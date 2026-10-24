@@ -162,5 +162,18 @@ document.getElementById("form").onsubmit=e=>{e.preventDefault();let n=document.g
 document.getElementById("year").textContent=new Date().getFullYear();
 render();
 </script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+  const SUPABASE_URL = 'PASTE_YOUR_PROJECT_URL_HERE';
+  const SUPABASE_PUBLISHABLE_KEY = 'PASTE_YOUR_PUBLISHABLE_KEY_HERE';
+
+  const supabaseClient = window.supabase.createClient(
+    https://yffruutknztvdyioovmp.supabase.co/rest/v1/,
+    sb_publishable_cHzM8sQmrqfcCH8lhESytg_FMJrQtCX
+  );
+
+  console.log('DeckPlay HQ connected to Supabase!');
+</script>
+
 </body>
 </html>
