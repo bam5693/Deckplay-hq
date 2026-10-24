@@ -105,7 +105,7 @@ footer p{color:#ccd5e9;font-size:13px}
 <div><h2>Your next sale starts here.</h2><p class="muted">Collectors and shops are welcome.</p></div>
 <button class="primary" onclick="openSell()">Create a listing →</button>
 </section>
-<div class="notice"><b>Prototype notice:</b> Product listings and prices are examples. This version is a website demo; accounts, online publishing of listings, payments and shipping are not connected yet.</div>
+<div class="notice"><b>Early access:</b> Live marketplace listings are connected. Account sign-in, online listing creation, payments and shipping are still being built.</div>
 </main>
 <footer>
 <a class="logo" href="#" style="color:white">DeckPlay <span>HQ</span></a>
@@ -144,11 +144,11 @@ const items=[
 {id:7,n:"Retro Handheld Console",c:"Consoles & Controllers",p:79,s:"Pixel Attic",cond:"Tested",e:"🕹️",t:"green"},
 {id:8,n:"Pokémon Trainer Collection",c:"Trading Cards",p:24.99,s:"PikaPost",cond:"Very Good",e:"⚡"}
 ];
-let cat="All",filter="All",query="",saved=new Set(),next=9;
+let cat="All",filter="All",query="",saved=new Set(),next=9,listingSource="demo";
 const grid=document.getElementById("grid");
 function render(){
 let list=items.filter(x=>(cat==="All"||x.c===cat)&&(filter==="All"||x.c===filter||(filter==="Under $50"&&x.p<50))&&(x.n+" "+x.c+" "+x.s).toLowerCase().includes(query.toLowerCase()));
-document.getElementById("count").textContent=list.length+" demo listing(s) shown.";
+document.getElementById("count").textContent=list.length+" "+(listingSource==="live"?"live":"demo")+" listing(s) shown.";
 grid.innerHTML=list.length?list.map(x=>`<article class="card"><div class="art ${x.t||""}"><span>${x.e}</span><span class="tag">${x.c==="Trading Cards"?"TCG":x.c==="Video Games"?"GAME":"GAMING GEAR"}</span><button class="heart" data-heart="${x.id}">${saved.has(x.id)?"♥":"♡"}</button></div><div class="cardbody"><div class="kind">Community seller</div><h3>${x.n}</h3><div class="seller">${x.s}</div><div class="price-row"><span class="price">$${x.p.toFixed(2)}</span><span class="condition">${x.cond}</span></div><button class="view" data-view="${x.id}">View item</button></div></article>`).join(""):'<p>No listings found. Try another search.</p>';
 }
 function toast(msg){let t=document.getElementById("toast");t.textContent=msg;t.style.display="block";setTimeout(()=>t.style.display="none",2500)}
@@ -164,15 +164,22 @@ render();
 </script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-  const SUPABASE_URL = 'PASTE_YOUR_PROJECT_URL_HERE';
-  const SUPABASE_PUBLISHABLE_KEY = 'PASTE_YOUR_PUBLISHABLE_KEY_HERE';
-
-  const supabaseClient = window.supabase.createClient(
-    https://yffruutknztvdyioovmp.supabase.co/rest/v1/,
-    sb_publishable_cHzM8sQmrqfcCH8lhESytg_FMJrQtCX
-  );
-
-  console.log('DeckPlay HQ connected to Supabase!');
+const SUPABASE_URL="https://yffruutknztvdyioovmp.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY="sb_publishable_cHzM8sQmrqfcCH8lhESytg_FMJrQtCX";
+const supabaseClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);
+function databaseCategory(category){if(category==="trading_cards"||category==="collectibles")return "Trading Cards";if(category==="video_games")return "Video Games";return "Consoles & Controllers"}
+function databaseCondition(condition){return ({new:"New",like_new:"Like New",used:"Used",damaged:"Damaged",graded:"Graded"})[condition]||"Used"}
+function databaseEmoji(category){if(category==="trading_cards"||category==="collectibles")return "🃏";if(category==="video_games")return "🕹️";return "🎮"}
+async function loadListings(){
+document.getElementById("count").textContent="Loading live listings...";
+const {data,error}=await supabaseClient.from("listings").select("id,title,category,price,condition,accepts_trades,image_urls,created_at").eq("status","active").order("created_at",{ascending:false});
+if(error){console.error("Could not load Supabase listings:",error);listingSource="demo";render();toast("Live listings could not load. Showing demo listings.");return}
+console.log("DeckPlay HQ connected to Supabase.");
+if(!data||data.length===0){listingSource="demo";render();console.log("No active listings are published yet.");return}
+const databaseItems=data.map((listing,index)=>({id:1000+index,databaseId:listing.id,n:listing.title,c:databaseCategory(listing.category),p:Number(listing.price),s:listing.accepts_trades?"DeckPlay seller · Trades accepted":"DeckPlay seller",cond:databaseCondition(listing.condition),e:databaseEmoji(listing.category),imageUrls:listing.image_urls||[]}));
+items.splice(0,items.length,...databaseItems);listingSource="live";render();
+}
+loadListings();
 </script>
 
 </body>
