@@ -1,0 +1,166 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DeckPlay HQ | Play. Trade. Collect.</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#f5f7fb;color:#172033;font:15px Arial,sans-serif}
+header{background:white;padding:16px 5%;display:flex;gap:15px;align-items:center;justify-content:space-between;flex-wrap:wrap;border-bottom:1px solid #e2e7ef}
+.logo{font-size:23px;font-weight:900;color:#14213d;text-decoration:none}
+.logo span{color:#4569e8}
+button,input,select{font:inherit}
+button{cursor:pointer;border:0;border-radius:9px;padding:11px 15px;font-weight:bold}
+.primary{background:#4569e8;color:white}
+.search{padding:11px;border:1px solid #ddd;border-radius:9px;flex:1;min-width:190px;max-width:440px}
+main{width:92%;max-width:1120px;margin:auto}
+.hero{margin:25px 0;padding:35px;border-radius:20px;background:linear-gradient(120deg,#101b35,#29477f);color:white;display:flex;justify-content:space-between;align-items:center;gap:20px;flex-wrap:wrap}
+.hero h1{font-size:clamp(38px,6vw,58px);line-height:1.05;margin:12px 0}
+.hero p{color:#d5def0;line-height:1.7;max-width:520px}
+.hero em{color:#79e5ed;font-style:normal}
+.art-hero{font-size:90px}
+.kicker{color:#79e5ed;text-transform:uppercase;letter-spacing:2px;font-size:12px;font-weight:bold}
+h2{margin:28px 0 6px}
+.muted{color:#657087}
+.categories{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:18px 0 30px}
+.cat{background:white;border:1px solid #e0e5ee;padding:17px 8px;text-align:center}
+.cat span{display:block;font-size:28px;margin-bottom:8px}
+.cat.active,.cat:hover{background:#eef1ff;border-color:#4569e8}
+.filters{display:flex;gap:8px;flex-wrap:wrap;margin:18px 0}
+.filter{background:white;border:1px solid #ddd;border-radius:20px;padding:9px 13px}
+.filter.active{background:#14213d;color:white}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:15px}
+.card{background:white;border:1px solid #e0e5ee;border-radius:14px;overflow:hidden}
+.art{height:145px;display:grid;place-items:center;font-size:62px;background:linear-gradient(140deg,#e6edff,#e2f8f7);position:relative}
+.purple{background:linear-gradient(140deg,#f1e8ff,#e4e7ff)}
+.orange{background:linear-gradient(140deg,#fff0dd,#ffe0cc)}
+.green{background:linear-gradient(140deg,#e1f7e8,#d5f1e9)}
+.tag{position:absolute;top:9px;left:9px;background:white;border-radius:5px;padding:5px;font-size:10px;font-weight:bold}
+.heart{position:absolute;right:8px;top:7px;padding:5px 9px;background:white;font-size:18px}
+.cardbody{padding:13px}
+.kind{font-size:10px;color:#4569e8;font-weight:bold;text-transform:uppercase}
+.card h3{font-size:15px;line-height:1.35;min-height:40px}
+.seller{font-size:12px;color:#657087}
+.price-row{display:flex;justify-content:space-between;align-items:center;border-top:1px solid #eee;padding-top:11px;margin-top:12px}
+.price{font-size:19px;font-weight:900}
+.condition{font-size:10px;background:#eaf8f2;color:#167553;padding:5px;border-radius:5px}
+.view{width:100%;margin-top:10px;background:#eef1ff;color:#294bd2}
+.sell{margin:35px 0;padding:25px;background:#e9efff;border-radius:17px;display:flex;justify-content:space-between;align-items:center;gap:15px;flex-wrap:wrap}
+.sell h2{margin:0 0 8px}
+.notice{padding:13px;border-radius:9px;background:#fff8e7;border:1px solid #f0dfb1;color:#775a18;font-size:12px;line-height:1.6;margin:25px 0}
+footer{background:#14213d;color:white;padding:28px 5%;margin-top:35px}
+footer p{color:#ccd5e9;font-size:13px}
+.modal{display:none;position:fixed;inset:0;background:#101b35bb;align-items:center;justify-content:center;padding:18px;z-index:5}
+.modal.open{display:flex}
+.dialog{background:white;padding:24px;border-radius:17px;width:min(440px,100%)}
+.dialog input,.dialog select{display:block;width:100%;padding:11px;border:1px solid #ddd;border-radius:8px;margin:7px 0 14px}
+.dialog label{font-size:13px;font-weight:bold}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#14213d;color:white;padding:12px 18px;border-radius:9px;display:none;max-width:90%;z-index:10}
+@media(max-width:800px){.grid{grid-template-columns:repeat(2,1fr)}.categories{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:480px){header{padding:13px}.logo{font-size:20px}.hero{padding:24px}.art-hero{font-size:65px}.grid{gap:9px}.art{height:120px;font-size:50px}.cardbody{padding:10px}.card h3{font-size:13px}}
+</style>
+</head>
+<body>
+<header>
+<a class="logo" href="#">DeckPlay <span>HQ</span></a>
+<input class="search" id="search" placeholder="Search cards, games, consoles..." aria-label="Search listings">
+<button class="primary" onclick="openSell()">＋ Sell an item</button>
+</header>
+<main>
+<section class="hero">
+<div>
+<div class="kicker">Your collection. Your community.</div>
+<h1>Play. Trade.<br><em>Collect.</em></h1>
+<p>A marketplace for trading cards, video games, consoles and controllers. Discover your next favorite find from collectors and gaming shops.</p>
+<button class="primary" onclick="document.getElementById('market').scrollIntoView({behavior:'smooth'})">Explore marketplace →</button>
+</div>
+<div class="art-hero">🎮</div>
+</section>
+
+<h2>Find your next favorite</h2>
+<p class="muted">Explore all your favorite corners of gaming.</p>
+<div class="categories">
+<button class="cat active" data-cat="All"><span>✨</span>Everything</button>
+<button class="cat" data-cat="Trading Cards"><span>🃏</span>Trading cards</button>
+<button class="cat" data-cat="Video Games"><span>🕹️</span>Video games</button>
+<button class="cat" data-cat="Consoles & Controllers"><span>🎮</span>Consoles & gear</button>
+</div>
+
+<section id="market">
+<h2>Marketplace picks</h2>
+<p class="muted" id="count">Sample listings to preview the experience.</p>
+<div class="filters">
+<button class="filter active" data-filter="All">All items</button>
+<button class="filter" data-filter="Trading Cards">Cards</button>
+<button class="filter" data-filter="Video Games">Games</button>
+<button class="filter" data-filter="Consoles & Controllers">Consoles & controllers</button>
+<button class="filter" data-filter="Under $50">Under $50</button>
+</div>
+<div class="grid" id="grid"></div>
+</section>
+
+<section class="sell">
+<div><h2>Your next sale starts here.</h2><p class="muted">Collectors and shops are welcome.</p></div>
+<button class="primary" onclick="openSell()">Create a listing →</button>
+</section>
+<div class="notice"><b>Prototype notice:</b> Product listings and prices are examples. This version is a website demo; accounts, online publishing of listings, payments and shipping are not connected yet.</div>
+</main>
+<footer>
+<a class="logo" href="#" style="color:white">DeckPlay <span>HQ</span></a>
+<p>Built for collectors, players and gaming shops.</p>
+<p>© <span id="year"></span> DeckPlay HQ</p>
+</footer>
+
+<div class="modal" id="modal">
+<div class="dialog">
+<h2>Create a demo listing</h2>
+<p class="muted">Preview how selling will work. This will not publish online.</p>
+<form id="form">
+<label for="item">Item name</label>
+<input id="item" required placeholder="Name of your item">
+<label for="category">Category</label>
+<select id="category"><option>Trading Cards</option><option>Video Games</option><option>Consoles & Controllers</option></select>
+<label for="price">Price in USD</label>
+<input id="price" type="number" min="0.01" step="0.01" required placeholder="25.00">
+<label for="seller">Seller type</label>
+<select id="seller"><option>Collector</option><option>Shop</option></select>
+<button class="primary" type="submit">Add demo listing</button>
+<button type="button" onclick="closeSell()">Cancel</button>
+</form>
+</div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const items=[
+{id:1,n:"One Piece TCG Booster Pack",c:"Trading Cards",p:6.99,s:"Cardboard Harbor",cond:"Sealed",e:"🃏"},
+{id:2,n:"Charizard VSTAR Pokémon Card",c:"Trading Cards",p:42,s:"BinderQuest",cond:"Near Mint",e:"🔥",t:"orange"},
+{id:3,n:"The Legend of Zelda: Tears of the Kingdom",c:"Video Games",p:39.99,s:"Pixel Attic",cond:"Great condition",e:"🗡️",t:"green"},
+{id:4,n:"Wireless Pro Controller",c:"Consoles & Controllers",p:34.50,s:"RetroRen",cond:"Tested",e:"🎮",t:"purple"},
+{id:5,n:"One Piece Alt Art Single",c:"Trading Cards",p:18,s:"Manga Meeple",cond:"Near Mint",e:"✨",t:"purple"},
+{id:6,n:"Super Mario Odyssey",c:"Video Games",p:32.99,s:"LevelUp Finds",cond:"Complete",e:"🍄",t:"orange"},
+{id:7,n:"Retro Handheld Console",c:"Consoles & Controllers",p:79,s:"Pixel Attic",cond:"Tested",e:"🕹️",t:"green"},
+{id:8,n:"Pokémon Trainer Collection",c:"Trading Cards",p:24.99,s:"PikaPost",cond:"Very Good",e:"⚡"}
+];
+let cat="All",filter="All",query="",saved=new Set(),next=9;
+const grid=document.getElementById("grid");
+function render(){
+let list=items.filter(x=>(cat==="All"||x.c===cat)&&(filter==="All"||x.c===filter||(filter==="Under $50"&&x.p<50))&&(x.n+" "+x.c+" "+x.s).toLowerCase().includes(query.toLowerCase()));
+document.getElementById("count").textContent=list.length+" demo listing(s) shown.";
+grid.innerHTML=list.length?list.map(x=>`<article class="card"><div class="art ${x.t||""}"><span>${x.e}</span><span class="tag">${x.c==="Trading Cards"?"TCG":x.c==="Video Games"?"GAME":"GAMING GEAR"}</span><button class="heart" data-heart="${x.id}">${saved.has(x.id)?"♥":"♡"}</button></div><div class="cardbody"><div class="kind">Community seller</div><h3>${x.n}</h3><div class="seller">${x.s}</div><div class="price-row"><span class="price">$${x.p.toFixed(2)}</span><span class="condition">${x.cond}</span></div><button class="view" data-view="${x.id}">View item</button></div></article>`).join(""):'<p>No listings found. Try another search.</p>';
+}
+function toast(msg){let t=document.getElementById("toast");t.textContent=msg;t.style.display="block";setTimeout(()=>t.style.display="none",2500)}
+document.querySelectorAll("[data-cat]").forEach(b=>b.onclick=()=>{cat=b.dataset.cat;filter="All";document.querySelectorAll("[data-cat]").forEach(x=>x.classList.toggle("active",x===b));document.querySelectorAll("[data-filter]").forEach(x=>x.classList.toggle("active",x.dataset.filter==="All"));render()});
+document.querySelectorAll("[data-filter]").forEach(b=>b.onclick=()=>{filter=b.dataset.filter;cat="All";document.querySelectorAll("[data-filter]").forEach(x=>x.classList.toggle("active",x===b));document.querySelectorAll("[data-cat]").forEach(x=>x.classList.toggle("active",x.dataset.cat==="All"));render()});
+document.getElementById("search").oninput=e=>{query=e.target.value;render()};
+grid.onclick=e=>{let h=e.target.closest("[data-heart]");if(h){let id=+h.dataset.heart;saved.has(id)?saved.delete(id):saved.add(id);render();toast(saved.has(id)?"Saved to demo favorites":"Removed from favorites");return}let v=e.target.closest("[data-view]");if(v){let x=items.find(i=>i.id===+v.dataset.view);toast(x.n+" — demo item only")}};
+function openSell(){document.getElementById("modal").classList.add("open")}
+function closeSell(){document.getElementById("modal").classList.remove("open")}
+document.getElementById("form").onsubmit=e=>{e.preventDefault();let n=document.getElementById("item").value.trim(),p=Number(document.getElementById("price").value),c=document.getElementById("category").value,s=document.getElementById("seller").value;if(!n||p<=0)return;items.unshift({id:next++,n,c,p,s:s==="Shop"?"New shop (demo)":"New collector (demo)",cond:"Demo listing",e:c==="Trading Cards"?"🃏":c==="Video Games"?"🕹️":"🎮"});cat="All";filter="All";query="";document.getElementById("search").value="";render();closeSell();e.target.reset();toast("Demo listing added in this browser only.")};
+document.getElementById("year").textContent=new Date().getFullYear();
+render();
+</script>
+</body>
+</html>
