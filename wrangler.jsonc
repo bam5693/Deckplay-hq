@@ -4,7 +4,6 @@
   "name": "deckplay-hq",
   "compatibility_date": "2026-10-24",
   "assets": {
-    "directory": "./",
-    "binding": "ASSETS"
+    "directory": "./"
   }
 }
