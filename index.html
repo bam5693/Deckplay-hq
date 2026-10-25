@@ -278,6 +278,22 @@ html[data-theme="dark"] .settings-section{border-color:#354459}
 html[data-theme="dark"] .theme-options button{background:#26354a;color:#e8eef8;border-color:#465a72}
 html[data-theme="dark"] .theme-options button[aria-pressed="true"]{background:#1b5355;border-color:#56c9bb;color:#fff}
 @media(max-width:400px){.settings-section{padding:13px}.theme-options{gap:5px}.theme-options button{font-size:13px;padding:12px 4px}}
+
+/* Dark theme contrast fixes for marketplace and promotional panels */
+html[data-theme="dark"] .card .price,
+html[data-theme="dark"] .card .price-row .price{color:#f3f8ff!important}
+html[data-theme="dark"] .card .price-row{border-top-color:#4a5c70!important}
+html[data-theme="dark"] .card .seller-link,
+html[data-theme="dark"] .card .seller-link:visited{color:#75d8d1!important;text-decoration-color:#75d8d1!important}
+html[data-theme="dark"] .card .kind{color:#7bdbd0!important}
+html[data-theme="dark"] .card .condition{background:#dff5ed!important;color:#155c50!important}
+html[data-theme="dark"] .sell{background:linear-gradient(115deg,#20354a,#244b4b)!important;color:#f2f7ff!important;border:1px solid #41646b}
+html[data-theme="dark"] .sell h2{color:#f8fbff!important}
+html[data-theme="dark"] .sell p,html[data-theme="dark"] .sell .muted{color:#d4e4ed!important}
+html[data-theme="dark"] .notice{background:#193c37!important;color:#dff9ed!important;border-color:#3a7766!important}
+html[data-theme="dark"] .notice b{color:#a5f0d0!important}
+html[data-theme="dark"] footer{background:#192b30!important;color:#f2f7ff!important}
+html[data-theme="dark"] footer p{color:#d4e1e6!important}
 </style>
 </head>
 <body>
@@ -312,7 +328,7 @@ html[data-theme="dark"] .theme-options button[aria-pressed="true"]{background:#1
 
 <button type="button" id="wantedNav" class="wanted-side-tab" aria-controls="wantedSection" aria-expanded="false" hidden>Wanted <span aria-hidden="true">❮</span></button><div id="wantedBackdrop" class="wanted-backdrop" hidden></div><aside id="wantedSection" class="wanted-section wanted-drawer" aria-label="Community wanted board" aria-hidden="true"><button type="button" id="closeWanted" class="wanted-close" aria-label="Close wanted board">×</button><div class="wanted-top"><div><div class="section-eyebrow">COMMUNITY WANTED BOARD</div><h2>What are you looking for?</h2><p class="muted">Post the cards, decks or collectibles you want to buy or trade for.</p></div><button class="primary" type="button" id="postWanted">＋ Post a wanted item</button></div><div id="wantedGrid" class="wanted-grid"><p class="muted">Loading wanted posts…</p></div></aside>
 <section class="sell"><div><h2>Your next sale starts here.</h2><p class="muted">Create an account, add photos and publish directly to the marketplace.</p></div><button class="primary" type="button" data-sell>Create a listing →</button></section>
-<div class="notice"><b>Early access:</b> Accounts, real listings and listing photos are live. Payments, shipping and private messaging are still being built.</div>
+<div class="notice"><b>Early access:</b> Accounts, real listings and listing photos are live. Payments and shipping are still being built. Private messaging and trade offers are available.</div>
 </main>
 <footer><a class="logo" href="#" style="color:white">DeckPlay <span>HQ</span></a><p>Built for the collecting and playing community.</p><p>© <span id="year"></span> DeckPlay HQ</p></footer>
 
