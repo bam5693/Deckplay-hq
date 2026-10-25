@@ -58,7 +58,7 @@ h2{margin:28px 0 6px}.muted{color:#657087}.categories{display:grid;grid-template
 <div class="modal" id="authModal" role="dialog" aria-modal="true" aria-labelledby="authTitle">
 <div class="dialog"><button class="close" type="button" data-close="authModal" aria-label="Close">×</button><h2 id="authTitle">Welcome to DeckPlay HQ</h2><p class="muted">Sign in to publish and manage marketplace listings.</p>
 <div class="auth-switch"><button class="active" type="button" data-auth-mode="signin">Sign in</button><button class="ghost" type="button" data-auth-mode="signup">Create account</button></div>
-<form id="authForm"><div id="displayNameWrap" hidden><label for="displayName">Display name</label><input id="displayName" maxlength="40" autocomplete="nickname" placeholder="How buyers will see you"></div><label for="authEmail">Email</label><input id="authEmail" type="email" required autocomplete="email" placeholder="you@example.com"><label for="authPassword">Password</label><input id="authPassword" type="password" required minlength="8" autocomplete="current-password" placeholder="At least 8 characters"><p class="password-hint" id="passwordHint" hidden>Use at least 8 characters, including an uppercase letter, a number and a symbol.</p><p class="status" id="authStatus"></p><div class="dialog-actions"><button class="primary" id="authSubmit" type="submit">Sign in</button><button class="ghost" type="button" data-close="authModal">Cancel</button></div></form>
+<form id="authForm"><div id="displayNameWrap" hidden><label for="username">Username (unique)</label><input id="username" minlength="3" maxlength="20" pattern="[A-Za-z0-9_]{3,20}" autocomplete="username" placeholder="CardHunter5693"><p class="password-hint">3–20 letters, numbers or underscores. Your public @username.</p><label for="displayName">Display name</label><input id="displayName" maxlength="40" autocomplete="nickname" placeholder="How buyers will see you"></div><label for="authEmail">Email</label><input id="authEmail" type="email" required autocomplete="email" placeholder="you@example.com"><label for="authPassword">Password</label><input id="authPassword" type="password" required minlength="8" autocomplete="current-password" placeholder="At least 8 characters"><p class="password-hint" id="passwordHint" hidden>Use at least 8 characters, including an uppercase letter, a number and a symbol.</p><p class="status" id="authStatus"></p><div class="dialog-actions"><button class="primary" id="authSubmit" type="submit">Sign in</button><button class="ghost" type="button" data-close="authModal">Cancel</button></div></form>
 </div></div>
 
 <div class="modal" id="sellModal" role="dialog" aria-modal="true" aria-labelledby="sellTitle">
@@ -110,16 +110,16 @@ async function loadListings(){
 }
 function updateAccountUI(){
  const button=document.getElementById("accountButton");
- button.textContent=currentUser?`☰ ${currentUser.user_metadata?.display_name||currentUser.email?.split("@")[0]||"My account"} ▾`:"Sign in";document.getElementById("accountMenu").hidden=true;button.setAttribute("aria-expanded","false");
+ button.textContent=currentUser?`☰ ${currentUser.user_metadata?.username?"@"+currentUser.user_metadata.username:currentUser.user_metadata?.display_name||currentUser.email?.split("@")[0]||"My account"} ▾`:"Sign in";document.getElementById("accountMenu").hidden=true;button.setAttribute("aria-expanded","false");
  button.title=currentUser?"Sign out of DeckPlay HQ":"Sign in or create an account";
 }
 async function ensureProfile(user,displayName){
  const name=(displayName||user.user_metadata?.display_name||user.email?.split("@")[0]||"DeckPlay member").trim().slice(0,40);
- const {error}=await supabaseClient.from("profiles").upsert({id:user.id,display_name:name},{onConflict:"id"});
+ const {error}=await supabaseClient.from("profiles").upsert({id:user.id,display_name:name,...(user.user_metadata?.username?{username:user.user_metadata.username}:{})},{onConflict:"id"});
  if(error)throw error;
 }
 function setAuthMode(mode){
- authMode=mode;document.getElementById("displayNameWrap").hidden=mode!=="signup";document.getElementById("displayName").required=mode==="signup";document.getElementById("authPassword").autocomplete=mode==="signup"?"new-password":"current-password";document.getElementById("authSubmit").textContent=mode==="signup"?"Create account":"Sign in";document.querySelectorAll("[data-auth-mode]").forEach(button=>button.classList.toggle("active",button.dataset.authMode===mode));document.getElementById("passwordHint").hidden=mode!=="signup";document.getElementById("authStatus").textContent="";
+ authMode=mode;document.getElementById("displayNameWrap").hidden=mode!=="signup";document.getElementById("displayName").required=mode==="signup";document.getElementById("username").required=mode==="signup";document.getElementById("authPassword").autocomplete=mode==="signup"?"new-password":"current-password";document.getElementById("authSubmit").textContent=mode==="signup"?"Create account":"Sign in";document.querySelectorAll("[data-auth-mode]").forEach(button=>button.classList.toggle("active",button.dataset.authMode===mode));document.getElementById("passwordHint").hidden=mode!=="signup";document.getElementById("authStatus").textContent="";
 }
 async function openSell(){if(!currentUser){setAuthMode("signin");openModal("authModal");toast("Sign in before creating a listing.");return}openModal("sellModal")}
 async function uploadPhotos(files,userId){
@@ -157,11 +157,13 @@ document.getElementById("myProfile").addEventListener("click",()=>{document.getE
 document.getElementById("myListings").addEventListener("click",()=>{document.getElementById("accountMenu").hidden=true;document.getElementById("market").scrollIntoView({behavior:"smooth"});toast("Your listings are marked 'Your listing'")});
 document.getElementById("myFavorites").addEventListener("click",()=>{document.getElementById("accountMenu").hidden=true;toast(saved.size+" saved item(s) this session")});
 document.getElementById("authForm").addEventListener("submit",async event=>{
- event.preventDefault();const form=event.currentTarget;const status=document.getElementById("authStatus");const email=document.getElementById("authEmail").value.trim();const password=document.getElementById("authPassword").value;const displayName=document.getElementById("displayName").value.trim();form.classList.add("busy");status.textContent=authMode==="signup"?"Creating your account...":"Signing you in...";
+ event.preventDefault();const form=event.currentTarget;const status=document.getElementById("authStatus");const email=document.getElementById("authEmail").value.trim();const password=document.getElementById("authPassword").value;const displayName=document.getElementById("displayName").value.trim();const username=document.getElementById("username").value.trim();form.classList.add("busy");status.textContent=authMode==="signup"?"Creating your account...":"Signing you in...";
  try{
   if(authMode==="signup"){
+   if(!/^[A-Za-z0-9_]{3,20}$/.test(username))throw new Error("Username must be 3–20 letters, numbers or underscores.");
+   const {data:existing,error:checkError}=await supabaseClient.from("profiles").select("id").ilike("username",username).limit(1);if(checkError)throw checkError;if(existing?.length)throw new Error("That username is already taken.");
    if(!/[A-Z]/.test(password)||!/[0-9]/.test(password)||!/[^A-Za-z0-9]/.test(password))throw new Error("Password needs an uppercase letter, a number and a symbol.");
-   const {data,error}=await supabaseClient.auth.signUp({email,password,options:{data:{display_name:displayName},emailRedirectTo:window.location.origin}});if(error)throw error;
+   const {data,error}=await supabaseClient.auth.signUp({email,password,options:{data:{display_name:displayName,username},emailRedirectTo:window.location.origin}});if(error)throw error;
    if(data.session){await ensureProfile(data.user,displayName);closeModal("authModal");toast("Account created. You are signed in.")}else{status.textContent="Check your email to confirm your account, then return here to sign in."}
   }else{
    const {error}=await supabaseClient.auth.signInWithPassword({email,password});if(error)throw error;closeModal("authModal");form.reset();toast("Welcome back!");
