@@ -213,7 +213,7 @@ h2{font-size:clamp(21px,2.2vw,27px)}
 .collector-strip>div{gap:5px}.collector-strip span:not(.strip-star){display:none}
 .card .art{height:145px}
 }
-</style>
+.hero{min-height:0;justify-content:flex-start}.hero>div:first-child{max-width:850px;flex:1 1 100%}@media(max-width:650px){.hero{min-height:0}}</style>
 </head>
 <body>
 <header>
@@ -227,7 +227,7 @@ h2{font-size:clamp(21px,2.2vw,27px)}
 <main>
 <section class="hero">
 <div><div class="kicker">A marketplace made for collectors</div><h1>Find your next<br><em>favorite thing.</em></h1><p>From anime cards and rare pulls to retro games and collectibles. Discover great finds, meet fellow collectors, and make room for what’s next.</p><button class="primary" type="button" id="exploreButton">Explore marketplace →</button></div>
-<div class="hero-display hero-graphic" aria-hidden="true"><div class="hero-halo"></div><svg viewBox="0 0 360 310" xmlns="http://www.w3.org/2000/svg"><circle cx="185" cy="150" r="123" fill="#ffffff0b" stroke="#e1c88b55" stroke-width="2"/><circle cx="185" cy="150" r="94" fill="none" stroke="#ffffff2a" stroke-dasharray="4 10"/><rect x="58" y="73" width="130" height="178" rx="14" fill="#e4d6b2" transform="rotate(-15 123 162)"/><rect x="70" y="85" width="106" height="152" rx="8" fill="#315b57" transform="rotate(-15 123 162)"/><rect x="165" y="49" width="132" height="185" rx="15" fill="#e9dfc6" transform="rotate(12 231 141)"/><rect x="177" y="61" width="108" height="161" rx="8" fill="#2b7168" transform="rotate(12 231 141)"/><circle cx="228" cy="134" r="48" fill="#9ac4ad"/><path d="M228 88l12 33 35 1-28 22 10 34-29-20-29 20 10-34-28-22 35-1z" fill="#f2d59b"/><circle cx="101" cy="151" r="34" fill="#9cc1af"/><path d="M101 122l9 21 22 2-18 14 6 22-19-13-19 13 6-22-18-14 22-2z" fill="#f3d9a3"/><path d="M286 41l6 13 14 6-14 6-6 13-6-13-14-6 14-6zM50 211l5 10 11 5-11 5-5 10-5-10-11-5 11-5z" fill="#f0d5a0"/></svg></div>
+
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0"></script>
