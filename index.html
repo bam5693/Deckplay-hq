@@ -731,7 +731,7 @@ function startMessageUpdates(){
 loadWanted();
 document.getElementById("year").textContent=new Date().getFullYear();
 setAuthMode("signin");render();
-supabaseClient.auth.getSession().then(({data})=>{currentUser=data.session?.user||null;updateAccountUI();startMessageUpdates();loadSavedListings().then(loadListings);refreshNotificationCenter()});
+supabaseClient.auth.getSession().then(({data})=>{currentUser=data.session?.user||null;updateAccountUI();startMessageUpdates();loadBlockedCollectors().then(()=>Promise.all([loadSavedListings(),loadListings(),loadWanted()]));startNotificationUpdates()});
 </script>
 </body>
 </html>
