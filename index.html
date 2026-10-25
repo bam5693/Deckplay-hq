@@ -308,8 +308,8 @@ const grid=document.getElementById("grid");
 const escapeHtml=value=>String(value??"").replace(/[&<>'"]/g,char=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"})[char]);
 const safeImageUrl=value=>{try{const url=new URL(value);return url.protocol==="https:"?url.href:""}catch{return ""}};
 function toast(message){const element=document.getElementById("toast");element.textContent=message;element.style.display="block";clearTimeout(toast.timer);toast.timer=setTimeout(()=>element.style.display="none",3000)}
-function openModal(id){document.getElementById(id).classList.add("open")}
-function closeModal(id){document.getElementById(id).classList.remove("open")}
+function openModal(id){const modal=document.getElementById(id);modal.classList.add("open");modal.style.zIndex=String(100+document.querySelectorAll(".modal.open").length*10)}
+function closeModal(id){const modal=document.getElementById(id);modal.classList.remove("open");modal.style.zIndex=""}
 function databaseCategory(value){if(value==="trading_cards")return "Trading Cards";if(value==="collectibles"||value==="other")return "Collectibles";if(value==="video_games")return "Video Games";return "Consoles & Controllers"}
 function databaseCondition(value){return ({new:"New / sealed",like_new:"Like new",used:"Used",damaged:"Damaged",graded:"Graded"})[value]||"Used"}
 function databaseEmoji(value){if(value==="trading_cards"||value==="collectibles")return "🃏";if(value==="video_games")return "🕹️";return "🎮"}
