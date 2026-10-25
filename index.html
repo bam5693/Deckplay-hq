@@ -558,6 +558,16 @@ body.inbox-focus #inboxPage{width:min(850px,100%)!important;max-width:850px!impo
 /* Match alerts bell to monochrome outline dock icons */
 .mobile-dock [data-dock="alerts"] .dock-bell-icon{display:inline-flex;align-items:center;justify-content:center;color:inherit;line-height:1}
 .mobile-dock [data-dock="alerts"] .dock-bell-icon svg{display:block;width:1em;height:1em;overflow:visible}
+
+/* Uniform mobile dock rhythm across all six destinations */
+@media(max-width:700px){
+ #mobileDock{grid-template-columns:repeat(6,minmax(0,1fr))!important;align-items:stretch!important;column-gap:0!important;padding:7px 5px calc(7px + env(safe-area-inset-bottom,0px))!important}
+ #mobileDock>button{min-width:0!important;min-height:66px!important;display:grid!important;grid-template-rows:32px 20px!important;align-content:center!important;justify-items:center!important;align-items:center!important;gap:4px!important;padding:4px 0!important;margin:0!important;line-height:1!important;border-radius:12px!important}
+ #mobileDock>button>span:first-child{grid-row:1!important;display:flex!important;align-items:center!important;justify-content:center!important;width:32px!important;height:32px!important;margin:0!important;line-height:1!important;font-size:27px!important}
+ #mobileDock>button>small{grid-row:2!important;display:block!important;margin:0!important;padding:0!important;line-height:20px!important;font-size:10px!important;white-space:nowrap!important;text-align:center!important}
+ #mobileDock>button.dock-sell>span:first-child{width:38px!important;height:38px!important;margin-top:-12px!important;font-size:31px!important}
+ #mobileDock [data-dock="alerts"] .dock-bell-icon svg{width:27px!important;height:27px!important}
+}
 </style>
 </head>
 <body>
