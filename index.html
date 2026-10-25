@@ -239,7 +239,7 @@ footer{margin-top:16px!important;padding:18px 5%!important}
 <a class="logo" href="#">DeckPlay <span>HQ</span></a>
 <input class="search" id="search" placeholder="Search cards, games, consoles..." aria-label="Search listings">
 <div class="header-actions">
-<div class="account-wrap"><button class="ghost account" id="accountButton" type="button" aria-expanded="false"><span id="headerAvatar" class="header-avatar" hidden></span><span id="accountLabel">Sign in</span><span id="headerUnread" class="unread-pill" hidden></span></button><div class="account-menu" id="accountMenu" hidden><div class="menu-heading">DeckPlay menu</div><button type="button" id="menuMarketplace">🛍️ Marketplace</button><button type="button" id="menuWanted">🔎 Wanted board</button><button type="button" id="menuSell">＋ Sell or trade an item</button><button type="button" id="menuPostWanted">📌 Post a wanted item</button><div class="menu-divider"></div><button type="button" id="myProfile">👤 My profile</button><button type="button" id="myListings">📦 My listings</button><button type="button" id="myFavorites">♡ Saved items</button><button type="button" id="myMessages">✉ Messages <span id="menuUnread" class="unread-pill" hidden></span></button><button type="button" id="myTrades">⇄ Trade offers</button><div class="menu-divider"></div><button type="button" id="signOutButton">Sign out</button></div></div>
+<div class="account-wrap"><button class="ghost account" id="accountButton" type="button" aria-expanded="false"><span id="headerAvatar" class="header-avatar" hidden></span><span id="accountLabel">Sign in</span><span id="headerUnread" class="unread-pill" hidden></span></button><div class="account-menu" id="accountMenu" hidden><div class="menu-heading">DeckPlay menu</div><button type="button" id="menuMarketplace">🛍️ Marketplace</button><button type="button" id="menuWanted">🔎 Wanted board</button><button type="button" id="menuSell">＋ Sell or trade an item</button><button type="button" id="menuPostWanted">📌 Post a wanted item</button><div class="menu-divider"></div><button type="button" id="myProfile">👤 My profile</button><button type="button" id="myListings">📦 My listings</button><button type="button" id="myFavorites">♡ Saved items</button><button type="button" id="myMessages">✉ Messages <span id="menuUnread" class="unread-pill" hidden></span></button><button type="button" id="myTrades">⇄ Trade offers <span id="menuTradeUnread" class="unread-pill" hidden></span></button><div class="menu-divider"></div><button type="button" id="signOutButton">Sign out</button></div></div>
 <button class="primary" type="button" data-sell>＋ Sell an item</button>
 </div>
 </header>
@@ -336,7 +336,7 @@ function updateAccountUI(){
  const button=document.getElementById("accountButton"),label=document.getElementById("accountLabel"),avatar=document.getElementById("headerAvatar");
  const user=currentUser;
  label.textContent=user?(user.user_metadata?.username?"@"+user.user_metadata.username:user.user_metadata?.display_name||user.email?.split("@")[0]||"My account")+" ▾":"Sign in";
- avatar.hidden=!user;if(!user){document.getElementById("headerUnread").hidden=true;document.getElementById("menuUnread").hidden=true;}
+ avatar.hidden=!user;if(!user){document.getElementById("headerUnread").hidden=true;document.getElementById("menuUnread").hidden=true;document.getElementById("menuTradeUnread").hidden=true;}
  if(user){avatar.textContent=(user.user_metadata?.username||user.email||"C").charAt(0).toUpperCase();avatar.style.backgroundImage="none";refreshHeaderAvatar(user.id)}
  document.getElementById("accountMenu").hidden=true;button.setAttribute("aria-expanded","false");
  button.title=user?"Open your account and profile":"Sign in or create an account";
@@ -420,7 +420,7 @@ document.getElementById("authForm").addEventListener("submit",async event=>{
   }else{
    if(!supabaseClient)throw new Error("Login service failed to load. Refresh the page and try again.");const result=await Promise.race([supabaseClient.auth.signInWithPassword({email,password}),new Promise((_,reject)=>setTimeout(()=>reject(new Error("Login is taking too long. Check your connection and try again.")),15000))]);if(result.error)throw result.error;closeModal("authModal");form.reset();toast("Welcome back!");
   }
- }catch(error){status.textContent=error.message||"Authentication failed. Please try again."}finally{form.classList.remove("busy")}
+ }catch(error){const msg=error.message||"Authentication failed. Please try again.";status.textContent=/email rate limit|rate limit exceeded|email rate exceeded/i.test(msg)?"Signup email limit reached. Please try again later. DeckPlay is configuring a higher-capacity email service; repeated attempts will not help.":msg}finally{form.classList.remove("busy")}
 });
 document.getElementById("listingType").addEventListener("change",()=>{const isDeck=document.getElementById("listingType").value==="deck";document.getElementById("deckFields").hidden=!isDeck;document.getElementById("deckLeader").required=isDeck;document.getElementById("deckCardCount").required=isDeck;document.getElementById("deckList").required=isDeck;if(isDeck){document.getElementById("category").value="trading_cards";document.getElementById("category").dispatchEvent(new Event("change"))}});
 document.getElementById("listingForm").addEventListener("submit",async event=>{
@@ -501,12 +501,12 @@ async function loadTradeOffers(){
 document.getElementById("tradeOffersList").addEventListener("click",async e=>{
  if(!currentUser)return;
  const counter=e.target.closest("[data-counter-start]");if(counter){activeCounterOffer=counter.dataset.counterStart;document.getElementById("counterForm").reset();document.getElementById("counterStatus").textContent="";openModal("counterModal");return}
- const reply=e.target.closest("[data-counter-response]");if(reply){const accept=reply.dataset.counterResponse==="accept";if(!confirm(accept?"Accept these counteroffer terms?":"Decline this counteroffer?"))return;reply.disabled=true;const {error}=await supabaseClient.rpc("respond_trade_counter",{p_counter:reply.dataset.counterId,p_accept:accept});if(error){toast(error.message);reply.disabled=false;return}await loadTradeOffers();toast(accept?"Counteroffer accepted":"Counteroffer declined");return}
+ const reply=e.target.closest("[data-counter-response]");if(reply){const accept=reply.dataset.counterResponse==="accept";if(!confirm(accept?"Accept these counteroffer terms?":"Decline this counteroffer?"))return;reply.disabled=true;const {error}=await supabaseClient.rpc("respond_trade_counter",{p_counter:reply.dataset.counterId,p_accept:accept});if(error){toast(error.message);reply.disabled=false;return}await loadTradeOffers();refreshTradeAlerts();toast(accept?"Counteroffer accepted":"Counteroffer declined");return}
  const button=e.target.closest("[data-trade-action]");if(!button)return;const action=button.dataset.tradeAction;
  if(!confirm(action==="accepted"?"Accept this proposal? You will still need to arrange the exchange safely.":"Change this offer to "+action+"?"))return;
- button.disabled=true;const column=action==="cancelled"?"sender_id":"recipient_id";const {error}=await supabaseClient.from("trade_offers").update({status:action}).eq("id",button.dataset.offerId).eq(column,currentUser.id).eq("status","pending");if(error){toast(error.message);button.disabled=false;return}await loadTradeOffers();toast("Offer "+action)
+ button.disabled=true;const column=action==="cancelled"?"sender_id":"recipient_id";const {error}=await supabaseClient.from("trade_offers").update({status:action}).eq("id",button.dataset.offerId).eq(column,currentUser.id).eq("status","pending");if(error){toast(error.message);button.disabled=false;return}await loadTradeOffers();refreshTradeAlerts();toast("Offer "+action)
 });
-document.getElementById("counterForm").addEventListener("submit",async e=>{e.preventDefault();if(!activeCounterOffer)return;const status=document.getElementById("counterStatus"),direction=document.getElementById("counterDirection").value,amount=direction==="none"?0:Number(document.getElementById("counterAmount").value),note=document.getElementById("counterNote").value.trim();if(!Number.isFinite(amount)||amount<0||(direction!=="none"&&amount<=0)){status.textContent="Enter a valid cash amount.";return}status.textContent="Sending counteroffer…";const {error}=await supabaseClient.rpc("create_trade_counter",{p_offer:activeCounterOffer,p_cash:amount,p_direction:direction,p_note:note});if(error){status.textContent=error.message;return}closeModal("counterModal");await loadTradeOffers();toast("Counteroffer sent")});
+document.getElementById("counterForm").addEventListener("submit",async e=>{e.preventDefault();if(!activeCounterOffer)return;const status=document.getElementById("counterStatus"),direction=document.getElementById("counterDirection").value,amount=direction==="none"?0:Number(document.getElementById("counterAmount").value),note=document.getElementById("counterNote").value.trim();if(!Number.isFinite(amount)||amount<0||(direction!=="none"&&amount<=0)){status.textContent="Enter a valid cash amount.";return}status.textContent="Sending counteroffer…";const {error}=await supabaseClient.rpc("create_trade_counter",{p_offer:activeCounterOffer,p_cash:amount,p_direction:direction,p_note:note});if(error){status.textContent=error.message;return}closeModal("counterModal");await loadTradeOffers();refreshTradeAlerts();toast("Counteroffer sent")});
 
 
 let profileTab="listings";
@@ -537,6 +537,7 @@ document.getElementById("profilePageContent").addEventListener("click",async e=>
 
 
 let messageChannel=null,messagePoll=null;
+async function refreshTradeAlerts(){if(!currentUser)return;const [offers,counters]=await Promise.all([supabaseClient.from("trade_offers").select("id",{count:"exact",head:true}).eq("recipient_id",currentUser.id).eq("status","pending"),supabaseClient.from("trade_counteroffers").select("id",{count:"exact",head:true}).eq("recipient_id",currentUser.id).eq("status","pending")]);if(offers.error||counters.error)return;const count=(offers.count||0)+(counters.count||0),el=document.getElementById("menuTradeUnread");el.hidden=!count;el.textContent=count>99?"99+":String(count)}
 async function refreshUnreadCount(){
  if(!currentUser)return;
  const {count,error}=await supabaseClient.from("collector_messages").select("id",{count:"exact",head:true}).eq("recipient_id",currentUser.id).is("read_at",null);
@@ -547,9 +548,9 @@ function startMessageUpdates(){
  if(messageChannel){supabaseClient.removeChannel(messageChannel);messageChannel=null}
  if(messagePoll){clearInterval(messagePoll);messagePoll=null}
  if(!currentUser)return;
- refreshUnreadCount();
+ refreshUnreadCount();refreshTradeAlerts();
  messageChannel=supabaseClient.channel("deckplay-inbox-"+currentUser.id).on("postgres_changes",{event:"INSERT",schema:"public",table:"collector_messages",filter:"recipient_id=eq."+currentUser.id},()=>{refreshUnreadCount();if(document.getElementById("messagesModal").classList.contains("open"))loadInbox()}).subscribe();
- messagePoll=setInterval(()=>{if(!document.hidden){refreshUnreadCount();if(document.getElementById("messagesModal").classList.contains("open"))loadInbox()}},30000);
+ messagePoll=setInterval(()=>{if(!document.hidden){refreshUnreadCount();refreshTradeAlerts();if(document.getElementById("messagesModal").classList.contains("open"))loadInbox()}},30000);
 }
 
 loadWanted();
