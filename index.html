@@ -413,6 +413,14 @@ body.inbox-focus .inbox-page-heading{margin-top:12px}
 .photo-categories.elegant-tiles .elegant-tile .cat-photo-label{color:#f5f2e9;text-align:center;left:6px;right:6px;bottom:16px;font-size:16px;letter-spacing:.15px}
 .photo-categories.elegant-tiles .elegant-tile.active{border:2px solid #e1c38b}
 @media(max-width:650px){.photo-categories.elegant-tiles .elegant-tile{min-height:155px}.elegant-tile .tile-line-art{width:72px;height:72px;top:18px}.photo-categories.elegant-tiles .elegant-tile .cat-photo-label{font-size:14px;bottom:12px}}
+
+/* Keep the full category icons clearly above their captions */
+.photo-categories.elegant-tiles .elegant-tile{min-height:210px!important;padding:14px 10px 16px!important;display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:space-between!important;gap:12px!important}
+.photo-categories.elegant-tiles .elegant-tile .tile-line-art{position:relative!important;top:auto!important;left:auto!important;transform:none!important;flex:0 0 auto;width:94px!important;height:94px!important;margin:8px auto 0!important}
+.photo-categories.elegant-tiles .elegant-tile:hover .tile-line-art{transform:translateY(-3px)!important}
+.photo-categories.elegant-tiles .elegant-tile .cat-photo-label{position:relative!important;inset:auto!important;display:block!important;width:100%;margin-top:auto!important;text-align:center!important;line-height:1.25!important;font-size:15px!important;z-index:2}
+.photo-categories.elegant-tiles .elegant-tile-3{color:#e5c37e!important}
+@media(max-width:650px){.photo-categories.elegant-tiles .elegant-tile{min-height:170px!important;padding:10px 5px 12px!important;gap:6px!important}.photo-categories.elegant-tiles .elegant-tile .tile-line-art{width:70px!important;height:70px!important;margin-top:8px!important}.photo-categories.elegant-tiles .elegant-tile .cat-photo-label{font-size:13px!important}}
 </style>
 </head>
 <body>
@@ -437,7 +445,7 @@ body.inbox-focus .inbox-page-heading{margin-top:12px}
 <div class="categories photo-categories elegant-tiles">
 <button class="cat elegant-tile elegant-tile-1 active" data-cat="All"><svg class="tile-line-art" viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><ellipse cx="36" cy="66" rx="20" ry="7"/><path d="M16 66v9c0 4 9 7 20 7s20-3 20-7v-9M16 74c0 4 9 7 20 7"/><ellipse cx="59" cy="49" rx="21" ry="7"/><path d="M38 49v10c0 4 9 7 21 7s21-3 21-7V49M38 57c0 4 9 7 21 7"/><ellipse cx="58" cy="32" rx="21" ry="7"/><path d="M37 32v10c0 4 9 7 21 7s21-3 21-7V32M37 40c0 4 9 7 21 7"/></svg><span class="cat-photo-label">✦ Collectibles</span></button>
 <button class="cat elegant-tile elegant-tile-2" data-cat="Trading Cards"><svg class="tile-line-art" viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="26" y="12" width="48" height="75" rx="5"/><rect x="31" y="17" width="38" height="65" rx="2"/><rect x="36" y="24" width="28" height="35" rx="2"/><path d="M37 67h26M37 73h20"/><path d="M50 32l4 8 9 1-7 6 2 8-8-4-8 4 2-8-7-6 9-1z"/></svg><span class="cat-photo-label">Trading cards</span></button>
-<button class="cat elegant-tile elegant-tile-3" data-cat="Video Games"><svg class="tile-line-art" viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M24 48c-6 0-10 8-13 22-2 11 3 15 11 9l15-13h26l15 13c8 6 13 2 11-9-3-14-7-22-13-22-7-6-45-6-52 0z"/><path d="M31 54v17M23 62h16"/><circle cx="66" cy="56" r="3"/><circle cx="76" cy="64" r="3"/></svg><span class="cat-photo-label">Video games</span></button>
+<button class="cat elegant-tile elegant-tile-3" data-cat="Video Games"><svg class="tile-line-art" viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="50" cy="49" r="34"/><circle cx="50" cy="49" r="8"/><circle cx="50" cy="49" r="3"/><path d="M50 15v19M50 64v19M16 49h19M65 49h19" opacity=".42"/><path d="M28 27a31 31 0 0 1 14-9M72 71a31 31 0 0 1-14 9" opacity=".65"/></svg><span class="cat-photo-label">Video games</span></button>
 <button class="cat elegant-tile elegant-tile-4" data-cat="Consoles & Controllers"><svg class="tile-line-art" viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="25" y="17" width="50" height="65" rx="8"/><path d="M36 29h28M36 39h28M36 49h28"/><circle cx="50" cy="68" r="5"/><path d="M19 29h-7v39h7M81 29h7v39h-7"/></svg><span class="cat-photo-label">Consoles & gear</span></button>
 </div>
 
