@@ -19,6 +19,7 @@ h2{margin:28px 0 6px}.muted{color:#657087}.categories{display:grid;grid-template
 .modal{display:none;position:fixed;inset:0;background:#101b35bb;align-items:center;justify-content:center;padding:18px;z-index:10;overflow:auto}.modal.open{display:flex}.dialog{background:white;padding:24px;border-radius:17px;width:min(500px,100%);max-height:92vh;overflow:auto;box-shadow:0 20px 70px #0004}.dialog.wide{width:min(680px,100%)}.dialog h2{margin-top:0}.dialog input,.dialog select,.dialog textarea{display:block;width:100%;padding:11px;border:1px solid #d8dfeb;border-radius:8px;margin:7px 0 14px;background:white}.dialog textarea{min-height:95px;resize:vertical}.dialog label{font-size:13px;font-weight:bold}.dialog-actions{display:flex;gap:8px;flex-wrap:wrap}.dialog-actions button{flex:1}.close{float:right;background:#eef1ff;padding:7px 10px;font-size:18px}.auth-switch{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin:14px 0}.auth-switch button.active{background:#14213d;color:white}.check-row{display:flex;gap:9px;align-items:center;margin:8px 0 16px}.check-row input{width:auto;margin:0}.file-help{font-size:12px;color:#657087;margin:-8px 0 14px}.status{font-size:12px;color:#657087;margin:0 0 14px}.detail-photo{width:100%;max-height:370px;object-fit:contain;border-radius:12px;background:#eef1ff}.detail-price{font-size:27px;font-weight:900;margin:12px 0}.empty{grid-column:1/-1;background:white;border:1px dashed #cbd4e3;border-radius:14px;padding:30px;text-align:center;color:#657087}.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#14213d;color:white;padding:12px 18px;border-radius:9px;display:none;max-width:90%;z-index:20}.busy{opacity:.65;pointer-events:none}
 @media(max-width:800px){.grid{grid-template-columns:repeat(2,1fr)}.categories{grid-template-columns:repeat(2,1fr)}header{position:static}.search{order:3;max-width:none;width:100%}}
 @media(max-width:480px){header{padding:13px}.logo{font-size:20px}.hero{padding:24px}.art-hero{font-size:65px}.grid{gap:9px}.art{height:135px;font-size:50px}.cardbody{padding:10px}.card h3{font-size:13px}.header-actions button{padding:9px 10px}.dialog{padding:19px}}
+.account-wrap{position:relative}.account-menu{position:absolute;right:0;top:calc(100% + 8px);min-width:190px;background:#fff;border:1px solid #dce3f0;border-radius:13px;box-shadow:0 16px 36px #15223c22;padding:7px;z-index:9}.account-menu[hidden]{display:none}.account-menu button{display:block;width:100%;text-align:left;background:transparent;color:#22324e;font-weight:600}.account-menu button:hover{background:#edf1ff}.hero{background:linear-gradient(120deg,#14213d,#374785 70%,#51458a)}.cat,.card{transition:transform .18s,box-shadow .18s}.cat:hover,.card:hover{transform:translateY(-2px);box-shadow:0 9px 22px #15223c16}.password-hint{font-size:12px;color:#657087;margin:-7px 0 12px}@media(max-width:480px){.account-menu{right:0}}
 </style>
 </head>
 <body>
@@ -26,7 +27,7 @@ h2{margin:28px 0 6px}.muted{color:#657087}.categories{display:grid;grid-template
 <a class="logo" href="#">DeckPlay <span>HQ</span></a>
 <input class="search" id="search" placeholder="Search cards, games, consoles..." aria-label="Search listings">
 <div class="header-actions">
-<button class="ghost account" id="accountButton" type="button">Sign in</button>
+<div class="account-wrap"><button class="ghost account" id="accountButton" type="button" aria-expanded="false">Sign in</button><div class="account-menu" id="accountMenu" hidden><button type="button" id="myProfile">My profile</button><button type="button" id="myListings">My listings</button><button type="button" id="myFavorites">Saved items</button><button type="button" id="signOutButton">Sign out</button></div></div>
 <button class="primary" type="button" data-sell>＋ Sell an item</button>
 </div>
 </header>
@@ -57,7 +58,7 @@ h2{margin:28px 0 6px}.muted{color:#657087}.categories{display:grid;grid-template
 <div class="modal" id="authModal" role="dialog" aria-modal="true" aria-labelledby="authTitle">
 <div class="dialog"><button class="close" type="button" data-close="authModal" aria-label="Close">×</button><h2 id="authTitle">Welcome to DeckPlay HQ</h2><p class="muted">Sign in to publish and manage marketplace listings.</p>
 <div class="auth-switch"><button class="active" type="button" data-auth-mode="signin">Sign in</button><button class="ghost" type="button" data-auth-mode="signup">Create account</button></div>
-<form id="authForm"><div id="displayNameWrap" hidden><label for="displayName">Display name</label><input id="displayName" maxlength="40" autocomplete="nickname" placeholder="How buyers will see you"></div><label for="authEmail">Email</label><input id="authEmail" type="email" required autocomplete="email" placeholder="you@example.com"><label for="authPassword">Password</label><input id="authPassword" type="password" required minlength="8" autocomplete="current-password" placeholder="At least 8 characters"><p class="status" id="authStatus"></p><div class="dialog-actions"><button class="primary" id="authSubmit" type="submit">Sign in</button><button class="ghost" type="button" data-close="authModal">Cancel</button></div></form>
+<form id="authForm"><div id="displayNameWrap" hidden><label for="displayName">Display name</label><input id="displayName" maxlength="40" autocomplete="nickname" placeholder="How buyers will see you"></div><label for="authEmail">Email</label><input id="authEmail" type="email" required autocomplete="email" placeholder="you@example.com"><label for="authPassword">Password</label><input id="authPassword" type="password" required minlength="8" autocomplete="current-password" placeholder="At least 8 characters"><p class="password-hint" id="passwordHint" hidden>Use at least 8 characters, including an uppercase letter, a number and a symbol.</p><p class="status" id="authStatus"></p><div class="dialog-actions"><button class="primary" id="authSubmit" type="submit">Sign in</button><button class="ghost" type="button" data-close="authModal">Cancel</button></div></form>
 </div></div>
 
 <div class="modal" id="sellModal" role="dialog" aria-modal="true" aria-labelledby="sellTitle">
@@ -109,7 +110,7 @@ async function loadListings(){
 }
 function updateAccountUI(){
  const button=document.getElementById("accountButton");
- button.textContent=currentUser?`Sign out · ${currentUser.email||"Account"}`:"Sign in";
+ button.textContent=currentUser?`☰ ${currentUser.user_metadata?.display_name||currentUser.email?.split("@")[0]||"My account"} ▾`:"Sign in";document.getElementById("accountMenu").hidden=true;button.setAttribute("aria-expanded","false");
  button.title=currentUser?"Sign out of DeckPlay HQ":"Sign in or create an account";
 }
 async function ensureProfile(user,displayName){
@@ -118,7 +119,7 @@ async function ensureProfile(user,displayName){
  if(error)throw error;
 }
 function setAuthMode(mode){
- authMode=mode;document.getElementById("displayNameWrap").hidden=mode!=="signup";document.getElementById("displayName").required=mode==="signup";document.getElementById("authPassword").autocomplete=mode==="signup"?"new-password":"current-password";document.getElementById("authSubmit").textContent=mode==="signup"?"Create account":"Sign in";document.querySelectorAll("[data-auth-mode]").forEach(button=>button.classList.toggle("active",button.dataset.authMode===mode));document.getElementById("authStatus").textContent="";
+ authMode=mode;document.getElementById("displayNameWrap").hidden=mode!=="signup";document.getElementById("displayName").required=mode==="signup";document.getElementById("authPassword").autocomplete=mode==="signup"?"new-password":"current-password";document.getElementById("authSubmit").textContent=mode==="signup"?"Create account":"Sign in";document.querySelectorAll("[data-auth-mode]").forEach(button=>button.classList.toggle("active",button.dataset.authMode===mode));document.getElementById("passwordHint").hidden=mode!=="signup";document.getElementById("authStatus").textContent="";
 }
 async function openSell(){if(!currentUser){setAuthMode("signin");openModal("authModal");toast("Sign in before creating a listing.");return}openModal("sellModal")}
 async function uploadPhotos(files,userId){
@@ -149,11 +150,17 @@ document.querySelectorAll("[data-cat]").forEach(button=>button.addEventListener(
 document.querySelectorAll("[data-filter]").forEach(button=>button.addEventListener("click",()=>{filter=button.dataset.filter;cat="All";document.querySelectorAll("[data-filter]").forEach(item=>item.classList.toggle("active",item===button));document.querySelectorAll("[data-cat]").forEach(item=>item.classList.toggle("active",item.dataset.cat==="All"));render()}));
 document.getElementById("search").addEventListener("input",event=>{query=event.target.value;render()});
 grid.addEventListener("click",event=>{const heart=event.target.closest("[data-heart]");if(heart){const id=heart.dataset.heart;saved.has(id)?saved.delete(id):saved.add(id);render();toast(saved.has(id)?"Saved to favorites":"Removed from favorites");return}const view=event.target.closest("[data-view]");if(view){const item=items.find(candidate=>String(candidate.id)===view.dataset.view);if(item)showDetails(item)}});
-document.getElementById("accountButton").addEventListener("click",async()=>{if(!currentUser){setAuthMode("signin");openModal("authModal");return}await supabaseClient.auth.signOut();toast("Signed out.")});
+document.getElementById("accountButton").addEventListener("click",()=>{if(!currentUser){setAuthMode("signin");openModal("authModal");return}const menu=document.getElementById("accountMenu");menu.hidden=!menu.hidden;document.getElementById("accountButton").setAttribute("aria-expanded",String(!menu.hidden))});
+document.addEventListener("click",event=>{if(!event.target.closest(".account-wrap"))document.getElementById("accountMenu").hidden=true});
+document.getElementById("signOutButton").addEventListener("click",async()=>{await supabaseClient.auth.signOut();toast("Signed out.")});
+document.getElementById("myProfile").addEventListener("click",()=>{document.getElementById("accountMenu").hidden=true;toast("Signed in as "+(currentUser?.user_metadata?.display_name||currentUser?.email||"member"))});
+document.getElementById("myListings").addEventListener("click",()=>{document.getElementById("accountMenu").hidden=true;document.getElementById("market").scrollIntoView({behavior:"smooth"});toast("Your listings are marked 'Your listing'")});
+document.getElementById("myFavorites").addEventListener("click",()=>{document.getElementById("accountMenu").hidden=true;toast(saved.size+" saved item(s) this session")});
 document.getElementById("authForm").addEventListener("submit",async event=>{
  event.preventDefault();const form=event.currentTarget;const status=document.getElementById("authStatus");const email=document.getElementById("authEmail").value.trim();const password=document.getElementById("authPassword").value;const displayName=document.getElementById("displayName").value.trim();form.classList.add("busy");status.textContent=authMode==="signup"?"Creating your account...":"Signing you in...";
  try{
   if(authMode==="signup"){
+   if(!/[A-Z]/.test(password)||!/[0-9]/.test(password)||!/[^A-Za-z0-9]/.test(password))throw new Error("Password needs an uppercase letter, a number and a symbol.");
    const {data,error}=await supabaseClient.auth.signUp({email,password,options:{data:{display_name:displayName},emailRedirectTo:window.location.origin}});if(error)throw error;
    if(data.session){await ensureProfile(data.user,displayName);closeModal("authModal");toast("Account created. You are signed in.")}else{status.textContent="Check your email to confirm your account, then return here to sign in."}
   }else{
