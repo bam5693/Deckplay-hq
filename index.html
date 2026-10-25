@@ -611,6 +611,11 @@ button:disabled{opacity:.55;cursor:not-allowed}
 #notificationModal .close:hover,#priceOffersModal .deckplay-clean-close:hover,#tradesModal .deckplay-clean-close:hover{background:rgba(223,189,120,.12)!important}
 .notification-return{display:inline-flex;align-items:center;gap:5px;background:transparent;color:#dfbd78;border:1px solid rgba(223,189,120,.35);padding:8px 12px;border-radius:10px;margin:0 0 12px;font-weight:700}
 .notification-return[hidden]{display:none!important}
+
+/* Consistent gold close controls throughout DeckPlay — no white tiles */
+button.close,button.wanted-close,button[data-close],button[aria-label="Close"],button[aria-label^="Close "]{background:transparent!important;background-color:transparent!important;color:#dfbd78!important;border:0!important;box-shadow:none!important;text-shadow:none!important;border-radius:50%!important;font-size:30px!important;line-height:1!important;min-width:38px;min-height:38px;padding:3px 7px!important;display:inline-flex;align-items:center;justify-content:center}
+button.close:hover,button.wanted-close:hover,button[data-close]:hover,button[aria-label="Close"]:hover,button[aria-label^="Close "]:hover{background:rgba(223,189,120,.13)!important;color:#f4cf86!important}
+button.close:focus-visible,button.wanted-close:focus-visible,button[data-close]:focus-visible{outline:2px solid #dfbd78;outline-offset:2px}
 </style>
 </head>
 <body>
