@@ -123,6 +123,30 @@ footer{background:#222d30}footer p{color:#d1dad3}
 .photo-categories .cat-photo-label{position:absolute;bottom:18px;left:17px;right:12px;z-index:2;display:block;margin:0;color:white;font-size:17px;font-weight:850;line-height:1.2;text-shadow:0 1px 8px #0007}
 .photo-categories .cat.active{border-color:#dfc18b;box-shadow:0 0 0 2px #dfc18b45}
 @media(max-width:650px){.photo-categories .cat{min-height:142px}.photo-categories .cat-photo-label{font-size:15px;bottom:13px;left:12px}}
+
+/* Photographic categories and polished marketplace — retain approved teal palette */
+.photo-categories{grid-template-columns:repeat(4,minmax(0,1fr));gap:15px}
+.photo-cat{height:210px;min-height:0;padding:0;position:relative;overflow:hidden;border-radius:18px;display:block;text-align:left;background:linear-gradient(145deg,#325d56,#1d3438);border:1px solid #d7ded6;isolation:isolate}
+.photo-cat img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:saturate(.83) contrast(1.08);transition:transform .35s;z-index:0}
+.photo-cat:after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,#0c252111 15%,#112c2ce8 100%);z-index:1}
+.photo-cat:hover img{transform:scale(1.06)}
+.photo-cat.active,.photo-cat:hover{border-color:#bda16b;box-shadow:0 9px 25px #163d372d;background:#284b46}
+.photo-fallback{position:absolute;top:22%;left:40%;font-size:48px!important;opacity:.5;z-index:-1}
+.cat-caption{position:absolute;bottom:0;left:0;right:0;padding:19px 16px;z-index:2;color:#fff!important;display:flex!important;flex-direction:column;align-items:flex-start;gap:3px}
+.cat-caption strong{font-size:17px;font-weight:850;letter-spacing:-.3px}.cat-caption small{font-size:11px;color:#d5e9e0;font-weight:650}
+.collector-strip{margin:-15px 0 36px;padding:18px 23px;border:1px solid #d7e1d6;border-radius:14px;background:linear-gradient(110deg,#f0eee2,#e5f0e9);display:flex;align-items:center;justify-content:space-between;gap:15px;flex-wrap:wrap}
+.collector-strip>div{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.strip-star{font-size:23px;color:#ae8a48}.collector-strip strong{font-size:14px;color:#294942}.collector-strip span:not(.strip-star){font-size:12px;color:#65786d}
+.strip-link{color:#176d70;background:#fffefa;border:1px solid #d4dfd4;font-size:12px}
+.card{background:#fffefa;border-color:#e1e4db;box-shadow:0 6px 22px #18362c0e}
+.card:hover{box-shadow:0 12px 30px #18362c20}
+.card .art{height:205px}.card .art img{transition:transform .3s}.card:hover .art img{transform:scale(1.035)}
+.card .kind{font-size:10px;font-weight:800}.card .seller{line-height:1.6}
+.card .price-row{border-top-color:#eaece5}
+.card .view{background:#e6f0ea;color:#1c625c;font-weight:800}.card .view:hover{background:#cfe5d9}
+.heart{color:#295c53}.tag{background:#fffefaed}
+@media(max-width:800px){.photo-categories{grid-template-columns:repeat(2,minmax(0,1fr))}.photo-cat{height:190px}}
+@media(max-width:480px){.photo-categories{gap:10px}.photo-cat{height:158px}.cat-caption{padding:13px 11px}.cat-caption strong{font-size:14px}.cat-caption small{font-size:10px}.collector-strip{margin-top:-17px;padding:14px}.card .art{height:150px}}
 </style>
 </head>
 <body>
@@ -131,6 +155,171 @@ footer{background:#222d30}footer p{color:#d1dad3}
 <input class="search" id="search" placeholder="Search cards, games, consoles..." aria-label="Search listings">
 <div class="header-actions">
 <div class="account-wrap"><button class="ghost account" id="accountButton" type="button" aria-expanded="false">Sign in</button><div class="account-menu" id="accountMenu" hidden><button type="button" id="myProfile">My profile</button><button type="button" id="myListings">My listings</button><button type="button" id="myFavorites">Saved items</button><button type="button" id="signOutButton">Sign out</button></div></div>
+<button class="primary" type="button" data-sell>＋ Sell an item</button>
+</div>
+</header>
+<main>
+<section class="hero">
+<div><div class="kicker">Your collection. Your community.</div><h1>Play. Trade.<br><em>Collect.</em></h1><p>A fresh home for trading cards, collectibles, retro games and the stuff you love finding. Browse, trade and build your collection.</p><button class="primary" type="button" id="exploreButton">Explore marketplace →</button></div>
+<div class="hero-showcase" aria-hidden="true"><div class="showcase-card showcase-back"><span>COLLECT • PLAY</span><strong>01</strong><small>THE NEXT FIND</small></div><div class="showcase-card showcase-front"><span>DECKPLAY HQ / 2026</span><div class="showcase-orb"></div><strong>RARE<br>FINDS.</strong><small>CARDS · GAMES · CULTURE</small></div><div class="showcase-spark">✦</div></div>
+</section>
+
+<div class="section-eyebrow">EXPLORE DECKPLAY</div><h2>Find your next favorite</h2><p class="muted">From anime cards to retro gaming — find your people and your next pickup.</p>
+<div class="categories photo-categories">
+<button class="cat active" data-cat="All"><img src="https://images.unsplash.com/photo-1606503153255-59d8b8b6c6db?auto=format&fit=crop&w=700&q=80" alt="" loading="lazy" onerror="this.style.display='none'"><span class="cat-photo-label">✦ Collectibles</span></button>
+<button class="cat" data-cat="Trading Cards"><img src="https://images.unsplash.com/photo-1578662996442-48f60103fc96?auto=format&fit=crop&w=700&q=80" alt="" loading="lazy" onerror="this.style.display='none'"><span class="cat-photo-label">Trading cards</span></button>
+<button class="cat" data-cat="Video Games"><img src="https://images.unsplash.com/photo-1493711662062-fa541adb3fc8?auto=format&fit=crop&w=700&q=80" alt="" loading="lazy" onerror="this.style.display='none'"><span class="cat-photo-label">Video games</span></button>
+<button class="cat" data-cat="Consoles & Controllers"><img src="https://images.unsplash.com/photo-1606144042614-b2417e99c4e3?auto=format&fit=crop&w=700&q=80" alt="" loading="lazy" onerror="this.style.display='none'"><span class="cat-photo-label">Consoles & gear</span></button>
+</div>
+
+<section class="collector-strip"><div><span class="strip-star">✦</span><strong>For the collectors, by the collectors.</strong><span>Anime favorites · Rare pulls · Retro finds</span></div><button class="strip-link" type="button" data-sell>Start selling →</button></section><section id="market"><div class="section-eyebrow">THE COLLECTOR MARKETPLACE</div><h2>Marketplace picks</h2><p class="muted" id="count">Loading live listings...</p>
+<div class="filters">
+<button class="filter active" data-filter="All">All collectibles</button><button class="filter" data-filter="Trading Cards">Cards</button><button class="filter" data-filter="Video Games">Games</button><button class="filter" data-filter="Consoles & Controllers">Consoles & controllers</button><button class="filter" data-filter="Under $50">Under $50</button>
+</div><h3 class="browse-heading">Browse trading card games</h3><div class="filters tcg-filters"><button class="filter active" data-game="All">All TCGs</button><button class="filter" data-game="pokemon">Pokémon</button><button class="filter" data-game="one_piece">One Piece</button><button class="filter" data-game="naruto_kayou">Naruto Kayou</button><button class="filter" data-game="magic">Magic: The Gathering</button><button class="filter" data-game="yugioh">Yu-Gi-Oh!</button><button class="filter" data-game="dragon_ball">Dragon Ball Super</button><button class="filter" data-game="lorcana">Disney Lorcana</button><button class="filter" data-game="digimon">Digimon</button><button class="filter" data-game="gundam">Gundam</button><button class="filter" data-game="union_arena">Union Arena</button><button class="filter" data-game="riftbound">Riftbound</button><button class="filter" data-game="flesh_blood">Flesh and Blood</button><button class="filter" data-game="star_wars">Star Wars Unlimited</button><button class="filter" data-game="weiss_schwarz">Weiss Schwarz</button><button class="filter" data-game="cardfight_vanguard">Cardfight!! Vanguard</button><button class="filter" data-game="altered">Altered</button><button class="filter" data-game="shadowverse">Shadowverse Evolve</button><button class="filter" data-game="sports_cards">Sports cards</button><button class="filter" data-game="other_tcg">Other TCG / cards</button></div><div class="grid" id="grid"></div></section>
+
+<section class="sell"><div><h2>Your next sale starts here.</h2><p class="muted">Create an account, add photos and publish directly to the marketplace.</p></div><button class="primary" type="button" data-sell>Create a listing →</button></section>
+<div class="notice"><b>Early access:</b> Accounts, real listings and listing photos are live. Payments, shipping and private messaging are still being built.</div>
+</main>
+<footer><a class="logo" href="#" style="color:white">DeckPlay <span>HQ</span></a><p>Built for collectors, players and gaming shops.</p><p>© <span id="year"></span> DeckPlay HQ</p></footer>
+
+<div class="modal" id="authModal" role="dialog" aria-modal="true" aria-labelledby="authTitle">
+<div class="dialog"><button class="close" type="button" data-close="authModal" aria-label="Close">×</button><h2 id="authTitle">Welcome to DeckPlay HQ</h2><p class="muted">Sign in to publish and manage marketplace listings.</p>
+<div class="auth-switch"><button class="active" type="button" data-auth-mode="signin">Sign in</button><button class="ghost" type="button" data-auth-mode="signup">Create account</button></div>
+<form id="authForm"><div id="displayNameWrap" hidden><label for="username">Username (unique)</label><input id="username" minlength="3" maxlength="20" pattern="[A-Za-z0-9_]{3,20}" autocomplete="username" placeholder="CardHunter5693"><p class="password-hint">3–20 letters, numbers or underscores. Your public @username.</p><label for="displayName">Display name</label><input id="displayName" maxlength="40" autocomplete="nickname" placeholder="How buyers will see you"></div><label for="authEmail">Email</label><input id="authEmail" type="email" required autocomplete="email" placeholder="you@example.com"><label for="authPassword">Password</label><input id="authPassword" type="password" required minlength="8" autocomplete="current-password" placeholder="At least 8 characters"><p class="password-hint" id="passwordHint" hidden>Use at least 8 characters, including an uppercase letter, a number and a symbol.</p><p class="status" id="authStatus"></p><div class="dialog-actions"><button class="primary" id="authSubmit" type="submit">Sign in</button><button class="ghost" type="button" data-close="authModal">Cancel</button></div></form>
+</div></div>
+
+<div class="modal" id="sellModal" role="dialog" aria-modal="true" aria-labelledby="sellTitle">
+<div class="dialog wide"><button class="close" type="button" data-close="sellModal" aria-label="Close">×</button><h2 id="sellTitle">Create a marketplace listing</h2><p class="muted">Your listing will be published immediately.</p>
+<form id="listingForm"><label for="item">Item name</label><input id="item" required maxlength="120" placeholder="Name of your item"><label for="description">Description</label><textarea id="description" maxlength="2000" placeholder="Describe the item, what's included and any flaws"></textarea><label for="category">Category</label><select id="category"><option value="trading_cards">Trading cards</option><option value="video_games">Video games</option><option value="consoles">Consoles</option><option value="controllers">Controllers</option><option value="accessories">Accessories</option><option value="collectibles">Collectibles</option><option value="other">Other</option></select><div id="tcgGameWrap"><label for="tcgGame">Trading card game / series</label><select id="tcgGame"><option value="">Choose a card game or series</option><option value="pokemon">Pokémon</option><option value="one_piece">One Piece</option><option value="naruto_kayou">Naruto Kayou</option><option value="magic">Magic: The Gathering</option><option value="yugioh">Yu-Gi-Oh!</option><option value="dragon_ball">Dragon Ball Super</option><option value="lorcana">Disney Lorcana</option><option value="digimon">Digimon</option><option value="gundam">Gundam</option><option value="union_arena">Union Arena</option><option value="riftbound">Riftbound</option><option value="flesh_blood">Flesh and Blood</option><option value="star_wars">Star Wars Unlimited</option><option value="weiss_schwarz">Weiss Schwarz</option><option value="cardfight_vanguard">Cardfight!! Vanguard</option><option value="altered">Altered</option><option value="shadowverse">Shadowverse Evolve</option><option value="sports_cards">Sports cards</option><option value="other_tcg">Other TCG / cards</option></select></div><label for="condition">Condition</label><select id="condition"><option value="new">New / sealed</option><option value="like_new">Like new</option><option value="used" selected>Used</option><option value="graded">Graded</option><option value="damaged">Damaged</option></select><label for="price">Price in USD</label><input id="price" type="number" min="0.01" max="100000" step="0.01" required placeholder="25.00"><label for="photos">Photos</label><input id="photos" type="file" accept="image/jpeg,image/png,image/webp" multiple><p class="file-help">Up to 5 JPG, PNG or WebP images. Maximum 5 MB each.</p><label class="check-row"><input id="acceptsTrades" type="checkbox"> I am open to trade offers</label><p class="status" id="listingStatus"></p><div class="dialog-actions"><button class="primary" id="publishButton" type="submit">Publish listing</button><button class="ghost" type="button" data-close="sellModal">Cancel</button></div></form>
+</div></div>
+
+<div class="modal" id="detailModal" role="dialog" aria-modal="true" aria-labelledby="detailTitle"><div class="dialog wide"><button class="close" type="button" data-close="detailModal" aria-label="Close">×</button><div id="detailContent"></div></div></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0"></script>
+<script>
+const SUPABASE_URL="https://yffruutknztvdyioovmp.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY="sb_publishable_cHzM8sQmrqfcCH8lhESytg_FMJrQtCX";
+const supabaseClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);
+const tcgNames={"pokemon":"Pokémon","one_piece":"One Piece","naruto_kayou":"Naruto Kayou","magic":"Magic: The Gathering","yugioh":"Yu-Gi-Oh!","dragon_ball":"Dragon Ball Super","lorcana":"Disney Lorcana","digimon":"Digimon","gundam":"Gundam","union_arena":"Union Arena","riftbound":"Riftbound","flesh_blood":"Flesh and Blood","star_wars":"Star Wars Unlimited","weiss_schwarz":"Weiss Schwarz","cardfight_vanguard":"Cardfight!! Vanguard","altered":"Altered","shadowverse":"Shadowverse Evolve","sports_cards":"Sports cards","other_tcg":"Other TCG / cards"};
+const demos=[
+{id:"demo-1",n:"One Piece TCG Booster Pack",c:"Trading Cards",p:6.99,s:"Cardboard Harbor",cond:"Sealed",e:"🃏",description:"Demo listing",game:"one_piece",gameLabel:"One Piece"},
+{id:"demo-2",n:"Charizard VSTAR Pokémon Card",c:"Trading Cards",p:42,s:"BinderQuest",cond:"Near Mint",e:"🔥",t:"orange",description:"Demo listing",game:"pokemon",gameLabel:"Pokémon"},
+{id:"demo-3",n:"The Legend of Zelda: Tears of the Kingdom",c:"Video Games",p:39.99,s:"Pixel Attic",cond:"Great condition",e:"🗡️",t:"green",description:"Demo listing"},
+{id:"demo-4",n:"Wireless Pro Controller",c:"Consoles & Controllers",p:34.50,s:"RetroRen",cond:"Tested",e:"🎮",t:"purple",description:"Demo listing",game:"one_piece",gameLabel:"One Piece"},
+{id:"demo-5",n:"One Piece Alt Art Single",c:"Trading Cards",p:18,s:"Manga Meeple",cond:"Near Mint",e:"✨",t:"purple",description:"Demo listing"},
+{id:"demo-6",n:"Super Mario Odyssey",c:"Video Games",p:32.99,s:"LevelUp Finds",cond:"Complete",e:"🍄",t:"orange",description:"Demo listing"},
+{id:"demo-7",n:"Retro Handheld Console",c:"Consoles & Controllers",p:79,s:"Pixel Attic",cond:"Tested",e:"🕹️",t:"green",description:"Demo listing"},
+{id:"demo-8",n:"Pokémon Trainer Collection",c:"Trading Cards",p:24.99,s:"PikaPost",cond:"Very Good",e:"⚡",description:"Demo listing"}
+];
+let items=[...demos],cat="All",filter="All",game="All",query="",saved=new Set(),listingSource="demo",currentUser=null,authMode="signin";
+const grid=document.getElementById("grid");
+const escapeHtml=value=>String(value??"").replace(/[&<>'"]/g,char=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"})[char]);
+const safeImageUrl=value=>{try{const url=new URL(value);return url.protocol==="https:"?url.href:""}catch{return ""}};
+function toast(message){const element=document.getElementById("toast");element.textContent=message;element.style.display="block";clearTimeout(toast.timer);toast.timer=setTimeout(()=>element.style.display="none",3000)}
+function openModal(id){document.getElementById(id).classList.add("open")}
+function closeModal(id){document.getElementById(id).classList.remove("open")}
+function databaseCategory(value){if(value==="trading_cards")return "Trading Cards";if(value==="collectibles"||value==="other")return "Collectibles";if(value==="video_games")return "Video Games";return "Consoles & Controllers"}
+function databaseCondition(value){return ({new:"New / sealed",like_new:"Like new",used:"Used",damaged:"Damaged",graded:"Graded"})[value]||"Used"}
+function databaseEmoji(value){if(value==="trading_cards"||value==="collectibles")return "🃏";if(value==="video_games")return "🕹️";return "🎮"}
+function itemArtwork(item){const image=safeImageUrl(item.imageUrls?.[0]);return image?`<img src="${escapeHtml(image)}" alt="${escapeHtml(item.n)}" loading="lazy">`:`<span>${escapeHtml(item.e)}</span>`}
+function render(){
+ const list=items.filter(item=>(cat==="All"||item.c===cat)&&(filter==="All"||item.c===filter||(filter==="Under $50"&&item.p<50))&&(game==="All"||item.game===game)&&(item.n+" "+item.c+" "+item.s+" "+(item.gameLabel||"")).toLowerCase().includes(query.toLowerCase()));
+ document.getElementById("count").textContent=list.length+" "+(listingSource==="live"?"live":"demo")+" listing(s) shown.";
+ grid.innerHTML=list.length?list.map(item=>`<article class="card"><div class="art ${escapeHtml(item.t||"")}">${itemArtwork(item)}<span class="tag">${item.c==="Trading Cards"?"TCG":item.c==="Video Games"?"GAME":item.c==="Collectibles"?"COLLECTIBLE":"GAMING GEAR"}</span><button class="heart" type="button" aria-label="Save item" data-heart="${escapeHtml(item.id)}">${saved.has(item.id)?"♥":"♡"}</button></div><div class="cardbody"><div class="kind">${item.trades?"Trades accepted":"Community seller"}</div><h3>${escapeHtml(item.n)}</h3><div class="seller">${escapeHtml(item.s)}${item.gameLabel?` · ${escapeHtml(item.gameLabel)}`:""}</div><div class="price-row"><span class="price">$${item.p.toFixed(2)}</span><span class="condition">${escapeHtml(item.cond)}</span></div><button class="view" type="button" data-view="${escapeHtml(item.id)}">View item</button></div></article>`).join(""):`<div class="empty">No listings found. Try another search.</div>`;
+}
+async function loadListings(){
+ document.getElementById("count").textContent="Loading live listings...";
+ const {data,error}=await supabaseClient.from("listings").select("id,title,description,category,tcg_game,price,condition,accepts_trades,image_urls,created_at,seller_id").eq("status","active").order("created_at",{ascending:false});
+ if(error){console.error("Could not load listings",error);items=[...demos];listingSource="demo";render();toast("Live listings could not load. Showing demo items.");return}
+ if(!data?.length){items=[...demos];listingSource="demo";render();return}
+ items=data.map(row=>({id:row.id,databaseId:row.id,n:row.title,c:databaseCategory(row.category),game:row.tcg_game||"",gameLabel:tcgNames[row.tcg_game]||"",p:Number(row.price),s:row.seller_id===currentUser?.id?"Your listing":"DeckPlay seller",cond:databaseCondition(row.condition),e:databaseEmoji(row.category),description:row.description||"No description provided.",trades:row.accepts_trades,imageUrls:row.image_urls||[],sellerId:row.seller_id}));
+ listingSource="live";render();
+}
+function updateAccountUI(){
+ const button=document.getElementById("accountButton");
+ button.textContent=currentUser?`☰ ${currentUser.user_metadata?.username?"@"+currentUser.user_metadata.username:currentUser.user_metadata?.display_name||currentUser.email?.split("@")[0]||"My account"} ▾`:"Sign in";document.getElementById("accountMenu").hidden=true;button.setAttribute("aria-expanded","false");
+ button.title=currentUser?"Sign out of DeckPlay HQ":"Sign in or create an account";
+}
+async function ensureProfile(user,displayName){
+ const name=(displayName||user.user_metadata?.display_name||user.email?.split("@")[0]||"DeckPlay member").trim().slice(0,40);
+ const {error}=await supabaseClient.from("profiles").upsert({id:user.id,display_name:name,...(user.user_metadata?.username?{username:user.user_metadata.username}:{})},{onConflict:"id"});
+ if(error)throw error;
+}
+function setAuthMode(mode){
+ authMode=mode;document.getElementById("displayNameWrap").hidden=mode!=="signup";document.getElementById("displayName").required=mode==="signup";document.getElementById("username").required=mode==="signup";document.getElementById("authPassword").autocomplete=mode==="signup"?"new-password":"current-password";document.getElementById("authSubmit").textContent=mode==="signup"?"Create account":"Sign in";document.querySelectorAll("[data-auth-mode]").forEach(button=>button.classList.toggle("active",button.dataset.authMode===mode));document.getElementById("passwordHint").hidden=mode!=="signup";document.getElementById("authStatus").textContent="";
+}
+async function openSell(){if(!currentUser){setAuthMode("signin");openModal("authModal");toast("Sign in before creating a listing.");return}openModal("sellModal")}
+async function uploadPhotos(files,userId){
+ const urls=[];
+ for(const file of files){
+  if(!["image/jpeg","image/png","image/webp"].includes(file.type))throw new Error("Photos must be JPG, PNG or WebP.");
+  if(file.size>5*1024*1024)throw new Error("Each photo must be 5 MB or smaller.");
+  const extension=(file.name.split(".").pop()||"jpg").toLowerCase().replace(/[^a-z0-9]/g,"");
+  const path=`${userId}/${crypto.randomUUID()}.${extension}`;
+  const {error}=await supabaseClient.storage.from("listing-images").upload(path,file,{cacheControl:"3600",contentType:file.type,upsert:false});
+  if(error)throw error;
+  const {data}=supabaseClient.storage.from("listing-images").getPublicUrl(path);
+  urls.push(data.publicUrl);
+ }
+ return urls;
+}
+function showDetails(item){
+ const image=safeImageUrl(item.imageUrls?.[0]);
+ document.getElementById("detailContent").innerHTML=`${image?`<img class="detail-photo" src="${escapeHtml(image)}" alt="${escapeHtml(item.n)}">`:""}<div class="kind">${item.trades?"Trades accepted":"Community marketplace"}</div><h2 id="detailTitle">${escapeHtml(item.n)}</h2><div class="detail-price">$${item.p.toFixed(2)}</div><p><b>Condition:</b> ${escapeHtml(item.cond)}</p>${item.gameLabel?`<p><b>Series:</b> ${escapeHtml(item.gameLabel)}</p>`:""}<p>${escapeHtml(item.description||"No description provided.")}</p><p class="muted">Seller: ${escapeHtml(item.s)}</p>`;
+ openModal("detailModal");
+}
+document.querySelectorAll("[data-close]").forEach(button=>button.addEventListener("click",()=>closeModal(button.dataset.close)));
+document.querySelectorAll(".modal").forEach(modal=>modal.addEventListener("click",event=>{if(event.target===modal)closeModal(modal.id)}));
+document.querySelectorAll("[data-sell]").forEach(button=>button.addEventListener("click",openSell));
+document.getElementById("exploreButton").addEventListener("click",()=>document.getElementById("market").scrollIntoView({behavior:"smooth"}));
+document.querySelectorAll("[data-auth-mode]").forEach(button=>button.addEventListener("click",()=>setAuthMode(button.dataset.authMode)));
+document.querySelectorAll("[data-cat]").forEach(button=>button.addEventListener("click",()=>{cat=button.dataset.cat;filter="All";game="All";document.querySelectorAll("[data-game]").forEach(b=>b.classList.toggle("active",b.dataset.game==="All"));document.querySelectorAll("[data-cat]").forEach(item=>item.classList.toggle("active",item===button));document.querySelectorAll("[data-filter]").forEach(item=>item.classList.toggle("active",item.dataset.filter==="All"));render()}));
+document.querySelectorAll("[data-filter]").forEach(button=>button.addEventListener("click",()=>{filter=button.dataset.filter;cat="All";game="All";document.querySelectorAll("[data-game]").forEach(b=>b.classList.toggle("active",b.dataset.game==="All"));document.querySelectorAll("[data-filter]").forEach(item=>item.classList.toggle("active",item===button));document.querySelectorAll("[data-cat]").forEach(item=>item.classList.toggle("active",item.dataset.cat==="All"));render()}));
+document.querySelectorAll("[data-game]").forEach(button=>button.addEventListener("click",()=>{game=button.dataset.game;cat="All";filter="All";document.querySelectorAll("[data-game]").forEach(b=>b.classList.toggle("active",b===button));document.querySelectorAll("[data-cat]").forEach(b=>b.classList.toggle("active",b.dataset.cat==="All"));document.querySelectorAll("[data-filter]").forEach(b=>b.classList.toggle("active",b.dataset.filter==="All"));render()}));
+function toggleTcgField(){const isCard=document.getElementById("category").value==="trading_cards";document.getElementById("tcgGameWrap").hidden=!isCard;document.getElementById("tcgGame").required=isCard;if(!isCard)document.getElementById("tcgGame").value=""}
+document.getElementById("category").addEventListener("change",toggleTcgField);toggleTcgField();
+document.getElementById("search").addEventListener("input",event=>{query=event.target.value;render()});
+grid.addEventListener("click",event=>{const heart=event.target.closest("[data-heart]");if(heart){const id=heart.dataset.heart;saved.has(id)?saved.delete(id):saved.add(id);render();toast(saved.has(id)?"Saved to favorites":"Removed from favorites");return}const view=event.target.closest("[data-view]");if(view){const item=items.find(candidate=>String(candidate.id)===view.dataset.view);if(item)showDetails(item)}});
+document.getElementById("accountButton").addEventListener("click",()=>{if(!currentUser){setAuthMode("signin");openModal("authModal");return}const menu=document.getElementById("accountMenu");menu.hidden=!menu.hidden;document.getElementById("accountButton").setAttribute("aria-expanded",String(!menu.hidden))});
+document.addEventListener("click",event=>{if(!event.target.closest(".account-wrap"))document.getElementById("accountMenu").hidden=true});
+document.getElementById("signOutButton").addEventListener("click",async()=>{await supabaseClient.auth.signOut();toast("Signed out.")});
+document.getElementById("myProfile").addEventListener("click",()=>{document.getElementById("accountMenu").hidden=true;toast("Signed in as "+(currentUser?.user_metadata?.display_name||currentUser?.email||"member"))});
+document.getElementById("myListings").addEventListener("click",()=>{document.getElementById("accountMenu").hidden=true;document.getElementById("market").scrollIntoView({behavior:"smooth"});toast("Your listings are marked 'Your listing'")});
+document.getElementById("myFavorites").addEventListener("click",()=>{document.getElementById("accountMenu").hidden=true;toast(saved.size+" saved item(s) this session")});
+document.getElementById("authForm").addEventListener("submit",async event=>{
+ event.preventDefault();const form=event.currentTarget;const status=document.getElementById("authStatus");const email=document.getElementById("authEmail").value.trim();const password=document.getElementById("authPassword").value;const displayName=document.getElementById("displayName").value.trim();const username=document.getElementById("username").value.trim();form.classList.add("busy");status.textContent=authMode==="signup"?"Creating your account...":"Signing you in...";
+ try{
+  if(authMode==="signup"){
+   if(!/^[A-Za-z0-9_]{3,20}$/.test(username))throw new Error("Username must be 3–20 letters, numbers or underscores.");
+   const {data:existing,error:checkError}=await supabaseClient.from("profiles").select("id").ilike("username",username).limit(1);if(checkError)throw checkError;if(existing?.length)throw new Error("That username is already taken.");
+   if(!/[A-Z]/.test(password)||!/[0-9]/.test(password)||!/[^A-Za-z0-9]/.test(password))throw new Error("Password needs an uppercase letter, a number and a symbol.");
+   const {data,error}=await supabaseClient.auth.signUp({email,password,options:{data:{display_name:displayName,username},emailRedirectTo:window.location.origin}});if(error)throw error;
+   if(data.session){await ensureProfile(data.user,displayName);closeModal("authModal");toast("Account created. You are signed in.")}else{status.textContent="Check your email to confirm your account, then return here to sign in."}
+  }else{
+   const {error}=await supabaseClient.auth.signInWithPassword({email,password});if(error)throw error;closeModal("authModal");form.reset();toast("Welcome back!");
+  }
+ }catch(error){status.textContent=error.message||"Authentication failed. Please try again."}finally{form.classList.remove("busy")}
+});
+document.getElementById("listingForm").addEventListener("submit",async event=>{
+ event.preventDefault();if(!currentUser){closeModal("sellModal");openModal("authModal");return}
+ const form=event.currentTarget;const status=document.getElementById("listingStatus");const files=[...document.getElementById("photos").files];if(files.length>5){status.textContent="Please choose no more than 5 photos.";return}
+ form.classList.add("busy");status.textContent=files.length?"Uploading photos...":"Publishing listing...";
+ try{
+  await ensureProfile(currentUser);
+  const imageUrls=await uploadPhotos(files,currentUser.id);status.textContent="Publishing listing...";
+  const listing={seller_id:currentUser.id,title:document.getElementById("item").value.trim(),description:document.getElementById("description").value.trim()||null,category:document.getElementById("category").value,tcg_game:document.getElementById("category").value==="trading_cards"?document.getElementById("tcgGame").value:null,condition:document.getElementById("condition").value,price:Number(document.getElementById("price").value),image_urls:imageUrls,accepts_trades:document.getElementById("acceptsTrades").checked,status:"active"};
+  const {error}=await supabaseClient.from("listings").insert(listing);if(error)throw error;
+  form.reset();status.textContent="";closeModal("sellModal");toast("Your listing is live!");await loadListings();
+ }catch(error){console.error("Could not publish listing",error);status.textContent=error.message||"The listing could not be published."}finally{form.classList.remove("busy")}
+});
+supabaseClient.auth.onAuthStateChange((_event,session)=>{currentUser=session?.user||null;updateAccountUI();loadListings()});
+document.getElementById("year").textContent=new Date().getFullYear();
+setAuthMode("signin");render();
+supabaseClient.auth.getSession().then(({data})=>{currentUser=data.session?.user||null;updateAccountUI();loadListings()});
+</script>
+</body>
+</html><div class="categories photo-categories"><button class="cat photo-cat active" data-cat="All" type="button"><img src="https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=700&q=80" alt="" loading="lazy" onerror="this.style.display='none'"><span class="photo-fallback" aria-hidden="true">✦</span><span class="cat-caption"><strong>Collectibles</strong><small>Explore collection →</small></span></button><button class="cat photo-cat" data-cat="Trading Cards" type="button"><img src="https://images.unsplash.com/photo-1612036782180-6f0b6cd846fe?w=700&q=80" alt="" loading="lazy" onerror="this.style.display='none'"><span class="photo-fallback" aria-hidden="true">🃏</span><span class="cat-caption"><strong>Trading cards</strong><small>Explore collection →</small></span></button><button class="cat photo-cat" data-cat="Video Games" type="button"><img src="https://images.unsplash.com/photo-1511512578047-dfb367046420?w=700&q=80" alt="" loading="lazy" onerror="this.style.display='none'"><span class="photo-fallback" aria-hidden="true">🕹️</span><span class="cat-caption"><strong>Video games</strong><small>Explore collection →</small></span></button><button class="cat photo-cat" data-cat="Consoles & Controllers" type="button"><img src="https://images.unsplash.com/photo-1493711662062-fa541adb3fc8?w=700&q=80" alt="" loading="lazy" onerror="this.style.display='none'"><span class="photo-fallback" aria-hidden="true">🎮</span><span class="cat-caption"><strong>Consoles & gear</strong><small>Explore collection →</small></span></button></div></div>
 <button class="primary" type="button" data-sell>＋ Sell an item</button>
 </div>
 </header>
