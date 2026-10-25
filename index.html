@@ -568,6 +568,11 @@ body.inbox-focus #inboxPage{width:min(850px,100%)!important;max-width:850px!impo
  #mobileDock>button.dock-sell>span:first-child{width:38px!important;height:38px!important;margin-top:-12px!important;font-size:31px!important}
  #mobileDock [data-dock="alerts"] .dock-bell-icon svg{width:27px!important;height:27px!important}
 }
+
+/* Bring Inbox envelope to the same visual scale as neighboring dock icons */
+@media(max-width:700px){
+ #mobileDock [data-dock="inbox"]>span:first-child{font-size:32px!important;transform:scale(1.16);transform-origin:center}
+}
 </style>
 </head>
 <body>
