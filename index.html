@@ -114,6 +114,15 @@ footer{background:#222d30}footer p{color:#d1dad3}
 .auth-switch button.active{background:#295752;color:white}
 .close{background:#e8f0e8}
 .toast{background:#243b3b}
+
+.photo-categories{gap:16px}
+.photo-categories .cat{position:relative;display:block;min-height:180px;padding:0;overflow:hidden;border-radius:18px;background:linear-gradient(135deg,#234d4d,#56766c);text-align:left;border:2px solid transparent;isolation:isolate}
+.photo-categories .cat img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:saturate(.85);transition:transform .3s ease}
+.photo-categories .cat:before{content:"";position:absolute;inset:0;background:linear-gradient(180deg,#162b2910 20%,#122826d9 100%);z-index:1}
+.photo-categories .cat:hover img{transform:scale(1.05)}
+.photo-categories .cat-photo-label{position:absolute;bottom:18px;left:17px;right:12px;z-index:2;display:block;margin:0;color:white;font-size:17px;font-weight:850;line-height:1.2;text-shadow:0 1px 8px #0007}
+.photo-categories .cat.active{border-color:#dfc18b;box-shadow:0 0 0 2px #dfc18b45}
+@media(max-width:650px){.photo-categories .cat{min-height:142px}.photo-categories .cat-photo-label{font-size:15px;bottom:13px;left:12px}}
 </style>
 </head>
 <body>
@@ -132,11 +141,11 @@ footer{background:#222d30}footer p{color:#d1dad3}
 </section>
 
 <div class="section-eyebrow">EXPLORE DECKPLAY</div><h2>Find your next favorite</h2><p class="muted">From anime cards to retro gaming — find your people and your next pickup.</p>
-<div class="categories">
-<button class="cat active" data-cat="All"><span>✦</span>Collectibles</button>
-<button class="cat" data-cat="Trading Cards"><span>🃏</span>Trading cards</button>
-<button class="cat" data-cat="Video Games"><span>🕹️</span>Video games</button>
-<button class="cat" data-cat="Consoles & Controllers"><span>🎮</span>Consoles & gear</button>
+<div class="categories photo-categories">
+<button class="cat active" data-cat="All"><img src="https://images.unsplash.com/photo-1606503153255-59d8b8b6c6db?auto=format&fit=crop&w=700&q=80" alt="" loading="lazy" onerror="this.style.display='none'"><span class="cat-photo-label">✦ Collectibles</span></button>
+<button class="cat" data-cat="Trading Cards"><img src="https://images.unsplash.com/photo-1578662996442-48f60103fc96?auto=format&fit=crop&w=700&q=80" alt="" loading="lazy" onerror="this.style.display='none'"><span class="cat-photo-label">Trading cards</span></button>
+<button class="cat" data-cat="Video Games"><img src="https://images.unsplash.com/photo-1493711662062-fa541adb3fc8?auto=format&fit=crop&w=700&q=80" alt="" loading="lazy" onerror="this.style.display='none'"><span class="cat-photo-label">Video games</span></button>
+<button class="cat" data-cat="Consoles & Controllers"><img src="https://images.unsplash.com/photo-1606144042614-b2417e99c4e3?auto=format&fit=crop&w=700&q=80" alt="" loading="lazy" onerror="this.style.display='none'"><span class="cat-photo-label">Consoles & gear</span></button>
 </div>
 
 <section id="market"><div class="section-eyebrow">THE COLLECTOR MARKETPLACE</div><h2>Marketplace picks</h2><p class="muted" id="count">Loading live listings...</p>
