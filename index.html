@@ -365,6 +365,12 @@ html[data-theme="dark"] .conversation-contact small{color:#b6c9d9}
 html[data-theme="dark"] .message-bubble:not(.mine){background:#304257;color:#f0f5fa}
 html[data-theme="dark"] .message-bubble.inbox-offer{background:#233e46;border-color:#4c777a;color:#f0f5fa}
 @media(max-width:550px){.conversation-layout{display:flex;flex-direction:column}.conversation-list{display:flex;gap:6px;max-height:none;padding:8px;overflow-x:auto}.conversation-contact{min-width:185px;max-width:220px;margin:0}.conversation-thread{min-height:350px;padding:12px}.conversation-bubbles{max-height:48dvh;min-height:170px}.message-bubble{max-width:94%}}
+
+/* Focused inbox: no marketplace navigation or selling controls */
+body.inbox-focus header .search,body.inbox-focus header [data-sell],body.inbox-focus header nav,body.inbox-focus header .header-actions,body.inbox-focus header .notification-bell,body.inbox-focus aside,body.inbox-focus footer{display:none!important}
+body.inbox-focus header{justify-content:flex-start}
+body.inbox-focus #inboxPage{width:min(1200px,94%);margin:0 auto}
+body.inbox-focus .inbox-page-heading{margin-top:12px}
 </style>
 </head>
 <body>
@@ -686,6 +692,7 @@ async function showInboxPage(targetCollectorId=null){
  closeAccountMenu();closeModal("notificationModal");
  document.querySelectorAll("main > section,main > aside").forEach(el=>el.hidden=true);
  document.getElementById("inboxPage").hidden=false;
+ document.body.classList.add("inbox-focus");
  window.scrollTo({top:0,behavior:"smooth"});
  await loadInbox(targetCollectorId);
 }
@@ -764,10 +771,10 @@ document.getElementById("counterForm").addEventListener("submit",async e=>{e.pre
 
 
 let profileTab="listings";
-function showMainMarketplace(){document.getElementById("inboxPage").hidden=true;document.getElementById("collectorPage").hidden=true;document.querySelectorAll("main > section,main > aside").forEach(el=>{if(el.id!=="collectorPage")el.hidden=false});window.scrollTo({top:0,behavior:"smooth"})}
+function showMainMarketplace(){document.body.classList.remove("inbox-focus");document.getElementById("inboxPage").hidden=true;document.getElementById("collectorPage").hidden=true;document.querySelectorAll("main > section,main > aside").forEach(el=>{if(el.id!=="collectorPage")el.hidden=false});window.scrollTo({top:0,behavior:"smooth"})}
 async function showCollectorPage(tab="listings"){
  if(!currentUser){openModal("authModal");return}
- profileTab=tab;document.getElementById("inboxPage").hidden=true;document.querySelectorAll("main > section,main > aside").forEach(el=>{if(el.id!=="collectorPage")el.hidden=true});document.getElementById("collectorPage").hidden=false;
+ profileTab=tab;document.body.classList.remove("inbox-focus");document.getElementById("inboxPage").hidden=true;document.querySelectorAll("main > section,main > aside").forEach(el=>{if(el.id!=="collectorPage")el.hidden=true});document.getElementById("collectorPage").hidden=false;
  window.scrollTo({top:0,behavior:"smooth"});document.getElementById("profilePageContent").innerHTML='<p class="muted">Loading your collection…</p>';
  const [profileResult,listingsResult,wantedResult]=await Promise.all([supabaseClient.from("profiles").select("username,bio,favorite_tcg,location_label,avatar_url").eq("id",currentUser.id).maybeSingle(),supabaseClient.from("listings").select("id,title,price,status,category,image_urls,created_at").eq("seller_id",currentUser.id).order("created_at",{ascending:false}),supabaseClient.from("wanted_posts").select("id,title,details,game,budget,created_at").eq("user_id",currentUser.id).order("created_at",{ascending:false})]);
  const profile=profileResult.data||{},listings=listingsResult.data||[],wanted=wantedResult.data||[],avatar=safeImageUrl(profile.avatar_url),username=profile.username||currentUser.user_metadata?.username||"collector";
