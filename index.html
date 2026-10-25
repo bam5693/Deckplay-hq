@@ -2,7 +2,14 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#14213d">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="DeckPlay">
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/icon.svg">
 <meta name="description" content="DeckPlay HQ is a community marketplace for trading cards, video games, consoles and controllers.">
 <title>DeckPlay HQ | Play. Trade. Collect.</title>
 <style>
@@ -1228,5 +1235,6 @@ document.getElementById("year").textContent=new Date().getFullYear();
 setAuthMode("signin");render();refreshSellerRatingCache();
 supabaseClient.auth.getSession().then(({data})=>{currentUser=data.session?.user||null;updateAccountUI();startMessageUpdates();loadBlockedCollectors().then(()=>Promise.all([loadSavedListings(),loadListings(),loadWanted()]));startNotificationUpdates()});
 </script>
+<script>if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("/sw.js").catch(error=>console.warn("App installation worker unavailable:",error)));}</script>
 </body>
 </html>
