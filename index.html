@@ -20,6 +20,65 @@ h2{margin:28px 0 6px}.muted{color:#657087}.categories{display:grid;grid-template
 @media(max-width:800px){.grid{grid-template-columns:repeat(2,1fr)}.categories{grid-template-columns:repeat(2,1fr)}header{position:static}.search{order:3;max-width:none;width:100%}}
 @media(max-width:480px){header{padding:13px}.logo{font-size:20px}.hero{padding:24px}.art-hero{font-size:65px}.grid{gap:9px}.art{height:135px;font-size:50px}.cardbody{padding:10px}.card h3{font-size:13px}.header-actions button{padding:9px 10px}.dialog{padding:19px}}
 .account-wrap{position:relative}.account-menu{position:absolute;right:0;top:calc(100% + 8px);min-width:190px;background:#fff;border:1px solid #dce3f0;border-radius:13px;box-shadow:0 16px 36px #15223c22;padding:7px;z-index:9}.account-menu[hidden]{display:none}.account-menu button{display:block;width:100%;text-align:left;background:transparent;color:#22324e;font-weight:600}.account-menu button:hover{background:#edf1ff}.hero{background:linear-gradient(120deg,#14213d,#374785 70%,#51458a)}.cat,.card{transition:transform .18s,box-shadow .18s}.cat:hover,.card:hover{transform:translateY(-2px);box-shadow:0 9px 22px #15223c16}.password-hint{font-size:12px;color:#657087;margin:-7px 0 12px}@media(max-width:480px){.account-menu{right:0}}
+
+/* DeckPlay HQ visual refresh — collector-first, editorial, with subtle anime energy */
+:root{--ink:#142039;--blue:#435be8;--violet:#6654b7;--mint:#50d7c4;--paper:#f6f8fc;--line:#e2e7f0}
+html{scroll-behavior:smooth}
+body{background:var(--paper);color:var(--ink);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.5}
+button{transition:background .18s,transform .18s,box-shadow .18s}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid #79dcd4;outline-offset:2px}
+button:hover{transform:translateY(-1px)}
+header{background:#ffffffed;backdrop-filter:blur(14px);border-bottom:1px solid var(--line);padding:15px max(4%,calc((100% - 1200px)/2));box-shadow:0 3px 18px #14203906}
+.logo{font-size:24px;letter-spacing:-1.1px;font-weight:900;color:var(--ink)}.logo span{color:var(--blue)}
+.search{background:#f5f7fb;border-color:#e0e5ee;border-radius:12px;padding:13px 16px}
+.primary{background:var(--blue);box-shadow:0 5px 15px #435be82a}.primary:hover{background:#334bcf;box-shadow:0 8px 20px #435be838}
+.ghost{border-color:#dce2ee;border-radius:11px}
+main{max-width:1200px}
+.hero{position:relative;isolation:isolate;overflow:hidden;min-height:385px;padding:55px clamp(25px,5vw,68px);margin:26px 0 43px;border-radius:25px;background:radial-gradient(circle at 82% 17%,#6550a0 0,transparent 39%),linear-gradient(117deg,#101d37 2%,#243b72 65%,#34336b 100%);box-shadow:0 18px 42px #18274a1c;gap:32px}
+.hero:before{content:"";position:absolute;inset:0;background:repeating-linear-gradient(130deg,transparent 0 54px,#ffffff07 55px 56px);pointer-events:none;z-index:-1}
+.hero:after{content:"";position:absolute;right:-115px;bottom:-220px;width:420px;height:420px;border:1px solid #ffffff20;border-radius:50%;box-shadow:0 0 0 65px #ffffff07,0 0 0 130px #ffffff05;z-index:-1}
+.hero>div:first-child{flex:1 1 470px;max-width:610px;position:relative;z-index:1}
+.hero h1{font-size:clamp(43px,6.1vw,76px);font-weight:900;letter-spacing:-3px;line-height:1.02;margin:18px 0}
+.hero em{color:#79e5d9}
+.hero p{font-size:16px;color:#e0e8f8;max-width:510px;margin-bottom:25px}
+.hero .primary{background:#6ce0d2;color:#10213d;box-shadow:none;padding:14px 22px}.hero .primary:hover{background:#9cf0e6}
+.kicker,.section-eyebrow{font-size:11px;font-weight:850;letter-spacing:2px;text-transform:uppercase}
+.kicker{color:#7ee7dc}.section-eyebrow{color:#5565bf;margin-top:14px}
+.hero-showcase{position:relative;flex:0 1 320px;width:320px;height:300px;display:grid;place-items:center}
+.showcase-card{position:absolute;width:200px;height:265px;border-radius:18px;padding:18px;display:flex;flex-direction:column;justify-content:space-between;box-shadow:0 20px 35px #060c2580;overflow:hidden}
+.showcase-card span,.showcase-card small{font-size:9px;letter-spacing:2px;font-weight:800}
+.showcase-back{background:linear-gradient(150deg,#e5e7ff,#93a8f6);color:#35408e;transform:translate(-57px,8px) rotate(-17deg);border:5px solid #f5f3ff}
+.showcase-back strong{font-size:95px;line-height:1;opacity:.18}
+.showcase-front{background:radial-gradient(circle at 75% 42%,#5de5d4 0,transparent 43%),linear-gradient(140deg,#3549aa,#211c64 77%);color:white;transform:translate(37px,-4px) rotate(9deg);border:5px solid #d6d5fb}
+.showcase-front strong{font-size:35px;line-height:.97;letter-spacing:-1.5px;position:relative;z-index:1;text-shadow:0 2px 10px #15134c88}
+.showcase-orb{position:absolute;width:185px;height:185px;border:2px solid #b9fff3a3;border-radius:50%;top:38px;right:-30px;box-shadow:0 0 0 18px #9ef3e41a,0 0 0 42px #9ef3e410}
+.showcase-spark{position:absolute;color:#8ef5e9;font-size:50px;right:8px;top:6px;text-shadow:0 0 30px #8ef5e9aa}
+h2{font-size:clamp(23px,2.5vw,31px);letter-spacing:-.9px;font-weight:850;margin:6px 0}
+.muted{color:#69758b}
+.categories{gap:14px;margin:22px 0 43px}
+.cat{min-height:115px;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:7px;border-radius:17px;border:1px solid var(--line);box-shadow:0 3px 12px #1e305009;font-size:14px;color:#22314b}
+.cat span{font-size:30px;margin:0}.cat.active,.cat:hover{background:#eef1ff;border-color:#8c9bed;box-shadow:0 9px 23px #324ca91a}
+#market{scroll-margin-top:100px}
+.filters{gap:8px}.filter{border:1px solid #e0e5ef;color:#44506b;background:white;font-size:12px;padding:9px 14px;font-weight:750}
+.filter.active{background:#26375e;border-color:#26375e;color:white}
+.tcg-filters{gap:7px;margin-bottom:25px}.tcg-filters .filter{border-radius:10px}
+.browse-heading{font-size:13px;letter-spacing:.2px;margin-top:25px}
+.grid{gap:18px}
+.card{border-radius:17px;border:1px solid var(--line);box-shadow:0 5px 19px #1720330b}
+.art{height:195px;background:radial-gradient(circle at 70% 25%,#ffffffcc,transparent 46%),linear-gradient(145deg,#e5e9ff,#cce8ed)}
+.art span{filter:drop-shadow(0 9px 10px #162c4533)}
+.tag{border-radius:7px;letter-spacing:.7px;padding:6px 8px;color:#34446b}
+.heart{border-radius:50%;width:33px;height:33px;padding:2px;display:grid;place-items:center;color:#4a5680}
+.cardbody{padding:15px}.card h3{font-size:15px;letter-spacing:-.2px;margin:8px 0}.kind{color:#5664c6;letter-spacing:.7px}
+.price{color:#162445}.condition{border-radius:7px;font-weight:700}
+.view{border-radius:9px;padding:10px}.view:hover{background:#dce4ff}
+.sell{background:linear-gradient(110deg,#e8eafd,#e4f7f3);border:1px solid #dce6f4;border-radius:20px;padding:30px}
+.notice{background:#eff8f7;border-color:#d1e8e4;border-radius:11px}
+footer{background:#111d36}
+.dialog{border-radius:19px}.dialog input,.dialog select,.dialog textarea{border-radius:10px}
+@media(max-width:900px){.hero-showcase{flex-basis:230px;width:230px}.showcase-card{scale:.82}.hero{padding:36px}.hero h1{letter-spacing:-2px}}
+@media(max-width:650px){header{padding:12px 4%}.hero{padding:32px 24px;min-height:auto;gap:12px;margin-top:18px}.hero>div:first-child{flex-basis:100%}.hero h1{font-size:clamp(42px,10vw,57px)}.hero-showcase{height:135px;width:100%;flex:1 1 100%;overflow:hidden;place-items:center}.showcase-card{scale:.55;transform-origin:center}.showcase-back{transform:translate(-110px,-65px) rotate(-17deg)}.showcase-front{transform:translate(90px,-65px) rotate(9deg)}.showcase-spark{right:18%;top:2px;font-size:30px}.categories{gap:10px}.cat{min-height:92px;padding:12px 7px}.cat span{font-size:25px}.grid{gap:10px}.art{height:150px}.cardbody{padding:11px}.card h3{font-size:13px}.sell{padding:22px}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}button,.cat,.card{transition:none}}
 </style>
 </head>
 <body>
@@ -33,19 +92,19 @@ h2{margin:28px 0 6px}.muted{color:#657087}.categories{display:grid;grid-template
 </header>
 <main>
 <section class="hero">
-<div><div class="kicker">Your collection. Your community.</div><h1>Play. Trade.<br><em>Collect.</em></h1><p>A marketplace for trading cards, video games, consoles and controllers. Discover your next favorite find from collectors and gaming shops.</p><button class="primary" type="button" id="exploreButton">Explore marketplace →</button></div>
-<div class="art-hero">🎮</div>
+<div><div class="kicker">Your collection. Your community.</div><h1>Play. Trade.<br><em>Collect.</em></h1><p>A fresh home for trading cards, collectibles, retro games and the stuff you love finding. Browse, trade and build your collection.</p><button class="primary" type="button" id="exploreButton">Explore marketplace →</button></div>
+<div class="hero-showcase" aria-hidden="true"><div class="showcase-card showcase-back"><span>COLLECT • PLAY</span><strong>01</strong><small>THE NEXT FIND</small></div><div class="showcase-card showcase-front"><span>DECKPLAY HQ / 2026</span><div class="showcase-orb"></div><strong>RARE<br>FINDS.</strong><small>CARDS · GAMES · CULTURE</small></div><div class="showcase-spark">✦</div></div>
 </section>
 
-<h2>Find your next favorite</h2><p class="muted">Explore all your favorite corners of gaming.</p>
+<div class="section-eyebrow">EXPLORE DECKPLAY</div><h2>Find your next favorite</h2><p class="muted">From anime cards to retro gaming — find your people and your next pickup.</p>
 <div class="categories">
-<button class="cat active" data-cat="All"><span>✨</span>Collectibles</button>
+<button class="cat active" data-cat="All"><span>✦</span>Collectibles</button>
 <button class="cat" data-cat="Trading Cards"><span>🃏</span>Trading cards</button>
 <button class="cat" data-cat="Video Games"><span>🕹️</span>Video games</button>
 <button class="cat" data-cat="Consoles & Controllers"><span>🎮</span>Consoles & gear</button>
 </div>
 
-<section id="market"><h2>Marketplace picks</h2><p class="muted" id="count">Loading live listings...</p>
+<section id="market"><div class="section-eyebrow">THE COLLECTOR MARKETPLACE</div><h2>Marketplace picks</h2><p class="muted" id="count">Loading live listings...</p>
 <div class="filters">
 <button class="filter active" data-filter="All">All collectibles</button><button class="filter" data-filter="Trading Cards">Cards</button><button class="filter" data-filter="Video Games">Games</button><button class="filter" data-filter="Consoles & Controllers">Consoles & controllers</button><button class="filter" data-filter="Under $50">Under $50</button>
 </div><h3 class="browse-heading">Browse trading card games</h3><div class="filters tcg-filters"><button class="filter active" data-game="All">All TCGs</button><button class="filter" data-game="pokemon">Pokémon</button><button class="filter" data-game="one_piece">One Piece</button><button class="filter" data-game="naruto_kayou">Naruto Kayou</button><button class="filter" data-game="magic">Magic: The Gathering</button><button class="filter" data-game="yugioh">Yu-Gi-Oh!</button><button class="filter" data-game="dragon_ball">Dragon Ball Super</button><button class="filter" data-game="lorcana">Disney Lorcana</button><button class="filter" data-game="digimon">Digimon</button><button class="filter" data-game="gundam">Gundam</button><button class="filter" data-game="union_arena">Union Arena</button><button class="filter" data-game="riftbound">Riftbound</button><button class="filter" data-game="flesh_blood">Flesh and Blood</button><button class="filter" data-game="star_wars">Star Wars Unlimited</button><button class="filter" data-game="weiss_schwarz">Weiss Schwarz</button><button class="filter" data-game="cardfight_vanguard">Cardfight!! Vanguard</button><button class="filter" data-game="altered">Altered</button><button class="filter" data-game="shadowverse">Shadowverse Evolve</button><button class="filter" data-game="sports_cards">Sports cards</button><button class="filter" data-game="other_tcg">Other TCG / cards</button></div><div class="grid" id="grid"></div></section>
