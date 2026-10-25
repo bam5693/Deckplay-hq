@@ -573,6 +573,31 @@ body.inbox-focus #inboxPage{width:min(850px,100%)!important;max-width:850px!impo
 @media(max-width:700px){
  #mobileDock [data-dock="inbox"]>span:first-child{font-size:32px!important;transform:scale(1.16);transform-origin:center}
 }
+
+/* DeckPlay cohesive navigation and interaction polish */
+html{scroll-behavior:smooth}
+body.deckplay-modal-open{overflow:hidden}
+:where(button,a,input,select,textarea):focus-visible{outline:2px solid #e5c17e!important;outline-offset:3px}
+button{touch-action:manipulation}
+button:disabled{opacity:.55;cursor:not-allowed}
+.inbox-page .inbox-subtitle{margin:3px 0 0;color:#8fa8a3;font-size:12px;letter-spacing:.1px}
+.inbox-page .inbox-page-heading{align-items:center!important}
+.inbox-page .conversation-contact:focus-visible,.inbox-page .notification-open:focus-visible{outline-offset:-3px}
+#notificationModal .dialog{overscroll-behavior:contain}
+#notificationModal .notification-title-row{position:sticky;top:-20px;z-index:1;padding:12px 0;background:inherit}
+#notificationModal .notification-title-row h2{margin:0}
+#notificationModal .notification-entry.unread{box-shadow:inset 3px 0 #d9b675;padding-left:10px}
+#notificationModal .notification-open{cursor:pointer}
+#notificationModal .notification-open:hover{opacity:.85}
+#mobileDock>button:focus-visible{outline-offset:-2px}
+@media(max-width:700px){
+ main{padding-bottom:calc(90px + env(safe-area-inset-bottom,0px))}
+ input,select,textarea{max-width:100%}
+ .modal .dialog{max-width:calc(100vw - 16px);max-height:calc(100dvh - 28px);overflow-y:auto;overscroll-behavior:contain}
+ #notificationModal .dialog{max-width:100%!important}
+ .inbox-page .inbox-page-heading{padding:12px 14px!important}
+}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*:before,*:after{transition-duration:.01ms!important;animation-duration:.01ms!important}}
 </style>
 </head>
 <body>
@@ -586,7 +611,7 @@ body.inbox-focus #inboxPage{width:min(850px,100%)!important;max-width:850px!impo
 </header>
 <div id="accountMenuPortal"></div><nav id="mobileDock" class="mobile-dock" aria-label="Main navigation"><button type="button" data-dock="home"><span aria-hidden="true">⌂</span><small>Home</small></button><button type="button" data-dock="market"><span aria-hidden="true">▦</span><small>Market</small></button><button type="button" data-dock="sell" class="dock-sell"><span aria-hidden="true">＋</span><small>Sell</small></button><button type="button" data-dock="inbox"><span aria-hidden="true">✉</span><small>Inbox</small><i id="dockUnread" hidden></i></button><button type="button" data-dock="alerts" aria-label="Notifications"><span aria-hidden="true" class="dock-bell-icon"><svg viewBox="0 0 24 24" width="27" height="27" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg></span><small>Alerts</small><i id="dockNotifications" hidden></i></button><button type="button" data-dock="profile"><span aria-hidden="true">♙</span><small>Profile</small></button></nav>
 <main>
-<section id="inboxPage" class="collector-page inbox-page" hidden><button type="button" class="ghost inbox-thread-back" id="inboxThreadBack">← All messages</button><div class="inbox-page-heading"><div><h1>Inbox</h1></div><button type="button" class="ghost" id="refreshInbox" aria-label="Refresh inbox" title="Refresh inbox">↻</button></div><div class="inbox-tabs" hidden><button type="button" class="active" id="inboxMessagesTab">Messages</button><button type="button" id="inboxNotificationsTab">Notifications</button></div><div class="inbox-slides"><div id="messageInbox">Loading…</div><div id="inboxNotificationPanel" hidden><div class="inbox-notification-actions"><button type="button" class="ghost" id="inboxMarkAllRead">Mark all read</button></div><div id="inboxNotificationList" class="inbox-notification-list">Loading notifications…</div></div></div></section>
+<section id="inboxPage" class="collector-page inbox-page" hidden><button type="button" class="ghost inbox-thread-back" id="inboxThreadBack">← All messages</button><div class="inbox-page-heading"><div><h1>Messages</h1><p class="inbox-subtitle">Trades, bartering & conversations</p></div><button type="button" class="ghost" id="refreshInbox" aria-label="Refresh inbox" title="Refresh inbox">↻</button></div><div class="inbox-tabs" hidden><button type="button" class="active" id="inboxMessagesTab">Messages</button><button type="button" id="inboxNotificationsTab">Notifications</button></div><div class="inbox-slides"><div id="messageInbox">Loading…</div><div id="inboxNotificationPanel" hidden><div class="inbox-notification-actions"><button type="button" class="ghost" id="inboxMarkAllRead">Mark all read</button></div><div id="inboxNotificationList" class="inbox-notification-list">Loading notifications…</div></div></div></section>
 <section id="collectorPage" class="collector-page" hidden><div class="profile-page-top"><div class="profile-quick-actions"><button type="button" id="profileMenuToggle" class="profile-menu-toggle" aria-label="Open profile menu" aria-expanded="false" aria-controls="profileActionMenu"><span></span><span></span><span></span></button><div id="profileActionMenu" class="profile-action-menu" hidden><button type="button" data-profile-action="profileAddListing">＋ Add listing</button><button type="button" data-profile-action="profileAddWanted">＋ Add wanted post</button><button type="button" data-profile-action="profileEdit">✎ Edit profile</button><button type="button" data-profile-action="profileSettings">⚙ Settings</button></div><div hidden><button type="button" id="profileAddListing"></button><button type="button" id="profileAddWanted"></button><button type="button" id="profileEdit"></button><button type="button" id="profileSettings"></button></div></div></div><div class="profile-page-hero"><button type="button" class="profile-page-avatar" id="pageAvatar" aria-label="Enlarge profile picture" title="View profile picture">C</button><div><h1 id="pageHandle">@collector</h1><p id="pageBio" class="muted">Your collector profile</p><p id="pageMeta" class="muted"></p><div class="profile-page-stats"><span id="pageListingCount">0 listings</span><span id="pageWantedCount">0 wanted posts</span></div></div></div><div id="ownSellerRatings"></div><div class="profile-page-tabs"><button type="button" class="profile-tab active" data-profile-tab="listings">My listings</button><button type="button" class="profile-tab" data-profile-tab="wanted">Wanted posts</button><button type="button" class="profile-tab" data-profile-tab="saved">Saved items</button></div><div id="profilePageContent"><p class="muted">Loading your collection…</p></div></section>
 <section class="hero">
 <div><div class="kicker">Your collection. Your community.</div><h1>Play. Trade.<br><em>Collect.</em></h1><p>A fresh home for trading cards, collectibles, retro games and the stuff you love finding. Browse, trade and build your collection.</p></div>
@@ -649,8 +674,8 @@ const grid=document.getElementById("grid");
 const escapeHtml=value=>String(value??"").replace(/[&<>'"]/g,char=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"})[char]);
 const safeImageUrl=value=>{try{const url=new URL(value);return url.protocol==="https:"?url.href:""}catch{return ""}};
 function toast(message){const element=document.getElementById("toast");element.textContent=message;element.style.display="block";clearTimeout(toast.timer);toast.timer=setTimeout(()=>element.style.display="none",3000)}
-function openModal(id){const modal=document.getElementById(id);modal.classList.add("open");modal.style.zIndex=String(100+document.querySelectorAll(".modal.open").length*10)}
-function closeModal(id){const modal=document.getElementById(id);modal.classList.remove("open");modal.style.zIndex=""}
+function openModal(id){const modal=document.getElementById(id);if(!modal)return;modal.classList.add("open");modal.style.zIndex=String(100+document.querySelectorAll(".modal.open").length*10);document.body.classList.add("deckplay-modal-open")}
+function closeModal(id){const modal=document.getElementById(id);if(!modal)return;modal.classList.remove("open");modal.style.zIndex="";if(!document.querySelector(".modal.open"))document.body.classList.remove("deckplay-modal-open")}
 function databaseCategory(value){if(value==="trading_cards")return "Trading Cards";if(value==="collectibles"||value==="other")return "Collectibles";if(value==="video_games")return "Video Games";return "Consoles & Controllers"}
 function databaseCondition(value){return ({new:"New / sealed",like_new:"Like new",used:"Used",damaged:"Damaged",graded:"Graded"})[value]||"Used"}
 function databaseEmoji(value){if(value==="trading_cards"||value==="collectibles")return "🃏";if(value==="video_games")return "🕹️";return "🎮"}
@@ -768,11 +793,12 @@ function showDetails(item){
  openModal("detailModal");
 }
 document.querySelectorAll("[data-close]").forEach(button=>button.addEventListener("click",()=>closeModal(button.dataset.close)));
+document.addEventListener("keydown",event=>{if(event.key!=="Escape")return;const open=[...document.querySelectorAll(".modal.open")];if(open.length){event.preventDefault();closeModal(open[open.length-1].id)}});
 document.querySelectorAll(".modal").forEach(modal=>modal.addEventListener("click",event=>{if(event.target===modal)closeModal(modal.id)}));
 document.querySelectorAll("[data-sell]").forEach(button=>button.addEventListener("click",openSell));
 
 function syncMobileDock(){const dock=document.getElementById("mobileDock");if(!dock)return;const active=document.body.classList.contains("inbox-focus")?"inbox":document.body.classList.contains("deckplay-home")?"home":document.body.classList.contains("deckplay-market")?"market":"profile";dock.querySelectorAll("[data-dock]").forEach(b=>{const selected=b.dataset.dock===active;b.classList.toggle("active",selected);if(selected)b.setAttribute("aria-current","page");else b.removeAttribute("aria-current")});const badge=document.getElementById("headerUnread"),dot=document.getElementById("dockUnread");dot.hidden=!badge||badge.hidden}
-document.querySelectorAll("[data-dock]").forEach(button=>button.addEventListener("click",()=>{const page=button.dataset.dock;if(page==="home")showHomePage();else if(page==="market")showMainMarketplace();else if(page==="sell")openSell();else if(page==="inbox")showInboxPage();else if(page==="alerts"){if(!currentUser){openModal("authModal");return}openModal("notificationModal");loadNotificationCenter()}else showCollectorPage()}));
+document.querySelectorAll("[data-dock]").forEach(button=>button.addEventListener("click",()=>{document.querySelectorAll(".modal.open").forEach(modal=>closeModal(modal.id));const page=button.dataset.dock;if(page==="home")showHomePage();else if(page==="market")showMainMarketplace();else if(page==="sell")openSell();else if(page==="inbox")showInboxPage();else if(page==="alerts"){if(!currentUser){openModal("authModal");return}openModal("notificationModal");loadNotificationCenter()}else showCollectorPage()}));
 document.querySelector(".logo")?.addEventListener("click",event=>{event.preventDefault();showHomePage()});
 new MutationObserver(syncMobileDock).observe(document.body,{attributes:true,attributeFilter:["class"]});
 new MutationObserver(syncMobileDock).observe(document.getElementById("headerUnread"),{attributes:true,attributeFilter:["hidden"]});
