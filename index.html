@@ -282,11 +282,12 @@ footer{margin-top:16px!important;padding:18px 5%!important}
 <div class="modal" id="detailModal" role="dialog" aria-modal="true" aria-labelledby="detailTitle"><div class="dialog wide"><button class="close" type="button" data-close="detailModal" aria-label="Close">×</button><div id="detailContent"></div></div></div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0" onerror="this.onerror=null;this.src='https://unpkg.com/@supabase/supabase-js@2.118.0/dist/umd/supabase.js'"></script>
 <script>
 const SUPABASE_URL="https://yffruutknztvdyioovmp.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY="sb_publishable_cHzM8sQmrqfcCH8lhESytg_FMJrQtCX";
-const supabaseClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);
+const supabaseClient=window.supabase?.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);
+if(!supabaseClient){document.addEventListener("DOMContentLoaded",()=>{const b=document.getElementById("accountButton");if(b){b.textContent="Login unavailable — reload";b.addEventListener("click",()=>alert("Login could not load. Please refresh the page or try another browser."))}})}
 const tcgNames={"pokemon":"Pokémon","one_piece":"One Piece","naruto_kayou":"Naruto Kayou","magic":"Magic: The Gathering","yugioh":"Yu-Gi-Oh!","dragon_ball":"Dragon Ball Super","lorcana":"Disney Lorcana","digimon":"Digimon","gundam":"Gundam","union_arena":"Union Arena","riftbound":"Riftbound","flesh_blood":"Flesh and Blood","star_wars":"Star Wars Unlimited","weiss_schwarz":"Weiss Schwarz","cardfight_vanguard":"Cardfight!! Vanguard","altered":"Altered","shadowverse":"Shadowverse Evolve","sports_cards":"Sports cards","other_tcg":"Other TCG / cards"};
 const demos=[
 {id:"demo-1",n:"One Piece TCG Booster Pack",c:"Trading Cards",p:6.99,s:"Cardboard Harbor",cond:"Sealed",e:"🃏",description:"Demo listing"},
@@ -337,7 +338,7 @@ async function ensureProfile(user,displayName){
  if(error)throw error;
 }
 function setAuthMode(mode){
- authMode=mode;document.getElementById("displayNameWrap").hidden=mode!=="signup";document.getElementById("displayName").required=mode==="signup";document.getElementById("username").required=mode==="signup";document.getElementById("authPassword").autocomplete=mode==="signup"?"new-password":"current-password";document.getElementById("authSubmit").textContent=mode==="signup"?"Create account":"Sign in";document.querySelectorAll("[data-auth-mode]").forEach(button=>button.classList.toggle("active",button.dataset.authMode===mode));document.getElementById("passwordHint").hidden=mode!=="signup";document.getElementById("authStatus").textContent="";
+ authMode=mode;document.getElementById("displayNameWrap").hidden=mode!=="signup";document.getElementById("displayName").required=mode==="signup";document.getElementById("username").required=mode==="signup";document.getElementById("authPassword").autocomplete=mode==="signup"?"new-password":"current-password";document.getElementById("authPassword").minLength=mode==="signup"?8:1;document.getElementById("authSubmit").textContent=mode==="signup"?"Create account":"Sign in";document.querySelectorAll("[data-auth-mode]").forEach(button=>button.classList.toggle("active",button.dataset.authMode===mode));document.getElementById("passwordHint").hidden=mode!=="signup";document.getElementById("authStatus").textContent="";
 }
 async function openSell(){if(!currentUser){setAuthMode("signin");openModal("authModal");toast("Sign in before creating a listing.");return}openModal("sellModal")}
 async function uploadPhotos(files,userId){
@@ -378,6 +379,7 @@ document.getElementById("myProfile").addEventListener("click",async()=>{document
 document.getElementById("profileForm").addEventListener("submit",async event=>{event.preventDefault();if(!currentUser)return;const status=document.getElementById("profileStatus"),username=document.getElementById("profileUsername").value.trim(),displayName=document.getElementById("profileDisplayName").value.trim();if(!/^[A-Za-z0-9_]{3,20}$/.test(username)){status.textContent="Username must be 3–20 letters, numbers, or underscores.";return}if(!displayName){status.textContent="Enter a display name.";return}status.textContent="Saving…";const {error}=await supabaseClient.from("profiles").upsert({id:currentUser.id,username,display_name:displayName},{onConflict:"id"});if(error){status.textContent=error.code==="23505"?"That username is already taken. Try another.":error.message;return}const {error:metadataError}=await supabaseClient.auth.updateUser({data:{username,display_name:displayName}});if(metadataError)console.warn("Profile saved; auth metadata sync failed",metadataError);const {data:updated}=await supabaseClient.auth.getUser();if(updated?.user)currentUser=updated.user;updateAccountUI();closeModal("profileModal");toast("Your @username is saved!");await loadListings()});
 document.getElementById("myListings").addEventListener("click",()=>{document.getElementById("accountMenu").hidden=true;document.getElementById("market").scrollIntoView({behavior:"smooth"});toast("Your listings are marked 'Your listing'")});
 document.getElementById("myFavorites").addEventListener("click",()=>{document.getElementById("accountMenu").hidden=true;toast(saved.size+" saved item(s) this session")});
+document.getElementById("authSubmit").addEventListener("click",()=>{const status=document.getElementById("authStatus");if(!document.getElementById("authEmail").value.trim())status.textContent="Please enter your email.";else if(!document.getElementById("authPassword").value)status.textContent="Please enter your password.";});
 document.getElementById("authForm").addEventListener("submit",async event=>{
  event.preventDefault();const form=event.currentTarget;const status=document.getElementById("authStatus");const email=document.getElementById("authEmail").value.trim();const password=document.getElementById("authPassword").value;const displayName=document.getElementById("displayName").value.trim();const username=document.getElementById("username").value.trim();form.classList.add("busy");status.textContent=authMode==="signup"?"Creating your account...":"Signing you in...";
  try{
@@ -388,7 +390,7 @@ document.getElementById("authForm").addEventListener("submit",async event=>{
    const {data,error}=await supabaseClient.auth.signUp({email,password,options:{data:{display_name:displayName,username},emailRedirectTo:window.location.origin}});if(error)throw error;
    if(data.session){await ensureProfile(data.user,displayName);closeModal("authModal");toast("Account created. You are signed in.")}else{status.textContent="Check your email to confirm your account, then return here to sign in."}
   }else{
-   const {error}=await supabaseClient.auth.signInWithPassword({email,password});if(error)throw error;closeModal("authModal");form.reset();toast("Welcome back!");
+   if(!supabaseClient)throw new Error("Login service failed to load. Refresh the page and try again.");const result=await Promise.race([supabaseClient.auth.signInWithPassword({email,password}),new Promise((_,reject)=>setTimeout(()=>reject(new Error("Login is taking too long. Check your connection and try again.")),15000))]);if(result.error)throw result.error;closeModal("authModal");form.reset();toast("Welcome back!");
   }
  }catch(error){status.textContent=error.message||"Authentication failed. Please try again."}finally{form.classList.remove("busy")}
 });
