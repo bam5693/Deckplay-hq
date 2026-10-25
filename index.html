@@ -400,6 +400,19 @@ body.inbox-focus .inbox-page-heading{margin-top:12px}
 .inbox-tabs button{flex:1;background:transparent;color:inherit;border-radius:0;padding:14px 6px;font-size:16px;box-shadow:none}
 .inbox-tabs button.active{border-bottom:3px solid #46aaa1;color:#6dc5bb}
 @media(max-width:600px){.inbox-page .conversation-contact{padding:16px 4px;gap:12px}.inbox-page .conversation-contact strong{font-size:16px}.inbox-page .conversation-contact img,.inbox-page .conversation-initial{height:48px;width:48px;min-width:48px}.inbox-page .conversation-contact small{font-size:13px}}
+
+/* Original vector category artwork: elegant, copyright-independent icons */
+.photo-categories.elegant-tiles{gap:14px}
+.photo-categories.elegant-tiles .elegant-tile{position:relative;display:flex;align-items:center;justify-content:center;min-height:190px;overflow:hidden;background:radial-gradient(circle at 75% 18%,#456b6333,transparent 55%),linear-gradient(145deg,#152b2e,#263e3e);border:1px solid #5e776d;border-radius:18px;color:#ddbf84;box-shadow:inset 0 1px #ffffff18,0 7px 18px #0000001c}
+.photo-categories.elegant-tiles .elegant-tile:nth-child(2){color:#e5c37e;background:linear-gradient(145deg,#202c30,#3c4140)}
+.photo-categories.elegant-tiles .elegant-tile:nth-child(3){color:#b4cfd0;background:linear-gradient(145deg,#1a333a,#254b50)}
+.photo-categories.elegant-tiles .elegant-tile:nth-child(4){color:#dfc58c;background:linear-gradient(145deg,#223539,#3a4843)}
+.elegant-tile .tile-line-art{position:absolute;width:90px;height:90px;top:26px;left:50%;transform:translateX(-50%);filter:drop-shadow(0 4px 10px #0003);transition:transform .2s}
+.elegant-tile:hover .tile-line-art{transform:translateX(-50%) translateY(-4px)}
+.photo-categories.elegant-tiles .elegant-tile:before{background:linear-gradient(180deg,transparent 20%,#0b20248c 100%)}
+.photo-categories.elegant-tiles .elegant-tile .cat-photo-label{color:#f5f2e9;text-align:center;left:6px;right:6px;bottom:16px;font-size:16px;letter-spacing:.15px}
+.photo-categories.elegant-tiles .elegant-tile.active{border:2px solid #e1c38b}
+@media(max-width:650px){.photo-categories.elegant-tiles .elegant-tile{min-height:155px}.elegant-tile .tile-line-art{width:72px;height:72px;top:18px}.photo-categories.elegant-tiles .elegant-tile .cat-photo-label{font-size:14px;bottom:12px}}
 </style>
 </head>
 <body>
@@ -421,11 +434,11 @@ body.inbox-focus .inbox-page-heading{margin-top:12px}
 </section>
 
 <div class="section-eyebrow">EXPLORE DECKPLAY</div><h2>Find your next favorite</h2><p class="muted">From anime cards to retro gaming — find your people and your next pickup.</p>
-<div class="categories photo-categories">
-<button class="cat active" data-cat="All"><img src="https://images.pexels.com/photos/163036/mario-luigi-yoschi-figures-163036.jpeg?auto=compress&cs=tinysrgb&w=700" alt="" loading="lazy" onerror="this.style.display='none'"><span class="cat-photo-label">✦ Collectibles</span></button>
-<button class="cat" data-cat="Trading Cards"><img src="https://images.unsplash.com/photo-1621882352098-a4986f39fd29?auto=format&fit=crop&w=700&q=80" alt="" loading="lazy" onerror="this.style.display='none'"><span class="cat-photo-label">Trading cards</span></button>
-<button class="cat" data-cat="Video Games"><img src="https://images.unsplash.com/photo-1493711662062-fa541adb3fc8?auto=format&fit=crop&w=700&q=80" alt="" loading="lazy" onerror="this.style.display='none'"><span class="cat-photo-label">Video games</span></button>
-<button class="cat" data-cat="Consoles & Controllers"><img src="https://images.unsplash.com/photo-1606144042614-b2417e99c4e3?auto=format&fit=crop&w=700&q=80" alt="" loading="lazy" onerror="this.style.display='none'"><span class="cat-photo-label">Consoles & gear</span></button>
+<div class="categories photo-categories elegant-tiles">
+<button class="cat elegant-tile elegant-tile-1 active" data-cat="All"><svg class="tile-line-art" viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="50" cy="42" r="22"/><path d="M50 10v9M50 65v9M18 42h9M73 42h9M27 19l7 7M66 58l7 7M73 19l-7 7M34 58l-7 7"/><path d="M42 33l8-7 8 7-3 11H45z"/><path d="M35 78h30M41 70h18"/></svg><span class="cat-photo-label">✦ Collectibles</span></button>
+<button class="cat elegant-tile elegant-tile-2" data-cat="Trading Cards"><svg class="tile-line-art" viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="29" y="14" width="45" height="65" rx="5" transform="rotate(9 51 46)"/><rect x="22" y="21" width="45" height="65" rx="5" transform="rotate(-8 44 53)"/><path d="M34 38h21M34 45h21M34 62h21"/><path d="M39 27l4 5 7-9"/></svg><span class="cat-photo-label">Trading cards</span></button>
+<button class="cat elegant-tile elegant-tile-3" data-cat="Video Games"><svg class="tile-line-art" viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M24 48c-6 0-10 8-13 22-2 11 3 15 11 9l15-13h26l15 13c8 6 13 2 11-9-3-14-7-22-13-22-7-6-45-6-52 0z"/><path d="M31 54v17M23 62h16"/><circle cx="66" cy="56" r="3"/><circle cx="76" cy="64" r="3"/></svg><span class="cat-photo-label">Video games</span></button>
+<button class="cat elegant-tile elegant-tile-4" data-cat="Consoles & Controllers"><svg class="tile-line-art" viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="25" y="17" width="50" height="65" rx="8"/><path d="M36 29h28M36 39h28M36 49h28"/><circle cx="50" cy="68" r="5"/><path d="M19 29h-7v39h7M81 29h7v39h-7"/></svg><span class="cat-photo-label">Consoles & gear</span></button>
 </div>
 
 <section id="market"><div class="section-eyebrow">THE COLLECTOR MARKETPLACE</div><h2>Marketplace picks</h2><p class="muted" id="count">Loading live listings...</p><button id="myListingsReset" type="button" class="ghost" hidden>← Back to all listings</button>
