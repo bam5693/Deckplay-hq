@@ -1242,5 +1242,48 @@ setAuthMode("signin");render();refreshSellerRatingCache();
 supabaseClient.auth.getSession().then(({data})=>{currentUser=data.session?.user||null;updateAccountUI();startMessageUpdates();loadBlockedCollectors().then(()=>Promise.all([loadSavedListings(),loadListings(),loadWanted()]));startNotificationUpdates()});
 </script>
 <script>if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("/sw.js").catch(error=>console.warn("App installation worker unavailable:",error)));}</script>
+<script>
+/* Android/PWA Back navigation: dismiss the top dialog before leaving the page. */
+(function(){
+ const originalOpen=openModal,originalClose=closeModal;
+ const originalHome=showHomePage,originalMarket=showMainMarketplace,originalProfile=showCollectorPage,originalInbox=showInboxPage;
+ let suppress=false;
+ let screen=document.body.classList.contains("inbox-focus")?"inbox":document.body.classList.contains("profile-focus")?"profile":document.body.classList.contains("deckplay-home")?"home":"market";
+ const states=[{type:"screen",name:screen}];
+ history.replaceState({...history.state,deckplayNav:true,deckplayDepth:0},"");
+ function push(entry){if(suppress)return;states.push(entry);history.pushState({...history.state,deckplayNav:true,deckplayDepth:states.length-1},"")}
+ openModal=function(id){const modal=document.getElementById(id);if(!modal||modal.classList.contains("open"))return;originalOpen(id);push({type:"modal",id})};
+ closeModal=function(id){const modal=document.getElementById(id);if(!modal||!modal.classList.contains("open"))return;originalClose(id);if(!suppress&&states.at(-1)?.type==="modal"&&states.at(-1).id===id)history.back()};
+ function navigate(name,fn){const changed=screen!==name;screen=name;const result=fn();if(changed)push({type:"screen",name});return result}
+ showHomePage=function(){return navigate("home",()=>{suppress=true;try{return originalHome()}finally{suppress=false}})};
+ showMainMarketplace=function(){return navigate("market",()=>originalMarket())};
+ showCollectorPage=function(tab){return navigate("profile",()=>originalProfile(tab))};
+ showInboxPage=function(id){return navigate("inbox",()=>originalInbox(id))};
+ window.addEventListener("popstate",function(e){
+  if(!e.state?.deckplayNav)return;
+  const depth=e.state.deckplayDepth;
+  if(!Number.isInteger(depth)||depth<0||depth>=states.length)return;
+  suppress=true;
+  try{
+   document.querySelectorAll(".modal.open").forEach(m=>originalClose(m.id));
+   states.length=depth+1;
+   const target=states[depth];
+   if(target.type==="modal"){
+    const parent=[...states].reverse().find(x=>x.type==="screen");
+    if(parent&&screen!==parent.name)restore(parent.name);
+    originalOpen(target.id);
+   }else if(target.type==="screen"&&screen!==target.name)restore(target.name);
+  }finally{suppress=false}
+ });
+ function restore(name){
+  screen=name;
+  if(name==="inbox")originalInbox();
+  else if(name==="profile")originalProfile();
+  else if(name==="home")originalHome();
+  else originalMarket();
+ }
+ document.addEventListener("keydown",e=>{if(e.key==="Escape"){const modal=[...document.querySelectorAll(".modal.open")].at(-1);if(modal){e.preventDefault();closeModal(modal.id)}}});
+})();
+</script>
 </body>
 </html>
