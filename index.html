@@ -376,6 +376,30 @@ body.inbox-focus header .search,body.inbox-focus header [data-sell],body.inbox-f
 body.inbox-focus header{justify-content:flex-start}
 body.inbox-focus #inboxPage{width:min(1200px,94%);margin:0 auto}
 body.inbox-focus .inbox-page-heading{margin-top:12px}
+/* Vinted-inspired DeckPlay inbox */
+.inbox-page{max-width:850px!important;padding-top:12px}
+.inbox-page-heading{border-bottom:1px solid #344744;padding-bottom:14px;margin-bottom:0}
+.inbox-page-heading h1{font-size:32px;letter-spacing:-1px}
+.inbox-page .conversation-layout{display:block;border:0;border-radius:0;background:transparent;min-height:0}
+.inbox-page .conversation-list{max-height:none;overflow:visible;padding:0;background:transparent}
+.inbox-page .conversation-contact{width:100%;display:flex;align-items:center;text-align:left;gap:15px;padding:20px 12px;border:0;border-bottom:1px solid #52615b44;border-radius:0;background:transparent;min-height:104px;box-shadow:none}
+.inbox-page .conversation-contact:hover,.inbox-page .conversation-contact.active{background:#719e9220}
+.inbox-page .conversation-contact img,.inbox-page .conversation-initial{height:58px;width:58px;min-width:58px;border-radius:50%;object-fit:cover;display:grid;place-items:center;font-size:25px}
+.inbox-page .conversation-contact>span:last-child{flex:1;min-width:0;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:3px 10px;align-items:center}
+.inbox-page .conversation-contact strong{font-size:18px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.inbox-page .conversation-contact small{font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#899a96}
+.inbox-page .conversation-contact small:nth-of-type(1){grid-column:1/-1;grid-row:2}
+.inbox-page .conversation-contact small:nth-of-type(2){grid-column:2;grid-row:1;font-size:12px;text-align:right}
+.inbox-page .conversation-thread{display:none;min-height:0;border:0;background:transparent;padding:15px 4px}
+.inbox-page.thread-open .conversation-list{display:none}
+.inbox-page.thread-open .conversation-thread{display:block}
+.inbox-thread-back{display:none;margin:0 0 16px}
+.inbox-page.thread-open .inbox-thread-back{display:inline-block}
+.inbox-page.thread-open .inbox-page-heading{display:none}
+.inbox-tabs{display:flex;gap:0;border-bottom:1px solid #4d6964;margin-top:12px}
+.inbox-tabs button{flex:1;background:transparent;color:inherit;border-radius:0;padding:14px 6px;font-size:16px;box-shadow:none}
+.inbox-tabs button.active{border-bottom:3px solid #46aaa1;color:#6dc5bb}
+@media(max-width:600px){.inbox-page .conversation-contact{padding:16px 4px;gap:12px}.inbox-page .conversation-contact strong{font-size:16px}.inbox-page .conversation-contact img,.inbox-page .conversation-initial{height:48px;width:48px;min-width:48px}.inbox-page .conversation-contact small{font-size:13px}}
 </style>
 </head>
 <body>
@@ -389,7 +413,7 @@ body.inbox-focus .inbox-page-heading{margin-top:12px}
 </header>
 <div id="accountMenuPortal"></div>
 <main>
-<section id="inboxPage" class="collector-page inbox-page" hidden><div class="profile-page-top"><button type="button" class="ghost" id="inboxBack">← Back to marketplace</button></div><div class="inbox-page-heading"><div><h1>📥 Inbox</h1><p class="muted">Your conversations, price negotiations and trades — all together.</p></div><button type="button" class="ghost" id="refreshInbox">↻ Refresh inbox</button></div><div id="messageInbox">Loading…</div></section>
+<section id="inboxPage" class="collector-page inbox-page" hidden><div class="profile-page-top"><button type="button" class="ghost" id="inboxBack">← Back to marketplace</button></div><button type="button" class="ghost inbox-thread-back" id="inboxThreadBack">← All messages</button><div class="inbox-page-heading"><div><h1>Inbox</h1><p class="muted">Your conversations, price negotiations and trades — all together.</p></div><button type="button" class="ghost" id="refreshInbox">↻ Refresh inbox</button></div><div class="inbox-tabs"><button type="button" class="active" id="inboxMessagesTab">Messages & offers</button><button type="button" id="inboxNotificationsTab">Notifications</button></div><div id="messageInbox">Loading…</div></section>
 <section id="collectorPage" class="collector-page" hidden><div class="profile-page-top"><button type="button" class="ghost" id="profileBack">← Back to marketplace</button><div class="profile-quick-actions"><button type="button" class="primary" id="profileAddListing">+ Add listing</button><button type="button" class="ghost" id="profileAddWanted">+ Add wanted</button><button type="button" class="ghost" id="profileEdit">Edit profile</button></div></div><div class="profile-page-hero"><div class="profile-page-avatar" id="pageAvatar">C</div><div><h1 id="pageHandle">@collector</h1><p id="pageBio" class="muted">Your collector profile</p><p id="pageMeta" class="muted"></p><div class="profile-page-stats"><span id="pageListingCount">0 listings</span><span id="pageWantedCount">0 wanted posts</span></div></div></div><div class="profile-page-tabs"><button type="button" class="profile-tab active" data-profile-tab="listings">My listings</button><button type="button" class="profile-tab" data-profile-tab="wanted">Wanted posts</button><button type="button" class="profile-tab" data-profile-tab="saved">Saved items</button></div><div id="profilePageContent"><p class="muted">Loading your collection…</p></div></section>
 <section class="hero">
 <div><div class="kicker">Your collection. Your community.</div><h1>Play. Trade.<br><em>Collect.</em></h1><p>A fresh home for trading cards, collectibles, retro games and the stuff you love finding. Browse, trade and build your collection.</p><button class="primary" type="button" id="exploreButton">Explore marketplace →</button></div>
@@ -730,14 +754,19 @@ async function loadInbox(targetCollectorId=null){
  const openThread=async id=>{
  const entries=groups.get(id)||[],unread=entries.filter(x=>x.type==="message"&&x.recipient_id===currentUser.id&&!x.read_at).map(x=>x.id);
  if(unread.length){const {error}=await supabaseClient.from("collector_messages").update({read_at:new Date().toISOString()}).in("id",unread).eq("recipient_id",currentUser.id);if(!error){entries.forEach(x=>{if(unread.includes(x.id))x.read_at=new Date().toISOString()});refreshUnreadCount()}}
+ document.getElementById("inboxPage").classList.add("thread-open");
  el.querySelectorAll("[data-conversation-id]").forEach(b=>b.classList.toggle("active",b.dataset.conversationId===id));
  const person=names.get(id),thread=document.getElementById("conversationThread");
  thread.innerHTML=`<h3>@${escapeHtml(person?.username||"collector")}</h3><p class="muted">Messages & offers · ${entries.length} updates</p><div class="conversation-bubbles">${entries.map(x=>x.type==="message"?`<div class="message-bubble ${x.sender_id===currentUser.id?"mine":"theirs"}"><p>${escapeHtml(x.body)}</p><small>✉ Message · ${new Date(x.date).toLocaleString()}</small></div>`:x.type==="price"?`<div class="message-bubble inbox-offer ${x.actor_id===currentUser.id?"inbox-mine":""}"><strong>${x.action==="offered"?"💵 Offer made":x.action==="countered"?"↩️ Counteroffer":x.action==="accepted"?"✓ Offer accepted":x.action==="declined"?"✕ Offer declined":x.action==="withdrawn"?"↩ Offer withdrawn":"💵 Offer update"} · ${Number(x.amount).toFixed(2)}</strong><p>${x.actor_id===currentUser.id?"You":"@"+escapeHtml(person?.username||"collector")} · ${escapeHtml(x.action)}</p><small>${new Date(x.date).toLocaleString()}</small>${x.isLatest&&["pending","countered"].includes(x.currentOffer.status)?`<p class="price-offer-actions">${x.currentOffer.last_actor_id!==currentUser.id?`<button type="button" class="primary" data-inbox-price="accept" data-offer="${escapeHtml(x.offer_id)}">Accept</button><button type="button" class="ghost" data-inbox-price="counter" data-offer="${escapeHtml(x.offer_id)}">Counter</button><button type="button" class="ghost" data-inbox-price="decline" data-offer="${escapeHtml(x.offer_id)}">Decline</button>`:`<span class="muted">Waiting for their reply</span>`}</p>`:""}</div>`:`<div class="message-bubble inbox-offer"><strong>⇄ Trade offer</strong><p>${escapeHtml(x.status)}${x.offer_note?" · "+escapeHtml(x.offer_note):""}</p><small>${new Date(x.date).toLocaleString()}</small>${x.status==="pending"?`<p class="price-offer-actions">${x.recipient_id===currentUser.id?`<button type="button" class="primary" data-inbox-trade="accepted" data-offer="${escapeHtml(x.id)}">Accept</button><button type="button" class="ghost" data-inbox-trade="counter" data-offer="${escapeHtml(x.id)}">Counter</button><button type="button" class="ghost" data-inbox-trade="declined" data-offer="${escapeHtml(x.id)}">Decline</button>`:`<button type="button" class="ghost" data-inbox-trade="cancelled" data-offer="${escapeHtml(x.id)}">Cancel</button>`}</p>`:""}</div>`).join("")}</div><button class="primary" type="button" data-thread-reply="${escapeHtml(id)}">Send message</button>`;
  thread.querySelector(".conversation-bubbles").scrollTop=thread.querySelector(".conversation-bubbles").scrollHeight;
  };
  el.querySelectorAll("[data-conversation-id]").forEach(b=>b.addEventListener("click",()=>openThread(b.dataset.conversationId)));
- await openThread(groups.has(targetCollectorId)?targetCollectorId:groups.has(previous)?previous:ordered[0][0]);
+ if(targetCollectorId)await openThread(groups.has(targetCollectorId)?targetCollectorId:ordered[0][0]);
+ else document.getElementById("inboxPage").classList.remove("thread-open");
 }
+document.getElementById("inboxThreadBack").addEventListener("click",()=>document.getElementById("inboxPage").classList.remove("thread-open"));
+document.getElementById("inboxMessagesTab").addEventListener("click",()=>{document.getElementById("inboxMessagesTab").classList.add("active");document.getElementById("inboxNotificationsTab").classList.remove("active");document.getElementById("messageInbox").hidden=false;loadInbox()});
+document.getElementById("inboxNotificationsTab").addEventListener("click",()=>{document.getElementById("inboxNotificationsTab").classList.add("active");document.getElementById("inboxMessagesTab").classList.remove("active");openModal("notificationModal");loadNotificationCenter()});
 document.getElementById("refreshInbox").addEventListener("click",()=>loadInbox());
 document.getElementById("messageInbox").addEventListener("click",async e=>{const price=e.target.closest("[data-inbox-price]");if(price){const action=price.dataset.inboxPrice,id=price.dataset.offer;let amount=null;if(action==="counter"){const value=prompt("Enter your counteroffer in USD:");if(value===null)return;amount=Number(value);if(!Number.isFinite(amount)||amount<0.01||amount>100000){toast("Enter a valid amount.");return}}else if(!confirm("Confirm "+action+"?"))return;price.disabled=true;const {error}=await supabaseClient.rpc("respond_price_offer",{p_offer_id:id,p_action:action,p_amount:amount});if(error){toast(error.message);price.disabled=false}else{toast(action==="accept"?"Offer accepted — listing reserved!":"Offer updated");if(action==="accept")loadListings();void sendCollectorEmailForSource(id);await loadInbox()}return}
  const trade=e.target.closest("[data-inbox-trade]");if(trade){const action=trade.dataset.inboxTrade,id=trade.dataset.offer;if(action==="counter"){activeCounterOffer=id;document.getElementById("counterForm").reset();document.getElementById("counterStatus").textContent="";openModal("counterModal");return}if(!confirm("Confirm "+action+" for this trade?"))return;trade.disabled=true;const column=action==="cancelled"?"sender_id":"recipient_id";const {error}=await supabaseClient.from("trade_offers").update({status:action}).eq("id",id).eq(column,currentUser.id).eq("status","pending");if(error){toast(error.message);trade.disabled=false}else{toast("Trade "+action);if(action==="accepted")loadListings();await loadInbox();refreshTradeAlerts()}return}
