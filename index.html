@@ -366,6 +366,11 @@ html[data-theme="dark"] .message-bubble:not(.mine){background:#304257;color:#f0f
 html[data-theme="dark"] .message-bubble.inbox-offer{background:#233e46;border-color:#4c777a;color:#f0f5fa}
 @media(max-width:550px){.conversation-layout{display:flex;flex-direction:column}.conversation-list{display:flex;gap:6px;max-height:none;padding:8px;overflow-x:auto}.conversation-contact{min-width:185px;max-width:220px;margin:0}.conversation-thread{min-height:350px;padding:12px}.conversation-bubbles{max-height:48dvh;min-height:170px}.message-bubble{max-width:94%}}
 
+/* Inbox isolation fix */
+main > [hidden], section[hidden], aside[hidden] {display:none!important}
+body.inbox-focus main > :not(#inboxPage){display:none!important}
+body.inbox-focus #inboxPage{display:block!important}
+body.inbox-focus .wanted-side-tab,body.inbox-focus .collector-strip{display:none!important}
 /* Focused inbox: no marketplace navigation or selling controls */
 body.inbox-focus header .search,body.inbox-focus header [data-sell],body.inbox-focus header nav,body.inbox-focus header .header-actions,body.inbox-focus header .notification-bell,body.inbox-focus aside,body.inbox-focus footer{display:none!important}
 body.inbox-focus header{justify-content:flex-start}
