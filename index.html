@@ -608,11 +608,25 @@ function setAuthMode(mode){
  authMode=mode;document.getElementById("displayNameWrap").hidden=mode!=="signup";document.getElementById("username").required=mode==="signup";document.getElementById("username").disabled=mode!=="signup";document.getElementById("authPassword").autocomplete=mode==="signup"?"new-password":"current-password";document.getElementById("authPassword").minLength=mode==="signup"?8:1;document.getElementById("authSubmit").textContent=mode==="signup"?"Create account":"Sign in";document.getElementById("authSubmit").disabled=false;document.getElementById("authSubmit").style.opacity="";document.querySelectorAll("[data-auth-mode]").forEach(button=>button.classList.toggle("active",button.dataset.authMode===mode));document.getElementById("passwordHint").hidden=mode!=="signup";document.getElementById("signupCaptchaWrap").hidden=false;initSignupCaptcha();if(!window.turnstile){let retries=0;const wait=setInterval(()=>{if(window.turnstile||++retries>40){clearInterval(wait);initSignupCaptcha();}},250)}resetSignupCaptcha();updatePasswordStrength();showAuthStatus("");
 }
 async function openSell(){if(!currentUser){setAuthMode("signin");openModal("authModal");toast("Sign in before creating a listing.");return}openModal("sellModal")}
+async function prepareListingPhoto(file){
+ if(!["image/jpeg","image/png","image/webp"].includes(file.type))throw new Error("Photos must be JPG, PNG or WebP.");
+ if(file.size<=5*1024*1024)return file;
+ const bitmap=await createImageBitmap(file);
+ try{
+  const scale=Math.min(1,2000/Math.max(bitmap.width,bitmap.height));
+  const canvas=document.createElement("canvas");canvas.width=Math.max(1,Math.round(bitmap.width*scale));canvas.height=Math.max(1,Math.round(bitmap.height*scale));
+  canvas.getContext("2d").drawImage(bitmap,0,0,canvas.width,canvas.height);
+  for(const quality of [.85,.72,.55,.4]){
+   const blob=await new Promise(resolve=>canvas.toBlob(resolve,"image/jpeg",quality));
+   if(blob&&blob.size<=5*1024*1024)return new File([blob],file.name.replace(/\.[^.]+$/,"")+".jpg",{type:"image/jpeg"});
+  }
+  throw new Error("This photo could not be reduced below 5 MB. Try a different photo.");
+ }finally{bitmap.close()}
+}
 async function uploadPhotos(files,userId){
  const urls=[];
- for(const file of files){
-  if(!["image/jpeg","image/png","image/webp"].includes(file.type))throw new Error("Photos must be JPG, PNG or WebP.");
-  if(file.size>5*1024*1024)throw new Error("Each photo must be 5 MB or smaller.");
+ for(const original of files){
+  const file=await prepareListingPhoto(original);
   const extension=(file.name.split(".").pop()||"jpg").toLowerCase().replace(/[^a-z0-9]/g,"");
   const path=`${userId}/${crypto.randomUUID()}.${extension}`;
   const {error}=await supabaseClient.storage.from("listing-images").upload(path,file,{cacheControl:"3600",contentType:file.type,upsert:false});
@@ -662,7 +676,7 @@ document.querySelectorAll("[data-filter]").forEach(button=>button.addEventListen
 document.querySelectorAll("[data-game]").forEach(button=>button.addEventListener("click",()=>{game=button.dataset.game;cat="All";filter="All";document.querySelectorAll("[data-game]").forEach(b=>b.classList.toggle("active",b===button));document.querySelectorAll("[data-cat]").forEach(b=>b.classList.toggle("active",b.dataset.cat==="All"));document.querySelectorAll("[data-filter]").forEach(b=>b.classList.toggle("active",b.dataset.filter==="All"));render()}));
 function toggleTcgField(){const isCard=document.getElementById("category").value==="trading_cards";document.getElementById("tcgGameWrap").hidden=!isCard;document.getElementById("tcgGame").required=isCard;if(!isCard)document.getElementById("tcgGame").value=""}
 document.getElementById("category").addEventListener("change",toggleTcgField);document.getElementById("authForm").addEventListener("invalid",event=>{const field=event.target;if(field.id==="username"&&authMode!=="signup")return;showAuthStatus((field.id==="username"?"Username":field.id==="authEmail"?"Email":"Password")+" needs attention: "+field.validationMessage,"error");},{capture:true});
-document.getElementById("photos").addEventListener("change",event=>{const files=Array.from(event.target.files||[]),preview=document.getElementById("listingPhotoPreview");preview.replaceChildren();if(files.length>5){preview.textContent="Please choose no more than five photos.";return}for(const file of files){if(!["image/jpeg","image/png","image/webp"].includes(file.type)||file.size>5*1024*1024){preview.textContent="Each photo must be JPG, PNG or WebP and under 5 MB.";return}const img=document.createElement("img");img.src=URL.createObjectURL(file);img.alt="Selected listing photo";img.onload=()=>URL.revokeObjectURL(img.src);preview.append(img)}});
+document.getElementById("photos").addEventListener("change",event=>{const files=Array.from(event.target.files||[]),preview=document.getElementById("listingPhotoPreview");preview.replaceChildren();if(files.length>5){preview.textContent="Please choose no more than five photos.";return}for(const file of files){if(!["image/jpeg","image/png","image/webp"].includes(file.type)){preview.textContent="Photos must be JPG, PNG or WebP.";return}const img=document.createElement("img");img.src=URL.createObjectURL(file);img.alt="Selected listing photo";img.onload=()=>URL.revokeObjectURL(img.src);preview.append(img)}});
 function syncGradedCondition(){const condition=document.getElementById("condition"),graded=condition.querySelector('option[value="graded"]');const isCards=document.getElementById("category").value==="trading_cards";graded.hidden=!isCards;graded.disabled=!isCards;if(!isCards&&condition.value==="graded")condition.value="used"}
 document.getElementById("category").addEventListener("change",syncGradedCondition);
 syncGradedCondition();
