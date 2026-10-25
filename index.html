@@ -524,6 +524,9 @@ body.inbox-focus #inboxPage{width:min(850px,100%)!important;max-width:850px!impo
 .inbox-page .notification-open small{grid-column:2;grid-row:1;font-size:11px;white-space:nowrap;opacity:.7}
 .inbox-page .notification-read{flex-shrink:0;font-size:11px;padding:7px}
 .inbox-page #inboxNotificationPanel[hidden],.inbox-page #messageInbox[hidden]{display:none!important}
+
+/* Notification access lives exclusively in the Inbox tabs; no separate bell */
+#notificationBell{display:none!important}
 </style>
 </head>
 <body>
