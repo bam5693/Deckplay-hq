@@ -458,6 +458,9 @@ body.deckplay-home .hero{display:flex}
 
 /* Collector conversations */
 .conversation-contact{transition:background .15s ease,border-color .15s ease}.conversation-contact:hover{background:#eaf0f0}.conversation-contact.active{background:#e7eeed;border-color:#b9a076}.conversation-summary{min-width:0;flex:1}.conversation-summary strong{display:flex;align-items:center;justify-content:space-between;gap:8px}.conversation-summary small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.conversation-unread{font-style:normal;font-size:10px;white-space:nowrap;background:#1c5957;color:white;padding:4px 7px;border-radius:99px}.conversation-bubbles{scroll-behavior:smooth}.message-bubble{overflow-wrap:anywhere;box-shadow:0 2px 8px #10252d0a}.message-bubble small{opacity:.75}.inbox-offer{border-left:3px solid #c9a462}.inbox-offer strong{display:block;margin-bottom:5px}.price-offer-actions{display:flex;flex-wrap:wrap;gap:7px}.price-offer-actions button{min-height:38px}@media(max-width:700px){.conversation-contact{min-height:78px}.conversation-thread{min-width:0}.conversation-bubbles{padding-bottom:12px}.message-bubble{max-width:92%}}
+
+/* Mobile header: bottom dock owns account, sell and inbox navigation */
+@media(max-width:700px){header{padding:12px 4% 13px;gap:11px;display:flex;flex-direction:column;align-items:stretch}header .logo{font-size:23px;align-self:flex-start}header .search{width:100%;max-width:none;min-width:0;flex:auto;order:2;padding:13px 15px;border-radius:13px}header .header-actions{display:none!important}header .logo{order:1}}
 </style>
 </head>
 <body>
