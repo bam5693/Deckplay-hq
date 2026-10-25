@@ -147,6 +147,33 @@ footer{background:#222d30}footer p{color:#d1dad3}
 .heart{color:#295c53}.tag{background:#fffefaed}
 @media(max-width:800px){.photo-categories{grid-template-columns:repeat(2,minmax(0,1fr))}.photo-cat{height:190px}}
 @media(max-width:480px){.photo-categories{gap:10px}.photo-cat{height:158px}.cat-caption{padding:13px 11px}.cat-caption strong{font-size:14px}.cat-caption small{font-size:10px}.collector-strip{margin-top:-17px;padding:14px}.card .art{height:150px}}
+
+/* Reliable self-contained category artwork: no external image hosts or broken tiles */
+.photo-categories{grid-template-columns:repeat(4,minmax(0,1fr));gap:15px}
+.category-tile{display:flex;position:relative;flex-direction:column;justify-content:flex-end;align-items:stretch;overflow:hidden;min-height:218px;padding:0;background:linear-gradient(145deg,#244c4b,#3c6d60);text-align:left;border:1px solid #c7d5c8;border-radius:18px}
+.category-tile:nth-child(2){background:linear-gradient(145deg,#225554,#397c70)}
+.category-tile:nth-child(3){background:linear-gradient(145deg,#2b4a4b,#527b6b)}
+.category-tile:nth-child(4){background:linear-gradient(145deg,#354d4b,#607c67)}
+.category-illustration{width:100%;height:160px;display:block;transition:transform .3s;flex:1}
+.category-tile:hover .category-illustration{transform:scale(1.055)}
+.category-copy{display:flex!important;flex-direction:column;align-items:flex-start;gap:1px;position:relative;z-index:1;padding:12px 15px 15px;background:linear-gradient(180deg,#193d3900,#142d2d9c);color:#fff!important;width:100%}
+.category-copy strong{font-size:16px;font-weight:850}.category-copy small{font-size:11px;color:#e6ebd9}
+.category-tile.active,.category-tile:hover{border-color:#d9bd83;box-shadow:0 8px 25px #173c342b}
+.hero{background:radial-gradient(circle at 82% 18%,#447a6d 0,transparent 38%),linear-gradient(120deg,#1c2d30,#29534f 70%,#41695b);min-height:390px}
+.hero h1{font-size:clamp(42px,5.6vw,70px);letter-spacing:-2.5px}
+.hero-display{position:relative;width:300px;height:300px;flex:0 1 300px;display:grid;place-items:center}
+.hero-halo{position:absolute;width:270px;height:270px;border-radius:50%;border:1px solid #d6c29250;box-shadow:0 0 0 30px #f3e5bd0b,0 0 0 60px #f3e5bd09}
+.hero-card{position:absolute;width:180px;height:244px;border-radius:16px;border:5px solid #e7ddc5;box-shadow:0 20px 35px #071b1b75;padding:16px;display:flex;flex-direction:column;justify-content:space-between;overflow:hidden}
+.hero-card span,.hero-card small{font-size:9px;font-weight:850;letter-spacing:1.6px}
+.hero-card-rear{background:linear-gradient(140deg,#d8c69b,#8cb7a7);color:#365e56;transform:translate(-60px,12px) rotate(-16deg)}
+.hero-card-rear strong{font-size:125px;text-align:center;line-height:1}
+.hero-card-main{background:radial-gradient(circle at 70% 40%,#80b6a2,#2a665f 60%,#203f43);color:#fff;transform:translate(43px,-3px) rotate(9deg)}
+.hero-card-emblem{font-size:76px;line-height:1;text-align:center;color:#f0d39c;text-shadow:0 0 25px #f0d39c66}
+.hero-card-main strong{font-size:21px;line-height:1.08;letter-spacing:-.6px}
+@media(max-width:900px){.hero-display{flex-basis:230px;width:230px}.hero-card{scale:.85}}
+@media(max-width:650px){.hero-display{height:145px;flex:1 1 100%;width:100%;overflow:hidden}.hero-halo{scale:.65}.hero-card{scale:.53}.hero-card-rear{transform:translate(-105px,-55px) rotate(-16deg)}.hero-card-main{transform:translate(90px,-55px) rotate(9deg)}}
+@media(max-width:800px){.photo-categories{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:480px){.category-tile{min-height:165px}.category-illustration{height:115px}.category-copy{padding:9px 11px 12px}.category-copy strong{font-size:14px}.category-copy small{font-size:10px}}
 </style>
 </head>
 <body>
@@ -160,40 +187,8 @@ footer{background:#222d30}footer p{color:#d1dad3}
 </header>
 <main>
 <section class="hero">
-<div><div class="kicker">Your collection. Your community.</div><h1>Play. Trade.<br><em>Collect.</em></h1><p>A fresh home for trading cards, collectibles, retro games and the stuff you love finding. Browse, trade and build your collection.</p><button class="primary" type="button" id="exploreButton">Explore marketplace →</button></div>
-<div class="hero-showcase" aria-hidden="true"><div class="showcase-card showcase-back"><span>COLLECT • PLAY</span><strong>01</strong><small>THE NEXT FIND</small></div><div class="showcase-card showcase-front"><span>DECKPLAY HQ / 2026</span><div class="showcase-orb"></div><strong>RARE<br>FINDS.</strong><small>CARDS · GAMES · CULTURE</small></div><div class="showcase-spark">✦</div></div>
-</section>
-
-<div class="section-eyebrow">EXPLORE DECKPLAY</div><h2>Find your next favorite</h2><p class="muted">From anime cards to retro gaming — find your people and your next pickup.</p>
-<div class="categories photo-categories">
-<button class="cat active" data-cat="All"><img src="https://images.unsplash.com/photo-1606503153255-59d8b8b6c6db?auto=format&fit=crop&w=700&q=80" alt="" loading="lazy" onerror="this.style.display='none'"><span class="cat-photo-label">✦ Collectibles</span></button>
-<button class="cat" data-cat="Trading Cards"><img src="https://images.unsplash.com/photo-1578662996442-48f60103fc96?auto=format&fit=crop&w=700&q=80" alt="" loading="lazy" onerror="this.style.display='none'"><span class="cat-photo-label">Trading cards</span></button>
-<button class="cat" data-cat="Video Games"><img src="https://images.unsplash.com/photo-1493711662062-fa541adb3fc8?auto=format&fit=crop&w=700&q=80" alt="" loading="lazy" onerror="this.style.display='none'"><span class="cat-photo-label">Video games</span></button>
-<button class="cat" data-cat="Consoles & Controllers"><img src="https://images.unsplash.com/photo-1606144042614-b2417e99c4e3?auto=format&fit=crop&w=700&q=80" alt="" loading="lazy" onerror="this.style.display='none'"><span class="cat-photo-label">Consoles & gear</span></button>
-</div>
-
-<section class="collector-strip"><div><span class="strip-star">✦</span><strong>For the collectors, by the collectors.</strong><span>Anime favorites · Rare pulls · Retro finds</span></div><button class="strip-link" type="button" data-sell>Start selling →</button></section><section id="market"><div class="section-eyebrow">THE COLLECTOR MARKETPLACE</div><h2>Marketplace picks</h2><p class="muted" id="count">Loading live listings...</p>
-<div class="filters">
-<button class="filter active" data-filter="All">All collectibles</button><button class="filter" data-filter="Trading Cards">Cards</button><button class="filter" data-filter="Video Games">Games</button><button class="filter" data-filter="Consoles & Controllers">Consoles & controllers</button><button class="filter" data-filter="Under $50">Under $50</button>
-</div><h3 class="browse-heading">Browse trading card games</h3><div class="filters tcg-filters"><button class="filter active" data-game="All">All TCGs</button><button class="filter" data-game="pokemon">Pokémon</button><button class="filter" data-game="one_piece">One Piece</button><button class="filter" data-game="naruto_kayou">Naruto Kayou</button><button class="filter" data-game="magic">Magic: The Gathering</button><button class="filter" data-game="yugioh">Yu-Gi-Oh!</button><button class="filter" data-game="dragon_ball">Dragon Ball Super</button><button class="filter" data-game="lorcana">Disney Lorcana</button><button class="filter" data-game="digimon">Digimon</button><button class="filter" data-game="gundam">Gundam</button><button class="filter" data-game="union_arena">Union Arena</button><button class="filter" data-game="riftbound">Riftbound</button><button class="filter" data-game="flesh_blood">Flesh and Blood</button><button class="filter" data-game="star_wars">Star Wars Unlimited</button><button class="filter" data-game="weiss_schwarz">Weiss Schwarz</button><button class="filter" data-game="cardfight_vanguard">Cardfight!! Vanguard</button><button class="filter" data-game="altered">Altered</button><button class="filter" data-game="shadowverse">Shadowverse Evolve</button><button class="filter" data-game="sports_cards">Sports cards</button><button class="filter" data-game="other_tcg">Other TCG / cards</button></div><div class="grid" id="grid"></div></section>
-
-<section class="sell"><div><h2>Your next sale starts here.</h2><p class="muted">Create an account, add photos and publish directly to the marketplace.</p></div><button class="primary" type="button" data-sell>Create a listing →</button></section>
-<div class="notice"><b>Early access:</b> Accounts, real listings and listing photos are live. Payments, shipping and private messaging are still being built.</div>
-</main>
-<footer><a class="logo" href="#" style="color:white">DeckPlay <span>HQ</span></a><p>Built for collectors, players and gaming shops.</p><p>© <span id="year"></span> DeckPlay HQ</p></footer>
-
-<div class="modal" id="authModal" role="dialog" aria-modal="true" aria-labelledby="authTitle">
-<div class="dialog"><button class="close" type="button" data-close="authModal" aria-label="Close">×</button><h2 id="authTitle">Welcome to DeckPlay HQ</h2><p class="muted">Sign in to publish and manage marketplace listings.</p>
-<div class="auth-switch"><button class="active" type="button" data-auth-mode="signin">Sign in</button><button class="ghost" type="button" data-auth-mode="signup">Create account</button></div>
-<form id="authForm"><div id="displayNameWrap" hidden><label for="username">Username (unique)</label><input id="username" minlength="3" maxlength="20" pattern="[A-Za-z0-9_]{3,20}" autocomplete="username" placeholder="CardHunter5693"><p class="password-hint">3–20 letters, numbers or underscores. Your public @username.</p><label for="displayName">Display name</label><input id="displayName" maxlength="40" autocomplete="nickname" placeholder="How buyers will see you"></div><label for="authEmail">Email</label><input id="authEmail" type="email" required autocomplete="email" placeholder="you@example.com"><label for="authPassword">Password</label><input id="authPassword" type="password" required minlength="8" autocomplete="current-password" placeholder="At least 8 characters"><p class="password-hint" id="passwordHint" hidden>Use at least 8 characters, including an uppercase letter, a number and a symbol.</p><p class="status" id="authStatus"></p><div class="dialog-actions"><button class="primary" id="authSubmit" type="submit">Sign in</button><button class="ghost" type="button" data-close="authModal">Cancel</button></div></form>
-</div></div>
-
-<div class="modal" id="sellModal" role="dialog" aria-modal="true" aria-labelledby="sellTitle">
-<div class="dialog wide"><button class="close" type="button" data-close="sellModal" aria-label="Close">×</button><h2 id="sellTitle">Create a marketplace listing</h2><p class="muted">Your listing will be published immediately.</p>
-<form id="listingForm"><label for="item">Item name</label><input id="item" required maxlength="120" placeholder="Name of your item"><label for="description">Description</label><textarea id="description" maxlength="2000" placeholder="Describe the item, what's included and any flaws"></textarea><label for="category">Category</label><select id="category"><option value="trading_cards">Trading cards</option><option value="video_games">Video games</option><option value="consoles">Consoles</option><option value="controllers">Controllers</option><option value="accessories">Accessories</option><option value="collectibles">Collectibles</option><option value="other">Other</option></select><div id="tcgGameWrap"><label for="tcgGame">Trading card game / series</label><select id="tcgGame"><option value="">Choose a card game or series</option><option value="pokemon">Pokémon</option><option value="one_piece">One Piece</option><option value="naruto_kayou">Naruto Kayou</option><option value="magic">Magic: The Gathering</option><option value="yugioh">Yu-Gi-Oh!</option><option value="dragon_ball">Dragon Ball Super</option><option value="lorcana">Disney Lorcana</option><option value="digimon">Digimon</option><option value="gundam">Gundam</option><option value="union_arena">Union Arena</option><option value="riftbound">Riftbound</option><option value="flesh_blood">Flesh and Blood</option><option value="star_wars">Star Wars Unlimited</option><option value="weiss_schwarz">Weiss Schwarz</option><option value="cardfight_vanguard">Cardfight!! Vanguard</option><option value="altered">Altered</option><option value="shadowverse">Shadowverse Evolve</option><option value="sports_cards">Sports cards</option><option value="other_tcg">Other TCG / cards</option></select></div><label for="condition">Condition</label><select id="condition"><option value="new">New / sealed</option><option value="like_new">Like new</option><option value="used" selected>Used</option><option value="graded">Graded</option><option value="damaged">Damaged</option></select><label for="price">Price in USD</label><input id="price" type="number" min="0.01" max="100000" step="0.01" required placeholder="25.00"><label for="photos">Photos</label><input id="photos" type="file" accept="image/jpeg,image/png,image/webp" multiple><p class="file-help">Up to 5 JPG, PNG or WebP images. Maximum 5 MB each.</p><label class="check-row"><input id="acceptsTrades" type="checkbox"> I am open to trade offers</label><p class="status" id="listingStatus"></p><div class="dialog-actions"><button class="primary" id="publishButton" type="submit">Publish listing</button><button class="ghost" type="button" data-close="sellModal">Cancel</button></div></form>
-</div></div>
-
-<div class="modal" id="detailModal" role="dialog" aria-modal="true" aria-labelledby="detailTitle"><div class="dialog wide"><button class="close" type="button" data-close="detailModal" aria-label="Close">×</button><div id="detailContent"></div></div></div>
+<div><div class="kicker">A marketplace made for collectors</div><h1>Find your next<br><em>favorite thing.</em></h1><p>From anime cards and rare pulls to retro games and collectibles. Discover great finds, meet fellow collectors, and make room for what’s next.</p><button class="primary" type="button" id="exploreButton">Explore marketplace →</button></div>
+<div class="hero-display" aria-hidden="true"><div class="hero-halo"></div><div class="hero-card hero-card-rear"><span>DECKPLAY / COLLECT</span><strong>✦</strong><small>YOUR NEXT DISCOVERY</small></div><div class="hero-card hero-card-main"><span>THE COLLECTOR'S CLUB</span><div class="hero-card-emblem">✦</div><strong>FIND YOUR<br>NEXT FAVORITE</strong><small>PLAY · TRADE · COLLECT</small></div></div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0"></script>
