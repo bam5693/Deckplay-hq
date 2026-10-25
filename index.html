@@ -592,9 +592,10 @@ async function refreshHeaderAvatar(userId){
  if(data?.username)document.getElementById("accountLabel").textContent="@"+data.username+" ▾";
 }
 
+function generatedDeckplayUsername(){const a=["card","deck","retro","pixel","gold","trade","collector"];const b=a[Math.floor(Math.random()*a.length)];return b+"_"+Math.random().toString(36).slice(2,9)}
 async function ensureProfile(user,displayName){
  const name=(displayName||user.user_metadata?.display_name||user.email?.split("@")[0]||"DeckPlay member").trim().slice(0,40);
- const {error}=await supabaseClient.from("profiles").upsert({id:user.id,display_name:name,...(user.user_metadata?.username?{username:user.user_metadata.username}:{})},{onConflict:"id"});
+ const {error}=await supabaseClient.from("profiles").upsert({id:user.id,display_name:name,...(user.user_metadata?.username?{username:user.user_metadata.username}:{username:generatedDeckplayUsername()})},{onConflict:"id"});
  if(error)throw error;
 }
 function showAuthStatus(message,type="info"){const el=document.getElementById("authStatus");el.textContent=message;el.style.display=message?"block":"none";el.style.padding=message?"14px":"0";el.style.borderRadius="10px";el.style.marginTop="14px";el.style.background=type==="success"?"#e7f7ee":type==="error"?"#fff0f0":"#edf3ff";el.style.color=type==="success"?"#14633c":type==="error"?"#a12121":"#244582";el.style.fontWeight="600";}
@@ -682,7 +683,7 @@ document.getElementById("myListings").addEventListener("click",()=>{closeAccount
 document.getElementById("myFavorites").addEventListener("click",()=>{closeAccountMenu();onlyMyListings=false;onlySavedListings=true;cat="All";filter="All";game="All";query="";document.getElementById("search").value="";render();document.getElementById("market").scrollIntoView({behavior:"smooth"})});
 document.getElementById("authSubmit").addEventListener("click",()=>{const status=document.getElementById("authStatus");if(!document.getElementById("authEmail").value.trim())status.textContent="Please enter your email.";else if(!document.getElementById("authPassword").value)status.textContent="Please enter your password.";});
 document.getElementById("authForm").addEventListener("submit",async event=>{
- event.preventDefault();const form=event.currentTarget;const status=document.getElementById("authStatus");const email=document.getElementById("authEmail").value.trim();const password=document.getElementById("authPassword").value;const username=document.getElementById("username").value.trim();const displayName=username;form.classList.add("busy");showAuthStatus(authMode==="signup"?"Creating your account… please wait.":"Signing you in…");
+ event.preventDefault();const form=event.currentTarget;const status=document.getElementById("authStatus");const email=document.getElementById("authEmail").value.trim();const password=document.getElementById("authPassword").value;const username=document.getElementById("username").value.trim()||generatedDeckplayUsername();const displayName=username;form.classList.add("busy");showAuthStatus(authMode==="signup"?"Creating your account… please wait.":"Signing you in…");
  try{
   if(authMode==="signup"){
    if(!/^[A-Za-z0-9_]{3,20}$/.test(username))throw new Error("Username must be 3–20 letters, numbers or underscores.");
