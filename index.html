@@ -1259,6 +1259,16 @@ supabaseClient.auth.getSession().then(({data})=>{currentUser=data.session?.user|
  showMainMarketplace=function(){return navigate("market",()=>originalMarket())};
  showCollectorPage=function(tab){return navigate("profile",()=>originalProfile(tab))};
  showInboxPage=function(id){return navigate("inbox",()=>originalInbox(id))};
+ // Keep inbox conversations in Android's navigation stack.
+ document.getElementById("messageInbox")?.addEventListener("click",function(e){
+  const conversation=e.target.closest("[data-conversation-id]");
+  if(!conversation||suppress)return;
+  if(states.at(-1)?.type==="thread")states.pop();
+  push({type:"thread",id:conversation.dataset.conversationId});
+ },true);
+ document.getElementById("inboxThreadBack")?.addEventListener("click",function(){
+  if(states.at(-1)?.type==="thread")history.back();
+ });
  window.addEventListener("popstate",function(e){
   if(!e.state?.deckplayNav)return;
   const depth=e.state.deckplayDepth;
@@ -1268,6 +1278,8 @@ supabaseClient.auth.getSession().then(({data})=>{currentUser=data.session?.user|
    document.querySelectorAll(".modal.open").forEach(m=>originalClose(m.id));
    states.length=depth+1;
    const target=states[depth];
+   if(target.type==="thread"){document.getElementById("inboxPage").classList.add("thread-open");return}
+   if(document.getElementById("inboxPage").classList.contains("thread-open"))document.getElementById("inboxPage").classList.remove("thread-open");
    if(target.type==="modal"){
     const parent=[...states].reverse().find(x=>x.type==="screen");
     if(parent&&screen!==parent.name)restore(parent.name);
