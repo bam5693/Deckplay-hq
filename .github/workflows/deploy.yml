@@ -28,6 +28,8 @@ jobs:
         run: npm install
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
+      - name: Run isolated local UI simulations
+        run: npx playwright test --config=playwright.local.config.js
       - name: Run pre-deployment browser tests
         run: npm run test:e2e
         env:
