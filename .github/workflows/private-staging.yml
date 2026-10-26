@@ -55,7 +55,7 @@ jobs:
         run: |
           mkdir -p test-results
           set -o pipefail
-          node scripts/run-staging-api.cjs | tee test-results/staging-api.tap
+          node scripts/run-staging-api.cjs 2>&1 | tee test-results/staging-api.tap
       - name: Verify deployed mobile and desktop buyer-seller journeys
         if: ${{ !cancelled() && env.DECKPLAY_STAGING_URL != '' }}
         run: npx playwright test --config=playwright.staging.config.js
