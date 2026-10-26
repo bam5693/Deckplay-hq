@@ -28,3 +28,16 @@ test('set metadata is optional and hidden on video game listings',async({page})=
  await expect(page.locator('#tcgSetFields')).toBeHidden();
  await expect(page.locator('#gamePlatformFields')).toBeVisible();
 });
+
+test('Pokemon variants never include Manga Rare',async({page})=>{
+ await page.locator('#tcgGame').selectOption('pokemon');
+ expect(await page.locator('#tcgVariant option').allTextContents()).not.toContain('Manga Rare');
+ await expect(page.locator('#tcgVariant option')).toContainText(['Not specified','Regular','Reverse Holo']);
+});
+test('One Piece variants include Manga Rare and SP',async({page})=>{
+ await page.locator('#tcgGame').selectOption('one_piece');
+ expect(await page.locator('#tcgVariant option').allTextContents()).toContain('Manga Rare');
+ expect(await page.locator('#tcgVariant option').allTextContents()).toContain('Special Rare (SP)');
+ await page.locator('#tcgGame').selectOption('pokemon');
+ expect(await page.locator('#tcgVariant option').allTextContents()).not.toContain('Manga Rare');
+});
