@@ -23,3 +23,12 @@ jobs:
           DECKPLAY_TEST_SELLER_PASSWORD: ${{ secrets.DECKPLAY_TEST_SELLER_PASSWORD }}
           DECKPLAY_TEST_BUYER_EMAIL: ${{ secrets.DECKPLAY_TEST_BUYER_EMAIL }}
           DECKPLAY_TEST_BUYER_PASSWORD: ${{ secrets.DECKPLAY_TEST_BUYER_PASSWORD }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: deckplay-browser-results
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore
+          retention-days: 7
