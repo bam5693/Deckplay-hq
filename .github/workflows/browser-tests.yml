@@ -26,12 +26,7 @@ jobs:
       - name: Install Chromium browser
         run: npx playwright install chromium
       - name: Run mobile and desktop browser tests
-        run: npm run test:e2e
-        env:
-          DECKPLAY_TEST_SELLER_EMAIL: ${{ secrets.DECKPLAY_TEST_SELLER_EMAIL }}
-          DECKPLAY_TEST_SELLER_PASSWORD: ${{ secrets.DECKPLAY_TEST_SELLER_PASSWORD }}
-          DECKPLAY_TEST_BUYER_EMAIL: ${{ secrets.DECKPLAY_TEST_BUYER_EMAIL }}
-          DECKPLAY_TEST_BUYER_PASSWORD: ${{ secrets.DECKPLAY_TEST_BUYER_PASSWORD }}
+        run: npx playwright test --config=playwright.local.config.js
       - uses: actions/upload-artifact@v4
         if: always()
         with:
