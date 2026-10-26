@@ -15,7 +15,7 @@ test('buyer can complete checkout simulation without a transaction', async ({ pa
  await page.locator('#simulationNext').click();
  await expect(page.locator('#simulationSummary')).toContainText('Test Card');
  await expect(page.locator('#simulationSummary')).toContainText('$49.00');
- await expect(page.locator('#simulationSummary')).toContainText('not charged');
+ await expect(page.locator('#simulationSummary')).toContainText('Nothing is charged');
  await page.locator('#simulationFinish').click();
  await expect(page.locator('#simulationStepDone')).toBeVisible();
  await expect(page.locator('#simulationStepDone')).toContainText('No charge, order, shipping label, or message was created.');
