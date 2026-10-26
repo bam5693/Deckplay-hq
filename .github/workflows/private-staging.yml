@@ -49,8 +49,8 @@ jobs:
         with:
           path: ~/.cache/ms-playwright
           key: staging-playwright-${{ hashFiles('package-lock.json') }}
-      - run: npx playwright install --with-deps chromium --only-shell
-        timeout-minutes: 4
+      - run: npx playwright install chromium --only-shell
+        timeout-minutes: 8
       - name: Verify staging API transactions and authorization
         run: |
           mkdir -p test-results
