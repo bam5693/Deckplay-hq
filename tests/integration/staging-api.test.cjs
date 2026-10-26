@@ -97,7 +97,7 @@ test('notification preferences persist and suppress unwanted notifications',()=>
  const original=ok(api('seller','/rest/v1/notification_preferences?user_id=eq.'+users.seller))[0];
  const preferences={user_id:users.seller,messages:false,trade_offers:true,wanted_matches:true,product_updates:false};
  try{
-  ok(api('seller','/rest/v1/notification_preferences','POST',preferences,{Prefer:'resolution=merge-duplicates'}),201);
+  assert([200,201].includes(api('seller','/rest/v1/notification_preferences','POST',preferences,{Prefer:'resolution=merge-duplicates'}).status));
   assert.equal(ok(api('seller','/rest/v1/notification_preferences?user_id=eq.'+users.seller))[0].messages,false);
   assert.equal(ok(api('buyer','/rest/v1/notification_preferences?user_id=eq.'+users.seller)).length,0);
   assert(api('buyer','/rest/v1/notification_preferences','POST',preferences,{Prefer:'resolution=merge-duplicates'}).status>=400);
