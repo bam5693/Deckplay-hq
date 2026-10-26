@@ -7,7 +7,7 @@ const key = process.env.DECKPLAY_STAGING_SUPABASE_KEY;
 if (!url || !key || !/^https:\/\/[a-z0-9-]+\.supabase\.co$/.test(url) || !key.startsWith('sb_publishable_')) {
   throw new Error('Valid staging Supabase URL and publishable key required');
 }
-if (url.includes('yffruutknztvdyioovmp')) throw new Error('Production Supabase URL is forbidden');
+if (url !== 'https://prrrzeelltmyugssqnzk.supabase.co') throw new Error('Unexpected staging Supabase project');
 fs.rmSync(target, { recursive: true, force: true });
 fs.mkdirSync(target, { recursive: true });
 const files = execFileSync('git', ['ls-files', '-z'], { encoding: 'utf8' }).split('\0').filter(Boolean);
@@ -19,9 +19,11 @@ for (const name of files) {
   if (name.startsWith('tests/') || name.startsWith('scripts/') || name.startsWith('.github/') || name.startsWith('node_modules/') || name.startsWith('dist-')) continue;
   const original = fs.readFileSync(name);
   let output = original;
-  if (name.endsWith('.html') || name.endsWith('.js')) {
+  if (/\.(html|js|json|webmanifest|css)$/.test(name)) {
     const text = original.toString('utf8');
-    output = Buffer.from(text.replaceAll('https://yffruutknztvdyioovmp.supabase.co', url).replaceAll('sb_publishable_cHzM8sQmrqfcCH8lhESytg_FMJrQtCX', key));
+    let replaced = text.replaceAll('https://yffruutknztvdyioovmp.supabase.co', url).replaceAll('sb_publishable_cHzM8sQmrqfcCH8lhESytg_FMJrQtCX', key);
+    if (name.endsWith('.html')) replaced = replaced.replace(/<head>/i, '<head>\\n<meta name="robots" content="noindex,nofollow">');
+    output = Buffer.from(replaced);
     if (output.toString('utf8').includes('yffruutknztvdyioovmp') || output.toString('utf8').includes('sb_publishable_cHzM8sQmrqfcCH8lhESytg_FMJrQtCX')) {
       throw new Error('Production configuration remains in ' + name);
     }
