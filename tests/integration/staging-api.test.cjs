@@ -126,3 +126,19 @@ test('empty messages, invalid photos and broad cleanup attempts fail',()=>{
  assert(api(null,'/rest/v1/rpc/cleanup_staging_fixture','POST',{p_marker:run}).status>=400);
  assert(api('seller','/rest/v1/rpc/cleanup_staging_fixture','POST',{p_marker:'TEST ONLY%'}).status>=400);
 });
+test('shared demo order creates, joins, advances and deletes without a real purchase',()=>{
+ const order=ok(api('seller','/rest/v1/demo_orders','POST',{creator_id:users.seller,creator_role:'seller',item_name:run,item_price:25,shipping_price:5},{Prefer:'return=representation'}),201)[0];
+ try{
+  assert.equal(ok(api('buyer','/rest/v1/demo_orders?id=eq.'+order.id)).length,0);
+  assert(api('seller','/rest/v1/rpc/advance_deckplay_demo_order','POST',{p_id:order.id}).status>=400);
+  ok(api('buyer','/rest/v1/rpc/join_deckplay_demo_order','POST',{p_code:order.invite_code}),204);
+  assert.equal(ok(api('buyer','/rest/v1/demo_orders?id=eq.'+order.id)).length,1);
+  assert(api('buyer','/rest/v1/rpc/delete_deckplay_demo_order','POST',{p_id:order.id}).status>=400);
+  for(let stage=1;stage<=4;stage++){
+   ok(api(stage%2?'buyer':'seller','/rest/v1/rpc/advance_deckplay_demo_order','POST',{p_id:order.id}),204);
+   assert.equal(ok(api('buyer','/rest/v1/demo_orders?id=eq.'+order.id))[0].stage,stage);
+  }
+  assert(api('buyer','/rest/v1/rpc/advance_deckplay_demo_order','POST',{p_id:order.id}).status>=400);
+  assert.equal(ok(api('buyer','/rest/v1/orders?item_title=eq.'+encodeURIComponent(run))).length,0);
+ }finally{ok(api('seller','/rest/v1/rpc/delete_deckplay_demo_order','POST',{p_id:order.id}),204)}
+});
