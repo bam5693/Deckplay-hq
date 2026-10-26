@@ -1,8 +1,6 @@
 name: DeckPlay browser tests
 on:
   workflow_dispatch:
-  push:
-    branches: [test/staging-reporting]
   pull_request:
 permissions:
   contents: read
@@ -19,6 +17,8 @@ jobs:
         with:
           node-version: '22'
       - run: npm ci
+      - name: Verify staging runner authorization boundaries
+        run: node --test tests/security/staging-oidc.test.mjs
       - name: Cache Playwright browsers
         uses: actions/cache@v4
         with:

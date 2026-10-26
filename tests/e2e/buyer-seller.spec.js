@@ -1,4 +1,5 @@
 const {test,expect}=require('@playwright/test');
+const {marker,cleanup}=require('../helpers/staging.cjs');
 async function signIn(page,role){
  await page.goto('/',{waitUntil:'domcontentloaded',timeout:30000});
  const opener=await page.locator('#accountButton').isVisible()?page.locator('#accountButton'):page.locator('[data-dock="profile"]');await opener.click();
@@ -12,8 +13,8 @@ test('seller uploads and lists; buyer saves, messages and offers; seller accepts
  await signIn(page,'SELLER');
  const buyerContext=await browser.newContext({baseURL:process.env.DECKPLAY_STAGING_URL,viewport:page.viewportSize(),httpCredentials:{username:'deckplay',password:process.env.DECKPLAY_STAGING_ACCESS_PASSWORD},ignoreHTTPSErrors:!!process.env.CODEX_NETWORK_PROXY_ACTIVE});
  const buyer=await buyerContext.newPage();buyer.on('pageerror',e=>errors.push(e.message));
+ const title=marker();
  try {
-  const title='TEST ONLY E2E '+Date.now();
   const sell=page.locator('[data-dock="sell"]');
   if(await sell.isVisible())await sell.click();else await page.getByRole('button',{name:'＋ Sell an item',exact:true}).click();
   await page.locator('#item').fill(title);await page.locator('#tcgGame').selectOption('one_piece');await page.locator('#cardCondition').selectOption('near_mint');await page.locator('#price').fill('25');
@@ -34,5 +35,5 @@ test('seller uploads and lists; buyer saves, messages and offers; seller accepts
   await expect(page.locator('#conversationThread')).toContainText('accepted',{timeout:20000});
   await buyer.reload({waitUntil:'domcontentloaded',timeout:30000});await buyer.locator('[data-cat="Trading Cards"]').first().click();await buyer.locator('#search').fill(title);await expect.poll(()=>buyer.evaluate(()=>listingSource)).toBe('live');await expect(buyer.locator('#grid .card').filter({hasText:title})).toHaveCount(0,{timeout:20000});
   expect(errors).toEqual([]);
- } finally {await buyerContext.close()}
+ } finally {try{await cleanup(page,title)}finally{await buyerContext.close()}}
 });

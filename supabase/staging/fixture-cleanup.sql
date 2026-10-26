@@ -10,7 +10,7 @@ begin
  select coalesce(array_agg(id),'{}') into lids from public.listings where title=p_marker and seller_id=any(bots);
  select coalesce(array_agg(id),'{}') into offers from public.price_offers where listing_id=any(lids);
  select coalesce(array_agg(id),'{}') into trades from public.trade_offers where listing_id=any(lids) or offered_listing_id=any(lids);
- select coalesce(array_agg(id),'{}') into messages from public.collector_messages where body=p_marker and sender_id=any(bots) and recipient_id=any(bots);
+ select coalesce(array_agg(id),'{}') into messages from public.collector_messages where (body=p_marker or listing_id=any(lids)) and sender_id=any(bots) and recipient_id=any(bots);
  if exists(select 1 from public.price_offers where id=any(offers) and (not(buyer_id=any(bots)) or not(seller_id=any(bots))))
  or exists(select 1 from public.trade_offers where id=any(trades) and (not(sender_id=any(bots)) or not(recipient_id=any(bots))))
  or exists(select 1 from public.collector_messages where listing_id=any(lids) and (not(sender_id=any(bots)) or not(recipient_id=any(bots))))

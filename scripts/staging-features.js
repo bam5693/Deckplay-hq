@@ -57,3 +57,11 @@ async function runStagingFeatures(env,suite){
  if(sessions.seller)try{await api('seller','/rest/v1/staging_test_runs','POST',report,201)}catch(e){report.passed=false;report.error='Report persistence failed: '+e.message}
  console.log(JSON.stringify({event:'staging-features',suite,passed:report.passed,checks:checks.length,error:report.error}));return report;
 }
+async function stagingReportHistory(env){
+ const headers={apikey:STAGING_KEY,'Content-Type':'application/json'};
+ const auth=await fetch(STAGING_API+'/auth/v1/token?grant_type=password',{method:'POST',headers,body:JSON.stringify({email:'deckplay-seller@deckplay.test',password:env.TEST_SELLER_PASSWORD}),signal:AbortSignal.timeout(15000)});
+ if(!auth.ok)throw Error('Report authentication unavailable');
+ const {access_token}=await auth.json();
+ const response=await fetch(STAGING_API+'/rest/v1/staging_test_runs?select=suite,passed,checks,error,created_at&order=created_at.desc&limit=30',{headers:{...headers,Authorization:'Bearer '+access_token},signal:AbortSignal.timeout(15000)});
+ if(!response.ok)throw Error('Report history unavailable');return response.json();
+}

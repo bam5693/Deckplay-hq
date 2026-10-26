@@ -12,6 +12,7 @@ export default {
   const a=await digest(request.headers.get('Authorization')||''),b=await digest(expected);
   let diff=0;for(let i=0;i<a.length;i++)diff|=a[i]^b[i];
   if(diff)return new Response('Private DeckPlay testing environment',{status:401,headers:{...headers,'WWW-Authenticate':'Basic realm="DeckPlay staging", charset="UTF-8"'}});
+  if(url.pathname==='/__reports'&&request.method==='GET'){try{return Response.json(await stagingReportHistory(env),{headers})}catch{return Response.json({error:'Report history unavailable'},{status:503,headers})}}
   if(url.pathname==='/__checks'&&request.method==='POST'){const suite=url.searchParams.get('suite');if(suite&&!['commerce','community'].includes(suite))return new Response('Unknown suite',{status:400,headers});return Response.json(suite?await runStagingFeatures(env,suite):await runStagingHealth(env),{headers});}
   if(!['GET','HEAD'].includes(request.method))return new Response('Method not allowed',{status:405,headers:{...headers,Allow:'GET, HEAD'}});
   const file=assets[url.pathname==='/'?'/index.html':url.pathname];

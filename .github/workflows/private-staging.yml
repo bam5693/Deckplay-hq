@@ -21,10 +21,15 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - run: npm ci
-      - run: npx playwright install --with-deps chromium
       - name: Authenticate using repository-scoped GitHub identity
         run: node scripts/staging-ci-credentials.cjs
+      - run: npm ci
+      - name: Cache Playwright browser
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: staging-playwright-${{ hashFiles('package-lock.json') }}
+      - run: npx playwright install --with-deps chromium --only-shell
       - name: Verify staging API transactions and authorization
         run: |
           mkdir -p test-results
@@ -33,6 +38,11 @@ jobs:
       - name: Verify deployed mobile and desktop buyer-seller journeys
         if: ${{ !cancelled() && env.DECKPLAY_STAGING_URL != '' }}
         run: npx playwright test --config=playwright.staging.config.js
+      - name: Save durable staging feature result
+        if: ${{ !cancelled() && env.DECKPLAY_STAGING_URL != '' }}
+        env:
+          STAGING_JOB_STATUS: ${{ job.status }}
+        run: node scripts/report-staging-results.cjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
