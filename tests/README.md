@@ -1,24 +1,17 @@
-# DeckPlay HQ browser testing
+# DeckPlay HQ testing
 
-The browser smoke tests run from GitHub Actions. Two dedicated accounts are proposed:
+## What passing checks mean
 
-- deckplay-seller@deckplay.test
-- deckplay-buyer@deckplay.test
+- **Production deploy / local browser workflow:** JavaScript validation and isolated local Playwright UI simulations. These do not prove real account login, offers, trades, or payment/shipping.
+- **Private staging account verification:** A separately triggered workflow, configured for an isolated staging host and two test users. A passing run proves only that both users could sign in.
+- **Full buyer/seller transactions:** Not yet implemented or verified. Do not report them as passing.
 
-**Status:** Accounts are not yet created. The connected Supabase tools cannot administer Auth users.
+## Security and isolation
 
-## Secure one-time setup
+The production site must not be used as the staging test target. Never use production Supabase tables, production Turnstile challenge bypasses, real payment processing, or live shipping labels for automated tests. Staging needs its own data and approved test Turnstile configuration.
 
-Use the Supabase dashboard for the DeckPlay HQ project:
+See [STAGING_SETUP.md](STAGING_SETUP.md) for setup instructions. The account tests fail rather than silently skip when staging is explicitly configured but its credentials or CAPTCHA validation are unavailable.
 
-1. Authentication → Users → Add user.
-2. Create each account with its address above, a different strong generated password, and email confirmed.
-3. In GitHub repository Settings → Secrets and variables → Actions, add the following repository secrets:
-   - DECKPLAY_TEST_SELLER_EMAIL
-   - DECKPLAY_TEST_SELLER_PASSWORD
-   - DECKPLAY_TEST_BUYER_EMAIL
-   - DECKPLAY_TEST_BUYER_PASSWORD
-4. Never put passwords or a Supabase service-role key in repository files or chat.
-5. Keep all test listings explicitly labeled TEST ONLY — NOT FOR SALE. Do not exercise payments or real shipping.
+## Status
 
-The existing tests currently cover UI smoke checks, not authenticated offer/trade workflows. The next step is to add isolated two-account interaction tests with test data cleanup and verify the workflow results.
+The staging workflow has been added on a draft pull request. It is not a claim that staging is deployed or verified. End-to-end offer/trade/notification tests remain to be built.
