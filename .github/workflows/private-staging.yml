@@ -7,11 +7,23 @@ on:
 permissions:
   contents: read
   id-token: write
-concurrency:
-  group: private-staging-transactions
-  cancel-in-progress: false
 jobs:
+  staging-identity:
+    name: Verify trusted staging runner identity
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    environment: deckplay-staging
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node scripts/staging-ci-credentials.cjs
   staging-accounts:
+    needs: staging-identity
+    concurrency:
+      group: private-staging-transactions
+      cancel-in-progress: false
     name: Real staging API and mobile/desktop buyer-seller journeys
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -30,6 +42,7 @@ jobs:
           path: ~/.cache/ms-playwright
           key: staging-playwright-${{ hashFiles('package-lock.json') }}
       - run: npx playwright install --with-deps chromium --only-shell
+        timeout-minutes: 4
       - name: Verify staging API transactions and authorization
         run: |
           mkdir -p test-results
