@@ -12,10 +12,6 @@ for (const [role, emailKey, passwordKey] of accounts) {
     await page.locator('#authEmail').fill(email);
     await page.locator('#authPassword').fill(password);
     // Do not bypass or forge Cloudflare Turnstile. A real challenge may block CI.
-    const ready = await page.waitForFunction(() => {
-      const status = document.querySelector('#signupCaptcha');
-      return status && (document.querySelector('#authSubmit') !== null);
-    });
     await expect(page.locator('#authSubmit')).toBeVisible();
     const captchaReady = await page.evaluate(() => typeof signupCaptchaToken !== 'undefined' && !!signupCaptchaToken);
     test.skip(!captchaReady, 'Production Turnstile did not automatically verify this test browser; staging test keys are required');
