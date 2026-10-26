@@ -3,7 +3,7 @@ const { defineConfig, devices } = require('@playwright/test');
 // The selected tests only manipulate browser UI and the built-in checkout preview.
 module.exports = defineConfig({
   testDir: './tests/e2e',
-  testMatch: ['every-option.spec.js', 'selling-category-matrix.spec.js', 'checkout-simulation.spec.js'],
+  testMatch: ['every-option.spec.js', 'selling-category-matrix.spec.js', 'checkout-simulation.spec.js', 'marketplace-safety.spec.js', 'flows.spec.js', 'wanted-matches.spec.js', 'smoke.spec.js'],
   use: { baseURL: 'http://127.0.0.1:8765' },
   projects: [
     { name: 'local-mobile', use: devices['Pixel 7'] },
