@@ -14,9 +14,9 @@ test('profile edit, wanted post, settings and notification preferences persist',
   await page.locator('[data-theme-choice="dark"]').click();await expect(page.locator('html')).toHaveAttribute('data-theme','dark');
   await page.locator('button[data-font-size="large"]').click();await expect(page.locator('html')).toHaveAttribute('data-font-size','large');
   const pref=page.locator('[data-notify-pref="product_updates"]');const prior=await pref.isChecked();await pref.setChecked(!prior);await expect(page.locator('#notificationSettingsStatus')).toContainText('Preferences saved',{timeout:15000});
-  await page.locator('[data-close="settingsModal"]').click();await page.reload({waitUntil:'domcontentloaded'});await expect(page.locator('html')).toHaveAttribute('data-theme','dark');await expect(page.locator('html')).toHaveAttribute('data-font-size','large');
+  await page.locator('[data-close="settingsModal"]').click({position:{x:8,y:8},timeout:10000});await page.reload({waitUntil:'domcontentloaded'});await expect(page.locator('html')).toHaveAttribute('data-theme','dark');await expect(page.locator('html')).toHaveAttribute('data-font-size','large');
   await menu(page,'profileSettings');await expect(page.locator('#notificationSettingsStatus')).toContainText('Preferences saved',{timeout:15000});await expect(pref).toBeChecked({checked:!prior});await pref.setChecked(prior);await expect(page.locator('#notificationSettingsStatus')).toContainText('Preferences saved');
-  await page.locator('button[data-font-size="normal"]').click();await page.locator('[data-theme-choice="auto"]').click();await page.locator('[data-close="settingsModal"]').click();
+  await page.locator('button[data-font-size="normal"]').click();await page.locator('[data-theme-choice="auto"]').click();await page.locator('[data-close="settingsModal"]').click({position:{x:8,y:8},timeout:10000});
  }finally{
   if(original&&!page.isClosed())await page.evaluate(async original=>{const {error}=await supabaseClient.from('profiles').update({bio:original.bio,favorite_tcg:original.favorite_tcg,location_label:original.location_label}).eq('id',currentUser.id);if(error)throw Error(error.message)},original);
   if(!page.isClosed())await cleanup(page,title);
