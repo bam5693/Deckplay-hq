@@ -25,7 +25,7 @@ jobs:
       - name: Validate inline JavaScript
         run: node scripts/check-inline-js.cjs
       - name: Install browser test dependencies
-        run: npm ci
+        run: npm install
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
       - name: Run pre-deployment browser tests
