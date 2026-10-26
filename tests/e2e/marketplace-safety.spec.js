@@ -28,7 +28,7 @@ test('listing requires a name and offers photo upload controls without publishin
   expect(await item.evaluate(el => el.checkValidity())).toBe(true);
   await expect(page.locator('#listingAddPhotos')).toBeVisible();
   await expect(page.locator('#listingTakePhoto')).toBeVisible();
-  await expect(page.locator('#listingForm')).toContainText('Publish listing');
+  await expect(page.locator('#listingForm')).toContainText('Post listing');
 });
 
 test('inbox and notification surfaces have private thread navigation controls', async ({ page }) => {
