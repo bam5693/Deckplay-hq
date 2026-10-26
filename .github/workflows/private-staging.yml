@@ -9,6 +9,10 @@ permissions:
   id-token: write
 jobs:
   staging-identity:
+    permissions:
+      contents: read
+      id-token: write
+      actions: write
     name: Verify trusted staging runner identity
     runs-on: ubuntu-latest
     timeout-minutes: 3
@@ -19,6 +23,10 @@ jobs:
         with:
           node-version: '22'
       - run: node scripts/staging-ci-credentials.cjs
+      - name: Clear superseded staging runs
+        env:
+          GH_RUN_CONTROL_TOKEN: ${{ github.token }}
+        run: node scripts/cancel-superseded-staging.cjs
   staging-accounts:
     needs: staging-identity
     concurrency:
