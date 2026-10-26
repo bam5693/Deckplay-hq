@@ -13,8 +13,8 @@ jobs:
           node-version: '22'
       - name: Build isolated staging site
         env:
-          DECKPLAY_STAGING_SUPABASE_URL: ${{ vars.DECKPLAY_STAGING_SUPABASE_URL }}
-          DECKPLAY_STAGING_SUPABASE_KEY: ${{ vars.DECKPLAY_STAGING_SUPABASE_KEY }}
+          DECKPLAY_STAGING_SUPABASE_URL: https://prrrzeelltmyugssqnzk.supabase.co
+          DECKPLAY_STAGING_SUPABASE_KEY: sb_publishable_0omvNnv_ZOvXrZ-LHPMyIQ_a9zxD-yh
         run: node scripts/build-staging.cjs
       - uses: actions/upload-artifact@v4
         with:
