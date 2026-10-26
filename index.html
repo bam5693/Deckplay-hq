@@ -1096,7 +1096,12 @@ const deckplaySets={
  }
 };
 function deckplayFillOptions(el,options,placeholder){el.replaceChildren(new Option(placeholder,""));options.forEach(value=>el.add(new Option(value,value)))}
-function deckplaySyncSetFields(){const game=document.getElementById("tcgGame").value,cat=document.getElementById("category").value;const visible=cat==="trading_cards"&&!!deckplaySets[game];document.getElementById("tcgSetFields").hidden=!visible;const eras=visible?Object.keys(deckplaySets[game]):[];deckplayFillOptions(document.getElementById("tcgEra"),eras,"Select an era or skip");deckplayFillOptions(document.getElementById("tcgSet"),[],"Select a set or skip")}
+const deckplayVariants={
+ pokemon:["Regular","Reverse Holo","Holo","Ultra Rare","Illustration Rare","Special Illustration Rare","Hyper Rare","Full Art","Secret Rare","Shiny Rare","Gold","Promo","Other"],
+ one_piece:["Regular","Parallel / Alternate Art","Special Rare (SP)","Manga Rare","Treasure Rare","Leader Parallel","Promo","Other"]
+};
+function deckplaySyncVariants(){const game=document.getElementById("tcgGame").value;const variants=deckplayVariants[game]||["Regular","Holo","Foil","Alternate Art","Promo","Other"];deckplayFillOptions(document.getElementById("tcgVariant"),variants,"Not specified")}
+function deckplaySyncSetFields(){const game=document.getElementById("tcgGame").value,cat=document.getElementById("category").value;const visible=cat==="trading_cards"&&!!deckplaySets[game];document.getElementById("tcgSetFields").hidden=!visible;const eras=visible?Object.keys(deckplaySets[game]):[];deckplayFillOptions(document.getElementById("tcgEra"),eras,"Select an era or skip");deckplayFillOptions(document.getElementById("tcgSet"),[],"Select a set or skip");deckplaySyncVariants()}
 document.getElementById("tcgEra").addEventListener("change",()=>{const game=document.getElementById("tcgGame").value,era=document.getElementById("tcgEra").value;deckplayFillOptions(document.getElementById("tcgSet"),deckplaySets[game]?.[era]||[],"Select a set or skip")});
 document.getElementById("tcgGame").addEventListener("change",deckplaySyncSetFields);
 document.getElementById("category").addEventListener("change",deckplaySyncSetFields);
