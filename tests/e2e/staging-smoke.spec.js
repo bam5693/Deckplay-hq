@@ -29,3 +29,19 @@ test('mobile layout exposes navigation without horizontal overflow', async ({ pa
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
   expect(overflow, 'Unexpected horizontal scrolling on mobile').toBeLessThanOrEqual(2);
 });
+
+test('staging login UI does not expose production auth endpoints', async ({ page }) => {
+  const production = [];
+  page.on('request', request => {
+    try {
+      if (new URL(request.url()).hostname === 'yffruutknztvdyioovmp.supabase.co') production.push(request.url());
+    } catch {}
+  });
+  await page.goto('/');
+  await page.locator('#accountButton').click();
+  await expect(page.locator('#authModal')).toBeAttached();
+  const html = await page.content();
+  expect(html).toContain('prrrzeelltmyugssqnzk.supabase.co');
+  expect(html).not.toContain('yffruutknztvdyioovmp.supabase.co');
+  expect(production).toEqual([]);
+});
