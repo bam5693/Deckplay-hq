@@ -1,5 +1,5 @@
 export default {
- async scheduled(controller,env,ctx) { ctx.waitUntil(runStagingHealth(env)); },
+ async scheduled(controller,env,ctx) { const suite=controller.cron==='27 9 * * *'?'commerce':controller.cron==='37 9 * * *'?'community':null;ctx.waitUntil(suite?runStagingFeatures(env,suite):runStagingHealth(env)); },
  async fetch(request,env) {
   const url=new URL(request.url);
   const headers={'Cache-Control':'no-store','X-Robots-Tag':'noindex, nofollow','X-Content-Type-Options':'nosniff','Referrer-Policy':'same-origin','X-Frame-Options':'DENY'};
@@ -12,7 +12,7 @@ export default {
   const a=await digest(request.headers.get('Authorization')||''),b=await digest(expected);
   let diff=0;for(let i=0;i<a.length;i++)diff|=a[i]^b[i];
   if(diff)return new Response('Private DeckPlay testing environment',{status:401,headers:{...headers,'WWW-Authenticate':'Basic realm="DeckPlay staging", charset="UTF-8"'}});
-  if(url.pathname==='/__checks'&&request.method==='POST')return Response.json(await runStagingHealth(env),{headers});
+  if(url.pathname==='/__checks'&&request.method==='POST'){const suite=url.searchParams.get('suite');if(suite&&!['commerce','community'].includes(suite))return new Response('Unknown suite',{status:400,headers});return Response.json(suite?await runStagingFeatures(env,suite):await runStagingHealth(env),{headers});}
   if(!['GET','HEAD'].includes(request.method))return new Response('Method not allowed',{status:405,headers:{...headers,Allow:'GET, HEAD'}});
   const file=assets[url.pathname==='/'?'/index.html':url.pathname];
   if(!file)return new Response('Page not found',{status:404,headers});

@@ -58,3 +58,9 @@ test('inbox loads once and retains the selected conversation during background r
  await expect(page.locator('#conversationThread')).toContainText('Fixture message persists');
  await expect(page.locator('#inboxPage')).toHaveClass(/thread-open/);
 });
+
+test('page element IDs are unique so notifications have one working target',async({page})=>{
+ await page.goto('/');
+ const duplicates=await page.locator('[id]').evaluateAll(elements=>{const counts=new Map();elements.forEach(e=>counts.set(e.id,(counts.get(e.id)||0)+1));return [...counts].filter(([,n])=>n>1).map(([id])=>id)});
+ expect(duplicates).toEqual([]);
+});
