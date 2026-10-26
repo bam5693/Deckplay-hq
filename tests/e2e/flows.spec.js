@@ -5,9 +5,9 @@ test('offer form validates amounts without sending an offer', async ({ page }) =
  const amount=page.locator('#priceOfferAmount');
  await expect(amount).toBeVisible();
  await amount.fill('-1');
- await expect(amount).not.toBeValid();
+  expect(await amount.evaluate(el => el.checkValidity())).toBe(false);
  await amount.fill('25.00');
- await expect(amount).toBeValid();
+ expect(await amount.evaluate(el => el.checkValidity())).toBe(true);
 });
 test('checkout is only a preview, not a live payment form', async ({ page }) => {
  await page.goto('/');
