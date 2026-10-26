@@ -1,6 +1,8 @@
 name: Private staging account verification
 on:
   workflow_dispatch:
+  schedule:
+    - cron: '17 9 * * *'
 
 permissions:
   contents: read
@@ -44,11 +46,11 @@ jobs:
           DECKPLAY_TEST_SELLER_PASSWORD: ${{ secrets.DECKPLAY_TEST_SELLER_PASSWORD }}
           DECKPLAY_TEST_BUYER_EMAIL: ${{ secrets.DECKPLAY_TEST_BUYER_EMAIL }}
           DECKPLAY_TEST_BUYER_PASSWORD: ${{ secrets.DECKPLAY_TEST_BUYER_PASSWORD }}
-        run: npx playwright test tests/e2e/accounts.spec.js --config=playwright.staging.config.js
+        run: npx playwright test --config=playwright.staging.config.js
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: private-staging-account-report
+          name: private-staging-browser-report
           path: |
             playwright-report/
             test-results/
