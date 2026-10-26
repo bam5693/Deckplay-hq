@@ -1,6 +1,11 @@
 name: Prepare staging assets
 on:
   workflow_dispatch:
+  pull_request:
+    paths:
+      - 'scripts/build-staging.cjs'
+      - 'index.html'
+      - '.github/workflows/build-staging.yml'
 permissions:
   contents: read
 jobs:
