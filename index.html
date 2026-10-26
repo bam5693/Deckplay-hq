@@ -733,6 +733,29 @@ html:not([data-theme="dark"]) header .logo.deckplay-brand .mark-letters{fill:#14
 .photo-categories.elegant-tiles .elegant-tile-5 .cat-photo-label{width:auto!important;margin:0!important;font-size:20px!important;color:#f6f7f9!important}
 @media(max-width:900px){.photo-categories.elegant-tiles{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
 @media(max-width:650px){.photo-categories.elegant-tiles .elegant-tile-5{min-height:112px!important;gap:16px!important}.photo-categories.elegant-tiles .elegant-tile-5 .tile-line-art{width:48px!important;height:48px!important}.photo-categories.elegant-tiles .elegant-tile-5 .cat-photo-label{font-size:17px!important}}
+
+/* DeckPlay unified navy / slate / gold palette */
+:root{--dp-navy:#14213d;--dp-slate:#303b4b;--dp-gold:#d4a747;--dp-paper:#f6f7f9}
+body{background:var(--dp-paper);color:var(--dp-navy)}
+.hero,html[data-theme="dark"] .hero{background:linear-gradient(120deg,#14213d,#303b4b)!important}
+.hero em,.kicker,.section-eyebrow{color:var(--dp-gold)!important}
+.primary,.market-toggle,.dock-sell{background:#14213d!important;color:#fff!important;border-color:#d4a747!important}
+.primary:hover,.market-toggle:hover{background:#303b4b!important}
+.secondary,.filter.active,.profile-tab.active{background:#e9dfc6!important;color:#14213d!important;border-color:#d4a747!important}
+.cat.active,.cat:hover{border-color:#d4a747!important}
+.photo-categories.elegant-tiles .elegant-tile{background:linear-gradient(145deg,#14213d,#303b4b)!important;color:#d4a747!important;border-color:#596478!important}
+.photo-categories.elegant-tiles .elegant-tile:nth-child(2){background:linear-gradient(145deg,#28354a,#465161)!important}
+.photo-categories.elegant-tiles .elegant-tile:nth-child(3){background:linear-gradient(145deg,#182a43,#34455b)!important}
+.photo-categories.elegant-tiles .elegant-tile:nth-child(4){background:linear-gradient(145deg,#2b3546,#485365)!important}
+.photo-categories.elegant-tiles .elegant-tile.active{border:2px solid #d4a747!important}
+.photo-categories.elegant-tiles .elegant-tile-5{background:linear-gradient(120deg,#14213d,#303b4b)!important}
+a:not(.logo):not(.deckplay-brand){accent-color:#d4a747}
+input:focus,select:focus,textarea:focus{outline-color:#d4a747!important;border-color:#d4a747!important}
+html[data-theme="dark"] body{background:#101722!important;color:#e8edf5!important}
+html[data-theme="dark"] .primary,html[data-theme="dark"] .market-toggle,html[data-theme="dark"] .dock-sell{background:#d4a747!important;color:#14213d!important;border-color:#d4a747!important}
+html[data-theme="dark"] .secondary,html[data-theme="dark"] .filter.active,html[data-theme="dark"] .profile-tab.active{background:#303b4b!important;color:#f5e4b7!important;border-color:#d4a747!important}
+html[data-theme="dark"] a:not(.logo):not(.deckplay-brand){color:#e5bd67}
+html[data-theme="dark"] .section-eyebrow,html[data-theme="dark"] .kicker,html[data-theme="dark"] .hero em{color:#e5bd67!important}
 </style>
 </head>
 <body>
