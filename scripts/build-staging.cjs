@@ -34,4 +34,10 @@ for (const name of files) {
   count++;
 }
 if (!count) throw new Error('No assets copied');
+const entry = path.join(target, 'index.html');
+if (!fs.existsSync(entry)) throw new Error('Staging index.html missing');
+const entryHtml = fs.readFileSync(entry, 'utf8');
+if (!entryHtml.includes(url) || !entryHtml.includes(key)) throw new Error('Staging Supabase config missing from entry HTML');
+if (!entryHtml.includes('noindex,nofollow')) throw new Error('Staging noindex missing');
+if (entryHtml.includes('yffruutknztvdyioovmp')) throw new Error('Production project leaked into staging entry');
 console.log('Prepared isolated staging assets: ' + count + ' files. Production project references checked.');
