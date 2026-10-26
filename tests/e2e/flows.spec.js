@@ -13,7 +13,7 @@ test('checkout is only a preview, not a live payment form', async ({ page }) => 
  await page.goto('/');
  await page.evaluate(() => document.getElementById('checkoutPreviewModal').classList.add('open'));
  await expect(page.locator('#checkoutPreviewModal')).toBeVisible();
- await expect(page.locator('#checkoutPreviewModal').getByText(/coming soon|not enabled|preview/i).first()).toBeVisible();
+ await expect(page.locator('#checkoutPreviewModal').getByText(/Simulation only\. No payments, orders, shipping labels/i)).toBeVisible();
 });
 test('inbox page exists for private conversations', async ({ page }) => {
  await page.goto('/');
