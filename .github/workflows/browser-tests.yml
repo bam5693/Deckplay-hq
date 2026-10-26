@@ -16,8 +16,17 @@ jobs:
         with:
           node-version: '22'
       - run: npm install
-      - run: npx playwright install --with-deps chromium
-      - run: npm run test:e2e
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-linux-${{ hashFiles('package-lock.json') }}
+      - name: Install Chromium dependencies
+        run: npx playwright install-deps chromium
+      - name: Install Chromium browser
+        run: npx playwright install chromium
+      - name: Run mobile and desktop browser tests
+        run: npm run test:e2e
         env:
           DECKPLAY_TEST_SELLER_EMAIL: ${{ secrets.DECKPLAY_TEST_SELLER_EMAIL }}
           DECKPLAY_TEST_SELLER_PASSWORD: ${{ secrets.DECKPLAY_TEST_SELLER_PASSWORD }}
