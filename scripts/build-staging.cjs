@@ -23,7 +23,7 @@ for (const name of files) {
     const text = original.toString('utf8');
     let replaced = text.replaceAll('https://yffruutknztvdyioovmp.supabase.co', url).replaceAll('sb_publishable_cHzM8sQmrqfcCH8lhESytg_FMJrQtCX', key);
     if (name.endsWith('.html')) {
-      replaced = replaced.replace(/<head>/i, '<head>\\n<meta name="robots" content="noindex,nofollow">');
+      replaced = replaced.replace(/<head>/i, '<head>\n<meta name="robots" content="noindex,nofollow">');
       replaced = replaced.replaceAll('emailRedirectTo:"https://deckplayhq.com"', 'emailRedirectTo:window.location.origin');
     }
     output = Buffer.from(replaced);
