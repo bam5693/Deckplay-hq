@@ -15,7 +15,7 @@ let phase='runner';
  console.log('::add-mask::'+value);
  phase='staging-exchange';
  const response=await fetch(origin+'/__ci/session',{method:'POST',headers:{Authorization:'Bearer '+value},signal:AbortSignal.timeout(20000)});
- if(!response.ok){console.error('Staging exchange HTTP '+response.status);throw Error('Staging exchange denied')}
+ if(!response.ok){const denied=await response.json().catch(()=>({}));console.error('Staging exchange HTTP '+response.status+' '+String(denied.error||'denied').replace(/[^A-Za-z _]/g,'').slice(0,90));throw Error('Staging exchange denied')}
  phase='credential-export';
  const values=await response.json();
  const names=['DECKPLAY_STAGING_URL','DECKPLAY_STAGING_ACCESS_PASSWORD','DECKPLAY_TEST_SELLER_EMAIL','DECKPLAY_TEST_SELLER_PASSWORD','DECKPLAY_TEST_BUYER_EMAIL','DECKPLAY_TEST_BUYER_PASSWORD'];

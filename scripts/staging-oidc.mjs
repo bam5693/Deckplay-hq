@@ -12,14 +12,11 @@ export async function verifyStagingIdentity(token,fetcher=fetch,now=Math.floor(D
  const header=JSON.parse(new TextDecoder().decode(decodeBase64url(parts[0])));
  const claims=JSON.parse(new TextDecoder().decode(decodeBase64url(parts[1])));
  if(header.alg!=='RS256'||typeof header.kid!=='string'||header.crit||header.jku||header.jwk)throw Error('Invalid algorithm');
- if(claims.iss!==OIDC_ISSUER||claims.aud!==OIDC_AUDIENCE||
- claims.repository_id!=='1432533626'||claims.repository_owner_id!=='347527951'||
- claims.repository!=='bam5693/Deckplay-hq'||claims.ref!=='refs/heads/test/staging-reporting'||
- claims.workflow_ref!==OIDC_WORKFLOW||claims.sub!=='repo:bam5693/Deckplay-hq:environment:deckplay-staging'||
- claims.environment!=='deckplay-staging'||!['push','workflow_dispatch'].includes(claims.event_name)||
- !Number.isInteger(claims.exp)||claims.exp<=now||claims.exp>now+600||
- !Number.isInteger(claims.iat)||claims.iat>now+30||claims.iat<now-600||
- !Number.isInteger(claims.nbf)||claims.nbf>now+30||!/^\d+$/.test(claims.run_id||''))throw Error('Untrusted workflow');
+ const required={iss:OIDC_ISSUER,aud:OIDC_AUDIENCE,repository_id:'1432533626',repository_owner_id:'347527951',repository:'bam5693/Deckplay-hq',ref:'refs/heads/test/staging-reporting',workflow_ref:OIDC_WORKFLOW,sub:'repo:bam5693/Deckplay-hq:environment:deckplay-staging',environment:'deckplay-staging'};
+ for(const [name,value] of Object.entries(required))if(claims[name]!==value)throw Error('Untrusted claim '+name);
+ if(!['push','workflow_dispatch'].includes(claims.event_name))throw Error('Untrusted event');
+ if(!Number.isInteger(claims.exp)||claims.exp<=now||claims.exp>now+600||!Number.isInteger(claims.iat)||claims.iat>now+30||claims.iat<now-600||!Number.isInteger(claims.nbf)||claims.nbf>now+30)throw Error('Invalid identity lifetime');
+ if(!/^\d+$/.test(claims.run_id||''))throw Error('Invalid run ID');
  const response=await fetcher(OIDC_ISSUER+'/.well-known/jwks',{signal:AbortSignal.timeout(10000),redirect:'error'});
  if(!response.ok)throw Error('Identity keys unavailable');
  const data=await response.json();const jwk=data.keys?.find(k=>k.kid===header.kid&&k.kty==='RSA'&&k.use==='sig'&&k.alg==='RS256');
@@ -39,5 +36,5 @@ export async function stagingCiSession(request,env,headers){
   return Response.json({DECKPLAY_STAGING_URL:OIDC_AUDIENCE,DECKPLAY_STAGING_ACCESS_PASSWORD:env.STAGING_ACCESS_PASSWORD,
    DECKPLAY_TEST_SELLER_EMAIL:'deckplay-seller@deckplay.test',DECKPLAY_TEST_SELLER_PASSWORD:env.TEST_SELLER_PASSWORD,
    DECKPLAY_TEST_BUYER_EMAIL:'deckplay-buyer@deckplay.test',DECKPLAY_TEST_BUYER_PASSWORD:env.TEST_BUYER_PASSWORD},{headers});
- }catch{return new Response('Trusted staging workflow identity required',{status:401,headers})}
+ }catch(e){const reason=/^(Untrusted claim [a-z_]+|Untrusted event|Invalid identity lifetime|Invalid run ID|Invalid signature|Identity keys unavailable|Identity key missing|Identity required|Credentials unavailable)$/.test(e.message)?e.message:'Invalid identity';return Response.json({error:reason},{status:401,headers})}
 }
