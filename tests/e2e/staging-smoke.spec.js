@@ -38,8 +38,8 @@ test('staging login UI does not expose production auth endpoints', async ({ page
     } catch {}
   });
   await page.goto('/');
-  await page.locator('#accountButton').click();
   await expect(page.locator('#authModal')).toBeAttached();
+  await expect(page.locator('#authEmail')).toBeAttached();
   const html = await page.content();
   expect(html).toContain('prrrzeelltmyugssqnzk.supabase.co');
   expect(html).not.toContain('yffruutknztvdyioovmp.supabase.co');
