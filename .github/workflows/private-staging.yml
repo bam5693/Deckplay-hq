@@ -9,8 +9,9 @@ permissions:
 
 jobs:
   staging-accounts:
-    name: Private staging account checks (not full transactions)
+    name: Isolated staging API and browser checks
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     environment: deckplay-staging
     steps:
       - uses: actions/checkout@v4
@@ -20,28 +21,39 @@ jobs:
       - name: Require isolated staging and dedicated test credentials
         env:
           STAGING_URL: ${{ vars.DECKPLAY_STAGING_URL }}
+          ACCESS_PASSWORD: ${{ secrets.DECKPLAY_STAGING_ACCESS_PASSWORD }}
           SELLER_EMAIL: ${{ secrets.DECKPLAY_TEST_SELLER_EMAIL }}
           SELLER_PASSWORD: ${{ secrets.DECKPLAY_TEST_SELLER_PASSWORD }}
           BUYER_EMAIL: ${{ secrets.DECKPLAY_TEST_BUYER_EMAIL }}
           BUYER_PASSWORD: ${{ secrets.DECKPLAY_TEST_BUYER_PASSWORD }}
         run: |
           node - <<'NODE'
-          const {STAGING_URL,SELLER_EMAIL,SELLER_PASSWORD,BUYER_EMAIL,BUYER_PASSWORD}=process.env;
-          if (![STAGING_URL,SELLER_EMAIL,SELLER_PASSWORD,BUYER_EMAIL,BUYER_PASSWORD].every(Boolean)) {
+          const {STAGING_URL,ACCESS_PASSWORD,SELLER_EMAIL,SELLER_PASSWORD,BUYER_EMAIL,BUYER_PASSWORD}=process.env;
+          if (![STAGING_URL,ACCESS_PASSWORD,SELLER_EMAIL,SELLER_PASSWORD,BUYER_EMAIL,BUYER_PASSWORD].every(Boolean)) {
             console.error('STAGING NOT CONFIGURED: URL and both dedicated account credentials are required.');
             process.exit(1);
           }
           const u=new URL(STAGING_URL);
-          if(u.protocol!=='https:' || !/staging|preview|test/i.test(u.hostname)) {
+          if(u.origin!=='https://deckplay-hq-staging.cstivers56.workers.dev') {
             console.error('Refusing to test a URL that is not clearly an HTTPS staging/preview/test host.');
             process.exit(1);
           }
           NODE
       - run: npm ci
       - run: npx playwright install --with-deps chromium
+      - name: Verify staging API transactions and authorization
+        env:
+          DECKPLAY_TEST_SELLER_EMAIL: ${{ secrets.DECKPLAY_TEST_SELLER_EMAIL }}
+          DECKPLAY_TEST_SELLER_PASSWORD: ${{ secrets.DECKPLAY_TEST_SELLER_PASSWORD }}
+          DECKPLAY_TEST_BUYER_EMAIL: ${{ secrets.DECKPLAY_TEST_BUYER_EMAIL }}
+          DECKPLAY_TEST_BUYER_PASSWORD: ${{ secrets.DECKPLAY_TEST_BUYER_PASSWORD }}
+        run: |
+          mkdir -p test-results
+          node scripts/run-staging-api.cjs > test-results/staging-api.tap
       - name: Verify account sign-ins (does not certify transactions)
         env:
           DECKPLAY_STAGING_URL: ${{ vars.DECKPLAY_STAGING_URL }}
+          DECKPLAY_STAGING_ACCESS_PASSWORD: ${{ secrets.DECKPLAY_STAGING_ACCESS_PASSWORD }}
           DECKPLAY_TEST_SELLER_EMAIL: ${{ secrets.DECKPLAY_TEST_SELLER_EMAIL }}
           DECKPLAY_TEST_SELLER_PASSWORD: ${{ secrets.DECKPLAY_TEST_SELLER_PASSWORD }}
           DECKPLAY_TEST_BUYER_EMAIL: ${{ secrets.DECKPLAY_TEST_BUYER_EMAIL }}

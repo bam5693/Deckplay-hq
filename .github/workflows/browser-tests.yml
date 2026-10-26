@@ -2,20 +2,23 @@ name: DeckPlay browser tests
 on:
   workflow_dispatch:
   push:
-    paths:
-      - 'index.html'
-      - 'tests/e2e/**'
-      - 'playwright.config.js'
-      - 'package.json'
+    branches: [test/staging-reporting]
+  pull_request:
+permissions:
+  contents: read
+concurrency:
+  group: browser-tests-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - run: npm install
+      - run: npm ci
       - name: Cache Playwright browsers
         uses: actions/cache@v4
         with:
@@ -36,3 +39,8 @@ jobs:
             test-results/
           if-no-files-found: ignore
           retention-days: 7
+      - name: Summarize verified browser result
+        if: always()
+        run: |
+          echo "## Isolated mobile and desktop UI checks" >> "$GITHUB_STEP_SUMMARY"
+          echo "Status: ${{ job.status }}. See attached HTML report, JUnit, screenshots and traces. This job does not certify real buyer/seller API transactions." >> "$GITHUB_STEP_SUMMARY"

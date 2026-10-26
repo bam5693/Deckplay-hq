@@ -32,6 +32,7 @@ jobs:
           DECKPLAY_STAGING_SUPABASE_URL: https://prrrzeelltmyugssqnzk.supabase.co
           DECKPLAY_STAGING_SUPABASE_KEY: sb_publishable_0omvNnv_ZOvXrZ-LHPMyIQ_a9zxD-yh
         run: node scripts/build-staging.cjs
+      - run: node scripts/build-staging-worker.cjs
       - name: Deploy separate Worker (never production)
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}

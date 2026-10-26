@@ -1,0 +1,8 @@
+node_modules/
+dist-staging/
+playwright-report/
+test-results/
+.env*
+.staging-credentials.json
+
+dist-staging-worker.mjs

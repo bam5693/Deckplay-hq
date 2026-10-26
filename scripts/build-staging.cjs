@@ -23,7 +23,9 @@ for (const name of files) {
     const text = original.toString('utf8');
     let replaced = text.replaceAll('https://yffruutknztvdyioovmp.supabase.co', url).replaceAll('sb_publishable_cHzM8sQmrqfcCH8lhESytg_FMJrQtCX', key);
     if (name.endsWith('.html')) {
-      replaced = replaced.replace(/<head>/i, '<head>\\n<meta name="robots" content="noindex,nofollow">');
+      replaced = replaced.replace(/<body([^>]*)>/i, '<body$1><div role="status" style="padding:10px;text-align:center;background:#e5bd67;color:#172033;font-weight:700">Private staging · Synthetic test data only · Payments and shipping disabled</div>');
+      replaced = replaced.replace(/<head>/i, '<head>\n<meta name="robots" content="noindex,nofollow">');
+      replaced = replaced.replaceAll('0x4AAAAAAFlCX5HPx9tk7uO6','1x00000000000000000000AA');
       replaced = replaced.replaceAll('emailRedirectTo:"https://deckplayhq.com"', 'emailRedirectTo:window.location.origin');
     }
     output = Buffer.from(replaced);
@@ -44,3 +46,5 @@ if (!entryHtml.includes(url) || !entryHtml.includes(key)) throw new Error('Stagi
 if (!entryHtml.includes('noindex,nofollow')) throw new Error('Staging noindex missing');
 if (entryHtml.includes('yffruutknztvdyioovmp')) throw new Error('Production project leaked into staging entry');
 console.log('Prepared isolated staging assets: ' + count + ' files. Production project references checked.');
+
+fs.writeFileSync(path.join(target,"robots.txt"),"User-agent: *\nDisallow: /\n");

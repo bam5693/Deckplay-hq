@@ -1,28 +1,28 @@
-# DeckPlay HQ isolated staging setup
+# Isolated staging
 
-## Current verified state
-- Staging Supabase project: `prrrzeelltmyugssqnzk` (separate from production).
-- Staging Worker: **not yet deployed or verified**.
-- Staging tables: 20 at last inspection, with RLS enabled.
-- Staging browser tests: written, **not yet run successfully**.
-- No real payments, prepaid labels, or production member data should be used.
+Worker: `https://deckplay-hq-staging.cstivers56.workers.dev`.
+Database: `prrrzeelltmyugssqnzk` only. Production must never be used for simulations.
 
-## Deployment (manual and gated)
-1. Review the draft pull request and merge only after checks/review. GitHub scheduled workflows execute from the default branch; adding a schedule on a development branch does not start it.
-2. Create the GitHub environment `deckplay-staging`.
-3. Set environment secret `CLOUDFLARE_API_TOKEN` (scoped to deploy Workers) and variable `CLOUDFLARE_ACCOUNT_ID`. Do **not** put either in source code.
-4. Manually run **Deploy isolated staging website**. It uses `wrangler.staging.jsonc`, deploys only Worker `deckplay-hq-staging`, and builds assets with the separate staging Supabase publishable key.
-5. Confirm the actual HTTPS `workers.dev` staging URL and set environment variable `DECKPLAY_STAGING_URL`. Verify it is not the production domain.
-6. Configure Supabase Auth redirect allowlist for the staging URL and approved Turnstile test configuration for staging. Do not disable production protections.
-7. Create two staging-only users and set GitHub environment secrets `DECKPLAY_TEST_SELLER_EMAIL`, `DECKPLAY_TEST_SELLER_PASSWORD`, `DECKPLAY_TEST_BUYER_EMAIL`, `DECKPLAY_TEST_BUYER_PASSWORD`.
-8. Run **Private staging account verification** manually; only after successful runs should its daily schedule be treated as operational.
+The Worker requires username `deckplay` and the secret `STAGING_ACCESS_PASSWORD` for every route. Secrets are never written to source. The Worker fails closed if this secret is absent. Its frontend uses official Turnstile test site keys; this does not certify production CAPTCHA enforcement.
 
-## What reports prove
-- Smoke tests verify basic rendering, mobile overflow, and separation from production URLs.
-- Account tests verify login UI and authenticated sign-in when configured.
-- Full listing, offer, trade, notification, locking, dispute, shipping and payment flows **are not yet tested or certified**.
-- Failing configuration is a failing test, not a pass. Save Playwright screenshots, traces, and JUnit reports for review.
-- Keep live payments and shipping labels disabled in staging. Never copy customer credentials.
+## Reproducible deployment
+1. Build with `DECKPLAY_STAGING_SUPABASE_URL` and `DECKPLAY_STAGING_SUPABASE_KEY` targeting the exact staging project: `node scripts/build-staging.cjs`.
+2. Run `node scripts/build-staging-worker.cjs`.
+3. Deploy only with `wrangler.staging.jsonc` and a staging-scoped Cloudflare token. Keep existing secrets. Never deploy through the production configuration.
+4. Configure Worker secrets `STAGING_ACCESS_PASSWORD`, `TEST_SELLER_PASSWORD`, `TEST_BUYER_PASSWORD`. Test identities are `deckplay-seller@deckplay.test` and `deckplay-buyer@deckplay.test`, confined to staging.
+5. SQL under `supabase/staging/` describes staging-only changes. It is not a production migration and is not automatically applied by either deployment workflow. The initial staging schema was provisioned before this branch and is not a complete reproducible schema dump.
 
-## Cost and safety
-GitHub Actions, Cloudflare Workers and Supabase each have quotas and potential charges. Check plan usage before enabling frequent schedules. No AI coding service is required for these browser checks.
+## Tests
+- `npm ci`, then `npx playwright install --with-deps chromium`.
+- `npx playwright test --config=playwright.local.config.js`: local mobile/desktop UI simulations built against staging configuration. Does not certify real transactions.
+- `node scripts/run-staging-api.cjs`: real staging APIs, dedicated account credentials from environment.
+- `node scripts/run-staging-browser.cjs`: deployed staging browser checks; exact staging origin is enforced.
+- Required environment: `DECKPLAY_TEST_SELLER_EMAIL`, `DECKPLAY_TEST_SELLER_PASSWORD`, `DECKPLAY_TEST_BUYER_EMAIL`, `DECKPLAY_TEST_BUYER_PASSWORD`, `DECKPLAY_STAGING_URL`, `DECKPLAY_STAGING_ACCESS_PASSWORD`.
+- In this workspace only, ignored `.staging-credentials.json` supports secure test setup. Do not upload this file or include its contents in reports.
+
+## Automation and evidence
+The private GitHub workflow requires the above secrets/URL in environment `deckplay-staging`. A missing value is a failure, not a skipped pass. It uploads HTML, JUnit, screenshot/trace evidence and API TAP output. Reports/traces can include synthetic test sessions; keep artifact retention short and never use real accounts.
+
+GitHub cron in a draft branch is inactive until on the default branch. Worker health probes and their durable `staging_test_runs` reports are separate from the full transaction/browser suite. A passing health probe proves logins/read endpoints, not all marketplace behavior.
+
+Do not merge or deploy production without Coty's approval. Production deployment workflow changes in this PR make production deployment manual and place it in a `production` GitHub environment; environment approval rules still require repository configuration.

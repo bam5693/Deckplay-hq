@@ -1,8 +1,6 @@
 name: Deploy DeckPlay HQ to Cloudflare Workers
 
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 concurrency:
@@ -14,6 +12,7 @@ permissions:
 
 jobs:
   deploy:
+    environment: production
     runs-on: ubuntu-latest
     steps:
       - name: Check out website
@@ -25,7 +24,7 @@ jobs:
       - name: Validate inline JavaScript
         run: node scripts/check-inline-js.cjs
       - name: Install browser test dependencies
-        run: npm install
+        run: npm ci
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
       - name: Run isolated local UI simulations

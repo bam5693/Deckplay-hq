@@ -14,16 +14,17 @@ for (const [role, emailKey, passwordKey] of accounts) {
       const expected = new URL(process.env.DECKPLAY_STAGING_URL);
       expect(actual.origin, 'Staging login must never redirect to production').toBe(expected.origin);
     }
-    await page.evaluate(() => { document.getElementById('authModal').classList.add('open'); });
+    const opener=await page.locator('#accountButton').isVisible()?page.locator('#accountButton'):page.locator('[data-dock="profile"]');await opener.click();
     await page.locator('#authEmail').fill(email);
     await page.locator('#authPassword').fill(password);
     // Do not bypass or forge Cloudflare Turnstile. A real challenge may block CI.
     await expect(page.locator('#authSubmit')).toBeVisible();
-    await page.waitForTimeout(3000);
+    await page.waitForFunction(()=>typeof signupCaptchaToken!=='undefined'&&!!signupCaptchaToken,{},{timeout:20000});
     const captchaReady = await page.evaluate(() => typeof signupCaptchaToken !== 'undefined' && !!signupCaptchaToken);
     if (process.env.DECKPLAY_STAGING_URL && !captchaReady) throw new Error('STAGING NOT VERIFIED: Turnstile challenge did not complete. Configure approved staging test keys.');
     test.skip(!captchaReady, 'Production Turnstile did not automatically verify this test browser; staging test keys are required');
     await page.locator('#authSubmit').click();
     await expect(page.locator('#authModal')).not.toHaveClass(/open/, { timeout: 20000 });
+    await expect.poll(()=>page.evaluate(()=>currentUser?.email)).toBe(email);
   });
 }
