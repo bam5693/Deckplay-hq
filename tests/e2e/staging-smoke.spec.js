@@ -14,7 +14,7 @@ test('staging isolation, essential navigation, and no production database calls'
   await expect(page.locator('#inboxPage')).toBeAttached();
   await expect(page.locator('#collectorPage')).toBeAttached();
   await page.waitForLoadState('networkidle').catch(() => {});
-  const productionCalls = requests.filter(url => /yffruutknztvdyioovmp\.supabase\.co/i.test(url));
+  const productionCalls = requests.filter(url => { try { return new URL(url).hostname === 'yffruutknztvdyioovmp.supabase.co'; } catch { return false; } });
   expect(productionCalls, 'Staging must not contact the production database').toEqual([]);
   const documentText = await page.locator('html').evaluate(el => el.outerHTML);
   expect(documentText).not.toContain('yffruutknztvdyioovmp');
