@@ -9,6 +9,11 @@ for (const [role, emailKey, passwordKey] of accounts) {
     if (process.env.DECKPLAY_STAGING_URL && (!email || !password)) throw new Error('Staging credentials missing');
     test.skip(!email || !password, 'Configure dedicated GitHub Actions secrets');
     await page.goto('/');
+    if (process.env.DECKPLAY_STAGING_URL) {
+      const actual = new URL(page.url());
+      const expected = new URL(process.env.DECKPLAY_STAGING_URL);
+      expect(actual.origin, 'Staging login must never redirect to production').toBe(expected.origin);
+    }
     await page.evaluate(() => { document.getElementById('authModal').classList.add('open'); });
     await page.locator('#authEmail').fill(email);
     await page.locator('#authPassword').fill(password);
