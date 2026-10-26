@@ -12,7 +12,7 @@ export async function verifyStagingIdentity(token,fetcher=fetch,now=Math.floor(D
  const header=JSON.parse(new TextDecoder().decode(decodeBase64url(parts[0])));
  const claims=JSON.parse(new TextDecoder().decode(decodeBase64url(parts[1])));
  if(header.alg!=='RS256'||typeof header.kid!=='string'||header.crit||header.jku||header.jwk)throw Error('Invalid algorithm');
- const required={iss:OIDC_ISSUER,aud:OIDC_AUDIENCE,repository_id:'1432533626',repository_owner_id:'347527951',repository:'bam5693/Deckplay-hq',ref:'refs/heads/test/staging-reporting',workflow_ref:OIDC_WORKFLOW,sub:'repo:bam5693/Deckplay-hq:environment:deckplay-staging',environment:'deckplay-staging'};
+ const required={iss:OIDC_ISSUER,aud:OIDC_AUDIENCE,repository_id:'1432533626',repository_owner_id:'347527951',repository:'bam5693/Deckplay-hq',ref:'refs/heads/test/staging-reporting',workflow_ref:OIDC_WORKFLOW,sub:'repo:bam5693@347527951/Deckplay-hq@1432533626:environment:deckplay-staging',environment:'deckplay-staging'};
  for(const [name,value] of Object.entries(required))if(claims[name]!==value)throw Error('Untrusted claim '+name);
  if(!['push','workflow_dispatch'].includes(claims.event_name))throw Error('Untrusted event');
  if(!Number.isInteger(claims.exp)||claims.exp<=now||claims.exp>now+600||!Number.isInteger(claims.iat)||claims.iat>now+30||claims.iat<now-600||!Number.isInteger(claims.nbf)||claims.nbf>now+30)throw Error('Invalid identity lifetime');
