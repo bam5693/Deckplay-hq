@@ -22,7 +22,7 @@ for (const name of files) {
   if (/\.(html|js|json|webmanifest|css)$/.test(name)) {
     const text = original.toString('utf8');
     let replaced = text.replaceAll('https://yffruutknztvdyioovmp.supabase.co', url).replaceAll('sb_publishable_cHzM8sQmrqfcCH8lhESytg_FMJrQtCX', key);
-    if (name.endsWith('.html')) replaced = replaced.replace(/<head>/i, '<head>\\n<meta name="robots" content="noindex,nofollow">');
+    if (name.endsWith('.html')) replaced = replaced.replace(/<head>/i, '<head>\n<meta name="robots" content="noindex,nofollow">');
     output = Buffer.from(replaced);
     if (output.toString('utf8').includes('yffruutknztvdyioovmp') || output.toString('utf8').includes('sb_publishable_cHzM8sQmrqfcCH8lhESytg_FMJrQtCX')) {
       throw new Error('Production configuration remains in ' + name);
