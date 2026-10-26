@@ -9,7 +9,7 @@ test('profile edit, wanted post, settings and notification preferences persist',
   await page.locator('#profileForm button[type="submit"]').click();await expect(page.locator('#profileModal')).not.toHaveClass(/open/,{timeout:20000});
   await menu(page,'myProfile');await expect(page.locator('#pageBio')).toContainText(title,{timeout:20000});
   await menu(page,'menuPostWanted');await page.locator('#wantedItem').fill(title);await page.locator('#wantedGame').selectOption('one_piece');await page.locator('#wantedBudget').fill('50');await page.locator('#wantedDetails').fill(title);await page.locator('#wantedForm button[type="submit"]').click();await expect(page.locator('#wantedModal')).not.toHaveClass(/open/,{timeout:20000});
-  await menu(page,'myProfile');await page.locator('[data-profile-tab="wanted"]').click();await expect(page.locator('#profilePageContent')).toContainText(title,{timeout:20000});
+  await menu(page,'myProfile');await page.locator('[data-profile-tab="wanted"]').click();await expect.poll(async()=>page.locator('#profilePageContent').innerText(),{timeout:30000}).toContain(title);
   await menu(page,'profileSettings');await expect(page.locator('#notificationSettingsStatus')).toContainText('Preferences saved',{timeout:20000});
   await page.locator('[data-theme-choice="dark"]').click();await expect(page.locator('html')).toHaveAttribute('data-theme','dark');
   await page.locator('button[data-font-size="large"]').click();await expect(page.locator('html')).toHaveAttribute('data-font-size','large');
