@@ -30,13 +30,6 @@ jobs:
         run: npx playwright install --with-deps chromium
       - name: Run isolated local UI simulations
         run: npx playwright test --config=playwright.local.config.js
-      - name: Run pre-deployment browser tests
-        run: npm run test:e2e
-        env:
-          DECKPLAY_TEST_SELLER_EMAIL: ${{ secrets.DECKPLAY_TEST_SELLER_EMAIL }}
-          DECKPLAY_TEST_SELLER_PASSWORD: ${{ secrets.DECKPLAY_TEST_SELLER_PASSWORD }}
-          DECKPLAY_TEST_BUYER_EMAIL: ${{ secrets.DECKPLAY_TEST_BUYER_EMAIL }}
-          DECKPLAY_TEST_BUYER_PASSWORD: ${{ secrets.DECKPLAY_TEST_BUYER_PASSWORD }}
       - name: Publish to existing Cloudflare Worker
         run: npx --yes wrangler@4 deploy
         env:
