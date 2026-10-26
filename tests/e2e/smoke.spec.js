@@ -2,7 +2,7 @@ const { test, expect } = require('@playwright/test');
 test('homepage categories', async ({ page }) => {
   await page.goto('/');
   await expect(page.locator('[data-cat="All"]').first()).toBeVisible();
-  await expect(page.locator('[data-cat="Collectibles"]').first()).toBeVisible();
+  await expect(page.locator('[data-cat="Trading Cards"]').first()).toBeVisible();
 });
 test('listing form UI', async ({ page }) => {
   await page.goto('/');
