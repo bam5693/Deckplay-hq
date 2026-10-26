@@ -103,7 +103,7 @@ test('notification preferences persist and suppress unwanted notifications',()=>
   assert(api('buyer','/rest/v1/notification_preferences','POST',preferences,{Prefer:'resolution=merge-duplicates'}).status>=400);
   const message=ok(api('buyer','/rest/v1/collector_messages','POST',{sender_id:users.buyer,recipient_id:users.seller,body:run},{Prefer:'return=representation'}),201)[0];
   assert.equal(ok(api('seller','/rest/v1/collector_notifications?source_id=eq.'+message.id)).length,0);
- } finally{ok(api('seller','/rest/v1/notification_preferences','POST',original||{...preferences,messages:true},{Prefer:'resolution=merge-duplicates'}),201)}
+ } finally{assert([200,201].includes(api('seller','/rest/v1/notification_preferences','POST',original||{...preferences,messages:true},{Prefer:'resolution=merge-duplicates'}).status))}
 });
 test('blocking prevents messages and price offers until unblocked',()=>{
  ok(api('seller','/rest/v1/user_blocks','POST',{blocker_id:users.seller,blocked_id:users.buyer}),201);
