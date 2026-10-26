@@ -14,6 +14,8 @@ const files = execFileSync('git', ['ls-files', '-z'], { encoding: 'utf8' }).spli
 let count = 0;
 for (const name of files) {
   if (!/\.(?:html|css|js|svg|png|jpg|jpeg|webp|ico|webmanifest|json)$/.test(name)) continue;
+  if (name.endsWith('.js') && (name.startsWith('playwright.') || name.endsWith('.config.js'))) continue;
+  if (name === 'package.json' || name === 'package-lock.json') continue;
   if (name.startsWith('tests/') || name.startsWith('scripts/') || name.startsWith('.github/') || name.startsWith('node_modules/') || name.startsWith('dist-')) continue;
   const original = fs.readFileSync(name);
   let output = original;
