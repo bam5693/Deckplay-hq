@@ -3,6 +3,7 @@ test('buyer can complete checkout simulation without a transaction', async ({ pa
  await page.goto('/');
  await page.evaluate(() => document.getElementById('checkoutPreviewModal').classList.add('open'));
  await expect(page.getByText('Checkout simulator')).toBeVisible();
+ await page.evaluate(() => { window.deckplaySimulatedItem={title:'Test Card',price:40}; });
  await page.locator('#simulationRecipient').fill('Test Buyer');
  await page.locator('#simulationAddress').fill('123 Example Street');
  await page.locator('#simulationCity').fill('Test City');
@@ -12,9 +13,12 @@ test('buyer can complete checkout simulation without a transaction', async ({ pa
  await expect(page.locator('#simulationStepTwo')).toBeVisible();
  await page.locator('#previewShippingMethod').selectOption('priority');
  await page.locator('#simulationNext').click();
- await expect(page.locator('#simulationSummary')).toContainText('$9.00');
+ await expect(page.locator('#simulationSummary')).toContainText('Test Card');
+ await expect(page.locator('#simulationSummary')).toContainText('$49.00');
  await expect(page.locator('#simulationSummary')).toContainText('not charged');
  await page.locator('#simulationFinish').click();
  await expect(page.locator('#simulationStepDone')).toBeVisible();
  await expect(page.locator('#simulationStepDone')).toContainText('No charge, order, shipping label, or message was created.');
+ await expect(page.locator('#simulationTracking')).toContainText('Delivered — preview');
+ await expect(page.locator('#simulationStepDone')).toContainText('DEMO-ONLY');
 });
