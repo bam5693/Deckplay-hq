@@ -1,9 +1,9 @@
-const {test,before}=require('node:test');const assert=require('node:assert/strict');const {randomUUID}=require('node:crypto');
+const {test,before,after}=require('node:test');const assert=require('node:assert/strict');const {randomUUID}=require('node:crypto');
 const {http}=require('../../scripts/staging-http.cjs');
 const base='https://prrrzeelltmyugssqnzk.supabase.co';
 const key='sb_publishable_0omvNnv_ZOvXrZ-LHPMyIQ_a9zxD-yh';
 // Hardcoded isolated target: no configurable production URL or service-role credential.
-const users={};const run='TEST ONLY — NOT FOR SALE '+randomUUID().slice(0,8);
+const users={};const run='TEST ONLY BOT '+randomUUID();
 const sessions={};
 function api(role,path,method='GET',body,extra={}){
  return http(base+path,{method,headers:{apikey:key,'Content-Type':'application/json',...(sessions[role]?{Authorization:'Bearer '+sessions[role].access_token}:{}),...extra},body});
@@ -90,4 +90,39 @@ test('concurrent acceptances produce exactly one winning offer',async()=>{
  const results=await Promise.all([one,two].map(id=>httpAsync(base+'/rest/v1/rpc/respond_price_offer',{method:'POST',headers:{apikey:key,'Content-Type':'application/json',Authorization:'Bearer '+sessions.seller.access_token},body:{p_offer_id:id,p_action:'accept',p_amount:null}})));
  assert.equal(results.filter(r=>r.status===204).length,1);assert.equal(results.filter(r=>r.status>=400).length,1);
  const rows=ok(api('seller','/rest/v1/price_offers?listing_id=eq.'+l.id));assert.equal(rows.filter(x=>x.status==='accepted').length,1);assert.equal(rows.filter(x=>x.status==='declined').length,1);
+});
+
+after(()=>{if(sessions.seller)ok(api('seller','/rest/v1/rpc/cleanup_staging_fixture','POST',{p_marker:run}),204)});
+test('notification preferences persist and suppress unwanted notifications',()=>{
+ const original=ok(api('seller','/rest/v1/notification_preferences?user_id=eq.'+users.seller))[0];
+ const preferences={user_id:users.seller,messages:false,trade_offers:true,wanted_matches:true,product_updates:false};
+ try{
+  ok(api('seller','/rest/v1/notification_preferences','POST',preferences,{Prefer:'resolution=merge-duplicates'}),201);
+  assert.equal(ok(api('seller','/rest/v1/notification_preferences?user_id=eq.'+users.seller))[0].messages,false);
+  assert.equal(ok(api('buyer','/rest/v1/notification_preferences?user_id=eq.'+users.seller)).length,0);
+  assert(api('buyer','/rest/v1/notification_preferences','POST',preferences,{Prefer:'resolution=merge-duplicates'}).status>=400);
+  const message=ok(api('buyer','/rest/v1/collector_messages','POST',{sender_id:users.buyer,recipient_id:users.seller,body:run},{Prefer:'return=representation'}),201)[0];
+  assert.equal(ok(api('seller','/rest/v1/collector_notifications?source_id=eq.'+message.id)).length,0);
+ } finally{ok(api('seller','/rest/v1/notification_preferences','POST',original||{...preferences,messages:true},{Prefer:'resolution=merge-duplicates'}),201)}
+});
+test('blocking prevents messages and price offers until unblocked',()=>{
+ ok(api('seller','/rest/v1/user_blocks','POST',{blocker_id:users.seller,blocked_id:users.buyer}),201);
+ try{
+  assert.equal(ok(api('buyer','/rest/v1/user_blocks?blocker_id=eq.'+users.seller)).length,0);
+  const l=createListing();
+  assert(api('buyer','/rest/v1/collector_messages','POST',{sender_id:users.buyer,recipient_id:users.seller,body:run}).status>=400);
+  assert(api('buyer','/rest/v1/rpc/submit_price_offer','POST',{p_listing_id:l.id,p_amount:20}).status>=400);
+ }finally{ok(api('seller','/rest/v1/user_blocks?blocker_id=eq.'+users.seller+'&blocked_id=eq.'+users.buyer,'DELETE'),204)}
+ ok(api('buyer','/rest/v1/collector_messages','POST',{sender_id:users.buyer,recipient_id:users.seller,body:run}),201);
+});
+test('reports are private to reporter and cannot impersonate another reporter',()=>{
+ const report=ok(api('buyer','/rest/v1/user_reports','POST',{reporter_id:users.buyer,reported_id:users.seller,reason:'other',details:run},{Prefer:'return=representation'}),201)[0];
+ assert.equal(ok(api('seller','/rest/v1/user_reports?id=eq.'+report.id)).length,0);
+ assert.equal(ok(api(null,'/rest/v1/user_reports?id=eq.'+report.id)).length,0);
+ assert(api('buyer','/rest/v1/user_reports','POST',{reporter_id:users.seller,reported_id:users.buyer,reason:'other',details:run}).status>=400);
+});
+test('empty messages, invalid photos and broad cleanup attempts fail',()=>{
+ assert(api('buyer','/rest/v1/collector_messages','POST',{sender_id:users.buyer,recipient_id:users.seller,body:'   '}).status>=400);
+ assert(api(null,'/rest/v1/rpc/cleanup_staging_fixture','POST',{p_marker:run}).status>=400);
+ assert(api('seller','/rest/v1/rpc/cleanup_staging_fixture','POST',{p_marker:'TEST ONLY%'}).status>=400);
 });

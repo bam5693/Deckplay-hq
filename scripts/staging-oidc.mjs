@@ -17,11 +17,11 @@ export async function verifyStagingIdentity(token,fetcher=fetch,now=Math.floor(D
  if(!['push','workflow_dispatch'].includes(claims.event_name))throw Error('Untrusted event');
  if(!Number.isInteger(claims.exp)||claims.exp<=now||claims.exp>now+600||!Number.isInteger(claims.iat)||claims.iat>now+30||claims.iat<now-600||!Number.isInteger(claims.nbf)||claims.nbf>now+30)throw Error('Invalid identity lifetime');
  if(!/^\d+$/.test(claims.run_id||''))throw Error('Invalid run ID');
- const response=await fetcher(OIDC_ISSUER+'/.well-known/jwks',{signal:AbortSignal.timeout(10000),redirect:'error'});
+ let response;try{response=await fetcher(OIDC_ISSUER+'/.well-known/jwks',{signal:AbortSignal.timeout(10000),redirect:'error'})}catch{throw Error('Identity keys fetch failed')}
  if(!response.ok)throw Error('Identity keys unavailable');
  const data=await response.json();const jwk=data.keys?.find(k=>k.kid===header.kid&&k.kty==='RSA'&&k.use==='sig'&&k.alg==='RS256');
  if(!jwk)throw Error('Identity key missing');
- const key=await crypto.subtle.importKey('jwk',jwk,{name:'RSASSA-PKCS1-v1_5',hash:'SHA-256'},false,['verify']);
+ let key;try{key=await crypto.subtle.importKey('jwk',jwk,{name:'RSASSA-PKCS1-v1_5',hash:'SHA-256'},false,['verify'])}catch{throw Error('Identity key import failed')}
  if(!await crypto.subtle.verify('RSASSA-PKCS1-v1_5',key,decodeBase64url(parts[2]),new TextEncoder().encode(parts[0]+'.'+parts[1])))throw Error('Invalid signature');
  return {run_id:claims.run_id};
 }
@@ -36,5 +36,5 @@ export async function stagingCiSession(request,env,headers){
   return Response.json({DECKPLAY_STAGING_URL:OIDC_AUDIENCE,DECKPLAY_STAGING_ACCESS_PASSWORD:env.STAGING_ACCESS_PASSWORD,
    DECKPLAY_TEST_SELLER_EMAIL:'deckplay-seller@deckplay.test',DECKPLAY_TEST_SELLER_PASSWORD:env.TEST_SELLER_PASSWORD,
    DECKPLAY_TEST_BUYER_EMAIL:'deckplay-buyer@deckplay.test',DECKPLAY_TEST_BUYER_PASSWORD:env.TEST_BUYER_PASSWORD},{headers});
- }catch(e){const reason=/^(Untrusted claim [a-z_]+|Untrusted event|Invalid identity lifetime|Invalid run ID|Invalid signature|Identity keys unavailable|Identity key missing|Identity required|Credentials unavailable)$/.test(e.message)?e.message:'Invalid identity';return Response.json({error:reason},{status:401,headers})}
+ }catch(e){const reason=/^(Untrusted claim [a-z_]+|Untrusted event|Invalid identity lifetime|Invalid run ID|Invalid signature|Identity keys unavailable|Identity keys fetch failed|Identity key import failed|Identity key missing|Identity required|Credentials unavailable)$/.test(e.message)?e.message:'Invalid identity';return Response.json({error:reason},{status:401,headers})}
 }

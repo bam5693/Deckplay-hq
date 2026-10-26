@@ -8,7 +8,7 @@ if (host.origin !== 'https://deckplay-hq-staging.cstivers56.workers.dev') {
 module.exports = defineConfig({
   testDir: './tests/e2e',
   outputDir:'test-results/staging',
-  testMatch: ['accounts.spec.js', 'staging-smoke.spec.js', 'buyer-seller.spec.js'],
+  testMatch: ['accounts.spec.js', 'staging-smoke.spec.js', 'buyer-seller.spec.js', 'community.spec.js', 'trading.spec.js'],
   workers: 1,
   timeout: 45000,
   retries: 1,

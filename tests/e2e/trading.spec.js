@@ -1,0 +1,14 @@
+const {test,expect}=require('@playwright/test');const {signIn,menu,seedListing,cleanup,marker}=require('../helpers/staging.cjs');
+test('trade proposal and cash counteroffer accepted through both collector screens',async({page,browser})=>{
+ test.setTimeout(180000);const title=marker();await signIn(page,'SELLER');
+ const context=await browser.newContext({baseURL:process.env.DECKPLAY_STAGING_URL,viewport:page.viewportSize(),httpCredentials:{username:'deckplay',password:process.env.DECKPLAY_STAGING_ACCESS_PASSWORD},ignoreHTTPSErrors:!!process.env.CODEX_NETWORK_PROXY_ACTIVE});const buyer=await context.newPage();
+ try{
+  const target=await seedListing(page,title);await signIn(buyer,'BUYER');const offered=await seedListing(buyer,title);
+  await buyer.reload({waitUntil:'domcontentloaded'});await buyer.locator('[data-cat="Trading Cards"]').first().click();await buyer.locator('#search').fill(title);await buyer.locator('[data-view="'+target+'"]').click();await buyer.locator('[data-trade-id]').click();
+  await expect(buyer.locator('#tradeOfferedListing option[value="'+offered+'"]')).toBeAttached({timeout:15000});await buyer.locator('#tradeOfferedListing').selectOption(offered);await buyer.locator('#tradeOfferNote').fill(title);
+  const response=buyer.waitForResponse(r=>r.url().includes('/rest/v1/trade_offers')&&r.request().method()==='POST');await buyer.locator('#tradeComposeForm button[type="submit"]').click();expect((await response).ok()).toBe(true);await expect(buyer.locator('#tradeComposeModal')).not.toHaveClass(/open/,{timeout:15000});
+  await menu(page,'myTrades');const card=page.locator('.trade-offer-card').filter({hasText:title});await expect(card).toHaveCount(1,{timeout:15000});await card.locator('[data-counter-start]').click();await page.locator('#counterDirection').selectOption('sender_pays');await page.locator('#counterAmount').fill('5');await page.locator('#counterNote').fill(title+' counter');await page.locator('#counterForm button[type="submit"]').click();await expect(page.locator('#counterModal')).not.toHaveClass(/open/,{timeout:15000});
+  await buyer.locator('[data-close="detailModal"]').click();await menu(buyer,'myTrades');const incoming=buyer.locator('.trade-offer-card').filter({hasText:title});await expect(incoming.locator('[data-counter-response="accept"]')).toBeVisible({timeout:15000});buyer.once('dialog',d=>d.accept());await incoming.locator('[data-counter-response="accept"]').click();await expect(incoming).toContainText('Original offer: accepted',{timeout:15000});
+  for(const [p,id] of [[page,target],[buyer,offered]])expect(await p.evaluate(async id=>{const {data,error}=await supabaseClient.from('listings').select('status').eq('id',id).single();if(error)throw Error(error.message);return data.status},id)).toBe('reserved');
+ }finally{await cleanup(page,title);await context.close()}
+});
