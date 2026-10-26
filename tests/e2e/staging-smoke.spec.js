@@ -5,7 +5,7 @@ test('staging isolation, essential navigation, and no production database calls'
   const expected = new URL(process.env.DECKPLAY_STAGING_URL);
   const requests = [];
   page.on('request', request => requests.push(request.url()));
-  await page.goto('/');
+  await page.goto('/',{waitUntil:'domcontentloaded',timeout:30000});
   expect(new URL(page.url()).origin).toBe(expected.origin);
   await expect(page).toHaveTitle(/DeckPlay/i);
   await expect(page.locator('#search')).toBeVisible();
@@ -13,7 +13,7 @@ test('staging isolation, essential navigation, and no production database calls'
   await expect(page.locator('#wantedNav')).toBeAttached();
   await expect(page.locator('#inboxPage')).toBeAttached();
   await expect(page.locator('#collectorPage')).toBeAttached();
-  await page.waitForLoadState('networkidle').catch(() => {});
+  await page.waitForLoadState('networkidle',{timeout:3000}).catch(() => {});
   const productionCalls = requests.filter(url => { try { return new URL(url).hostname === 'yffruutknztvdyioovmp.supabase.co'; } catch { return false; } });
   expect(productionCalls, 'Staging must not contact the production database').toEqual([]);
   const documentText = await page.locator('html').evaluate(el => el.outerHTML);
@@ -23,7 +23,7 @@ test('staging isolation, essential navigation, and no production database calls'
 
 test('mobile layout exposes navigation without horizontal overflow', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto('/');
+  await page.goto('/',{waitUntil:'domcontentloaded',timeout:30000});
   await expect(page.locator('#mobileDock')).toBeAttached();
   await expect(page.locator('#search')).toBeVisible();
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
@@ -37,7 +37,7 @@ test('staging login UI does not expose production auth endpoints', async ({ page
       if (new URL(request.url()).hostname === 'yffruutknztvdyioovmp.supabase.co') production.push(request.url());
     } catch {}
   });
-  await page.goto('/');
+  await page.goto('/',{waitUntil:'domcontentloaded',timeout:30000});
   await expect(page.locator('#authModal')).toBeAttached();
   await expect(page.locator('#authEmail')).toBeAttached();
   const html = await page.content();

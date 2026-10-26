@@ -4,6 +4,7 @@ export default {
   const url=new URL(request.url);
   const headers={'Cache-Control':'no-store','X-Robots-Tag':'noindex, nofollow','X-Content-Type-Options':'nosniff','Referrer-Policy':'same-origin','X-Frame-Options':'DENY'};
   if(url.hostname!=='deckplay-hq-staging.cstivers56.workers.dev')return new Response('Staging host required',{status:403,headers});
+  if(url.pathname==='/__ci/session')return stagingCiSession(request,env,headers);
   if(!env.STAGING_ACCESS_PASSWORD)return new Response('Staging access is not configured',{status:503,headers});
   // Hash before comparison; never expose the secret in a response or a URL.
   const expected='Basic '+btoa('deckplay:'+env.STAGING_ACCESS_PASSWORD);

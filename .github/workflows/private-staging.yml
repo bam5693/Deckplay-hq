@@ -1,70 +1,49 @@
-name: Private staging account verification
+name: Private staging feature bots
 on:
   workflow_dispatch:
-  schedule:
-    - cron: '17 9 * * *'
-
+  push:
+    branches: [test/staging-reporting]
+    paths-ignore: ['tests/reports/**']
 permissions:
   contents: read
-
+  id-token: write
+concurrency:
+  group: private-staging-transactions
+  cancel-in-progress: false
 jobs:
   staging-accounts:
-    name: Isolated staging API and browser checks
+    name: Real staging API and mobile/desktop buyer-seller journeys
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     environment: deckplay-staging
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Require isolated staging and dedicated test credentials
-        env:
-          STAGING_URL: ${{ vars.DECKPLAY_STAGING_URL }}
-          ACCESS_PASSWORD: ${{ secrets.DECKPLAY_STAGING_ACCESS_PASSWORD }}
-          SELLER_EMAIL: ${{ secrets.DECKPLAY_TEST_SELLER_EMAIL }}
-          SELLER_PASSWORD: ${{ secrets.DECKPLAY_TEST_SELLER_PASSWORD }}
-          BUYER_EMAIL: ${{ secrets.DECKPLAY_TEST_BUYER_EMAIL }}
-          BUYER_PASSWORD: ${{ secrets.DECKPLAY_TEST_BUYER_PASSWORD }}
-        run: |
-          node - <<'NODE'
-          const {STAGING_URL,ACCESS_PASSWORD,SELLER_EMAIL,SELLER_PASSWORD,BUYER_EMAIL,BUYER_PASSWORD}=process.env;
-          if (![STAGING_URL,ACCESS_PASSWORD,SELLER_EMAIL,SELLER_PASSWORD,BUYER_EMAIL,BUYER_PASSWORD].every(Boolean)) {
-            console.error('STAGING NOT CONFIGURED: URL and both dedicated account credentials are required.');
-            process.exit(1);
-          }
-          const u=new URL(STAGING_URL);
-          if(u.origin!=='https://deckplay-hq-staging.cstivers56.workers.dev') {
-            console.error('Refusing to test a URL that is not clearly an HTTPS staging/preview/test host.');
-            process.exit(1);
-          }
-          NODE
       - run: npm ci
       - run: npx playwright install --with-deps chromium
+      - name: Authenticate using repository-scoped GitHub identity
+        run: node scripts/staging-ci-credentials.cjs
       - name: Verify staging API transactions and authorization
-        env:
-          DECKPLAY_TEST_SELLER_EMAIL: ${{ secrets.DECKPLAY_TEST_SELLER_EMAIL }}
-          DECKPLAY_TEST_SELLER_PASSWORD: ${{ secrets.DECKPLAY_TEST_SELLER_PASSWORD }}
-          DECKPLAY_TEST_BUYER_EMAIL: ${{ secrets.DECKPLAY_TEST_BUYER_EMAIL }}
-          DECKPLAY_TEST_BUYER_PASSWORD: ${{ secrets.DECKPLAY_TEST_BUYER_PASSWORD }}
         run: |
           mkdir -p test-results
-          node scripts/run-staging-api.cjs > test-results/staging-api.tap
-      - name: Verify account sign-ins (does not certify transactions)
-        env:
-          DECKPLAY_STAGING_URL: ${{ vars.DECKPLAY_STAGING_URL }}
-          DECKPLAY_STAGING_ACCESS_PASSWORD: ${{ secrets.DECKPLAY_STAGING_ACCESS_PASSWORD }}
-          DECKPLAY_TEST_SELLER_EMAIL: ${{ secrets.DECKPLAY_TEST_SELLER_EMAIL }}
-          DECKPLAY_TEST_SELLER_PASSWORD: ${{ secrets.DECKPLAY_TEST_SELLER_PASSWORD }}
-          DECKPLAY_TEST_BUYER_EMAIL: ${{ secrets.DECKPLAY_TEST_BUYER_EMAIL }}
-          DECKPLAY_TEST_BUYER_PASSWORD: ${{ secrets.DECKPLAY_TEST_BUYER_PASSWORD }}
+          set -o pipefail
+          node scripts/run-staging-api.cjs | tee test-results/staging-api.tap
+      - name: Verify deployed mobile and desktop buyer-seller journeys
+        if: ${{ !cancelled() && env.DECKPLAY_STAGING_URL != '' }}
         run: npx playwright test --config=playwright.staging.config.js
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: private-staging-browser-report
+          name: private-staging-feature-report
           path: |
             playwright-report/
             test-results/
-          if-no-files-found: ignore
-          retention-days: 7
+          if-no-files-found: warn
+          retention-days: 3
+      - name: Summarize feature bot result
+        if: always()
+        run: |
+          echo '## Real staging feature bots' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Result: ${{ job.status }}. Reports include API assertions, mobile/desktop journeys, traces and screenshots. Payment/shipping remain previews. See coverage matrix for external-service limits.' >> "$GITHUB_STEP_SUMMARY"

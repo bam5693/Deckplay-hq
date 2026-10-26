@@ -8,7 +8,7 @@ for (const [role, emailKey, passwordKey] of accounts) {
     const email = process.env[emailKey], password = process.env[passwordKey];
     if (process.env.DECKPLAY_STAGING_URL && (!email || !password)) throw new Error('Staging credentials missing');
     test.skip(!email || !password, 'Configure dedicated GitHub Actions secrets');
-    await page.goto('/');
+    await page.goto('/',{waitUntil:'domcontentloaded',timeout:30000});
     if (process.env.DECKPLAY_STAGING_URL) {
       const actual = new URL(page.url());
       const expected = new URL(process.env.DECKPLAY_STAGING_URL);

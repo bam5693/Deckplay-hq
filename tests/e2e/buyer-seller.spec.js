@@ -1,6 +1,6 @@
 const {test,expect}=require('@playwright/test');
 async function signIn(page,role){
- await page.goto('/');
+ await page.goto('/',{waitUntil:'domcontentloaded',timeout:30000});
  const opener=await page.locator('#accountButton').isVisible()?page.locator('#accountButton'):page.locator('[data-dock="profile"]');await opener.click();
  await page.locator('#authEmail').fill(process.env['DECKPLAY_TEST_'+role+'_EMAIL']);await page.locator('#authPassword').fill(process.env['DECKPLAY_TEST_'+role+'_PASSWORD']);
  await page.waitForFunction(()=>!!signupCaptchaToken,{},{timeout:25000});await page.locator('#authSubmit').click();await expect(page.locator('#authModal')).not.toHaveClass(/open/,{timeout:25000});
@@ -29,10 +29,10 @@ test('seller uploads and lists; buyer saves, messages and offers; seller accepts
   await buyer.locator('#priceOfferForm button[type="submit"]').click();const response=await offerResponse;expect(response.ok()).toBe(true);const offerId=await response.json();
   await expect(buyer.locator('#priceOfferModal')).not.toHaveClass(/open/);
   if(await page.locator('[data-dock="inbox"]').isVisible())await page.locator('[data-dock="inbox"]').click();else {await page.locator('#accountButton').click();await page.locator('#myMessages').click()}
-  await page.locator('[data-conversation-id]').filter({hasText:'test_buyer'}).click();await expect(page.locator('#conversationThread')).toContainText(title+' — hello');
+  await page.locator('[data-conversation-id]').filter({hasText:'test_buyer'}).click();await expect(page.locator('#conversationThread')).toContainText(title+' — hello',{timeout:15000});
   page.once('dialog',d=>d.accept());await page.locator('[data-inbox-price="accept"][data-offer="'+offerId+'"]').click();
   await expect(page.locator('#conversationThread')).toContainText('accepted',{timeout:20000});
-  await buyer.reload();await buyer.locator('[data-cat="Trading Cards"]').first().click();await buyer.locator('#search').fill(title);await expect.poll(()=>buyer.evaluate(()=>listingSource)).toBe('live');await expect(buyer.locator('#grid .card').filter({hasText:title})).toHaveCount(0,{timeout:20000});
+  await buyer.reload({waitUntil:'domcontentloaded',timeout:30000});await buyer.locator('[data-cat="Trading Cards"]').first().click();await buyer.locator('#search').fill(title);await expect.poll(()=>buyer.evaluate(()=>listingSource)).toBe('live');await expect(buyer.locator('#grid .card').filter({hasText:title})).toHaveCount(0,{timeout:20000});
   expect(errors).toEqual([]);
  } finally {await buyerContext.close()}
 });

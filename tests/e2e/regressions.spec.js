@@ -36,3 +36,25 @@ test('a late Turnstile ready callback initializes the widget',async({page})=>{
  const widget=await page.evaluate(()=>{window.turnstile={render:()=>99,reset:()=>{}};window.deckplayTurnstileReady();return signupCaptchaWidget});
  expect(widget).toBe(99);
 });
+test('inbox loads once and retains the selected conversation during background refresh',async({page})=>{
+ await page.goto('/');
+ // Isolated deterministic fixture: no network write or real authentication is performed.
+ await page.evaluate(async()=>{
+  await supabaseClient.auth.getSession();currentUser={id:'fixture-seller'};window.inboxFixtureReads=0;
+  const now=new Date().toISOString();
+  supabaseClient.from=table=>{
+   if(table==='collector_messages')window.inboxFixtureReads++;
+   const data=table==='collector_messages'?[{id:'fixture-message',sender_id:'fixture-buyer',recipient_id:'fixture-seller',body:'Fixture message persists',read_at:now,created_at:now}]:table==='profiles'?[{id:'fixture-buyer',username:'fixture_buyer'}]:[];
+   const q={then:(resolve,reject)=>Promise.resolve({data,error:null}).then(resolve,reject)};
+   for(const name of ['select','order','limit','in','eq','is','update','insert','maybeSingle'])q[name]=()=>q;
+   return q;
+  };
+  await showInboxPage();
+ });
+ expect(await page.evaluate(()=>window.inboxFixtureReads)).toBe(1);
+ await page.locator('[data-conversation-id="fixture-buyer"]').click();
+ await expect(page.locator('#conversationThread')).toContainText('Fixture message persists');
+ await page.evaluate(()=>loadInbox());
+ await expect(page.locator('#conversationThread')).toContainText('Fixture message persists');
+ await expect(page.locator('#inboxPage')).toHaveClass(/thread-open/);
+});

@@ -13,5 +13,5 @@ function collect(dir,prefix='') {
 collect('dist-staging');
 if(JSON.stringify(files).includes('yffruutknztvdyioovmp'))throw Error('Production project in staging');
 const handler=fs.readFileSync('scripts/staging-handler.js','utf8');
-fs.writeFileSync('dist-staging-worker.mjs','const assets='+JSON.stringify(files)+';\n'+fs.readFileSync('scripts/staging-health.js','utf8')+'\n'+handler);
+fs.writeFileSync('dist-staging-worker.mjs','const assets='+JSON.stringify(files)+';\n'+fs.readFileSync('scripts/staging-health.js','utf8')+'\n'+fs.readFileSync('scripts/staging-oidc.mjs','utf8').replaceAll('export async function','async function')+'\n'+handler);
 console.log('Built private staging Worker');
