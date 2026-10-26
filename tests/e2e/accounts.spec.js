@@ -6,6 +6,7 @@ const accounts = [
 for (const [role, emailKey, passwordKey] of accounts) {
   test(role + ' can sign in through the normal protected login', async ({ page }) => {
     const email = process.env[emailKey], password = process.env[passwordKey];
+    if (process.env.DECKPLAY_STAGING_URL && (!email || !password)) throw new Error('Staging credentials missing');
     test.skip(!email || !password, 'Configure dedicated GitHub Actions secrets');
     await page.goto('/');
     await page.evaluate(() => { document.getElementById('authModal').classList.add('open'); });
@@ -15,6 +16,7 @@ for (const [role, emailKey, passwordKey] of accounts) {
     await expect(page.locator('#authSubmit')).toBeVisible();
     await page.waitForTimeout(3000);
     const captchaReady = await page.evaluate(() => typeof signupCaptchaToken !== 'undefined' && !!signupCaptchaToken);
+    if (process.env.DECKPLAY_STAGING_URL && !captchaReady) throw new Error('STAGING NOT VERIFIED: Turnstile challenge did not complete. Configure approved staging test keys.');
     test.skip(!captchaReady, 'Production Turnstile did not automatically verify this test browser; staging test keys are required');
     await page.locator('#authSubmit').click();
     await expect(page.locator('#authModal')).not.toHaveClass(/open/, { timeout: 20000 });
