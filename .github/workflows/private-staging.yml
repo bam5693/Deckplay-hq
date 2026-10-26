@@ -1,0 +1,56 @@
+name: Private staging account verification
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  staging-accounts:
+    name: Private staging account checks (not full transactions)
+    runs-on: ubuntu-latest
+    environment: deckplay-staging
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Require isolated staging and dedicated test credentials
+        env:
+          STAGING_URL: ${{ vars.DECKPLAY_STAGING_URL }}
+          SELLER_EMAIL: ${{ secrets.DECKPLAY_TEST_SELLER_EMAIL }}
+          SELLER_PASSWORD: ${{ secrets.DECKPLAY_TEST_SELLER_PASSWORD }}
+          BUYER_EMAIL: ${{ secrets.DECKPLAY_TEST_BUYER_EMAIL }}
+          BUYER_PASSWORD: ${{ secrets.DECKPLAY_TEST_BUYER_PASSWORD }}
+        run: |
+          node - <<'NODE'
+          const {STAGING_URL,SELLER_EMAIL,SELLER_PASSWORD,BUYER_EMAIL,BUYER_PASSWORD}=process.env;
+          if (![STAGING_URL,SELLER_EMAIL,SELLER_PASSWORD,BUYER_EMAIL,BUYER_PASSWORD].every(Boolean)) {
+            console.error('STAGING NOT CONFIGURED: URL and both dedicated account credentials are required.');
+            process.exit(1);
+          }
+          const u=new URL(STAGING_URL);
+          if(u.protocol!=='https:' || !/staging|preview|test/i.test(u.hostname)) {
+            console.error('Refusing to test a URL that is not clearly an HTTPS staging/preview/test host.');
+            process.exit(1);
+          }
+          NODE
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Verify account sign-ins (does not certify transactions)
+        env:
+          DECKPLAY_STAGING_URL: ${{ vars.DECKPLAY_STAGING_URL }}
+          DECKPLAY_TEST_SELLER_EMAIL: ${{ secrets.DECKPLAY_TEST_SELLER_EMAIL }}
+          DECKPLAY_TEST_SELLER_PASSWORD: ${{ secrets.DECKPLAY_TEST_SELLER_PASSWORD }}
+          DECKPLAY_TEST_BUYER_EMAIL: ${{ secrets.DECKPLAY_TEST_BUYER_EMAIL }}
+          DECKPLAY_TEST_BUYER_PASSWORD: ${{ secrets.DECKPLAY_TEST_BUYER_PASSWORD }}
+        run: npx playwright test tests/e2e/accounts.spec.js --config=playwright.staging.config.js
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: private-staging-account-report
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore
+          retention-days: 7
