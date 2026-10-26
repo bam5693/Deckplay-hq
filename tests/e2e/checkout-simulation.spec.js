@@ -1,0 +1,20 @@
+const { test, expect } = require('@playwright/test');
+test('buyer can complete checkout simulation without a transaction', async ({ page }) => {
+ await page.goto('/');
+ await page.evaluate(() => document.getElementById('checkoutPreviewModal').classList.add('open'));
+ await expect(page.getByText('Checkout simulator')).toBeVisible();
+ await page.locator('#simulationRecipient').fill('Test Buyer');
+ await page.locator('#simulationAddress').fill('123 Example Street');
+ await page.locator('#simulationCity').fill('Test City');
+ await page.locator('#simulationState').fill('AR');
+ await page.locator('#simulationZip').fill('72000');
+ await page.locator('#simulationNext').click();
+ await expect(page.locator('#simulationStepTwo')).toBeVisible();
+ await page.locator('#previewShippingMethod').selectOption('priority');
+ await page.locator('#simulationNext').click();
+ await expect(page.locator('#simulationSummary')).toContainText('$9.00');
+ await expect(page.locator('#simulationSummary')).toContainText('not charged');
+ await page.locator('#simulationFinish').click();
+ await expect(page.locator('#simulationStepDone')).toBeVisible();
+ await expect(page.locator('#simulationStepDone')).toContainText('No charge, order, shipping label, or message was created.');
+});
