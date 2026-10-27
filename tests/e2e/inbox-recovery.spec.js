@@ -1,6 +1,11 @@
 const {test,expect}=require('@playwright/test');
+test.beforeEach(async({page})=>{
+ await page.route('https://challenges.cloudflare.com/**',route=>route.abort());
+ await page.route('https://prrrzeelltmyugssqnzk.supabase.co/rest/v1/**',route=>route.fulfill({json:[]}));
+});
+async function ready(page){await page.goto('/');await page.waitForLoadState('networkidle')}
 async function inbox(page){
- await page.goto('/');
+ await ready(page);
  await page.evaluate(async()=>{
   await supabaseClient.auth.getSession();currentUser={id:'fixture-seller'};
   const now=new Date().toISOString();window.fixtureWrites=0;
@@ -46,7 +51,7 @@ test('finishing a send does not pull the reader out of another conversation',asy
  await expect(page.locator('#chatInput')).toHaveValue('Private draft B');
 });
 test('loaded listing timestamps drive oldest and newest sorting',async({page})=>{
- await page.goto('/');await page.evaluate(async()=>{
+ await ready(page);await page.evaluate(async()=>{
   await supabaseClient.auth.getSession();supabaseClient.from=table=>{const data=table==='listings'?[{id:'new',title:'New listing',created_at:'2026-10-20',price:25,category:'trading_cards'},{id:'old',title:'Old listing',created_at:'2026-09-01',price:25,category:'trading_cards'}]:[];const q={then:r=>Promise.resolve({data,error:null}).then(r)};for(const key of ['select','eq','order','in'])q[key]=()=>q;return q};await loadListings();showMainMarketplace();
  });
  await page.locator('#marketSort').selectOption('oldest');await expect(page.locator('#grid h3').first()).toHaveText('Old listing');
@@ -59,8 +64,30 @@ test('sign-out removes private conversation text and unsent drafts',async({page}
  expect(await page.locator('#messageInbox textarea').count()).toBe(0);
 });
 test('marketplace search tolerates accents, case and extra spaces',async({page})=>{
- await page.goto('/');await page.evaluate(()=>{items=[{id:'pokemon',n:'Pokémon Charizard',c:'Trading Cards',game:'pokemon',gameLabel:'Pokémon',p:25,s:'@fixture',cond:'Used',e:'🃏'},{id:'onepiece',n:'Luffy',c:'Trading Cards',game:'one_piece',gameLabel:'One Piece',p:25,s:'@fixture',cond:'Used',e:'🃏'}];showMainMarketplace();render()});
+ await ready(page);await page.evaluate(()=>{items=[{id:'pokemon',n:'Pokémon Charizard',c:'Trading Cards',game:'pokemon',gameLabel:'Pokémon',p:25,s:'@fixture',cond:'Used',e:'🃏'},{id:'onepiece',n:'Luffy',c:'Trading Cards',game:'one_piece',gameLabel:'One Piece',p:25,s:'@fixture',cond:'Used',e:'🃏'}];showMainMarketplace();render()});
  await page.locator('#search').fill('  CHARIZARD   POKEMON  ');
  await expect(page.locator('#grid h3')).toHaveText(['Pokémon Charizard']);
  await page.locator('#search').fill('   ');await expect(page.locator('#grid h3')).toHaveCount(2);
+});
+test('refresh during a pending send clears the sent draft and shows errors on the current form',async({page})=>{
+ await inbox(page);await page.locator('#chatInput').fill('Send while refreshing');await page.locator('#chatInput').press('Enter');
+ await page.evaluate(()=>loadInbox());await expect(page.locator('.chat-composer button')).toBeDisabled();
+ await page.evaluate(()=>finishFixtureSend({data:{id:'sent'},error:null}));
+ await expect(page.locator('#chatInput')).toHaveValue('');
+ await page.locator('#chatInput').fill('Retry after refresh');await page.locator('#chatInput').press('Enter');
+ await page.evaluate(()=>loadInbox());await page.evaluate(()=>finishFixtureSend({error:{message:'Try again later'}}));
+ await expect(page.locator('.chat-send-status')).toContainText('Try again later');
+ await expect(page.locator('#chatInput')).toHaveValue('Retry after refresh');await expect(page.locator('.chat-composer button')).toBeEnabled();
+});
+test('an older listing response cannot replace newer marketplace results',async({page})=>{
+ await ready(page);await page.evaluate(async()=>{
+  window.pendingListingLoads=[];
+  supabaseClient.from=()=>{const q={then:(resolve,reject)=>new Promise(done=>pendingListingLoads.push(done)).then(resolve,reject)};for(const key of ['select','eq','order'])q[key]=()=>q;return q};
+  window.oldListingLoad=loadListings();window.newListingLoad=loadListings();
+ });
+ await expect.poll(()=>page.evaluate(()=>pendingListingLoads.length)).toBe(2);
+ await page.evaluate(async()=>{pendingListingLoads[1]({data:[{id:'current',title:'Current listing',category:'trading_cards',price:10,created_at:'2026-10-27'}],error:null});await newListingLoad;showMainMarketplace()});
+ await expect(page.locator('#grid h3')).toHaveText(['Current listing']);
+ await page.evaluate(async()=>{pendingListingLoads[0]({data:[{id:'stale',title:'Stale listing',category:'trading_cards',price:20,created_at:'2026-10-26'}],error:null});await oldListingLoad});
+ await expect(page.locator('#grid h3')).toHaveText(['Current listing']);
 });

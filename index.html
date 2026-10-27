@@ -924,13 +924,17 @@ function render(){
  document.getElementById("count").textContent=onlyMyListings?list.length+" of your active listing(s) shown.":list.length+" "+(listingSource==="live"?"live":"demo")+" listing(s) shown.";document.querySelector("#market h2").textContent=onlyMyListings?"My listings":onlySavedListings?"Saved items":"Marketplace picks";document.getElementById("myListingsReset").hidden=!(onlyMyListings||onlySavedListings);
  grid.innerHTML=list.length?list.map(item=>`<article class="card"><div class="art ${escapeHtml(item.t||"")}">${itemArtwork(item)}<span class="tag">${item.c==="Trading Cards"?"TCG":item.c==="Video Games"?"GAME":item.c==="Collectibles"?"COLLECTIBLE":"GAMING GEAR"}</span><button class="heart" type="button" aria-label="Save item" data-heart="${escapeHtml(item.id)}">${saved.has(item.id)?"♥":"♡"}</button></div><div class="cardbody"><div class="kind">${item.trades?"Trades accepted":"Community seller"}</div><h3>${escapeHtml(item.n)}</h3><div class="seller">${item.sellerId?`<button type="button" class="seller-link" data-card-profile="${escapeHtml(item.sellerId)}">${escapeHtml(item.s)}</button>`:escapeHtml(item.s)}${item.gameLabel?` · ${escapeHtml(item.gameLabel)}`:""}${sellerRatingCache.has(item.sellerId)?`<span class="listing-seller-rating"> ★ ${sellerRatingCache.get(item.sellerId).average} (${sellerRatingCache.get(item.sellerId).count})</span>`:""}</div><div class="price-row"><span class="price">$${item.p.toFixed(2)}</span><span class="condition">${escapeHtml(item.cond)}</span></div><button class="view" type="button" data-view="${escapeHtml(item.id)}">View item</button>${onlyMyListings&&item.databaseId?`<div class="listing-manage"><button class="ghost" type="button" data-sold="${escapeHtml(item.id)}">Mark sold</button><button class="ghost danger" type="button" data-delete-listing="${escapeHtml(item.id)}">Delete</button></div>`:""}</div></article>`).join(""):`<div class="empty">${onlyMyListings?"You have no active listings yet. Use Sell an item to post your first one.":"No listings found. Try another search."}</div>`;
 }
+let listingsLoadVersion=0;
 async function loadListings(){
+ const requestId=++listingsLoadVersion;
  document.getElementById("count").textContent="Loading live listings...";
  const {data,error}=await supabaseClient.from("listings").select("id,title,description,category,tcg_game,collectible_subcategory,price,condition,accepts_trades,accepts_price_offers,image_urls,created_at,seller_id").eq("status","active").order("created_at",{ascending:false});
+ if(requestId!==listingsLoadVersion)return;
  if(error){console.error("Could not load listings",error);items=[...demos];listingSource="demo";render();toast("Live listings could not load. Showing demo items.");return}
  if(!data?.length){items=[];listingSource="live";render();return}
  const visibleData=data.filter(row=>!blockedCollectorIds.has(row.seller_id));const sellerIds=[...new Set(visibleData.map(row=>row.seller_id).filter(Boolean))];
  const {data:publicProfiles,error:profilesError}=sellerIds.length?await supabaseClient.from("profiles").select("id,username,display_name").in("id",sellerIds):{data:[],error:null};
+ if(requestId!==listingsLoadVersion)return;
  if(profilesError)console.warn("Could not load public seller names",profilesError);
  const sellersById=new Map((publicProfiles||[]).map(profile=>[profile.id,profile]));
  items=visibleData.map(row=>({id:row.id,databaseId:row.id,n:row.title,c:databaseCategory(row.category),game:row.tcg_game||"",collectibleSubcategory:row.collectible_subcategory||"",gameLabel:tcgNames[row.tcg_game]||"",p:Number(row.price),s:sellersById.get(row.seller_id)?.username?"@"+sellersById.get(row.seller_id).username:(sellersById.get(row.seller_id)?.display_name||"DeckPlay seller"),cond:databaseCondition(row.condition),e:databaseEmoji(row.category),description:row.description||"No description provided.",trades:row.accepts_trades,priceOffers:row.accepts_price_offers,imageUrls:row.image_urls||[],created_at:row.created_at,sellerId:row.seller_id}));
@@ -1440,9 +1444,15 @@ document.getElementById("messageInbox").addEventListener("submit",async e=>{
   if(error)throw error;
   if(currentUser?.id!==userId)return;
   inboxDrafts.delete(recipient);input.value="";status.textContent="";
-  if(selectedInboxCollector===recipient&&!document.getElementById("inboxPage").hidden)await loadInbox(recipient);
+  const active=document.querySelector("#messageInbox .chat-composer");
+  if(active?.dataset.chatRecipient===recipient)active.querySelector("textarea").value="";
+  if(selectedInboxCollector===recipient&&!document.getElementById("inboxPage").hidden){try{await loadInbox(recipient)}catch{toast("Message sent. Refresh the inbox to see it.")}}
   void sendCollectorEmailForSource(data?.id);
- }catch(error){status.textContent="Could not send: "+(error.message||"Please try again.")}
+ }catch(error){
+  const message="Could not send: "+(error.message||"Please try again.");status.textContent=message;
+  const active=document.querySelector("#messageInbox .chat-composer");
+  if(currentUser?.id===userId&&active?.dataset.chatRecipient===recipient)active.querySelector(".chat-send-status").textContent=message;
+ }
  finally{
   inboxSending.delete(key);button.disabled=false;input.readOnly=false;
   const active=document.querySelector("#messageInbox .chat-composer");
