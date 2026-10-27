@@ -325,3 +325,43 @@ test('declined trade updates the sender inbox once while both listings remain av
  assert(notifications('buyer')[0].read_at,'Sender can mark their own update read');
  assert.equal(notifications('seller')[0].read_at,null,'Sender read action must not affect recipient inbox');
 });
+
+test('saved favorite receives one price-drop activity alert, not an alert on price increases',()=>{
+ const listing=createListing();
+ const filter='?listing_id=eq.'+listing.id;
+ try{
+  ok(api('buyer','/rest/v1/saved_listings','POST',{user_id:users.buyer,listing_id:listing.id}),201);
+  ok(api('seller','/rest/v1/listings?id=eq.'+listing.id,'PATCH',{price:20}),204);
+  const alerts=ok(api('buyer','/rest/v1/collector_notifications?source_id=eq.'+listing.id));
+  assert.equal(alerts.length,1,'Saved listing price drop should notify the buyer exactly once');
+  assert.equal(alerts[0].kind,'favorite_price_drop');
+  assert.equal(alerts[0].actor_id,users.seller);
+  assert.equal(alerts[0].read_at,null);
+  assert.equal(ok(api('seller','/rest/v1/collector_notifications?source_id=eq.'+listing.id)).length,0,'Seller must not receive their own alert');
+  ok(api('seller','/rest/v1/listings?id=eq.'+listing.id,'PATCH',{price:23}),204);
+  assert.equal(ok(api('buyer','/rest/v1/collector_notifications?source_id=eq.'+listing.id)).length,1,'Price increases must not create price-drop alerts');
+ }finally{
+  ok(api('buyer','/rest/v1/saved_listings'+filter,'DELETE'),204);
+  ok(api('seller','/rest/v1/listings?id=eq.'+listing.id,'DELETE'),204);
+ }
+});
+
+test('saved favorite sold alert is private and emitted only on transition to sold',()=>{
+ const listing=createListing();
+ const filter='?listing_id=eq.'+listing.id;
+ try{
+  ok(api('buyer','/rest/v1/saved_listings','POST',{user_id:users.buyer,listing_id:listing.id}),201);
+  ok(api('seller','/rest/v1/listings?id=eq.'+listing.id,'PATCH',{status:'sold'}),204);
+  const alerts=ok(api('buyer','/rest/v1/collector_notifications?source_id=eq.'+listing.id));
+  assert.equal(alerts.length,1,'Sale must notify the collector who saved the item once');
+  assert.equal(alerts[0].kind,'favorite_sold');
+  assert.equal(alerts[0].actor_id,users.seller);
+  assert.equal(ok(api('seller','/rest/v1/collector_notifications?source_id=eq.'+listing.id)).length,0);
+  assert.equal(ok(api(null,'/rest/v1/collector_notifications?source_id=eq.'+listing.id)).length,0,'Activity alerts are private');
+  ok(api('seller','/rest/v1/listings?id=eq.'+listing.id,'PATCH',{title:run+' sold'}),204);
+  assert.equal(ok(api('buyer','/rest/v1/collector_notifications?source_id=eq.'+listing.id)).length,1,'Editing a sold listing must not duplicate the alert');
+ }finally{
+  ok(api('buyer','/rest/v1/saved_listings'+filter,'DELETE'),204);
+  ok(api('seller','/rest/v1/listings?id=eq.'+listing.id,'DELETE'),204);
+ }
+});
