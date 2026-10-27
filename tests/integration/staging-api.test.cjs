@@ -61,6 +61,18 @@ test('another collector cannot remove a buyer saved listing',()=>{
   ok(api('seller','/rest/v1/listings?id=eq.'+listing.id,'DELETE'),204);
  }
 });
+test('another collector cannot add or remove favorites under someone else identity',()=>{
+ const listing=createListing();
+ const filter='?user_id=eq.'+users.buyer+'&listing_id=eq.'+listing.id;
+ try{
+  const spoof=api('seller','/rest/v1/saved_listings','POST',{user_id:users.buyer,listing_id:listing.id},{Prefer:'return=representation'});
+  assert(spoof.status>=400,'Seller must not save a listing on behalf of buyer');
+  assert.equal(ok(api('buyer','/rest/v1/saved_listings'+filter)).length,0,'Rejected spoof must not create buyer favorite');
+ }finally{
+  ok(api('buyer','/rest/v1/saved_listings'+filter,'DELETE'),204);
+  ok(api('seller','/rest/v1/listings?id=eq.'+listing.id,'DELETE'),204);
+ }
+});
 test('wanted posts publish, browse and enforce owner deletion',()=>{const p=ok(api('buyer','/rest/v1/wanted_posts','POST',{user_id:users.buyer,title:run,game:'one_piece',budget:50,details:'TEST ONLY'},{Prefer:'return=representation'}),201)[0];assert.equal(ok(api(null,'/rest/v1/wanted_posts?id=eq.'+p.id)).length,1);assert.equal(ok(api('seller','/rest/v1/wanted_posts?id=eq.'+p.id,'DELETE',undefined,{Prefer:'return=representation'})).length,0);ok(api('buyer','/rest/v1/wanted_posts?id=eq.'+p.id,'DELETE'),204)});
 test('private messages persist, notify recipient, and cannot be rewritten',()=>{
  const m=ok(api('buyer','/rest/v1/collector_messages','POST',{sender_id:users.buyer,recipient_id:users.seller,body:run},{Prefer:'return=representation'}),201)[0];
