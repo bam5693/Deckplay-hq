@@ -41,6 +41,7 @@ test('Jayden and Tanner publish and inspect a complete deck with a separate buye
   await expect(page.locator('#listingPhotoCount')).toContainText('1 of 5');
   await page.locator('#publishButton').click();
   await expect(page.locator('#sellModal')).not.toHaveClass(/open/,{timeout:30000});
+  expect(await page.evaluate(()=>['deckLeader','deckCardCount','deckList'].map(id=>document.getElementById(id).required))).toEqual([false,false,false]);
   const saved=await page.evaluate(async title=>{
    const {data,error}=await supabaseClient.from('listings').select('description,category,price,image_urls').eq('title',title).eq('seller_id',currentUser.id).single();
    if(error)throw Error(error.message);return data;

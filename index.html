@@ -1034,13 +1034,15 @@ async function prepareListingPhoto(file){
  }finally{bitmap.close()}
 }
 async function uploadPhotos(files,userId){
+ const accountVersion=listingAccountVersion;
+ const checkAccount=()=>{if(currentUser?.id!==userId||listingAccountVersion!==accountVersion)throw new Error("Account changed while uploading photos. Please sign in again before posting.")};
  const urls=[];
  for(const original of files){
-  const file=await prepareListingPhoto(original);
+  checkAccount();const file=await prepareListingPhoto(original);checkAccount();
   const extension=(file.name.split(".").pop()||"jpg").toLowerCase().replace(/[^a-z0-9]/g,"");
   const path=`${userId}/${crypto.randomUUID()}.${extension}`;
   const {error}=await supabaseClient.storage.from("listing-images").upload(path,file,{cacheControl:"3600",contentType:file.type,upsert:false});
-  if(error)throw error;
+  if(error)throw error;checkAccount();
   const {data}=supabaseClient.storage.from("listing-images").getPublicUrl(path);
   urls.push(data.publicUrl);
  }
@@ -1153,7 +1155,7 @@ function toggleSportsBrand(){const sports=document.getElementById("category").va
 document.getElementById("tcgGame").addEventListener("change",toggleSportsBrand);
 function toggleTcgField(){const isCard=document.getElementById("category").value==="trading_cards";document.getElementById("tcgGameWrap").hidden=!isCard;document.getElementById("tcgGame").required=isCard;if(!isCard)document.getElementById("tcgGame").value="";toggleSportsBrand()}
 document.getElementById("category").addEventListener("change",toggleTcgField);document.getElementById("authForm").addEventListener("invalid",event=>{const field=event.target;if(field.id==="username"&&authMode!=="signup")return;showAuthStatus((field.id==="username"?"Username":field.id==="authEmail"?"Email":"Password")+" needs attention: "+field.validationMessage,"error");},{capture:true});
-let listingSelectedPhotos=[];
+let listingSelectedPhotos=[],listingAccountVersion=0;
 function updateListingQuickSummary(){const title=document.getElementById("item").value.trim(),price=Number(document.getElementById("price").value),photos=listingSelectedPhotos.length,el=document.getElementById("listingQuickSummary");if(!el)return;const previewTitle=document.getElementById("listingPreviewTitle"),previewPrice=document.getElementById("listingPreviewPrice"),previewMeta=document.getElementById("listingPreviewMeta");if(previewTitle){previewTitle.textContent=title||"Your item title";previewPrice.textContent=price>0?"$"+price.toFixed(2):"Set a price";const category=document.getElementById("category");const condition=document.getElementById("category").value==="trading_cards"?document.getElementById("cardCondition").selectedOptions[0]?.textContent:document.getElementById("condition").selectedOptions[0]?.textContent;previewMeta.textContent=(category.selectedOptions[0]?.textContent||"Category")+" · "+(condition||"Condition")}el.textContent=(title||"Untitled item")+" · "+(price>0?"$"+price.toFixed(2):"Price needed")+" · "+photos+" photo"+(photos===1?"":"s")+(photos?" · Ready for review":" · Add at least 1 photo")}
 ["item","price","category","tcgGame","cardCondition"].forEach(id=>document.getElementById(id)?.addEventListener("input",updateListingQuickSummary));
 function renderListingPhotos(){
@@ -1291,10 +1293,12 @@ document.getElementById("listingForm").addEventListener("submit",async event=>{
  event.preventDefault();if(!currentUser){closeModal("sellModal");openModal("authModal");return}
  const form=event.currentTarget;const status=document.getElementById("listingStatus");const files=[...listingSelectedPhotos];if(!files.length){status.textContent="Add at least one photo before posting.";document.getElementById("photos").focus();return}if(files.length>5){status.textContent="Please choose no more than 5 photos.";return}if(document.getElementById("condition").value==="graded"&&document.getElementById("category").value!=="trading_cards"){status.textContent="Graded condition is only available for trading cards.";return}
  const publishButton=document.getElementById("publishButton");if(publishButton.disabled)return;
+ const user=currentUser,userId=user.id,accountVersion=listingAccountVersion;
+ const current=()=>currentUser?.id===userId&&listingAccountVersion===accountVersion;
+ const draft=()=>JSON.stringify([...form.elements].filter(el=>["INPUT","SELECT","TEXTAREA"].includes(el.tagName)&&el.type!=="file").map(el=>[el.id,el.value,el.checked]));
+ const submittedDraft=draft();
  publishButton.disabled=true;publishButton.textContent="Posting…";form.classList.add("busy");status.textContent="Preparing and uploading photos. Please keep this page open…";
  try{
-  await ensureProfile(currentUser);
-  const imageUrls=await uploadPhotos(files,currentUser.id);status.textContent="Posting listing...";
   const listingType=document.getElementById("listingType").value;
   const deckName=document.getElementById("deckLeader").value.trim(),deckCount=document.getElementById("deckCardCount").value,deckList=document.getElementById("deckList").value.trim();
   const extraDetails=listingType==="deck"?`[Complete Deck]\nDeck: ${deckName}\nCards: ${deckCount}\n\nFull decklist:\n${deckList}`:listingType==="lot"?"[Card Lot / Collection]":"";
@@ -1305,10 +1309,13 @@ document.getElementById("listingForm").addEventListener("submit",async event=>{
   const cardConditionDetails=document.getElementById("category").value==="trading_cards"?`[Card Condition]\n${document.getElementById("cardCondition").selectedOptions[0].textContent}`:"";
   const tcgSetDetails=document.getElementById("category").value==="trading_cards"&&!document.getElementById("tcgSetFields").hidden?[["Era",document.getElementById("tcgEra").value],["Set",document.getElementById("tcgSet").value],["Card number",document.getElementById("tcgCardNumber").value.trim()],["Variant",document.getElementById("tcgVariant").value]].filter(pair=>pair[1]).map(pair=>pair[0]+": "+pair[1]).join("\n"):"";
   const fullDescription=[extraDetails,gradingDetails,consoleDetails,gamePlatformDetails,sportsBrandDetails,cardConditionDetails,tcgSetDetails,document.getElementById("description").value.trim()].filter(Boolean).join("\n\n");
-  const listing={seller_id:currentUser.id,title:document.getElementById("item").value.trim(),description:fullDescription||null,category:document.getElementById("category").value,tcg_game:document.getElementById("category").value==="trading_cards"?document.getElementById("tcgGame").value:null,collectible_subcategory:["collectibles","other"].includes(document.getElementById("category").value)?document.getElementById("collectibleSubcategory").value:null,condition:document.getElementById("category").value==="trading_cards"?({near_mint:"like_new",lightly_played:"used",moderately_played:"used",heavily_played:"damaged",damaged:"damaged",sealed:"new",graded:"graded"})[document.getElementById("cardCondition").value]:document.getElementById("condition").value,price:Number(document.getElementById("price").value),image_urls:imageUrls,accepts_trades:document.getElementById("acceptsTrades").checked,accepts_price_offers:document.getElementById("acceptsPriceOffers").checked,status:"active"};
-  const {error}=await supabaseClient.from("listings").insert(listing);if(error)throw error;
-  form.reset();listingSelectedPhotos=[];renderListingPhotos();updateListingQuickSummary();syncGradedCondition();syncCategoryFields();document.getElementById("deckFields").hidden=true;status.textContent="";closeModal("sellModal");toast("Your listing is live!");await loadListings();
- }catch(error){console.error("Could not publish listing",error);status.textContent=error.message||"The listing could not be published."}finally{form.classList.remove("busy");publishButton.disabled=false;publishButton.textContent="Post listing"}
+  const listing={seller_id:userId,title:document.getElementById("item").value.trim(),description:fullDescription||null,category:document.getElementById("category").value,tcg_game:document.getElementById("category").value==="trading_cards"?document.getElementById("tcgGame").value:null,collectible_subcategory:["collectibles","other"].includes(document.getElementById("category").value)?document.getElementById("collectibleSubcategory").value:null,condition:document.getElementById("category").value==="trading_cards"?({near_mint:"like_new",lightly_played:"used",moderately_played:"used",heavily_played:"damaged",damaged:"damaged",sealed:"new",graded:"graded"})[document.getElementById("cardCondition").value]:document.getElementById("condition").value,price:Number(document.getElementById("price").value),image_urls:[],accepts_trades:document.getElementById("acceptsTrades").checked,accepts_price_offers:document.getElementById("acceptsPriceOffers").checked,status:"active"};
+  await ensureProfile(user);if(!current())return;
+  listing.image_urls=await uploadPhotos(files,userId);if(!current())return;status.textContent="Posting listing...";
+  const {error}=await supabaseClient.from("listings").insert(listing);if(!current())return;if(error)throw error;
+  const unchanged=draft()===submittedDraft&&files.length===listingSelectedPhotos.length&&files.every((file,i)=>file===listingSelectedPhotos[i]);
+  if(unchanged){form.reset();document.getElementById("listingType").dispatchEvent(new Event("change"));listingSelectedPhotos=[];renderListingPhotos();updateListingQuickSummary();syncGradedCondition();syncCategoryFields();document.getElementById("deckFields").hidden=true;status.textContent="";closeModal("sellModal");toast("Your listing is live!")}else{status.textContent="Your listing is live. Your newer edits and photos have been kept.";toast("Your submitted listing is live!")}await loadListings();
+ }catch(error){if(current()){console.error("Could not publish listing",error);status.textContent=error.message||"The listing could not be published."}}finally{form.classList.remove("busy");publishButton.disabled=false;publishButton.textContent="Post listing"}
 });
 supabaseClient.auth.onAuthStateChange((_event,session)=>{currentUser=session?.user||null;syncInboxDraftUser();updateAccountUI();startMessageUpdates();startNotificationUpdates();loadBlockedCollectors().then(()=>Promise.all([loadSavedListings(),loadListings(),loadWanted()]))});
 
@@ -1321,7 +1328,7 @@ function syncWantedCardFields(){const game=document.getElementById("wantedGame")
 document.getElementById("wantedGame").addEventListener("change",syncWantedCardFields);
 syncWantedCardFields();
 function wantedMetadata(post){const details=post.details||"";const start=details.indexOf("[DeckPlay match: ");if(start<0)return null;const end=details.indexOf("]",start);if(end<0)return null;try{return JSON.parse(details.slice(start+17,end))}catch{return null}}
-function exactWantedMatches(post){const meta=wantedMetadata(post);if(!meta?.cardNumber||!post.game)return [];const norm=x=>String(x||"").toUpperCase().replace(/[^A-Z0-9]/g,"");return items.filter(item=>item.id&&item.c==="Trading Cards"&&item.game===post.game&&item.sellerId!==post.user_id&&(!post.budget||Number(item.p)<=Number(post.budget))&&norm((item.description||"").split("Card number: ")[1]?.split("\\n")[0])===norm(meta.cardNumber)&&(!meta.variant||(item.description||"").includes("Variant: "+meta.variant))&&(!meta.set||(item.description||"").toLowerCase().includes(meta.set.toLowerCase()))).slice(0,5)}
+function exactWantedMatches(post){const meta=wantedMetadata(post);if(!meta?.cardNumber||!post.game)return [];const norm=x=>String(x||"").toUpperCase().replace(/[^A-Z0-9]/g,"");return items.filter(item=>item.id&&item.c==="Trading Cards"&&item.game===post.game&&item.sellerId!==post.user_id&&(!post.budget||Number(item.p)<=Number(post.budget))&&norm((item.description||"").split("Card number: ")[1]?.split(/\\n|\r?\n/)[0])===norm(meta.cardNumber)&&(!meta.variant||(item.description||"").includes("Variant: "+meta.variant))&&(!meta.set||(item.description||"").toLowerCase().includes(meta.set.toLowerCase()))).slice(0,5)}
 document.getElementById("wantedForm").addEventListener("submit",async e=>{e.preventDefault();if(!currentUser)return;const status=document.getElementById("wantedStatus");status.textContent="Publishing…";const budget=document.getElementById("wantedBudget").value;const {error}=await supabaseClient.from("wanted_posts").insert({user_id:currentUser.id,title:document.getElementById("wantedItem").value.trim(),game:document.getElementById("wantedGame").value||null,offer_type:document.getElementById("wantedOffer").value,budget:budget?Number(budget):null,details:(()=>{const detail=document.getElementById("wantedDetails").value.trim();if(document.getElementById("wantedCardFields").hidden)return detail||null;const metadata={set:document.getElementById("wantedSet").value.trim(),cardNumber:document.getElementById("wantedCardNumber").value.trim(),variant:document.getElementById("wantedVariant").value};return Object.values(metadata).some(Boolean)?[detail,"[DeckPlay match: "+JSON.stringify(metadata)+"]"].filter(Boolean).join("\\n"):detail||null})()});if(error){status.textContent=error.message;return}e.target.reset();status.textContent="";closeModal("wantedModal");toast("Wanted post published!");await loadWanted()});
 document.getElementById("wantedGrid").addEventListener("click",async e=>{const button=e.target.closest("[data-delete-wanted]");if(!button||!currentUser)return;if(!confirm("Delete this wanted post?"))return;const {error}=await supabaseClient.from("wanted_posts").delete().eq("id",button.dataset.deleteWanted).eq("user_id",currentUser.id);if(error){toast(error.message);return}await loadWanted()});
 let savedListingsLoadVersion=0;
@@ -1525,6 +1532,7 @@ let inboxDraftUser=null;
 function syncInboxDraftUser(){
  const id=currentUser?.id||null;
  if(inboxDraftUser!==id){
+  ++listingAccountVersion;document.getElementById("listingForm").reset();document.getElementById("listingType").dispatchEvent(new Event("change"));listingSelectedPhotos=[];renderListingPhotos();syncCategoryFields();syncGradedCondition();document.getElementById("deckFields").hidden=true;document.getElementById("listingStatus").textContent="";closeModal("sellModal");
   inboxDrafts.clear();inboxDraftUser=id;++inboxLoadVersion;++profileLoadVersion;++priceOffersLoadVersion;++tradeOffersLoadVersion;++unreadCountLoadVersion;++profileEditorLoadVersion;selectedInboxCollector=null;
   for(const name of ["messageInbox","inboxNotificationList","notificationList","priceOffersList","tradeOffersList"])document.getElementById(name).replaceChildren();
   for(const name of ["profilePageContent","ownSellerRatings"])document.getElementById(name).replaceChildren();

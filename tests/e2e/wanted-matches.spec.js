@@ -29,3 +29,14 @@ test('exact wanted matches respect card number, variant, and budget',async({page
  expect(results.exact).toEqual(['a']);
  expect(results.underBudget).toEqual([]);
 });
+
+test('wanted matching accepts new line breaks and legacy escapes without absorbing later metadata',async({page})=>{
+ await page.goto('/');
+ const result=await page.evaluate(()=>{
+  const previous=items;
+  items=['\n','\r\n','\\n'].map((separator,i)=>({id:String(i),c:'Trading Cards',game:'one_piece',sellerId:'seller',p:20,description:['Card number: OP05-119','Variant: Manga Rare','Seller description: OP05-120'].join(separator)}));
+  const post={user_id:'buyer',game:'one_piece',budget:30,details:'[DeckPlay match: {"cardNumber":"OP05-119","variant":"Manga Rare"}]'};
+  const exact=exactWantedMatches(post).map(x=>x.id);post.details='[DeckPlay match: {"cardNumber":"OP05-120","variant":"Manga Rare"}]';const wrong=exactWantedMatches(post).map(x=>x.id);items=previous;return {exact,wrong};
+ });
+ expect(result.exact).toEqual(['0','1','2']);expect(result.wrong).toEqual([]);
+});
