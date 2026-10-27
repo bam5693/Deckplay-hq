@@ -72,3 +72,9 @@ test('anonymous visitor cannot create a private collector message',async({page})
  expect(result.data||[],'No anonymous messages should be created').toHaveLength(0);
  expect(result.error,'Anonymous messages should fail authorization').toBeTruthy();
 });
+
+test('anonymous visitor cannot change another collector profile',async({page})=>{
+ await page.goto('/',{waitUntil:'domcontentloaded'});
+ const result=await page.evaluate(async()=>{const {data,error}=await supabaseClient.from('profiles').update({bio:'TEST ONLY unauthorized edit'}).eq('id','00000000-0000-0000-0000-000000000000').select('id');return {data,error:error?.message||null}});
+ expect(result.data||[],'Signed-out visitor must not modify profiles').toHaveLength(0);
+});
