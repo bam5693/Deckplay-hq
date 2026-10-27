@@ -501,3 +501,20 @@ test('saving a listing after an earlier price drop does not send retroactive ale
  assert.equal(alerts.length,1,'A new price drop after saving must alert the buyer once');
  assert.equal(alerts[0].kind,'favorite_price_drop');
 });
+
+test('sold listings reject new price offers and trades without creating pending negotiations',()=>{
+ const soldTarget=createListing(),buyerItem=createListing('buyer');
+ ok(api('seller','/rest/v1/listings?id=eq.'+soldTarget.id,'PATCH',{status:'sold'}),204);
+ const priceAttempt=api('buyer','/rest/v1/rpc/submit_price_offer','POST',{p_listing_id:soldTarget.id,p_amount:20});
+ assert(priceAttempt.status>=400,'Sold listing must reject a new price offer');
+ const tradeAttempt=api('buyer','/rest/v1/trade_offers','POST',{listing_id:soldTarget.id,offered_listing_id:buyerItem.id,sender_id:users.buyer,recipient_id:users.seller,offer_note:run});
+ assert(tradeAttempt.status>=400,'Sold listing must reject a new trade proposal');
+ assert.equal(ok(api('seller','/rest/v1/price_offers?listing_id=eq.'+soldTarget.id)).length,0,'Rejected offer must not persist');
+ assert.equal(ok(api('seller','/rest/v1/trade_offers?listing_id=eq.'+soldTarget.id)).length,0,'Rejected trade must not persist');
+ const activeTarget=createListing(),soldBuyerItem=createListing('buyer');
+ ok(api('buyer','/rest/v1/listings?id=eq.'+soldBuyerItem.id,'PATCH',{status:'sold'}),204);
+ const unavailableItem=api('buyer','/rest/v1/trade_offers','POST',{listing_id:activeTarget.id,offered_listing_id:soldBuyerItem.id,sender_id:users.buyer,recipient_id:users.seller,offer_note:run});
+ assert(unavailableItem.status>=400,'A sold offered item must not be accepted as trade collateral');
+ assert.equal(ok(api('seller','/rest/v1/trade_offers?listing_id=eq.'+activeTarget.id)).length,0,'Rejected trade with sold item must not persist');
+ // The marker-scoped after() fixture cleanup removes all four synthetic listings.
+});
