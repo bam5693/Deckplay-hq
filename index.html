@@ -912,8 +912,10 @@ async function refreshSellerRatingCache(){
  sellerRatingCache=new Map([...grouped].map(([id,x])=>[id,{average:(x.total/x.count).toFixed(1),count:x.count}]));
  render();
 }
+function marketplaceSearchText(value){return String(value).normalize("NFKD").replace(/[\u0300-\u036f]/g,"").toLowerCase()}
 function render(){
- let list=items.filter(item=>!blockedCollectorIds.has(item.sellerId)&&(!onlyMyListings||(currentUser&&item.sellerId===currentUser.id))&&(!onlySavedListings||saved.has(item.id))&&(cat==="All"||item.c===cat)&&(filter==="All"||item.c===filter||(filter==="Under $50"&&item.p<50))&&(game==="All"||item.game===game)&&(item.n+" "+item.c+" "+item.s+" "+(item.gameLabel||"")).toLowerCase().includes(query.toLowerCase()));
+ const terms=marketplaceSearchText(query).trim().split(/\s+/).filter(Boolean);
+ let list=items.filter(item=>!blockedCollectorIds.has(item.sellerId)&&(!onlyMyListings||(currentUser&&item.sellerId===currentUser.id))&&(!onlySavedListings||saved.has(item.id))&&(cat==="All"||item.c===cat)&&(filter==="All"||item.c===filter||(filter==="Under $50"&&item.p<50))&&(game==="All"||item.game===game)&&terms.every(term=>marketplaceSearchText(item.n+" "+item.c+" "+item.s+" "+(item.gameLabel||"")).includes(term)));
  const collectibleSub=document.getElementById("marketCollectibleSubcategory")?.value||"All";if(cat==="Collectibles"&&collectibleSub!=="All")list=list.filter(item=>item.collectibleSubcategory===collectibleSub);
  const maxPrice=Number(document.getElementById("marketMaxPrice")?.value||0);
  if(maxPrice>0)list=list.filter(item=>Number(item.p)<=maxPrice);
@@ -931,7 +933,7 @@ async function loadListings(){
  const {data:publicProfiles,error:profilesError}=sellerIds.length?await supabaseClient.from("profiles").select("id,username,display_name").in("id",sellerIds):{data:[],error:null};
  if(profilesError)console.warn("Could not load public seller names",profilesError);
  const sellersById=new Map((publicProfiles||[]).map(profile=>[profile.id,profile]));
- items=visibleData.map(row=>({id:row.id,databaseId:row.id,n:row.title,c:databaseCategory(row.category),game:row.tcg_game||"",collectibleSubcategory:row.collectible_subcategory||"",gameLabel:tcgNames[row.tcg_game]||"",p:Number(row.price),s:sellersById.get(row.seller_id)?.username?"@"+sellersById.get(row.seller_id).username:(sellersById.get(row.seller_id)?.display_name||"DeckPlay seller"),cond:databaseCondition(row.condition),e:databaseEmoji(row.category),description:row.description||"No description provided.",trades:row.accepts_trades,priceOffers:row.accepts_price_offers,imageUrls:row.image_urls||[],sellerId:row.seller_id}));
+ items=visibleData.map(row=>({id:row.id,databaseId:row.id,n:row.title,c:databaseCategory(row.category),game:row.tcg_game||"",collectibleSubcategory:row.collectible_subcategory||"",gameLabel:tcgNames[row.tcg_game]||"",p:Number(row.price),s:sellersById.get(row.seller_id)?.username?"@"+sellersById.get(row.seller_id).username:(sellersById.get(row.seller_id)?.display_name||"DeckPlay seller"),cond:databaseCondition(row.condition),e:databaseEmoji(row.category),description:row.description||"No description provided.",trades:row.accepts_trades,priceOffers:row.accepts_price_offers,imageUrls:row.image_urls||[],created_at:row.created_at,sellerId:row.seller_id}));
  listingSource="live";render();
 }
 function updateAccountUI(){
@@ -1203,7 +1205,7 @@ document.getElementById("listingForm").addEventListener("submit",async event=>{
   form.reset();listingSelectedPhotos=[];renderListingPhotos();updateListingQuickSummary();syncGradedCondition();syncCategoryFields();document.getElementById("deckFields").hidden=true;status.textContent="";closeModal("sellModal");toast("Your listing is live!");await loadListings();
  }catch(error){console.error("Could not publish listing",error);status.textContent=error.message||"The listing could not be published."}finally{form.classList.remove("busy");publishButton.disabled=false;publishButton.textContent="Post listing"}
 });
-supabaseClient.auth.onAuthStateChange((_event,session)=>{currentUser=session?.user||null;updateAccountUI();startMessageUpdates();startNotificationUpdates();loadBlockedCollectors().then(()=>Promise.all([loadSavedListings(),loadListings(),loadWanted()]))});
+supabaseClient.auth.onAuthStateChange((_event,session)=>{currentUser=session?.user||null;syncInboxDraftUser();updateAccountUI();startMessageUpdates();startNotificationUpdates();loadBlockedCollectors().then(()=>Promise.all([loadSavedListings(),loadListings(),loadWanted()]))});
 
 async function loadWanted(){const grid=document.getElementById("wantedGrid");const {data,error}=await supabaseClient.from("wanted_posts").select("id,user_id,title,game,details,offer_type,budget,created_at").order("created_at",{ascending:false}).limit(50);if(error){grid.textContent="Wanted posts couldn't load. Please try again later.";return}const visiblePosts=data.filter(p=>!blockedCollectorIds.has(p.user_id));if(!visiblePosts.length){grid.innerHTML='<p class="muted">No wanted posts yet. Be the first to post what you are looking for!</p>';return}const ids=[...new Set(visiblePosts.map(p=>p.user_id))];const {data:people}=await supabaseClient.from("profiles").select("id,username,display_name").in("id",ids);const names=new Map((people||[]).map(p=>[p.id,p.username?"@"+p.username:p.display_name]));grid.innerHTML=visiblePosts.map(p=>`<article class="wanted-card"><div class="kind">${escapeHtml(tcgNames[p.game]||p.game||"Collectibles")} · ${escapeHtml(p.offer_type==="either"?"Buy or trade":p.offer_type==="buy"?"Looking to buy":"Looking to trade")}</div><h3>${escapeHtml(p.title)}</h3><p>${escapeHtml((p.details||"").split("[DeckPlay match: ")[0].trim()||"No additional details")}</p>${(()=>{const matches=exactWantedMatches(p);return matches.length?`<div class="wanted-matches"><strong>${matches.length} matching listing${matches.length===1?"":"s"}</strong>${matches.map(m=>`<p>${escapeHtml(m.title)} · ${Number(m.price).toFixed(2)}</p>`).join("")}<small>Exact card-number matches; verify condition and photos before buying.</small></div>`:""})()}<div class="wanted-bottom"><span>${escapeHtml(names.get(p.user_id)||"DeckPlay member")}${p.budget!=null?" · Budget $"+Number(p.budget).toFixed(2):""}</span>${p.user_id===currentUser?.id?`<button type="button" class="ghost" data-delete-wanted="${escapeHtml(p.id)}">Delete</button>`:""}</div></article>`).join("")}
 function toggleWanted(open){const panel=document.getElementById("wantedSection"),tab=document.getElementById("wantedNav"),backdrop=document.getElementById("wantedBackdrop");panel.classList.toggle("is-open",open);panel.setAttribute("aria-hidden",String(!open));tab.setAttribute("aria-expanded",String(open));backdrop.hidden=!open;document.body.classList.toggle("wanted-open",open);if(open)loadWanted()}
@@ -1324,6 +1326,7 @@ async function showPublicProfile(id){
 document.getElementById("myMessages").addEventListener("click",async()=>{closeAccountMenu();if(!currentUser)return;await showInboxPage()});
 async function showInboxPage(targetCollectorId=null){
  if(!currentUser){openModal("authModal");return}
+ syncInboxDraftUser();
  closeAccountMenu();closeModal("notificationModal");
  document.querySelectorAll("main > section,main > aside").forEach(el=>el.hidden=true);
  document.getElementById("inboxPage").hidden=false;
@@ -1357,9 +1360,27 @@ document.getElementById("messageInbox").addEventListener("click",async e=>{const
 document.getElementById("messageInbox").addEventListener("change",async e=>{const field=e.target.closest("[data-deal-status]");if(!field)return;if(field.value==="cancelled"&&!confirm("Cancel this deal? This cannot be undone. Please message the other collector first.")){await loadInbox();return}field.disabled=true;const {error}=await supabaseClient.from("deal_progress").update({status:field.value,updated_at:new Date().toISOString()}).eq("id",field.dataset.dealStatus);if(error){toast(error.message,"error");field.disabled=false;await loadInbox()}else{toast("Transaction status updated");await loadInbox()}});
 document.getElementById("messageInbox").addEventListener("click",async e=>{const button=e.target.closest("[data-submit-review]");if(!button)return;const id=button.dataset.submitReview,rating=Number(document.querySelector('[data-review-rating="'+id+'"]').value),comment=document.querySelector('[data-review-comment="'+id+'"]').value;const {data:deal}=await supabaseClient.from("deal_progress").select("seller_id").eq("id",id).single();if(!deal)return;const {error}=await supabaseClient.from("seller_reviews").insert({deal_id:id,reviewer_id:currentUser.id,seller_id:deal.seller_id,rating,comment});if(error)toast(error.message,"error");else{toast("Review posted");await loadInbox()}});
 
+// Drafts stay in memory, scoped to the signed-in collector and conversation.
+const inboxDrafts=new Map(),inboxSending=new Set();
+let inboxDraftUser=null;
+function syncInboxDraftUser(){
+ const id=currentUser?.id||null;
+ if(inboxDraftUser!==id){
+  inboxDrafts.clear();inboxDraftUser=id;++inboxLoadVersion;selectedInboxCollector=null;
+  for(const name of ["messageInbox","inboxNotificationList","notificationList"])document.getElementById(name).replaceChildren();
+  if(!document.getElementById("inboxPage").hidden)showMainMarketplace();
+ }
+}
+function rememberInboxDraft(){
+ syncInboxDraftUser();
+ const form=document.querySelector("#messageInbox .chat-composer");
+ if(form&&currentUser){const value=form.querySelector("textarea").value;value?inboxDrafts.set(form.dataset.chatRecipient,value):inboxDrafts.delete(form.dataset.chatRecipient)}
+}
+document.getElementById("messageInbox").addEventListener("input",e=>{if(e.target.matches(".chat-composer textarea"))rememberInboxDraft()});
 let inboxLoadVersion=0,selectedInboxCollector=null;
 async function loadInbox(targetCollectorId=null){
  const el=document.getElementById("messageInbox");if(!currentUser)return;
+ rememberInboxDraft();
  const requestId=++inboxLoadVersion,userId=currentUser.id;
  const previous=selectedInboxCollector||el.querySelector(".conversation-contact.active")?.dataset.conversationId;
  const requestedTarget=targetCollectorId||(document.getElementById("inboxPage").classList.contains("thread-open")?previous:null);
@@ -1390,6 +1411,7 @@ async function loadInbox(targetCollectorId=null){
  const preview=x=>x.type==="message"?"✉ "+x.body:x.type==="price"?"💰 Offer · $"+Number(x.amount).toFixed(2)+" · "+x.action:"⇄ Trade · "+x.status;
  el.innerHTML='<div class="conversation-layout"><div class="conversation-list">'+ordered.map(([id,entries])=>{const person=names.get(id),avatar=safeImageUrl(person?.avatar_url),unread=entries.filter(x=>x.type==="message"&&x.recipient_id===currentUser.id&&!x.read_at).length;return `<button type="button" class="conversation-contact" data-conversation-id="${escapeHtml(id)}">${avatar?`<img src="${escapeHtml(avatar)}" alt="">`:`<span class="conversation-initial">${escapeHtml((person?.username||"C")[0].toUpperCase())}</span>`}<span class="conversation-summary"><strong>@${escapeHtml(person?.username||"collector")}${unread?` <em class="conversation-unread">${unread} new</em>`:""}</strong>${dealStatusByUser.has(id)?`<small class="deal-status-label">Deal: ${escapeHtml(dealStatusByUser.get(id))}</small>`:""}<small class="conversation-preview">${escapeHtml(preview(entries.at(-1)).slice(0,70))}</small><small class="conversation-date">${new Date(entries.at(-1).date).toLocaleDateString(undefined,{month:"short",day:"numeric"})}</small></span></button>`}).join("")+'</div><div class="conversation-thread" id="conversationThread"><p class="muted">Select a collector</p></div></div>';
  const openThread=async id=>{
+ rememberInboxDraft();
  const entries=groups.get(id)||[],unread=entries.filter(x=>x.type==="message"&&x.recipient_id===currentUser.id&&!x.read_at).map(x=>x.id);
  selectedInboxCollector=id;
  if(requestId!==inboxLoadVersion||currentUser?.id!==userId)return;
@@ -1397,6 +1419,8 @@ async function loadInbox(targetCollectorId=null){
  el.querySelectorAll("[data-conversation-id]").forEach(b=>b.classList.toggle("active",b.dataset.conversationId===id));
  const person=names.get(id),thread=document.getElementById("conversationThread");
  thread.innerHTML=`<div class="chat-person"><span class="chat-avatar">${escapeHtml((person?.username||"C")[0].toUpperCase())}</span><div><h3>@${escapeHtml(person?.username||"collector")}</h3><p class="muted">${entries.length} conversation updates</p></div></div>${entries.some(x=>(x.type==="price"&&x.currentOffer?.status==="accepted")||(x.type==="trade"&&x.status==="accepted"))?`<details class="chat-deal-panel"><summary>✓ Accepted deal <span>View progress & details</span></summary><div data-deal-details>Open to view transaction progress.</div><details class="deal-guidance"><summary>Exchange tips <span>Safety & shipping</span></summary><div class="deal-guidance-body"><p>DeckPlay does not process payments, issue shipping labels, or verify delivery yet.</p><ol><li>Agree on the item, price and shipping method.</li><li>Share tracking details in messages.</li><li>Confirm completion only when your part is finished.</li></ol><p>Never share passwords or verification codes.</p></div></details></details>`:""}<div class="conversation-bubbles" role="log" aria-label="Conversation history">${entries.map(x=>x.type==="message"?`<div class="message-bubble chat-text ${x.sender_id===currentUser.id?"mine":"theirs"}"><p>${escapeHtml(x.body)}</p><small>${new Date(x.date).toLocaleString([], {hour:"numeric",minute:"2-digit"})}</small></div>`:x.type==="price"?`<div class="message-bubble inbox-offer chat-event ${x.actor_id===currentUser.id?"inbox-mine":""}"><strong>${x.action==="offered"?"💵 Offer made":x.action==="countered"?"↩️ Counteroffer":x.action==="accepted"?"✓ Offer accepted":x.action==="declined"?"✕ Offer declined":x.action==="withdrawn"?"↩ Offer withdrawn":"💵 Offer update"} · ${Number(x.amount).toFixed(2)}</strong><p>${x.actor_id===currentUser.id?"You":"@"+escapeHtml(person?.username||"collector")} · ${escapeHtml(x.action)}</p><small>${new Date(x.date).toLocaleString()}</small>${x.isLatest&&["pending","countered"].includes(x.currentOffer.status)?`<p class="price-offer-actions">${x.currentOffer.last_actor_id!==currentUser.id?`<button type="button" class="primary" data-inbox-price="accept" data-offer="${escapeHtml(x.offer_id)}">Accept</button><button type="button" class="ghost" data-inbox-price="counter" data-offer="${escapeHtml(x.offer_id)}">Counter</button><button type="button" class="ghost" data-inbox-price="decline" data-offer="${escapeHtml(x.offer_id)}">Decline</button>`:`<span class="muted">Waiting for their reply</span>`}</p>`:""}</div>`:`<div class="message-bubble inbox-offer chat-event"><strong>⇄ Trade offer</strong><p>${escapeHtml(x.status)}${x.offer_note?" · "+escapeHtml(x.offer_note):""}</p><small>${new Date(x.date).toLocaleString()}</small>${x.status==="pending"?`<p class="price-offer-actions">${x.recipient_id===currentUser.id?`<button type="button" class="primary" data-inbox-trade="accepted" data-offer="${escapeHtml(x.id)}">Accept</button><button type="button" class="ghost" data-inbox-trade="counter" data-offer="${escapeHtml(x.id)}">Counter</button><button type="button" class="ghost" data-inbox-trade="declined" data-offer="${escapeHtml(x.id)}">Decline</button>`:`<button type="button" class="ghost" data-inbox-trade="cancelled" data-offer="${escapeHtml(x.id)}">Cancel</button>`}</p>`:""}</div>`).join("")}</div><form class="chat-composer" data-chat-recipient="${escapeHtml(id)}"><label class="sr-only" for="chatInput">Message</label><textarea id="chatInput" name="message" rows="1" maxlength="2000" required placeholder="Message @${escapeHtml(person?.username||"collector")}…" aria-label="Write a message"></textarea><button class="primary" type="submit" aria-label="Send message">Send ➤</button><p class="chat-send-status" aria-live="polite"></p></form>`;
+ const composer=thread.querySelector(".chat-composer"),input=composer.querySelector("textarea"),sending=inboxSending.has(userId+":"+id);
+ input.value=inboxDrafts.get(id)||"";input.readOnly=sending;composer.querySelector("button").disabled=sending;
  thread.querySelector(".conversation-bubbles").scrollTop=thread.querySelector(".conversation-bubbles").scrollHeight;
  const panel=thread.querySelector('.chat-deal-panel');
  panel?.addEventListener('toggle',async()=>{if(!panel.open||panel.dataset.loaded)return;panel.dataset.loaded='true';const content=panel.querySelector('[data-deal-details]');try{const html=await dealProgressHtml(entries);if(content.isConnected)content.innerHTML=html}catch{if(content.isConnected)content.textContent='Transaction details could not load. Try refreshing.'}});
@@ -1406,7 +1430,25 @@ async function loadInbox(targetCollectorId=null){
  if(requestedTarget&&groups.has(requestedTarget))await openThread(requestedTarget);
  else document.getElementById("inboxPage").classList.remove("thread-open");
 }
-document.getElementById("messageInbox").addEventListener("submit",async e=>{const form=e.target.closest(".chat-composer");if(!form)return;e.preventDefault();if(!currentUser)return;const input=form.querySelector("textarea"),button=form.querySelector('button[type="submit"]'),status=form.querySelector(".chat-send-status"),body=input.value.trim(),recipient=form.dataset.chatRecipient;if(!body||!recipient)return;button.disabled=true;status.textContent="Sending…";const {data,error}=await supabaseClient.from("collector_messages").insert({sender_id:currentUser.id,recipient_id:recipient,body}).select("id").single();if(error){status.textContent="Could not send: "+error.message;button.disabled=false;return}input.value="";status.textContent="";await loadInbox(recipient);void sendCollectorEmailForSource(data?.id)});
+document.getElementById("messageInbox").addEventListener("submit",async e=>{
+ const form=e.target.closest(".chat-composer");if(!form)return;e.preventDefault();if(!currentUser)return;
+ const input=form.querySelector("textarea"),button=form.querySelector('button[type="submit"]'),status=form.querySelector(".chat-send-status"),body=input.value.trim(),recipient=form.dataset.chatRecipient,userId=currentUser.id,key=userId+":"+recipient;
+ if(!body||!recipient||inboxSending.has(key))return;
+ inboxSending.add(key);button.disabled=true;input.readOnly=true;status.textContent="Sending…";
+ try{
+  const {data,error}=await supabaseClient.from("collector_messages").insert({sender_id:userId,recipient_id:recipient,body}).select("id").single();
+  if(error)throw error;
+  if(currentUser?.id!==userId)return;
+  inboxDrafts.delete(recipient);input.value="";status.textContent="";
+  if(selectedInboxCollector===recipient&&!document.getElementById("inboxPage").hidden)await loadInbox(recipient);
+  void sendCollectorEmailForSource(data?.id);
+ }catch(error){status.textContent="Could not send: "+(error.message||"Please try again.")}
+ finally{
+  inboxSending.delete(key);button.disabled=false;input.readOnly=false;
+  const active=document.querySelector("#messageInbox .chat-composer");
+  if(currentUser?.id===userId&&active?.dataset.chatRecipient===recipient){active.querySelector("button").disabled=false;active.querySelector("textarea").readOnly=false}
+ }
+});
 document.getElementById("messageInbox").addEventListener("keydown",e=>{if(e.target.matches(".chat-composer textarea")&&e.key==="Enter"&&!e.shiftKey&&!e.isComposing){e.preventDefault();e.target.closest("form").requestSubmit()}});
 document.getElementById("inboxThreadBack").addEventListener("click",()=>{selectedInboxCollector=null;document.getElementById("inboxPage").classList.remove("thread-open")});
 function selectInboxMessages(){document.getElementById("inboxMessagesTab").classList.add("active");document.getElementById("inboxNotificationsTab").classList.remove("active");document.getElementById("messageInbox").hidden=false;document.getElementById("inboxNotificationPanel").hidden=true;document.getElementById("inboxPage").classList.remove("notifications-active")}
@@ -1503,7 +1545,7 @@ function startMessageUpdates(){
  if(messagePoll){clearInterval(messagePoll);messagePoll=null}
  if(!currentUser){document.getElementById("notificationBell").hidden=true;document.getElementById("notificationBadge").hidden=true;return}
  refreshUnreadCount();refreshTradeAlerts();refreshNotificationCount();
- const updateInboxActivity=()=>{refreshUnreadCount();refreshTradeAlerts();refreshNotificationCount();refreshNotificationCount();scheduleLiveInboxRefresh()};
+ const updateInboxActivity=()=>{refreshUnreadCount();refreshTradeAlerts();refreshNotificationCount();scheduleLiveInboxRefresh()};
  messageChannel=supabaseClient.channel("deckplay-inbox-"+currentUser.id)
  .on("postgres_changes",{event:"INSERT",schema:"public",table:"collector_messages",filter:"recipient_id=eq."+currentUser.id},updateInboxActivity)
  .on("postgres_changes",{event:"*",schema:"public",table:"price_offers"},updateInboxActivity)

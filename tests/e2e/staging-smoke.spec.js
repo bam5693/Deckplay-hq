@@ -45,3 +45,14 @@ test('staging login UI does not expose production auth endpoints', async ({ page
   expect(html).not.toContain('yffruutknztvdyioovmp.supabase.co');
   expect(production).toEqual([]);
 });
+
+test('deployed homepage matches the staging branch being tested',async({request})=>{
+  // Detect a stale deployment before reporting branch changes as browser-verified.
+  const {execFileSync}=require('node:child_process');
+  const {readFileSync}=require('node:fs');
+  const {createHash}=require('node:crypto');
+  execFileSync(process.execPath,['scripts/build-staging.cjs'],{env:{...process.env,DECKPLAY_STAGING_SUPABASE_URL:'https://prrrzeelltmyugssqnzk.supabase.co',DECKPLAY_STAGING_SUPABASE_KEY:'sb_publishable_0omvNnv_ZOvXrZ-LHPMyIQ_a9zxD-yh'},stdio:'pipe'});
+  const response=await request.get('/');expect(response.status()).toBe(200);
+  const digest=value=>createHash('sha256').update(value).digest('hex');
+  expect(digest(await response.text()),'Deploy the current staging homepage before certifying its UI').toBe(digest(readFileSync('dist-staging/index.html','utf8')));
+});
