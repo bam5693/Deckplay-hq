@@ -20,8 +20,8 @@ async function menu(page,id){
   if(actions[id]){await page.locator('#profileMenuToggle').click();await page.locator('[data-profile-action="'+actions[id]+'"]').click()}return;
  }
  if(id==='myTrades'&&await dock.isVisible()){
-  await page.locator('[data-dock="alerts"]').click();
-  await page.locator('[data-notification-kind="trade_offer"], [data-notification-kind="counteroffer"], [data-notification-kind="trade_update"]').first().click();
+  await page.locator('[data-dock="inbox"]').click({timeout:10000});
+  await page.locator('[data-inbox-offers="trade"]').click({timeout:10000});
   await expect(page.locator('#tradesModal')).toHaveClass(/open/);return;
  }
  const account=page.locator('#accountButton');

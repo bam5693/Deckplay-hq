@@ -91,3 +91,12 @@ test('an older listing response cannot replace newer marketplace results',async(
  await page.evaluate(async()=>{pendingListingLoads[0]({data:[{id:'stale',title:'Stale listing',category:'trading_cards',price:20,created_at:'2026-10-26'}],error:null});await oldListingLoad});
  await expect(page.locator('#grid h3')).toHaveText(['Current listing']);
 });
+test('inbox exposes price and trade offers without activity alerts',async({page})=>{
+ await inbox(page);
+ await page.getByRole('button',{name:'Price offers',exact:true}).click();
+ await expect(page.locator('#priceOffersModal')).toHaveClass(/open/);await expect(page.locator('#priceOffersList')).toContainText('No price offers yet');
+ await page.keyboard.press('Escape');
+ await page.getByRole('button',{name:'Trade offers',exact:true}).click();
+ await expect(page.locator('#tradesModal')).toHaveClass(/open/);
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth-innerWidth)).toBeLessThanOrEqual(2);
+});
