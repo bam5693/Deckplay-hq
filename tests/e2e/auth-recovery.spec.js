@@ -26,7 +26,7 @@ test('recovery submits once and clears password fields after success',async({pag
 });
 test('forgot password requires email and security verification before requesting reset',async({page})=>{
  await page.evaluate(()=>{setAuthMode('signin');openModal('authModal');window.resetCalls=0;supabaseClient.auth.resetPasswordForEmail=async()=>{resetCalls++;return {error:null}}});
- await page.locator('#authForgotPassword').click();expect(await page.evaluate(()=>resetCalls)).toBe(0);
+ await page.locator('#authForgotPassword').click();await expect(page.locator('#authStatus')).toContainText('valid email address');expect(await page.evaluate(()=>resetCalls)).toBe(0);
  await page.locator('#authEmail').fill('fixture@deckplay.test');await page.locator('#authForgotPassword').click();await expect(page.locator('#authStatus')).toContainText('security check');expect(await page.evaluate(()=>resetCalls)).toBe(0);
 });
 test('forgot password sends staging redirect and captcha, then recovers from a network exception',async({page})=>{

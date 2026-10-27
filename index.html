@@ -1265,7 +1265,7 @@ document.getElementById("passwordRecoveryForm").addEventListener("submit",async 
 document.getElementById("authForgotPassword").addEventListener("click",async()=>{
  const form=document.getElementById("authForm"),emailInput=document.getElementById("authEmail"),button=document.getElementById("authForgotPassword"),submit=document.getElementById("authSubmit");
  if(passwordResetPending||form.classList.contains("busy")||authMode!=="signin")return;
- if(!emailInput.value.trim()||!emailInput.checkValidity()){showAuthStatus("Enter a valid email address to request a password reset.","error");emailInput.reportValidity();emailInput.focus();return}
+ if(!emailInput.value.trim()||!emailInput.checkValidity()){emailInput.reportValidity();emailInput.focus();showAuthStatus("Enter a valid email address to request a password reset.","error");return}
  if(!signupCaptchaToken){showAuthStatus("Complete the security check before requesting a password reset.","error");return}
  passwordResetPending=true;button.disabled=true;submit.disabled=true;document.querySelectorAll("[data-auth-mode]").forEach(b=>b.disabled=true);showAuthStatus("Requesting a password reset…");
  try{
