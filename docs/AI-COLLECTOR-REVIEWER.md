@@ -13,15 +13,15 @@ Act like a discerning collectibles buyer and seller, not a random clicker. Revie
 ## Authority and reporting chain
 - **Manager (site owner):** final decisions on product behavior, significant design changes, priorities, and any new spend.
 - **Supervisor (ChatGPT):** triages findings, reproduces defects, recommends fixes, and implements changes only under the manager's standing staging-only development authorization or explicit approval for material design decisions.
-- **Two AI leads:** rotate through buyer, seller, and trader personas. Both must independently experience every role. **Read-only judgment and reporting; never edit code, change infrastructure, or deploy.**
-- **Two workers:** deterministic functional testers. They click and assert outcomes but do not make product decisions.
+- **Tanner and Jayden (two AI leads):** rotate through buyer, seller, and trader personas. Both must independently experience every role. **Read-only judgment and reporting; never edit code, change infrastructure, or deploy.**
+- **Charles and Kyle (two workers):** deterministic functional testers. They click and assert outcomes but do not make product decisions.
 - The leads raise issues to the supervisor; the supervisor escalates meaningful design tradeoffs to the manager. A reported issue is not permission for an AI lead to fix it.
 
 ## Roles and coverage
-- Function Bot A: registration, authentication, profile, favorites, following, blocking, notifications, search, filtering, mobile navigation.
-- Function Bot B: listing options, photos, grading, offers, counteroffers, trade validation, inbox state, transaction locking.
-- AI Lead 1 (rotating): start as buyer, then seller, then trader; review card/TCG/sports-card and non-card journeys, and flag friction using synthetic test data.
-- AI Lead 2 (rotating): start as seller, then trader, then buyer; review synthetic listings across cards, figures, games and sealed collectibles, including incoming offers, trades, and shopping workflows.
+- Charles (Worker 1): registration, authentication, profile, favorites, following, blocking, notifications, search, filtering, mobile navigation.
+- Kyle (Worker 2): listing options, photos, grading, offers, counteroffers, trade validation, inbox state, transaction locking.
+- Tanner (Lead 1, rotating): start as buyer, then seller, then trader; review card/TCG/sports-card and non-card journeys, and flag friction using synthetic test data.
+- Jayden (Lead 2, rotating): start as seller, then trader, then buyer; review synthetic listings across cards, figures, games and sealed collectibles, including incoming offers, trades, and shopping workflows.
 - Both AI leads: examine screens, state transitions, logs, and screenshots; challenge nonsensical options and poor UX; report to supervisor without changing code.
 - Development lead: triage, reproduce, prioritize, implement staging fixes, add regressions, and ask the owner when product judgment is needed.
 
