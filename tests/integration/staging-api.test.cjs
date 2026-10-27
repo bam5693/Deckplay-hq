@@ -106,6 +106,14 @@ test('sender cannot mark recipient private message read',()=>{
  ok(api('seller','/rest/v1/collector_messages?id=eq.'+msg.id,'PATCH',{read_at:new Date().toISOString()}),204);
  assert(ok(api('seller','/rest/v1/collector_messages?id=eq.'+msg.id))[0].read_at,'Recipient may mark their own message read');
 });
+test('message read status cannot be cleared by sender after recipient reads it',()=>{
+ const msg=ok(api('buyer','/rest/v1/collector_messages','POST',{sender_id:users.buyer,recipient_id:users.seller,body:run+' unread state'},{Prefer:'return=representation'}),201)[0];
+ ok(api('seller','/rest/v1/collector_messages?id=eq.'+msg.id,'PATCH',{read_at:new Date().toISOString()}),204);
+ assert(ok(api('seller','/rest/v1/collector_messages?id=eq.'+msg.id))[0].read_at,'Recipient message must be read');
+ const attempt=api('buyer','/rest/v1/collector_messages?id=eq.'+msg.id,'PATCH',{read_at:null},{Prefer:'return=representation'});
+ assert(attempt.status>=400||Array.isArray(attempt.data)&&attempt.data.length===0,'Sender cannot reset recipient unread status');
+ assert(ok(api('seller','/rest/v1/collector_messages?id=eq.'+msg.id))[0].read_at,'Recipient read status must survive sender reset attempt');
+});
 test('counteroffer changes turns, accepts atomically, and locks the listing',()=>{
  const l=createListing(),id=offer(l.id);assert(respond(id,'accept',null,'buyer').status>=400);
  ok(respond(id,'counter',22),204);assert.equal(ok(api('buyer','/rest/v1/price_offers?id=eq.'+id))[0].amount,22);
