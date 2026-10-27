@@ -678,6 +678,18 @@ test('blocking ends both follow directions and unblocking does not restore them'
   assert.equal(ok(api(b,bToA)).length,0,'Blocked collector must unfollow blocker');
   assert(api(a,'/rest/v1/seller_follows','POST',{follower_id:users[a],seller_id:users[b]}).status>=400,'Blocker cannot follow during block');
   assert(api(b,'/rest/v1/seller_follows','POST',{follower_id:users[b],seller_id:users[a]}).status>=400,'Blocked collector cannot follow during block');
+  const marker='TEST ONLY BOT '+randomUUID();
+  const previousPrefs=ok(api(a,'/rest/v1/notification_preferences?user_id=eq.'+users[a]))[0];
+  assert(previousPrefs,'Bot notification preferences must exist to restore');
+  try{
+   ok(api(a,'/rest/v1/notification_preferences?user_id=eq.'+users[a],'PATCH',{wanted_matches:true}),204);
+   ok(api(a,'/rest/v1/wanted_posts','POST',{user_id:users[a],title:marker,game:'one_piece',budget:30,details:'TEST ONLY'}),201);
+   const wantedBlockedListing=createListing(b,{title:marker,price:20,tcg_game:'one_piece'});
+   assert.equal(ok(api(a,'/rest/v1/collector_notifications?source_id=eq.'+wantedBlockedListing.id+'&kind=eq.wanted_match')).length,0,'Blocking in either direction must suppress wanted-match alerts');
+  }finally{
+   ok(api(a,'/rest/v1/notification_preferences?user_id=eq.'+users[a],'PATCH',{wanted_matches:previousPrefs.wanted_matches}),204);
+   ok(api(a,'/rest/v1/rpc/cleanup_staging_fixture','POST',{p_marker:marker}),204);
+  }
   const blockedListing=createListing(b,{title:run+' blocked follow activity'});
   assert.equal(ok(api(a,'/rest/v1/collector_notifications?source_id=eq.'+blockedListing.id+'&kind=eq.followed_seller_listing')).length,0,'Blocking must suppress future followed-seller listing alerts');
   ok(api(a,blockPath,'DELETE'),204);blocked=false;
