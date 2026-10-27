@@ -51,6 +51,8 @@ test('Jayden and Tanner publish and inspect a complete deck with a separate buye
   expect(saved.description).toContain('[Complete Deck]');
   expect(saved.description).toContain('Deck: Black Yamato');
   expect(saved.description).toContain('Cards: 51');
+  expect(saved.description).toContain('[Complete Deck]\nDeck: Black Yamato\nCards: 51\n\nFull decklist:\n');
+  expect(saved.description).not.toContain('\\n');
   expect(saved.description).toContain('4x OP16-097 Yamato');
   const buyer=await buyerContext.newPage();
   await buyer.goto('/',{waitUntil:'domcontentloaded'});
