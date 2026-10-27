@@ -20,3 +20,10 @@ test('buyer cannot modify another collector listing',async({page,browser})=>{
   expect(original,'Listing must remain unchanged').toBe(title);
  }finally{try{await cleanup(page,title)}finally{await context.close()}}
 });
+
+test('collector session survives page refresh',async({page})=>{
+ await signIn(page,'BUYER');
+ const id=await page.evaluate(()=>currentUser.id);
+ await page.reload({waitUntil:'domcontentloaded'});
+ await expect.poll(()=>page.evaluate(()=>currentUser?.id),{timeout:20000}).toBe(id);
+});
