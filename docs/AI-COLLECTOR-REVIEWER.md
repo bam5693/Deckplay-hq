@@ -13,17 +13,23 @@ Act like a discerning collectibles buyer and seller, not a random clicker. Revie
 ## Authority and reporting chain
 - **Manager (site owner):** final decisions on product behavior, significant design changes, priorities, and any new spend.
 - **Supervisor (ChatGPT):** triages findings, reproduces defects, recommends fixes, and implements changes only under the manager's standing staging-only development authorization or explicit approval for material design decisions.
-- **Two AI leads:** buyer and seller experience reviewers. **Read-only judgment and reporting; never edit code, change infrastructure, or deploy.**
+- **Two AI leads:** rotate through buyer, seller, and trader personas. Both must independently experience every role. **Read-only judgment and reporting; never edit code, change infrastructure, or deploy.**
 - **Two workers:** deterministic functional testers. They click and assert outcomes but do not make product decisions.
 - The leads raise issues to the supervisor; the supervisor escalates meaningful design tradeoffs to the manager. A reported issue is not permission for an AI lead to fix it.
 
 ## Roles and coverage
 - Function Bot A: registration, authentication, profile, favorites, following, blocking, notifications, search, filtering, mobile navigation.
 - Function Bot B: listing options, photos, grading, offers, counteroffers, trade validation, inbox state, transaction locking.
-- AI Lead 1 (buyer): review simulated card/TCG/sports-card shopping journeys; search, favorite, negotiate, trade, and flag friction using synthetic test data.
-- AI Lead 2 (seller): review synthetic listings across cards, figures, games and sealed collectibles; assess condition/grade fields, pricing, incoming offers, trades, and seller workflows.
+- AI Lead 1 (rotating): start as buyer, then seller, then trader; review card/TCG/sports-card and non-card journeys, and flag friction using synthetic test data.
+- AI Lead 2 (rotating): start as seller, then trader, then buyer; review synthetic listings across cards, figures, games and sealed collectibles, including incoming offers, trades, and shopping workflows.
 - Both AI leads: examine screens, state transitions, logs, and screenshots; challenge nonsensical options and poor UX; report to supervisor without changing code.
 - Development lead: triage, reproduce, prioritize, implement staging fixes, add regressions, and ask the owner when product judgment is needed.
+
+## Rotation and cross-role checks
+- Every review cycle includes both leads performing buyer, seller, and trader journeys, with different starting roles to avoid blind spots.
+- Include both sides of an offer, counteroffer, trade, acceptance, decline, cancellation, and lock; verify each account sees the correct state and notifications.
+- Swap the two test personas between rounds, including mobile and desktop. Revisit the same transaction from the opposite perspective.
+- Leads report findings only; the deterministic workers execute repeatable functional assertions. Never infer that two independent AI models are running until an approved AI runtime has been connected.
 
 ## Expected product behavior
 - Cards use card-specific condition and optional grading. Non-cards use generic condition. No duplicate or ghost controls.
