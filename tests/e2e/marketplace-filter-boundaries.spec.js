@@ -1,8 +1,13 @@
 const {test,expect}=require('@playwright/test');
 
+test.beforeEach(async({page})=>{
+ await page.route('https://challenges.cloudflare.com/**',route=>route.abort());
+ await page.route('https://prrrzeelltmyugssqnzk.supabase.co/rest/v1/**',route=>route.fulfill({json:[]}));
+});
+
 // Local-only synthetic listings; restore every mutated global after each test.
 async function installFixture(page,listings,blocked=[]){
- await page.goto('/');
+ await page.goto('/');await page.waitForLoadState('networkidle');
  await page.evaluate(({listings,blocked})=>{
   window.__marketFilterFixture={
    items,query,cat,filter,game,onlyMyListings,onlySavedListings,
