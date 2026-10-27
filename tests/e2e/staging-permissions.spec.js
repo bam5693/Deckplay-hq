@@ -65,3 +65,10 @@ test('signed-out visitor can browse but cannot create a price offer',async({page
  const result=await page.evaluate(async()=>{const {data,error}=await supabaseClient.rpc('submit_price_offer',{p_listing_id:'00000000-0000-0000-0000-000000000000',p_amount:20});return {data,error:error?.message||null}});
  expect(result.error,'Anonymous offers must be refused').toBeTruthy();
 });
+
+test('anonymous visitor cannot create a private collector message',async({page})=>{
+ await page.goto('/',{waitUntil:'domcontentloaded'});
+ const result=await page.evaluate(async()=>{const {data,error}=await supabaseClient.from('collector_messages').insert({sender_id:'00000000-0000-0000-0000-000000000000',recipient_id:'00000000-0000-0000-0000-000000000000',body:'TEST ONLY anonymous denied'}).select('id');return {data,error:error?.message||null}});
+ expect(result.data||[],'No anonymous messages should be created').toHaveLength(0);
+ expect(result.error,'Anonymous messages should fail authorization').toBeTruthy();
+});
