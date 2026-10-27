@@ -38,3 +38,27 @@ test('switching dialogs waits for Back history before opening the next dialog',a
  await page.evaluate(()=>{openModal('authModal');closeModal('authModal');openModal('composeModal');closeModal('composeModal')});
  await expect.poll(()=>page.evaluate(()=>history.state.deckplayDepth)).toBe(0);await expect(page.locator('#composeModal')).not.toHaveClass(/open/);
 });
+
+for(const [label,loader,table,list,modal] of [
+ ['price','loadPriceOffers','price_offers','priceOffersList','priceOffersModal'],
+ ['trade','loadTradeOffers','trade_offers','tradeOffersList','tradesModal']
+]){
+ test(`${label} offers discard a former account response after account switching`,async({page})=>{
+  await page.evaluate(({loader,table})=>{
+   currentUser={id:'fixture-old'};syncInboxDraftUser();window.offerLoadError=null;
+   supabaseClient.from=name=>{const q={then:(resolve,reject)=>(name===table?new Promise(done=>window.finishPrivateOffers=done):Promise.resolve({data:[],error:null})).then(resolve,reject)};for(const key of ['select','order','limit','in'])q[key]=()=>q;return q};
+   window.pendingPrivateOffers=window[loader]().catch(error=>offerLoadError=error.message);
+  },{loader,table});
+  await page.evaluate(async()=>{
+   currentUser={id:'fixture-new'};syncInboxDraftUser();
+   finishPrivateOffers({data:[{id:'private-offer',listing_id:'old-listing',buyer_id:'fixture-old',seller_id:'old-other',sender_id:'fixture-old',recipient_id:'old-other',amount:37,status:'declined',offer_note:'Private old proposal',created_at:'2026-10-27',updated_at:'2026-10-27'}],error:null});await pendingPrivateOffers;
+  });
+  expect(await page.evaluate(()=>offerLoadError)).toBeNull();
+  await expect(page.locator('#'+list)).not.toContainText('37.00');await expect(page.locator('#'+list)).not.toContainText('Private old proposal');
+ });
+ test(`${label} offers clear already rendered private details when signing out`,async({page})=>{
+  await page.evaluate(({list,modal})=>{currentUser={id:'fixture-old'};syncInboxDraftUser();document.getElementById(list).textContent='Private negotiation';openModal(modal)}, {list,modal});
+  await page.evaluate(()=>supabaseClient.auth.signOut({scope:'local'}));
+  await expect(page.locator('#'+list)).toBeEmpty();await expect(page.locator('#'+modal)).not.toHaveClass(/open/);
+ });
+}
