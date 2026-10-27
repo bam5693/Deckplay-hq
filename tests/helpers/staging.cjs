@@ -26,7 +26,8 @@ async function menu(page,id){
  }
  const account=page.locator('#accountButton');
  await expect(account).toBeVisible({timeout:10000});
- await account.click({timeout:10000});
+ const accountMenu=page.locator('#accountMenu');
+ if(await accountMenu.isHidden()) await account.click({timeout:10000});
  const action=page.locator('#'+id);
  await expect(action).toBeVisible({timeout:10000});
  await action.click({timeout:10000});
