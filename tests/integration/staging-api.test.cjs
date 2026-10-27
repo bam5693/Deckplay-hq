@@ -633,7 +633,7 @@ test('followed seller and wanted-match alerts are private and respect wanted opt
 });
 
 test('unfollowing a seller stops new-listing alerts and re-following restores them',()=>{
- const marker='TEST ONLY BOT '+randomUUID()+' FOLLOW TOGGLE',follower='seller',publisher='buyer';
+ const marker='TEST ONLY BOT '+randomUUID(),follower='seller',publisher='buyer';
  const followPath='/rest/v1/seller_follows?follower_id=eq.'+users[follower]+'&seller_id=eq.'+users[publisher];
  const original=ok(api(follower,followPath)).length>0;
  let following=original;
