@@ -401,3 +401,16 @@ test('unsaved listing price drops do not create unrelated activity alerts',()=>{
  ok(api('seller','/rest/v1/listings?id=eq.'+listing.id,'PATCH',{status:'sold'}),204);
  assert.equal(ok(api('buyer','/rest/v1/collector_notifications?source_id=eq.'+listing.id)).length,0,'A buyer who did not save the listing must not receive a sold alert');
 });
+
+test('removing a saved favorite stops future price-drop and sold alerts',()=>{
+ const listing=createListing();activityFixtureIds.push(listing.id);
+ const filter='?user_id=eq.'+users.buyer+'&listing_id=eq.'+listing.id;
+ ok(api('buyer','/rest/v1/saved_listings','POST',{user_id:users.buyer,listing_id:listing.id}),201);
+ assert.equal(ok(api('buyer','/rest/v1/saved_listings'+filter)).length,1);
+ ok(api('buyer','/rest/v1/saved_listings'+filter,'DELETE'),204);
+ assert.equal(ok(api('buyer','/rest/v1/saved_listings'+filter)).length,0,'Removed favorite must no longer be saved');
+ ok(api('seller','/rest/v1/listings?id=eq.'+listing.id,'PATCH',{price:19}),204);
+ assert.equal(ok(api('buyer','/rest/v1/collector_notifications?source_id=eq.'+listing.id)).length,0,'Unfavorited item must not generate a price-drop alert');
+ ok(api('seller','/rest/v1/listings?id=eq.'+listing.id,'PATCH',{status:'sold'}),204);
+ assert.equal(ok(api('buyer','/rest/v1/collector_notifications?source_id=eq.'+listing.id)).length,0,'Unfavorited item must not generate a sold alert');
+});
