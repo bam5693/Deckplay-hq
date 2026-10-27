@@ -24,10 +24,11 @@ jobs:
         with:
           path: ~/.cache/ms-playwright
           key: playwright-linux-${{ hashFiles('package-lock.json') }}
-      - name: Install Chromium dependencies
-        run: npx playwright install-deps chromium
-      - name: Install Chromium browser
-        run: npx playwright install chromium
+      # The staging buyer/seller workflow already runs headless Chromium on
+      # ubuntu-latest without apt install-deps. Avoid apt stalls/timeouts and
+      # install only the browser shell required by these headless UI checks.
+      - name: Install headless Chromium browser
+        run: npx playwright install chromium --only-shell
       - name: Run mobile and desktop browser tests
         run: npx playwright test --config=playwright.local.config.js
       - uses: actions/upload-artifact@v4
@@ -43,4 +44,4 @@ jobs:
         if: always()
         run: |
           echo "## Isolated mobile and desktop UI checks" >> "$GITHUB_STEP_SUMMARY"
-          echo "Status: ${{ job.status }}. See attached HTML report, JUnit, screenshots and traces. This job does not certify real buyer/seller API transactions." >> "$GITHUB_STEP_SUMMARY"
+          echo "Status: ${{ job.status }}. HTML/JUnit results are attached when tests execute; screenshots, videos and traces are disabled to save CI minutes. Real buyer/seller API transactions are verified separately." >> "$GITHUB_STEP_SUMMARY"
