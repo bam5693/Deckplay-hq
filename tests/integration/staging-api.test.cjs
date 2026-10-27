@@ -110,6 +110,20 @@ test('concurrent acceptances produce exactly one winning offer',async()=>{
  const rows=ok(api('seller','/rest/v1/price_offers?listing_id=eq.'+l.id));assert.equal(rows.filter(x=>x.status==='accepted').length,1);assert.equal(rows.filter(x=>x.status==='declined').length,1);
 });
 
+test('competing trade proposals cannot both reserve the same listing',()=>{
+ const target=createListing(),firstItem=createListing('buyer'),secondItem=createListing('buyer');
+ const propose=offeredId=>ok(api('buyer','/rest/v1/trade_offers','POST',{listing_id:target.id,offered_listing_id:offeredId,sender_id:users.buyer,recipient_id:users.seller,offer_note:run},{Prefer:'return=representation'}),201)[0];
+ const first=propose(firstItem.id),second=propose(secondItem.id);
+ ok(api('seller','/rest/v1/rpc/respond_trade_offer','POST',{p_offer:first.id,p_action:'accepted'}),204);
+ const losingResponse=api('seller','/rest/v1/rpc/respond_trade_offer','POST',{p_offer:second.id,p_action:'accepted'});
+ assert(losingResponse.status>=400,'A competing trade must not accept after the target is reserved');
+ assert.equal(ok(api('seller','/rest/v1/listings?id=eq.'+target.id))[0].status,'reserved');
+ assert.equal(ok(api('buyer','/rest/v1/listings?id=eq.'+firstItem.id))[0].status,'reserved');
+ assert.equal(ok(api('buyer','/rest/v1/listings?id=eq.'+secondItem.id))[0].status,'active','Losing trade must not lock its offered listing');
+ const trades=ok(api('seller','/rest/v1/trade_offers?id=in.('+first.id+','+second.id+')'));
+ assert.equal(trades.filter(t=>t.status==='accepted').length,1,'Exactly one trade may be accepted');
+});
+
 after(()=>{if(sessions.seller)ok(api('seller','/rest/v1/rpc/cleanup_staging_fixture','POST',{p_marker:run}),204)});
 test('notification preferences persist and suppress unwanted notifications',()=>{
  const original=ok(api('seller','/rest/v1/notification_preferences?user_id=eq.'+users.seller))[0];
