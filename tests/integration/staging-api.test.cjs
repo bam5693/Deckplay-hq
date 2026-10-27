@@ -636,6 +636,7 @@ test('followed seller and wanted-match alerts are private and respect wanted opt
 
 test('unfollowing a seller stops new-listing alerts and re-following restores them',()=>{
  const marker='TEST ONLY BOT '+randomUUID(),follower='seller',publisher='buyer';
+ const fixtureIds=[];
  const followPath='/rest/v1/seller_follows?follower_id=eq.'+users[follower]+'&seller_id=eq.'+users[publisher];
  const original=ok(api(follower,followPath)).length>0;
  let following=original;
@@ -648,16 +649,19 @@ test('unfollowing a seller stops new-listing alerts and re-following restores th
  const alerts=id=>ok(api(follower,'/rest/v1/collector_notifications?source_id=eq.'+id+'&kind=eq.followed_seller_listing'));
  try{
   setFollowing(true);
-  const first=createListing(publisher,{title:marker+' followed'});
+  const first=createListing(publisher,{title:marker});fixtureIds.push(first.id);
   assert.equal(alerts(first.id).length,1,'Following should create one new-listing alert');
   setFollowing(false);
-  const second=createListing(publisher,{title:marker+' unfollowed'});
+  const second=createListing(publisher,{title:marker});fixtureIds.push(second.id);
   assert.equal(alerts(second.id).length,0,'Unfollowing must stop new-listing alerts');
   setFollowing(true);
-  const third=createListing(publisher,{title:marker+' followed again'});
+  const third=createListing(publisher,{title:marker});fixtureIds.push(third.id);
   assert.equal(alerts(third.id).length,1,'Re-following should resume exactly one alert per listing');
  }finally{
-  try{setFollowing(original)}finally{ok(api(follower,'/rest/v1/rpc/cleanup_staging_fixture','POST',{p_marker:marker}),204)}
+  try{setFollowing(original)}finally{
+   ok(api(follower,'/rest/v1/rpc/cleanup_staging_fixture','POST',{p_marker:marker}),204);
+   for(const id of fixtureIds)assert.deepEqual(ok(api(publisher,'/rest/v1/listings?id=eq.'+id)),[],'Follow regression must not leak synthetic listings');
+  }
  }
 });
 
@@ -690,7 +694,7 @@ test('blocking ends both follow directions and unblocking does not restore them'
    ok(api(a,'/rest/v1/notification_preferences?user_id=eq.'+users[a],'PATCH',{wanted_matches:previousPrefs.wanted_matches}),204);
    ok(api(a,'/rest/v1/rpc/cleanup_staging_fixture','POST',{p_marker:marker}),204);
   }
-  const blockedListing=createListing(b,{title:run+' blocked follow activity'});
+  const blockedListing=createListing(b,{title:run});activityFixtureIds.push(blockedListing.id);
   assert.equal(ok(api(a,'/rest/v1/collector_notifications?source_id=eq.'+blockedListing.id+'&kind=eq.followed_seller_listing')).length,0,'Blocking must suppress future followed-seller listing alerts');
   ok(api(a,blockPath,'DELETE'),204);blocked=false;
   assert.equal(ok(api(a,aToB)).length,0,'Unblocking must not restore blocker follow');
