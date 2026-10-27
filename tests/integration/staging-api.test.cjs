@@ -614,6 +614,8 @@ test('followed seller and wanted-match alerts are private and respect wanted opt
   if(!alreadyFollowing){ok(api(follower,'/rest/v1/seller_follows','POST',{follower_id:users[follower],seller_id:users[publisher]}),201);createdFollow=true}
   assert.deepEqual(ok(api(publisher,followPath)),[],'A seller cannot inspect another collector follow list');
   assert(api(publisher,'/rest/v1/seller_follows','POST',{follower_id:users[follower],seller_id:users[publisher]}).status>=400,'Another user cannot forge a follow');
+  ok(api(publisher,followPath,'DELETE'),204);
+  assert.equal(ok(api(follower,followPath)).length,1,'A followed seller cannot delete another collector’s follow relationship');
   ok(api(follower,'/rest/v1/notification_preferences?user_id=eq.'+users[follower],'PATCH',{wanted_matches:true}),204);
   ok(api(follower,'/rest/v1/wanted_posts','POST',{user_id:users[follower],title:marker,game:'one_piece',budget:30,details:'TEST ONLY'}, {Prefer:'return=representation'}),201);
   const first=createListing(publisher,{title:marker,price:20,tcg_game:'one_piece'});
