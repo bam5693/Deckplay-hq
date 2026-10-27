@@ -601,3 +601,33 @@ test('simultaneous price and trade acceptances allow one deal without locking lo
  const loser=price.status==='accepted'?tradeRow:price;
  assert(!['pending','countered','accepted'].includes(loser.status),'Losing negotiation must be closed');
 });
+
+
+test('followed seller and wanted-match alerts are private and respect wanted opt-out',()=>{
+ const marker='TEST ONLY BOT '+randomUUID(),follower='seller',publisher='buyer';
+ const previous=ok(api(follower,'/rest/v1/notification_preferences?user_id=eq.'+users[follower]))[0];
+ assert(previous,'Staging seller bot must have notification preferences to restore');
+ const followPath='/rest/v1/seller_follows?follower_id=eq.'+users[follower]+'&seller_id=eq.'+users[publisher];
+ const alreadyFollowing=ok(api(follower,followPath)).length>0;
+ let createdFollow=false;
+ try{
+  if(!alreadyFollowing){ok(api(follower,'/rest/v1/seller_follows','POST',{follower_id:users[follower],seller_id:users[publisher]}),201);createdFollow=true}
+  assert.deepEqual(ok(api(publisher,followPath)),[],'A seller cannot inspect another collector follow list');
+  assert(api(publisher,'/rest/v1/seller_follows','POST',{follower_id:users[follower],seller_id:users[publisher]}).status>=400,'Another user cannot forge a follow');
+  ok(api(follower,'/rest/v1/notification_preferences?user_id=eq.'+users[follower],'PATCH',{wanted_matches:true}),204);
+  ok(api(follower,'/rest/v1/wanted_posts','POST',{user_id:users[follower],title:marker,game:'one_piece',budget:30,details:'TEST ONLY'}, {Prefer:'return=representation'}),201);
+  const first=createListing(publisher,{title:marker,price:20,tcg_game:'one_piece'});
+  const firstAlerts=ok(api(follower,'/rest/v1/collector_notifications?source_id=eq.'+first.id));
+  assert.deepEqual(firstAlerts.map(x=>x.kind).sort(),['followed_seller_listing','wanted_match'],'Following and matching a wanted post should create distinct activity alerts');
+  assert.deepEqual(ok(api(null,'/rest/v1/collector_notifications?source_id=eq.'+first.id)),[],'Anonymous visitors cannot read alerts');
+  assert.deepEqual(ok(api(publisher,'/rest/v1/collector_notifications?source_id=eq.'+first.id)),[],'Listing seller cannot read follower alerts');
+  ok(api(follower,'/rest/v1/notification_preferences?user_id=eq.'+users[follower],'PATCH',{wanted_matches:false}),204);
+  const second=createListing(publisher,{title:marker,price:20,tcg_game:'one_piece'});
+  const secondAlerts=ok(api(follower,'/rest/v1/collector_notifications?source_id=eq.'+second.id));
+  assert.deepEqual(secondAlerts.map(x=>x.kind),['followed_seller_listing'],'Wanted opt-out must suppress matching alerts without silently unfollowing the seller');
+ }finally{
+  ok(api(follower,'/rest/v1/notification_preferences?user_id=eq.'+users[follower],'PATCH',{wanted_matches:previous.wanted_matches}),204);
+  if(createdFollow)ok(api(follower,followPath,'DELETE'),204);
+  ok(api(follower,'/rest/v1/rpc/cleanup_staging_fixture','POST',{p_marker:marker}),204);
+ }
+});
