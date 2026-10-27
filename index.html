@@ -1407,9 +1407,13 @@ let inboxDraftUser=null;
 function syncInboxDraftUser(){
  const id=currentUser?.id||null;
  if(inboxDraftUser!==id){
-  inboxDrafts.clear();inboxDraftUser=id;++inboxLoadVersion;selectedInboxCollector=null;
+  inboxDrafts.clear();inboxDraftUser=id;++inboxLoadVersion;++profileLoadVersion;selectedInboxCollector=null;
   for(const name of ["messageInbox","inboxNotificationList","notificationList"])document.getElementById(name).replaceChildren();
-  if(!document.getElementById("inboxPage").hidden)showMainMarketplace();
+  for(const name of ["profilePageContent","ownSellerRatings"])document.getElementById(name).replaceChildren();
+  for(const name of ["pageHandle","pageBio","pageMeta","settingsAccountEmail","settingsSecurityStatus","composeStatus"])document.getElementById(name).textContent="";
+  document.getElementById("pageAvatar").textContent="C";document.getElementById("composeBody").value="";
+  for(const name of ["profileModal","settingsModal","blockedUsersModal","composeModal"])closeModal(name);
+  if(!document.getElementById("inboxPage").hidden||!document.getElementById("collectorPage").hidden)showMainMarketplace();
  }
 }
 function rememberInboxDraft(){
@@ -1508,7 +1512,22 @@ document.getElementById("refreshInbox").addEventListener("click",()=>document.ge
 document.getElementById("messageInbox").addEventListener("click",async e=>{const price=e.target.closest("[data-inbox-price]");if(price){const action=price.dataset.inboxPrice,id=price.dataset.offer;let amount=null;if(action==="counter"){const value=prompt("Enter your counteroffer in USD:");if(value===null)return;amount=Number(value);if(!Number.isFinite(amount)||amount<0.01||amount>100000){toast("Enter a valid amount.");return}}else if(!confirm("Confirm "+action+"?"))return;price.disabled=true;const {error}=await supabaseClient.rpc("respond_price_offer",{p_offer_id:id,p_action:action,p_amount:amount});if(error){toast(error.message);price.disabled=false;await loadInbox()}else{toast(action==="accept"?"Offer accepted — item reserved. Payment and shipping are not active.":"Offer updated");if(action==="accept")await loadListings();void sendCollectorEmailForSource(id);await loadInbox()}return}
  const trade=e.target.closest("[data-inbox-trade]");if(trade){const action=trade.dataset.inboxTrade,id=trade.dataset.offer;if(action==="counter"){activeCounterOffer=id;document.getElementById("counterForm").reset();document.getElementById("counterStatus").textContent="";openModal("counterModal");return}if(!confirm("Confirm "+action+" for this trade?"))return;trade.disabled=true;const column=action==="cancelled"?"sender_id":"recipient_id";const {error}=await supabaseClient.rpc("respond_trade_offer",{p_offer:id,p_action:action});if(error){toast(error.message||"This trade has already changed. Refreshing the conversation.");trade.disabled=false;await loadInbox();return}else{toast(action==="accepted"?"Trade accepted — item reserved. No payment has been taken.":"Trade "+action);if(action==="accepted")await loadListings();await loadInbox();refreshTradeAlerts()}return}
  const b=e.target.closest("[data-reply-to],[data-thread-reply]");if(!b)return;composeRecipient=b.dataset.replyTo||b.dataset.threadReply;composeListing=b.dataset.replyListing||null;document.getElementById("composeContext").textContent="Reply to collector";openModal("composeModal")});
-document.getElementById("composeForm").addEventListener("submit",async e=>{e.preventDefault();const status=document.getElementById("composeStatus");if(!currentUser||!composeRecipient)return;status.textContent="Sending…";const {data:sentMessage,error}=await supabaseClient.from("collector_messages").insert({sender_id:currentUser.id,recipient_id:composeRecipient,listing_id:composeListing||null,body:document.getElementById("composeBody").value.trim()}).select("id").single();if(error){status.textContent=error.message;return}e.target.reset();closeModal("composeModal");if(!document.getElementById("inboxPage").hidden)loadInbox();toast("Message sent");void sendCollectorEmailForSource(sentMessage?.id)});
+document.getElementById("composeForm").addEventListener("submit",async e=>{
+ e.preventDefault();const form=e.currentTarget;if(!currentUser||!composeRecipient||form.dataset.pending)return;
+ const status=document.getElementById("composeStatus"),input=document.getElementById("composeBody"),button=form.querySelector('button[type="submit"]'),draft=input.value,body=draft.trim(),userId=currentUser.id,recipient=composeRecipient,listing=composeListing;
+ if(!body)return;form.dataset.pending="true";form.setAttribute("aria-busy","true");button.disabled=true;status.textContent="Sending…";
+ try{
+  const {data:sentMessage,error}=await supabaseClient.from("collector_messages").insert({sender_id:userId,recipient_id:recipient,listing_id:listing||null,body}).select("id").single();if(error)throw error;
+  if(currentUser?.id!==userId)return;
+  if(composeRecipient===recipient&&composeListing===listing){
+   if(input.value===draft){form.reset();status.textContent="";closeModal("composeModal");toast("Message sent")}
+   else status.textContent="Message sent. Your new draft is ready.";
+  }
+  if(!document.getElementById("inboxPage").hidden){try{await loadInbox()}catch{toast("Message sent. Refresh your inbox to see it.")}}
+  void sendCollectorEmailForSource(sentMessage?.id);
+ }catch(error){if(currentUser?.id===userId&&composeRecipient===recipient)status.textContent="Could not send: "+(error.message||"Please try again.")}
+ finally{delete form.dataset.pending;form.removeAttribute("aria-busy");button.disabled=false;if((currentUser?.id!==userId||composeRecipient!==recipient)&&status.textContent==="Sending…")status.textContent=""}
+});
 
 
 let tradeTargetId=null,tradeRecipientId=null;
@@ -1544,21 +1563,24 @@ document.getElementById("counterForm").addEventListener("submit",async e=>{e.pre
 let profileTab="listings";
 function showHomePage(){showMainMarketplace();document.body.classList.remove("deckplay-market");document.body.classList.add("deckplay-home");window.scrollTo({top:0,behavior:"smooth"})}
 function showMainMarketplace(){document.body.classList.remove("deckplay-home");document.body.classList.add("deckplay-market");document.body.classList.remove("inbox-focus","profile-focus");document.getElementById("inboxPage").hidden=true;document.getElementById("collectorPage").hidden=true;document.querySelectorAll("main > section,main > aside").forEach(el=>{el.hidden=(el.id==="collectorPage"||el.id==="inboxPage")});window.scrollTo({top:0,behavior:"smooth"})}
+let profileLoadVersion=0;
 async function showCollectorPage(tab="listings"){
  if(!currentUser){openModal("authModal");return}
+ const userId=currentUser.id,request=++profileLoadVersion,current=()=>request===profileLoadVersion&&currentUser?.id===userId;
  profileTab=tab;document.body.classList.remove("inbox-focus","deckplay-home","deckplay-market");document.body.classList.add("profile-focus");document.getElementById("inboxPage").hidden=true;document.querySelectorAll("main > section,main > aside").forEach(el=>{if(el.id!=="collectorPage")el.hidden=true});document.getElementById("collectorPage").hidden=false;
  window.scrollTo({top:0,behavior:"smooth"});document.getElementById("profilePageContent").innerHTML='<p class="muted">Loading your collection…</p>';
- const [profileResult,listingsResult,wantedResult]=await Promise.all([supabaseClient.from("profiles").select("username,bio,favorite_tcg,location_label,avatar_url").eq("id",currentUser.id).maybeSingle(),supabaseClient.from("listings").select("id,title,price,status,category,image_urls,created_at").eq("seller_id",currentUser.id).order("created_at",{ascending:false}),supabaseClient.from("wanted_posts").select("id,title,details,game,budget,created_at").eq("user_id",currentUser.id).order("created_at",{ascending:false})]);
+ const [profileResult,listingsResult,wantedResult]=await Promise.all([supabaseClient.from("profiles").select("username,bio,favorite_tcg,location_label,avatar_url").eq("id",userId).maybeSingle(),supabaseClient.from("listings").select("id,title,price,status,category,image_urls,created_at").eq("seller_id",userId).order("created_at",{ascending:false}),supabaseClient.from("wanted_posts").select("id,title,details,game,budget,created_at").eq("user_id",userId).order("created_at",{ascending:false})]);
+ if(!current())return;
  const profile=profileResult.data||{},listings=listingsResult.data||[],wanted=wantedResult.data||[],avatar=safeImageUrl(profile.avatar_url),username=profile.username||currentUser.user_metadata?.username||"collector";
  document.getElementById("pageAvatar").innerHTML=avatar?`<img src="${escapeHtml(avatar)}" alt="Your profile picture">`:escapeHtml(username[0].toUpperCase());
  document.getElementById("pageHandle").textContent="@"+username;document.getElementById("pageBio").textContent=profile.bio||"Add a bio to tell collectors about yourself.";
  document.getElementById("pageMeta").textContent=[profile.favorite_tcg?"Favorite TCG: "+profile.favorite_tcg:"",profile.location_label||""].filter(Boolean).join(" · ");
  document.getElementById("pageListingCount").textContent=listings.length+" listings";document.getElementById("pageWantedCount").textContent=wanted.length+" wanted posts";
- const ownRating=await sellerRatingHtml(currentUser.id);document.getElementById("ownSellerRatings").innerHTML=ownRating;
+ const ownRating=await sellerRatingHtml(userId);if(!current())return;document.getElementById("ownSellerRatings").innerHTML=ownRating;
  document.querySelectorAll("[data-profile-tab]").forEach(b=>b.classList.toggle("active",b.dataset.profileTab===tab));
  const content=document.getElementById("profilePageContent");
  if(tab==="wanted"){content.innerHTML=wanted.length?wanted.map(w=>`<article class="profile-item"><h3>${escapeHtml(w.title)}</h3><p>${escapeHtml(w.details||"")}</p><small>${escapeHtml(w.game||"Collectibles")}${w.budget?" · Budget: $"+Number(w.budget).toFixed(2):""}</small></article>`).join(""):'<p class="muted">No wanted posts yet. Use the Wanted board to post what you are looking for.</p>';return}
- if(tab==="saved"){const {data:rows,error}=await supabaseClient.from("saved_listings").select("listing_id").eq("user_id",currentUser.id);if(error){content.textContent=error.message;return}const ids=(rows||[]).map(r=>r.listing_id);if(!ids.length){content.innerHTML='<p class="muted">No saved items yet.</p>';return}const {data:matches,error:listingError}=await supabaseClient.from("listings").select("id,title,price,status,image_urls").in("id",ids).eq("status","active");if(listingError){content.textContent=listingError.message;return}content.innerHTML=renderProfileCards(matches||[],false);return}
+ if(tab==="saved"){const {data:rows,error}=await supabaseClient.from("saved_listings").select("listing_id").eq("user_id",userId);if(!current())return;if(error){content.textContent=error.message;return}const ids=(rows||[]).map(r=>r.listing_id);if(!ids.length){content.innerHTML='<p class="muted">No saved items yet.</p>';return}const {data:matches,error:listingError}=await supabaseClient.from("listings").select("id,title,price,status,image_urls").in("id",ids).eq("status","active");if(!current())return;if(listingError){content.textContent=listingError.message;return}content.innerHTML=renderProfileCards(matches||[],false);return}
  if(listingsResult.error){content.textContent=listingsResult.error.message;return}
  content.innerHTML=listings.length?renderProfileCards(listings,true):'<p class="muted">You haven’t posted any listings yet. Tap Sell an item to get started.</p>';
 }
@@ -1615,13 +1637,13 @@ supabaseClient.auth.getSession().then(({data})=>{currentUser=data.session?.user|
 (function(){
  const originalOpen=openModal,originalClose=closeModal;
  const originalHome=showHomePage,originalMarket=showMainMarketplace,originalProfile=showCollectorPage,originalInbox=showInboxPage;
- let suppress=false;
+ let suppress=false,pendingModalBack=false,queuedModal=null;
  let screen=document.body.classList.contains("inbox-focus")?"inbox":document.body.classList.contains("profile-focus")?"profile":document.body.classList.contains("deckplay-home")?"home":"market";
  const states=[{type:"screen",name:screen}];
  history.replaceState({...history.state,deckplayNav:true,deckplayDepth:0},"");
  function push(entry){if(suppress)return;states.push(entry);history.pushState({...history.state,deckplayNav:true,deckplayDepth:states.length-1},"")}
- openModal=function(id){const modal=document.getElementById(id);if(!modal||modal.classList.contains("open"))return;originalOpen(id);push({type:"modal",id})};
- closeModal=function(id){const modal=document.getElementById(id);if(!modal||!modal.classList.contains("open"))return;originalClose(id);if(!suppress&&states.at(-1)?.type==="modal"&&states.at(-1).id===id)history.back()};
+ openModal=function(id){if(pendingModalBack){queuedModal=id;return}const modal=document.getElementById(id);if(!modal||modal.classList.contains("open"))return;originalOpen(id);push({type:"modal",id})};
+ closeModal=function(id){if(queuedModal===id)queuedModal=null;const modal=document.getElementById(id);if(!modal||!modal.classList.contains("open"))return;originalClose(id);if(!suppress&&!pendingModalBack&&states.at(-1)?.type==="modal"&&states.at(-1).id===id){pendingModalBack=true;history.back()}};
  function navigate(name,fn){const changed=screen!==name;screen=name;const result=fn();if(changed)push({type:"screen",name});return result}
  showHomePage=function(){return navigate("home",()=>{suppress=true;try{return originalHome()}finally{suppress=false}})};
  showMainMarketplace=function(){return navigate("market",()=>originalMarket())};
@@ -1653,7 +1675,7 @@ supabaseClient.auth.getSession().then(({data})=>{currentUser=data.session?.user|
     if(parent&&screen!==parent.name)restore(parent.name);
     originalOpen(target.id);
    }else if(target.type==="screen"&&screen!==target.name)restore(target.name);
-  }finally{suppress=false}
+  }finally{suppress=false;pendingModalBack=false;if(queuedModal){const id=queuedModal;queuedModal=null;openModal(id)}}
  });
  function restore(name){
   screen=name;
