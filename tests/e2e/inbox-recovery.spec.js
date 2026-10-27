@@ -123,3 +123,22 @@ test('late unread counts cannot restore account badges after sign-out',async({pa
  await page.evaluate(async()=>{Object.values(oldCountReplies).forEach(done=>done({count:7,error:null}));await oldCounts});
  for(const id of ['headerUnread','menuUnread','notificationBadge'])await expect(page.locator('#'+id)).toHaveJSProperty('hidden',true);
 });
+
+test('stale favorite responses cannot leak saved listings after switching accounts or signing out',async({page})=>{
+ await ready(page);
+ await page.evaluate(()=>{
+  currentUser={id:'fixture-old'};window.pendingSaved={};
+  supabaseClient.from=()=>{let account;const q={select:()=>q,eq:(field,value)=>{if(field==='user_id')account=value;return q},then:(resolve,reject)=>new Promise(done=>pendingSaved[account]=done).then(resolve,reject)};return q};
+  window.oldSavedLoad=loadSavedListings();
+ });
+ await expect.poll(()=>page.evaluate(()=>typeof pendingSaved['fixture-old'])).toBe('function');
+ await page.evaluate(()=>{currentUser={id:'fixture-new'};window.newSavedLoad=loadSavedListings()});
+ await expect.poll(()=>page.evaluate(()=>typeof pendingSaved['fixture-new'])).toBe('function');
+ await page.evaluate(async()=>{pendingSaved['fixture-new']({data:[{listing_id:'new-favorite'}],error:null});await newSavedLoad});
+ expect(await page.evaluate(()=>[...saved])).toEqual(['new-favorite']);
+ await page.evaluate(async()=>{pendingSaved['fixture-old']({data:[{listing_id:'old-private-favorite'}],error:null});await oldSavedLoad});
+ expect(await page.evaluate(()=>[...saved])).toEqual(['new-favorite']);
+ await page.evaluate(()=>{window.pendingAfterLogout=loadSavedListings()});
+ await page.evaluate(async()=>{currentUser=null;await loadSavedListings();pendingSaved['fixture-new']({data:[{listing_id:'private-after-logout'}],error:null});await pendingAfterLogout});
+ expect(await page.evaluate(()=>[...saved])).toEqual([]);
+});
