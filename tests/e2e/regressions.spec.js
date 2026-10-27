@@ -85,3 +85,18 @@ test('notification bell counts discovery alerts without counting inbox negotiati
  expect(result.badge).toBe('3');
  expect(result.hidden).toBe(false);
 });
+
+test('discovery notification opens an available listing rather than redirecting to inbox',async({page})=>{
+ await page.goto('/');
+ const result=await page.evaluate(async()=>{
+  const previous=items;
+  items=[{id:'fixture-listing',databaseId:'fixture-listing',n:'Fixture collectible',p:12,c:'Trading Cards',imageUrls:[],trades:false}];
+  try{
+   await navigateDeckplayNotification('wanted_match','fixture-seller','fixture-listing');
+   return {title:document.getElementById('detailTitle')?.textContent,modal:document.getElementById('detailModal')?.classList.contains('open'),inbox:document.getElementById('inboxPage')?.classList.contains('active')};
+  }finally{items=previous}
+ });
+ expect(result.title).toBe('Fixture collectible');
+ expect(result.modal).toBe(true);
+ expect(result.inbox).not.toBe(true);
+});
