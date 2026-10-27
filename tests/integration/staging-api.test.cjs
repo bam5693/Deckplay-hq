@@ -631,3 +631,30 @@ test('followed seller and wanted-match alerts are private and respect wanted opt
   ok(api(follower,'/rest/v1/rpc/cleanup_staging_fixture','POST',{p_marker:marker}),204);
  }
 });
+
+test('unfollowing a seller stops new-listing alerts and re-following restores them',()=>{
+ const marker='TEST ONLY BOT '+randomUUID()+' FOLLOW TOGGLE',follower='seller',publisher='buyer';
+ const followPath='/rest/v1/seller_follows?follower_id=eq.'+users[follower]+'&seller_id=eq.'+users[publisher];
+ const original=ok(api(follower,followPath)).length>0;
+ let following=original;
+ const setFollowing=desired=>{
+  if(desired===following)return;
+  if(desired)ok(api(follower,'/rest/v1/seller_follows','POST',{follower_id:users[follower],seller_id:users[publisher]}),201);
+  else ok(api(follower,followPath,'DELETE'),204);
+  following=desired;
+ };
+ const alerts=id=>ok(api(follower,'/rest/v1/collector_notifications?source_id=eq.'+id+'&kind=eq.followed_seller_listing'));
+ try{
+  setFollowing(true);
+  const first=createListing(publisher,{title:marker+' followed'});
+  assert.equal(alerts(first.id).length,1,'Following should create one new-listing alert');
+  setFollowing(false);
+  const second=createListing(publisher,{title:marker+' unfollowed'});
+  assert.equal(alerts(second.id).length,0,'Unfollowing must stop new-listing alerts');
+  setFollowing(true);
+  const third=createListing(publisher,{title:marker+' followed again'});
+  assert.equal(alerts(third.id).length,1,'Re-following should resume exactly one alert per listing');
+ }finally{
+  try{setFollowing(original)}finally{ok(api(follower,'/rest/v1/rpc/cleanup_staging_fixture','POST',{p_marker:marker}),204)}
+ }
+});
