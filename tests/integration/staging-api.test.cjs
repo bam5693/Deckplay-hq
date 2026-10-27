@@ -47,6 +47,20 @@ test('wanted posts reject impersonation and foreign edits',()=>{
  }finally{ok(api('buyer','/rest/v1/wanted_posts?id=eq.'+post.id,'DELETE'),204)}
 });
 test('favorites persist privately and can be removed',()=>{const l=createListing();ok(api('buyer','/rest/v1/saved_listings','POST',{user_id:users.buyer,listing_id:l.id}),201);assert.equal(ok(api('buyer','/rest/v1/saved_listings?listing_id=eq.'+l.id)).length,1);assert.equal(ok(api('seller','/rest/v1/saved_listings?listing_id=eq.'+l.id)).length,0);ok(api('buyer','/rest/v1/saved_listings?listing_id=eq.'+l.id,'DELETE'),204);ok(api('seller','/rest/v1/listings?id=eq.'+l.id,'DELETE'),204)});
+test('another collector cannot remove a buyer saved listing',()=>{
+ const listing=createListing();
+ const filter='?user_id=eq.'+users.buyer+'&listing_id=eq.'+listing.id;
+ try{
+  ok(api('buyer','/rest/v1/saved_listings','POST',{user_id:users.buyer,listing_id:listing.id}),201);
+  const attempt=api('seller','/rest/v1/saved_listings'+filter,'DELETE',undefined,{Prefer:'return=representation'});
+  assert([200,204].includes(attempt.status),'Foreign deletion must be denied or row-filtered');
+  if(attempt.status===200)assert.deepEqual(attempt.data,[],'Foreign deletion must affect no rows');
+  assert.equal(ok(api('buyer','/rest/v1/saved_listings'+filter)).length,1,'Buyer favorite must survive a foreign delete');
+ }finally{
+  ok(api('buyer','/rest/v1/saved_listings'+filter,'DELETE'),204);
+  ok(api('seller','/rest/v1/listings?id=eq.'+listing.id,'DELETE'),204);
+ }
+});
 test('wanted posts publish, browse and enforce owner deletion',()=>{const p=ok(api('buyer','/rest/v1/wanted_posts','POST',{user_id:users.buyer,title:run,game:'one_piece',budget:50,details:'TEST ONLY'},{Prefer:'return=representation'}),201)[0];assert.equal(ok(api(null,'/rest/v1/wanted_posts?id=eq.'+p.id)).length,1);assert.equal(ok(api('seller','/rest/v1/wanted_posts?id=eq.'+p.id,'DELETE',undefined,{Prefer:'return=representation'})).length,0);ok(api('buyer','/rest/v1/wanted_posts?id=eq.'+p.id,'DELETE'),204)});
 test('private messages persist, notify recipient, and cannot be rewritten',()=>{
  const m=ok(api('buyer','/rest/v1/collector_messages','POST',{sender_id:users.buyer,recipient_id:users.seller,body:run},{Prefer:'return=representation'}),201)[0];
