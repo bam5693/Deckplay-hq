@@ -1,6 +1,11 @@
 // curl uses the workspace's system trust/proxy configuration. Secrets travel via stdin.
 const {execFileSync}=require('node:child_process');const fs=require('node:fs'),os=require('node:os'),path=require('node:path');
+function assertStagingUrl(value){
+ const url=new URL(value);
+ if(url.origin!=='https://prrrzeelltmyugssqnzk.supabase.co'||url.username||url.password)throw new Error('Refusing non-staging database request');
+}
 function http(url,{method='GET',headers={},body}={}) {
+ assertStagingUrl(url);
  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'deckplay-http-'));
  try {
   const config=['silent','show-error','max-time = 30','request = '+JSON.stringify(method),'url = '+JSON.stringify(url),'write-out = "\\n%{http_code}"'];
@@ -15,6 +20,7 @@ module.exports={http};
 // Concurrent variant for acceptance-race tests; credentials remain on stdin.
 const {execFile}=require('node:child_process');
 function httpAsync(url,{method='GET',headers={},body}={}){
+ assertStagingUrl(url);
  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'deckplay-http-'));
  const config=['silent','show-error','max-time = 30','request = '+JSON.stringify(method),'url = '+JSON.stringify(url),'write-out = "\\n%{http_code}"'];
  for(const [k,v] of Object.entries(headers))config.push('header = '+JSON.stringify(k+': '+v));
@@ -22,3 +28,4 @@ function httpAsync(url,{method='GET',headers={},body}={}){
  return new Promise((resolve,reject)=>{const child=execFile('curl',['--config','-'],{encoding:'utf8'},(error,output)=>{fs.rmSync(dir,{recursive:true,force:true});if(error){reject(new Error('Concurrent HTTP request failed'));return}const i=output.lastIndexOf('\n');resolve({status:Number(output.slice(i+1)),data:output.slice(0,i)})});child.stdin.end(config.join('\n'))});
 }
 module.exports.httpAsync=httpAsync;
+module.exports.assertStagingUrl=assertStagingUrl;

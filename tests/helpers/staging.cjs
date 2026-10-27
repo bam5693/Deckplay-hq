@@ -36,7 +36,40 @@ async function seedListing(page,title,details={}){
  return page.evaluate(async ({title,details})=>{const {data,error}=await supabaseClient.from('listings').insert({...details,seller_id:currentUser.id,title,price:25,category:'trading_cards',condition:'like_new',image_urls:['https://prrrzeelltmyugssqnzk.supabase.co/storage/v1/object/public/listing-images/test.jpg'],accepts_trades:true,accepts_price_offers:true,tcg_game:details.tcg_game||'one_piece'}).select('id').single();if(error)throw Error(error.message);return data.id},{title,details});
 }
 async function cleanup(page,title){
- await page.evaluate(async title=>{const {data,error}=await supabaseClient.from('listings').select('image_urls').eq('title',title).eq('seller_id',currentUser.id);if(error)throw Error(error.message);const prefix='https://prrrzeelltmyugssqnzk.supabase.co/storage/v1/object/public/listing-images/';const paths=(data||[]).flatMap(x=>x.image_urls||[]).filter(x=>x.startsWith(prefix+currentUser.id+'/')).map(x=>x.slice(prefix.length));if(paths.length){const {error}=await supabaseClient.storage.from('listing-images').remove(paths);if(error)throw Error(error.message)}},title);
- const error=await page.evaluate(async title=>{const {error}=await supabaseClient.rpc('cleanup_staging_fixture',{p_marker:title});return error?.message||null},title);expect(error,'Disposable fixture cleanup').toBeNull();
+ if(typeof title!=='string'||!/^TEST ONLY BOT [a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/.test(title))throw Error('Exact synthetic fixture marker required');
+ await page.evaluate(async title=>{
+  const origin='https://prrrzeelltmyugssqnzk.supabase.co';
+  const uuid=/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/;
+  if(location.origin!=='https://deckplay-hq-staging.cstivers56.workers.dev'||SUPABASE_URL!==origin)throw Error('Refusing cleanup outside private staging');
+  const user=currentUser;
+  if(!user||!uuid.test(user.id)||!['deckplay-seller@deckplay.test','deckplay-buyer@deckplay.test'].includes(user.email))throw Error('Dedicated staging bot required for cleanup');
+  const unchanged=()=>{if(currentUser?.id!==user.id)throw Error('Cleanup account changed');};
+  const signal=AbortSignal.timeout(20000);
+  const {data,error}=await supabaseClient.from('listings').select('id,title,seller_id,image_urls').eq('title',title).eq('seller_id',user.id).abortSignal(signal);
+  if(error)throw Error(error.message);
+  unchanged();
+  const prefix=origin+'/storage/v1/object/public/listing-images/';
+  const paths=[];
+  for(const row of data||[]){
+   if(!uuid.test(row.id)||row.title!==title||row.seller_id!==user.id)throw Error('Unverified fixture listing');
+   for(const image of row.image_urls||[]){
+    if(typeof image!=='string'||!image.startsWith(prefix+user.id+'/'))continue;
+    const path=image.slice(prefix.length),file=path.slice(user.id.length+1);
+    if(!/^[a-f0-9-]{36}\.[a-z0-9]+$/.test(file)||!uuid.test(file.split('.')[0]))throw Error('Unverified fixture photo path');
+    paths.push(path);
+   }
+  }
+  if(paths.length){
+   // Use fetch so a stalled storage request has a real abort deadline.
+   const {data:{session},error}=await supabaseClient.auth.getSession();
+   if(error||session?.user.id!==user.id)throw Error('Cleanup session changed');
+   unchanged();
+   const response=await fetch(origin+'/storage/v1/object/listing-images',{method:'DELETE',headers:{apikey:SUPABASE_PUBLISHABLE_KEY,Authorization:'Bearer '+session.access_token,'Content-Type':'application/json'},body:JSON.stringify({prefixes:[...new Set(paths)]}),signal});
+   if(!response.ok)throw Error('Fixture photo cleanup failed: HTTP '+response.status);
+  }
+  unchanged();
+  const result=await supabaseClient.rpc('cleanup_staging_fixture',{p_marker:title}).abortSignal(signal);
+  if(result.error)throw Error(result.error.message);
+ },title);
 }
 module.exports={signIn,menu,seedListing,cleanup,marker};

@@ -44,6 +44,8 @@ jobs:
       - name: Authenticate using repository-scoped GitHub identity
         run: node scripts/staging-ci-credentials.cjs
       - run: npm ci
+      - name: Verify fixture cleanup safety before real staging transactions
+        run: node --test tests/security/fixture-cleanup.test.cjs
       - name: Cache Playwright browser
         uses: actions/cache@v4
         with:
