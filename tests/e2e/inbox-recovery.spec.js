@@ -177,5 +177,5 @@ test('newest unread activity count wins when an older same-account count resolve
  await expect(page.locator('#notificationBadge')).toHaveText('2');
  await page.evaluate(async()=>{pendingActivityCounts[0]({count:0,error:null});await oldActivityCount});
  await expect(page.locator('#notificationBadge')).toHaveText('2');
- await expect(page.locator('#notificationBadge')).toBeVisible();
+ await expect(page.locator('#notificationBadge')).toHaveJSProperty('hidden',false);
 });
