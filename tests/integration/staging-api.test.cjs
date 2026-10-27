@@ -20,6 +20,22 @@ before(()=>{
  }
 });
 test('both dedicated users authenticate and have distinct profiles',()=>{assert.notEqual(users.seller,users.buyer);for(const role of ['seller','buyer']){const p=ok(api(role,'/rest/v1/profiles?id=eq.'+users[role]));assert.equal(p.length,1);assert(p[0].username)}});
+test('a refreshed session restores buyer access while malformed tokens cannot read private data',()=>{
+ const email=process.env.DECKPLAY_TEST_BUYER_EMAIL,password=process.env.DECKPLAY_TEST_BUYER_PASSWORD;
+ // Create a separate session so refresh-token rotation never affects shared test sessions.
+ const signedIn=ok(api(null,'/auth/v1/token?grant_type=password','POST',{email,password}));
+ assert.equal(signedIn.user.id,users.buyer,'Fresh sign-in must belong to the buyer fixture');
+ assert(signedIn.refresh_token,'Sign-in must return a refresh token');
+ const refreshed=ok(api(null,'/auth/v1/token?grant_type=refresh_token','POST',{refresh_token:signedIn.refresh_token}));
+ assert.equal(refreshed.user.id,users.buyer,'Refresh must preserve buyer identity');
+ assert(refreshed.access_token,'Refresh must provide a usable access token');
+ const auth={Authorization:'Bearer '+refreshed.access_token};
+ assert.equal(ok(api(null,'/auth/v1/user','GET',undefined,auth)).id,users.buyer,'Refreshed token must authenticate');
+ assert.equal(ok(api(null,'/rest/v1/profiles?id=eq.'+users.buyer,'GET',undefined,auth)).length,1,'Refreshed session must restore profile access');
+ const invalid=api(null,'/rest/v1/collector_messages?select=id&limit=1','GET',undefined,{Authorization:'Bearer malformed.session.token'});
+ assert([401,403].includes(invalid.status),'Malformed bearer token must not read private messages');
+ assert.deepEqual(ok(api(null,'/rest/v1/collector_messages?select=id&limit=1')),[],'Anonymous requests must not see private messages');
+});
 test('listing persists and is browseable/searchable; foreign ownership and missing photos rejected',()=>{
  const l=createListing();assert.equal(ok(api(null,'/rest/v1/listings?id=eq.'+l.id))[0].title,run);
  assert.equal(ok(api(null,'/rest/v1/listings?title=ilike.*'+encodeURIComponent(run)+'*')).some(x=>x.id===l.id),true);
