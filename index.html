@@ -827,6 +827,12 @@ footer p,html[data-theme="dark"] footer p{color:#d6deea!important}
  #mobileDock>button.dock-sell>span:first-child{width:39px!important;height:39px!important;border-radius:50%!important;background:#e2bb6d!important;box-shadow:0 3px 7px #0003!important;font-size:31px!important}
  #mobileDock #dockUnread:not([hidden]){position:absolute;top:7px;right:14%;}
 }
+
+/* Keep activity alerts reachable on phones while retaining the five-button dock. */
+@media(max-width:700px){
+ header{position:relative}
+ header .header-actions>[data-sell]{display:none!important}
+}
 </style>
 </head>
 <body>
@@ -915,7 +921,7 @@ const grid=document.getElementById("grid");
 const escapeHtml=value=>String(value??"").replace(/[&<>'"]/g,char=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"})[char]);
 const safeImageUrl=value=>{try{const url=new URL(value);return url.protocol==="https:"?url.href:""}catch{return ""}};
 function toast(message){const element=document.getElementById("toast");element.textContent=message;element.style.display="block";clearTimeout(toast.timer);toast.timer=setTimeout(()=>element.style.display="none",3000)}
-function openModal(id){const modal=document.getElementById(id);if(!modal)return;modal.deckplayReturnFocus=document.activeElement;modal.classList.add("open");requestAnimationFrame(()=>modal.querySelector("button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),a[href]")?.focus());modal.style.zIndex=String(100+document.querySelectorAll(".modal.open").length*10);document.body.classList.add("deckplay-modal-open")}
+function openModal(id){const modal=document.getElementById(id);if(!modal)return;modal.deckplayReturnFocus=document.activeElement;modal.classList.add("open");requestAnimationFrame(()=>modal.querySelector("button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),a[href]")?.focus());modal.style.zIndex=String(2000+document.querySelectorAll(".modal.open").length*10);document.body.classList.add("deckplay-modal-open")}
 function closeModal(id){const modal=document.getElementById(id);if(!modal)return;modal.classList.remove("open");modal.style.zIndex="";if(modal.deckplayReturnFocus?.isConnected)modal.deckplayReturnFocus.focus();if(!document.querySelector(".modal.open"))document.body.classList.remove("deckplay-modal-open")}
 // Keep keyboard navigation inside the active dialog, including nested dialogs.
 document.addEventListener("keydown",event=>{
@@ -957,6 +963,7 @@ function render(){
  grid.innerHTML=list.length?list.map(item=>`<article class="card"><div class="art ${escapeHtml(item.t||"")}">${itemArtwork(item)}<span class="tag">${item.c==="Trading Cards"?"TCG":item.c==="Video Games"?"GAME":item.c==="Collectibles"?"COLLECTIBLE":"GAMING GEAR"}</span><button class="heart" type="button" aria-label="Save item" data-heart="${escapeHtml(item.id)}">${saved.has(item.id)?"♥":"♡"}</button></div><div class="cardbody"><div class="kind">${item.trades?"Trades accepted":"Community seller"}</div><h3>${escapeHtml(item.n)}</h3><div class="seller">${item.sellerId?`<button type="button" class="seller-link" data-card-profile="${escapeHtml(item.sellerId)}">${escapeHtml(item.s)}</button>`:escapeHtml(item.s)}${item.gameLabel?` · ${escapeHtml(item.gameLabel)}`:""}${sellerRatingCache.has(item.sellerId)?`<span class="listing-seller-rating"> ★ ${sellerRatingCache.get(item.sellerId).average} (${sellerRatingCache.get(item.sellerId).count})</span>`:""}</div><div class="price-row"><span class="price">$${item.p.toFixed(2)}</span><span class="condition">${escapeHtml(item.cond)}</span></div><button class="view" type="button" data-view="${escapeHtml(item.id)}">View item</button>${onlyMyListings&&item.databaseId?`<div class="listing-manage"><button class="ghost" type="button" data-sold="${escapeHtml(item.id)}">Mark sold</button><button class="ghost danger" type="button" data-delete-listing="${escapeHtml(item.id)}">Delete</button></div>`:""}</div></article>`).join(""):`<div class="empty">${onlyMyListings?"You have no active listings yet. Use Sell an item to post your first one.":"No listings found. Try another search."}</div>`;
 }
 let listingsLoadVersion=0;
+function marketplaceItemFromRow(row,profile){return {id:row.id,databaseId:row.id,n:row.title,c:databaseCategory(row.category),game:row.tcg_game||"",collectibleSubcategory:row.collectible_subcategory||"",gameLabel:tcgNames[row.tcg_game]||"",p:Number(row.price),s:profile?.username?"@"+profile.username:(profile?.display_name||"DeckPlay seller"),cond:databaseCondition(row.condition),e:databaseEmoji(row.category),description:row.description||"No description provided.",trades:row.accepts_trades,priceOffers:row.accepts_price_offers,imageUrls:row.image_urls||[],created_at:row.created_at,sellerId:row.seller_id}}
 async function loadListings(){
  const requestId=++listingsLoadVersion;
  document.getElementById("count").textContent="Loading live listings...";
@@ -969,7 +976,7 @@ async function loadListings(){
  if(requestId!==listingsLoadVersion)return;
  if(profilesError)console.warn("Could not load public seller names",profilesError);
  const sellersById=new Map((publicProfiles||[]).map(profile=>[profile.id,profile]));
- items=visibleData.map(row=>({id:row.id,databaseId:row.id,n:row.title,c:databaseCategory(row.category),game:row.tcg_game||"",collectibleSubcategory:row.collectible_subcategory||"",gameLabel:tcgNames[row.tcg_game]||"",p:Number(row.price),s:sellersById.get(row.seller_id)?.username?"@"+sellersById.get(row.seller_id).username:(sellersById.get(row.seller_id)?.display_name||"DeckPlay seller"),cond:databaseCondition(row.condition),e:databaseEmoji(row.category),description:row.description||"No description provided.",trades:row.accepts_trades,priceOffers:row.accepts_price_offers,imageUrls:row.image_urls||[],created_at:row.created_at,sellerId:row.seller_id}));
+ items=visibleData.map(row=>marketplaceItemFromRow(row,sellersById.get(row.seller_id)));
  listingSource="live";render();
 }
 function updateAccountUI(){
@@ -1368,8 +1375,26 @@ async function loadNotificationCenter(){
 }
 
 /* Route alerts by activity type instead of sending every actor-linked alert to messages. */
+let discoveryNavigationVersion=0;
 async function navigateDeckplayNotification(kind,actorId,sourceId){
- if(["favorite_price_drop","favorite_sold","followed_seller_listing","wanted_match"].includes(kind)&&sourceId){const listing=items.find(x=>String(x.databaseId||x.id)===String(sourceId));if(listing){showDetails(listing);return}toast("This listing is no longer available.");return}
+ const requestId=++discoveryNavigationVersion,userId=currentUser?.id;
+ const current=()=>requestId===discoveryNavigationVersion&&currentUser?.id===userId;
+ if(["favorite_price_drop","favorite_sold","followed_seller_listing","wanted_match"].includes(kind)&&sourceId){
+  let listing=items.find(x=>String(x.databaseId||x.id)===String(sourceId));
+  if(!listing){
+   try{
+    const {data,error}=await supabaseClient.from("listings").select("id,title,description,category,tcg_game,collectible_subcategory,price,condition,accepts_trades,accepts_price_offers,image_urls,created_at,seller_id").eq("id",sourceId).eq("status","active").maybeSingle();
+    if(!current())return;if(error)throw error;
+    if(!data||blockedCollectorIds.has(data.seller_id)){toast("This listing is no longer available.");return}
+    const {data:profile}=await supabaseClient.from("profiles").select("username,display_name").eq("id",data.seller_id).maybeSingle();
+    if(!current())return;listing=marketplaceItemFromRow(data,profile);
+   }catch(error){if(current())toast("Could not open this listing. Please try again.");return}
+  }
+  if(!current())return;
+  if(blockedCollectorIds.has(listing.sellerId)){toast("This listing is no longer available.");return}
+  if(!items.some(x=>String(x.databaseId||x.id)===String(sourceId)))items.unshift(listing);
+  showDetails(listing);return;
+ }
  document.querySelectorAll("[data-back-alerts]").forEach(button=>button.hidden=true);
  if(kind==="message"&&actorId){await showInboxPage(actorId);return}
  if(kind&&kind.startsWith("price_")){if(actorId){await showInboxPage(actorId);return}document.querySelector("#priceOffersModal [data-back-alerts]").hidden=false;openModal("priceOffersModal");await loadPriceOffers();return}

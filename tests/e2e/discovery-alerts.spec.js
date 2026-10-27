@@ -11,20 +11,28 @@ async function openProfile(page,sellerId){
  await expect(page.locator('[data-follow-profile="'+sellerId+'"]')).toBeVisible();
 }
 
-test('Kyle follows and unfollows Charles; listing and wanted-match alerts open the correct item',async({page,browser})=>{
+async function closeDialog(page,id){
+ const depth=await page.evaluate(()=>history.state.deckplayDepth);
+ await page.locator('[data-close="'+id+'"]').click();
+ await expect(page.locator('#'+id)).not.toHaveClass(/open/);
+ await expect.poll(()=>page.evaluate(()=>history.state.deckplayDepth)).toBe(depth-1);
+}
+
+test('Kyle follows and unfollows Charles; listing and wanted-match alerts open the correct item',async({page,browser},testInfo)=>{
  test.setTimeout(120000);
  const titles=[marker(),marker(),marker()];let priorFollow,priorWanted;
  await signIn(page,'SELLER');const sellerId=await page.evaluate(()=>currentUser.id);
  const context=await browser.newContext({baseURL:process.env.DECKPLAY_STAGING_URL,viewport:page.viewportSize(),httpCredentials:{username:'deckplay',password:process.env.DECKPLAY_STAGING_ACCESS_PASSWORD},ignoreHTTPSErrors:!!process.env.CODEX_NETWORK_PROXY_ACTIVE});
  const buyer=await context.newPage();
  try{
-  await signIn(buyer,'BUYER');
+  await signIn(buyer,'BUYER');buyer.setDefaultTimeout(15000);page.setDefaultTimeout(15000);
   const original=await buyer.evaluate(async sellerId=>{
    const follow=await supabaseClient.from('seller_follows').select('seller_id').eq('follower_id',currentUser.id).eq('seller_id',sellerId).maybeSingle();
    const prefs=await supabaseClient.from('notification_preferences').select('wanted_matches').eq('user_id',currentUser.id).maybeSingle();
    if(follow.error||prefs.error)throw Error((follow.error||prefs.error).message);
    return {following:!!follow.data,wanted:prefs.data?.wanted_matches};
   },sellerId);priorFollow=original.following;priorWanted=original.wanted;
+  await testInfo.attach('discovery-fixture-state',{body:JSON.stringify({markers:titles,sellerId,...original}),contentType:'application/json'});
   await buyer.evaluate(async sellerId=>{const {error}=await supabaseClient.from('seller_follows').delete().eq('follower_id',currentUser.id).eq('seller_id',sellerId);if(error)throw Error(error.message)},sellerId);
   const initial=await seedListing(page,titles[0]);
   await test.step('Kyle follows Charles through the seller profile and refreshes',async()=>{
@@ -38,14 +46,15 @@ test('Kyle follows and unfollows Charles; listing and wanted-match alerts open t
   },titles[1]);
   const matched=await seedListing(page,titles[1]);
   await test.step('Kyle opens each discovery alert at its listing, not the inbox',async()=>{
-   await buyer.reload({waitUntil:'domcontentloaded'});
+   await closeDialog(buyer,'publicProfileModal');await closeDialog(buyer,'detailModal');
+   expect(await buyer.evaluate(id=>items.some(item=>String(item.databaseId||item.id)===id),matched),'The new listing must not already be in this page cache').toBe(false);
    for(const kind of ['followed_seller_listing','wanted_match']){
     await expect(buyer.locator('#notificationBell')).toBeVisible({timeout:10000});await buyer.locator('#notificationBell').click({timeout:10000});
     const alert=buyer.locator('#notificationList [data-notification-kind="'+kind+'"][data-notification-source="'+matched+'"]');
-    await expect(alert).toHaveCount(1,{timeout:12000});await alert.click();await expect(buyer.locator('#detailTitle')).toHaveText(titles[1]);
+    await expect(alert).toHaveCount(1,{timeout:12000});await alert.click();await expect(buyer.locator('#detailModal')).toHaveClass(/open/);await expect(buyer.locator('#detailTitle')).toHaveText(titles[1]);
     await expect(buyer.locator('#inboxPage')).toBeHidden();
     const read=await buyer.evaluate(async({kind,id})=>{const {data,error}=await supabaseClient.from('collector_notifications').select('read_at').eq('user_id',currentUser.id).eq('kind',kind).eq('source_id',id).single();if(error)throw Error(error.message);return data.read_at},{kind,id:matched});expect(read).toBeTruthy();
-    await buyer.locator('[data-close="detailModal"]').click();
+    await closeDialog(buyer,'detailModal');
    }
   });
   await test.step('Kyle unfollows; a later Charles listing creates no follow alert',async()=>{
