@@ -470,34 +470,61 @@ body.inbox-focus .inbox-page-heading{margin-top:12px}
 #inboxPage .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 @media(max-width:600px){#inboxPage .chat-composer{bottom:calc(72px + env(safe-area-inset-bottom));margin-left:-3px;margin-right:-3px}}
 
-/* Inbox polish: compact list rows, chronological chat, expandable deal overview */
-#inboxPage .conversation-list{max-height:none!important;overflow:visible!important;border:0!important}
-#inboxPage .conversation-contact{display:grid!important;grid-template-columns:52px minmax(0,1fr)!important;align-items:center!important;gap:12px!important;padding:16px 14px!important;border-bottom:1px solid #829b9530!important;border-radius:0!important;min-height:90px}
-#inboxPage .conversation-contact .conversation-summary{display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;gap:4px 9px!important;min-width:0;width:100%}
-#inboxPage .conversation-contact .conversation-summary>strong{grid-column:1!important;grid-row:1!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:16px}
-#inboxPage .conversation-contact .conversation-summary>.conversation-preview{grid-column:1/-1!important;grid-row:2!important;display:block!important;max-width:100%!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13px;opacity:.75}
-#inboxPage .conversation-contact .conversation-summary>.conversation-date{grid-column:2!important;grid-row:1!important;white-space:nowrap;font-size:11px!important;opacity:.65;text-align:right}
-#inboxPage .conversation-contact .conversation-summary>.deal-status-label{grid-column:1/-1!important;grid-row:3!important;justify-self:start;font-size:11px!important;padding:3px 7px}
-#inboxPage .chat-deal-panel{border:1px solid #b89b6655;border-radius:13px;margin:10px 0 18px;background:#bba26e0c;overflow:hidden}
-#inboxPage .chat-deal-panel>summary{cursor:pointer;list-style:none;display:flex;justify-content:space-between;gap:12px;padding:13px 15px;font-weight:700;align-items:center}
+/* Inbox visual system: consistent rows, previews and conversation spacing. */
+#inboxPage #messageInbox .conversation-list{max-height:none;overflow:visible;border:0}
+#inboxPage #messageInbox .conversation-contact{
+ display:grid;grid-template-columns:52px minmax(0,1fr);align-items:center;
+ width:100%;min-height:92px;gap:14px;padding:16px 18px;
+ border-bottom:1px solid #829b9530;border-radius:0;
+}
+#inboxPage #messageInbox .conversation-contact .conversation-summary{
+ display:grid;grid-template-columns:minmax(0,1fr) auto;
+ grid-template-rows:auto auto auto;gap:6px 12px;align-items:center;
+ width:100%;min-width:0;
+}
+#inboxPage #messageInbox .conversation-contact .conversation-summary>strong{
+ grid-column:1;grid-row:1;min-width:0;font-size:17px;line-height:1.35;
+ overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+#inboxPage #messageInbox .conversation-contact .conversation-summary>.conversation-date{
+ grid-column:2;grid-row:1;justify-self:end;text-align:right;
+ font-size:12px;white-space:nowrap;opacity:.7;
+}
+#inboxPage #messageInbox .conversation-contact .conversation-summary>.conversation-preview{
+ grid-column:1/-1;grid-row:2;display:block;min-width:0;width:100%;max-width:100%;
+ font-size:15px;line-height:1.5;font-weight:400;opacity:.85;
+ overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+#inboxPage #messageInbox .conversation-contact .conversation-summary>.deal-status-label{
+ grid-column:1/-1;grid-row:3;justify-self:start;font-size:11px;padding:3px 7px;
+}
+#inboxPage .chat-deal-panel{
+ border:1px solid #b89b6655;border-radius:13px;margin:10px 0 18px;
+ background:#bba26e0c;overflow:hidden;
+}
+#inboxPage .chat-deal-panel>summary{
+ cursor:pointer;list-style:none;display:flex;justify-content:space-between;
+ gap:12px;padding:13px 15px;font-weight:700;align-items:center;
+}
 #inboxPage .chat-deal-panel>summary::-webkit-details-marker{display:none}
 #inboxPage .chat-deal-panel>summary span{font-weight:400;font-size:12px;opacity:.75}
-#inboxPage .chat-deal-panel>.transaction-next-steps{margin:8px!important}
-#inboxPage .chat-deal-panel>.deal-guidance{margin:8px!important}
-#inboxPage.thread-open #messageInbox .conversation-thread{min-height:calc(100dvh - 250px)!important;display:flex!important;flex-direction:column!important;padding-bottom:14px!important}
-#inboxPage.thread-open .conversation-bubbles{flex:1!important;justify-content:flex-end;min-height:120px;max-height:none!important;margin-bottom:12px!important}
-#inboxPage.thread-open .chat-composer{position:sticky!important;bottom:calc(80px + env(safe-area-inset-bottom));margin-top:auto!important}
-#inboxPage .chat-composer textarea{resize:none!important;background:transparent!important;border-radius:10px!important}
-
-/* Inbox list: align preview directly below username, with a readable font size */
-#inboxPage:not(.thread-open) #messageInbox .conversation-layout{display:block!important;width:100%!important}
-#inboxPage #messageInbox .conversation-contact{grid-template-columns:52px minmax(0,1fr)!important;width:100%!important;gap:14px!important;min-height:92px!important;padding:16px 18px!important}
-#inboxPage #messageInbox .conversation-contact .conversation-summary{display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;grid-template-rows:auto auto auto!important;column-gap:12px!important;row-gap:6px!important;align-items:center!important;width:100%!important;min-width:0!important}
-#inboxPage #messageInbox .conversation-contact .conversation-summary>strong{grid-column:1!important;grid-row:1!important;display:block!important;justify-content:initial!important;min-width:0!important;font-size:17px!important;line-height:1.35!important}
-#inboxPage #messageInbox .conversation-contact .conversation-summary>.conversation-date{grid-column:2!important;grid-row:1!important;display:block!important;justify-self:end!important;text-align:right!important;font-size:12px!important;white-space:nowrap!important;max-width:none!important}
-#inboxPage #messageInbox .conversation-contact .conversation-summary>.conversation-preview{grid-column:1/-1!important;grid-row:2!important;display:block!important;min-width:0!important;width:100%!important;max-width:100%!important;text-align:left!important;justify-self:stretch!important;font-size:15px!important;font-weight:400!important;line-height:1.5!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;opacity:.85!important;margin:0!important}
-#inboxPage #messageInbox .conversation-contact .conversation-summary>.deal-status-label{grid-column:1/-1!important;grid-row:3!important;justify-self:start!important;margin:1px 0 0!important}
-@media(max-width:420px){#inboxPage #messageInbox .conversation-contact{padding:14px 12px!important;gap:11px!important}#inboxPage #messageInbox .conversation-contact .conversation-summary>.conversation-preview{font-size:14px!important}}
+#inboxPage .chat-deal-panel>.transaction-next-steps,
+#inboxPage .chat-deal-panel>.deal-guidance{margin:8px}
+#inboxPage.thread-open #messageInbox .conversation-thread{
+ min-height:calc(100dvh - 250px);display:flex;flex-direction:column;
+ padding-bottom:14px;
+}
+#inboxPage.thread-open .conversation-bubbles{
+ flex:1;justify-content:flex-end;min-height:120px;max-height:none;margin-bottom:12px;
+}
+#inboxPage.thread-open .chat-composer{
+ position:sticky;bottom:calc(80px + env(safe-area-inset-bottom));margin-top:auto;
+}
+#inboxPage .chat-composer textarea{resize:none;background:transparent;border-radius:10px}
+@media(max-width:420px){
+ #inboxPage #messageInbox .conversation-contact{padding:14px 12px;gap:11px}
+ #inboxPage #messageInbox .conversation-contact .conversation-summary>.conversation-preview{font-size:14px}
+}
 
 /* User-selectable text sizing, persisted per device */
 html[data-font-size="small"]{font-size:14px}html[data-font-size="normal"]{font-size:16px}html[data-font-size="large"]{font-size:19px}
