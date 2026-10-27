@@ -187,3 +187,26 @@ test('inbox conversation layout stays within the viewport on mobile and desktop'
  expect(layout.right).toBeLessThanOrEqual(layout.width+2);
  expect(layout.pageOverflow).toBeLessThanOrEqual(2);
 });
+
+test('trading cards hide the generic Used selector while other categories retain it',async({page})=>{
+ await page.goto('/');
+ await page.evaluate(()=>{
+  const category=document.getElementById('category'),game=document.getElementById('tcgGame');
+  category.value='trading_cards';toggleTcgField();syncGradedCondition();
+  game.value='sports_cards';toggleSportsBrand();
+ });
+ await expect(page.locator('#sportsBrandWrap')).toBeVisible();
+ await expect(page.locator('#cardConditionWrap')).toBeVisible();
+ await expect(page.locator('#condition')).toBeHidden();
+ await expect(page.locator('label[for="condition"]')).toBeHidden();
+ await expect(page.locator('#cardCondition')).toBeEnabled();
+ await page.locator('#cardCondition').selectOption('near_mint');
+ await expect(page.locator('#cardCondition')).toHaveValue('near_mint');
+ await page.evaluate(()=>{
+  document.getElementById('category').value='video_games';
+  toggleTcgField();syncGradedCondition();
+ });
+ await expect(page.locator('#condition')).toBeVisible();
+ await expect(page.locator('#condition')).toBeEnabled();
+ await expect(page.locator('#cardConditionWrap')).toBeHidden();
+});
