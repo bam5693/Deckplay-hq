@@ -24,7 +24,12 @@ async function menu(page,id){
   await page.locator('[data-notification-kind="trade_offer"], [data-notification-kind="counteroffer"], [data-notification-kind="trade_update"]').first().click();
   await expect(page.locator('#tradesModal')).toHaveClass(/open/);return;
  }
- await page.locator('#accountButton').click();await page.locator('#'+id).click();
+ const account=page.locator('#accountButton');
+ await expect(account).toBeVisible({timeout:10000});
+ await account.click({timeout:10000});
+ const action=page.locator('#'+id);
+ await expect(action).toBeVisible({timeout:10000});
+ await action.click({timeout:10000});
 }
 async function seedListing(page,title){
  return page.evaluate(async title=>{const {data,error}=await supabaseClient.from('listings').insert({seller_id:currentUser.id,title,price:25,category:'trading_cards',condition:'like_new',image_urls:['https://prrrzeelltmyugssqnzk.supabase.co/storage/v1/object/public/listing-images/test.jpg'],accepts_trades:true,accepts_price_offers:true,tcg_game:'one_piece'}).select('id').single();if(error)throw Error(error.message);return data.id},title);
