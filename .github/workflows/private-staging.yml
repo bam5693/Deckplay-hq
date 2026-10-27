@@ -49,7 +49,7 @@ jobs:
         with:
           path: ~/.cache/ms-playwright
           key: staging-playwright-${{ hashFiles('package-lock.json') }}
-      - name: Verify staging API transactions and authorization
+      - name: Charles — verify staging API transactions and authorization
         run: |
           mkdir -p test-results
           set -o pipefail
@@ -58,7 +58,7 @@ jobs:
         if: ${{ !cancelled() }}
         run: npx playwright install chromium --only-shell
         timeout-minutes: 8
-      - name: Verify deployed mobile and desktop buyer-seller journeys
+      - name: Kyle — verify deployed mobile and desktop buyer-seller journeys
         if: ${{ !cancelled() && env.DECKPLAY_STAGING_URL != '' }}
         run: npx playwright test --config=playwright.staging.config.js
       - name: Save durable staging feature result
@@ -78,8 +78,8 @@ jobs:
       - name: Summarize feature bot result
         if: always()
         run: |
-          echo '## Real staging feature bots' >> "$GITHUB_STEP_SUMMARY"
-          echo 'Result: ${{ job.status }}. Reports include API assertions, mobile/desktop journeys, traces and screenshots. Payment/shipping remain previews. See coverage matrix for external-service limits.' >> "$GITHUB_STEP_SUMMARY"
+          echo '## DeckPlay test department — Charles and Kyle' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Result: ${{ job.status }}. Charles checks API transactions and authorization; Kyle checks deployed mobile/desktop browser journeys. Tanner and Jayden are separate rotating reviewer tests, not yet connected to independent AI inference. Reports include traces and screenshots where configured. Payment/shipping remain previews.' >> "$GITHUB_STEP_SUMMARY"
 
   report-failure:
     name: Report staging failures without stopping tests
