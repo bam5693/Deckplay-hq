@@ -4,7 +4,7 @@ const base='https://prrrzeelltmyugssqnzk.supabase.co';
 const key='sb_publishable_0omvNnv_ZOvXrZ-LHPMyIQ_a9zxD-yh';
 // Hardcoded isolated target: no configurable production URL or service-role credential.
 const users={};const run='TEST ONLY BOT '+randomUUID();
-const sessions={};const activityFixtureIds=[];
+const sessions={};const activityFixtureIds=[],messageFixtureIds=[];
 function api(role,path,method='GET',body,extra={}){
  return http(base+path,{method,headers:{apikey:key,'Content-Type':'application/json',...(sessions[role]?{Authorization:'Bearer '+sessions[role].access_token}:{}),...extra},body});
 }
@@ -133,7 +133,8 @@ test('private messages persist, notify recipient, and cannot be rewritten',()=>{
  assert(api('buyer','/rest/v1/collector_messages','POST',{sender_id:users.seller,recipient_id:users.buyer,body:run}).status>=400);
 });
 test('sender cannot mark recipient private message read',()=>{
- const msg=ok(api('buyer','/rest/v1/collector_messages','POST',{sender_id:users.buyer,recipient_id:users.seller,body:run+' privacy read test'},{Prefer:'return=representation'}),201)[0];
+ const msg=ok(api('buyer','/rest/v1/collector_messages','POST',{sender_id:users.buyer,recipient_id:users.seller,body:run},{Prefer:'return=representation'}),201)[0];
+ messageFixtureIds.push(msg.id);
  const attempt=api('buyer','/rest/v1/collector_messages?id=eq.'+msg.id,'PATCH',{read_at:new Date().toISOString()},{Prefer:'return=representation'});
  assert(attempt.status>=400||Array.isArray(attempt.data)&&attempt.data.length===0,'Sender cannot mark recipient message read');
  assert.equal(ok(api('seller','/rest/v1/collector_messages?id=eq.'+msg.id))[0].read_at,null,'Recipient unread state must remain intact');
@@ -141,9 +142,10 @@ test('sender cannot mark recipient private message read',()=>{
  assert(ok(api('seller','/rest/v1/collector_messages?id=eq.'+msg.id))[0].read_at,'Recipient may mark their own message read');
 });
 test('message read status cannot be cleared by sender after recipient reads it',()=>{
- const msg=ok(api('buyer','/rest/v1/collector_messages','POST',{sender_id:users.buyer,recipient_id:users.seller,body:run+' unread state'},{Prefer:'return=representation'}),201)[0];
+ const msg=ok(api('buyer','/rest/v1/collector_messages','POST',{sender_id:users.buyer,recipient_id:users.seller,body:run},{Prefer:'return=representation'}),201)[0];
  ok(api('seller','/rest/v1/collector_messages?id=eq.'+msg.id,'PATCH',{read_at:new Date().toISOString()}),204);
  assert(ok(api('seller','/rest/v1/collector_messages?id=eq.'+msg.id))[0].read_at,'Recipient message must be read');
+ messageFixtureIds.push(msg.id);
  const attempt=api('buyer','/rest/v1/collector_messages?id=eq.'+msg.id,'PATCH',{read_at:null},{Prefer:'return=representation'});
  assert(attempt.status>=400||Array.isArray(attempt.data)&&attempt.data.length===0,'Sender cannot reset recipient unread status');
  assert(ok(api('seller','/rest/v1/collector_messages?id=eq.'+msg.id))[0].read_at,'Recipient read status must survive sender reset attempt');
@@ -215,6 +217,12 @@ test('competing trade proposals cannot both reserve the same listing',()=>{
 after(()=>{
  if(!sessions.seller)return;
  ok(api('seller','/rest/v1/rpc/cleanup_staging_fixture','POST',{p_marker:run}),204);
+ for(const id of messageFixtureIds){
+  for(const role of ['seller','buyer']){
+   assert.deepEqual(ok(api(role,'/rest/v1/collector_messages?id=eq.'+id)),[],'Cleanup must remove private message fixtures');
+   assert.deepEqual(ok(api(role,'/rest/v1/collector_notifications?source_id=eq.'+id)),[],'Cleanup must remove message alerts');
+  }
+ }
  for(const id of activityFixtureIds){
   assert.equal(ok(api('buyer','/rest/v1/collector_notifications?source_id=eq.'+id)).length,0,'Cleanup must remove saved-item activity alerts');
   assert.equal(ok(api('seller','/rest/v1/listings?id=eq.'+id)).length,0,'Cleanup must remove saved-item fixture listing');
@@ -544,4 +552,30 @@ test('reserved listings reject new trades as either the requested item or offere
  assert.equal(ok(api('seller','/rest/v1/trade_offers?listing_id=eq.'+activeTarget.id)).length,0,'Rejected collateral trade must not persist');
  assert.equal(ok(api('seller','/rest/v1/listings?id=eq.'+activeTarget.id))[0].status,'active','Rejected trade must leave target available');
  // The marker-scoped after() fixture cleanup removes all four synthetic listings and negotiations.
+});
+
+
+test('fixture cleanup removes its messages and alerts while preserving another run',()=>{
+ const markers=[run,'TEST ONLY BOT '+randomUUID()];
+ const messages=[];
+ try{
+  for(const marker of markers){
+   messages.push(ok(api('buyer','/rest/v1/collector_messages','POST',{
+    sender_id:users.buyer,recipient_id:users.seller,body:marker
+   },{Prefer:'return=representation'}),201)[0]);
+  }
+  // Clean only the independent fixture, never the suite marker still in use.
+  const [retained,removed]=messages;
+  assert.equal(ok(api('seller','/rest/v1/collector_notifications?source_id=eq.'+removed.id)).length,1,'Fixture must create an alert before cleanup');
+  ok(api('seller','/rest/v1/rpc/cleanup_staging_fixture','POST',{p_marker:markers[1]}),204);
+  for(const role of ['seller','buyer']){
+   assert.deepEqual(ok(api(role,'/rest/v1/collector_messages?id=eq.'+removed.id)),[],'Cleaned fixture message must disappear for both participants');
+   assert.deepEqual(ok(api(role,'/rest/v1/collector_notifications?source_id=eq.'+removed.id)),[],'Cleaned message alert must disappear');
+   assert.equal(ok(api(role,'/rest/v1/collector_messages?id=eq.'+retained.id)).length,1,'Another run marker must survive cleanup');
+  }
+  assert.equal(ok(api('seller','/rest/v1/collector_notifications?source_id=eq.'+retained.id)).length,1,'Another run alert must survive cleanup');
+  messageFixtureIds.push(retained.id);
+ }finally{
+  ok(api('seller','/rest/v1/rpc/cleanup_staging_fixture','POST',{p_marker:markers[1]}),204);
+ }
 });
