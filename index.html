@@ -1613,7 +1613,25 @@ document.getElementById("detailContent").addEventListener("click",async e=>{
  finally{if(current())select.disabled=false}
 });
 document.getElementById("tradeCashDirection").addEventListener("change",e=>{const field=document.getElementById("tradeCashAmount");field.disabled=e.target.value==="none";field.required=e.target.value!=="none";if(field.disabled)field.value="0";else if(Number(field.value)===0)field.value=""});
-document.getElementById("tradeComposeForm").addEventListener("submit",async e=>{e.preventDefault();const status=document.getElementById("tradeOfferStatus");if(!currentUser||!tradeTargetId)return;const note=document.getElementById("tradeOfferNote").value.trim();if(!note){status.textContent="Describe your offer.";return}const cashDirection=document.getElementById("tradeCashDirection").value,cashAmount=Number(document.getElementById("tradeCashAmount").value);if(!Number.isFinite(cashAmount)||cashAmount<0||cashAmount>100000||(cashDirection!=="none"&&cashAmount<=0)){status.textContent="Enter a valid cash amount.";return}status.textContent="Sending offer…";const {data:sentTrade,error}=await supabaseClient.from("trade_offers").insert({cash_amount:cashDirection==="none"?0:cashAmount,cash_direction:cashDirection,listing_id:tradeTargetId,sender_id:currentUser.id,recipient_id:tradeRecipientId,offered_listing_id:document.getElementById("tradeOfferedListing").value||null,offer_note:note}).select("id").single();if(error){status.textContent=error.message;return}e.target.reset();document.getElementById("tradeCashAmount").disabled=true;closeModal("tradeComposeModal");toast("Trade offer sent!");void sendCollectorEmailForSource(sentTrade?.id)});
+document.getElementById("tradeComposeForm").addEventListener("submit",async e=>{
+ e.preventDefault();const form=e.currentTarget,status=document.getElementById("tradeOfferStatus");
+ if(form.dataset.pending||!currentUser||!tradeTargetId)return;
+ const input=document.getElementById("tradeOfferNote"),draft=input.value,note=draft.trim();
+ if(!note){status.textContent="Describe your offer.";return}
+ const cashDirection=document.getElementById("tradeCashDirection").value,cashAmount=Number(document.getElementById("tradeCashAmount").value);
+ if(!Number.isFinite(cashAmount)||cashAmount<0||cashAmount>100000||(cashDirection!=="none"&&cashAmount<=0)){status.textContent="Enter a valid cash amount.";return}
+ const userId=currentUser.id,targetId=tradeTargetId,recipientId=tradeRecipientId,offeredId=document.getElementById("tradeOfferedListing").value;
+ const button=form.querySelector('button[type="submit"]');form.dataset.pending="true";form.setAttribute("aria-busy","true");button.disabled=true;status.textContent="Sending offer…";
+ const current=()=>currentUser?.id===userId&&tradeTargetId===targetId&&tradeRecipientId===recipientId;
+ try{
+  const {data:sentTrade,error}=await supabaseClient.from("trade_offers").insert({cash_amount:cashDirection==="none"?0:cashAmount,cash_direction:cashDirection,listing_id:targetId,sender_id:userId,recipient_id:recipientId,offered_listing_id:offeredId||null,offer_note:note}).select("id").single();if(error)throw error;
+  if(!current())return;
+  if(input.value===draft&&document.getElementById("tradeOfferedListing").value===offeredId&&document.getElementById("tradeCashDirection").value===cashDirection&&Number(document.getElementById("tradeCashAmount").value)===cashAmount){form.reset();document.getElementById("tradeCashAmount").disabled=true;status.textContent="";closeModal("tradeComposeModal");toast("Trade offer sent!")}
+  else status.textContent="Trade sent. Your new draft is ready.";
+  void sendCollectorEmailForSource(sentTrade?.id);
+ }catch(error){if(current())status.textContent="Could not send: "+(error.message||"Please try again.")}
+ finally{delete form.dataset.pending;form.removeAttribute("aria-busy");button.disabled=false;if(!current()&&status.textContent==="Sending offer…")status.textContent=""}
+});
 document.getElementById("myTrades").addEventListener("click",async()=>{closeAccountMenu();if(!currentUser)return;openModal("tradesModal");await loadTradeOffers()});
 let activeCounterOffer=null;
 async function loadTradeOffers(){

@@ -23,3 +23,41 @@ test('trade picker includes inventory beyond 100 items and discards a switched a
  });
  await expect(page.locator('#tradeOfferedListing option[value="private-item"]')).toHaveCount(0);
 });
+
+async function composeFixture(page){
+ await page.route('https://challenges.cloudflare.com/**',route=>route.abort());
+ await page.route('https://prrrzeelltmyugssqnzk.supabase.co/rest/v1/**',route=>route.fulfill({json:[]}));
+ await page.goto('/');await page.waitForLoadState('networkidle');
+ await page.evaluate(async()=>{
+  await supabaseClient.auth.getSession();currentUser={id:'buyer-fixture'};tradeTargetId='target-fixture';tradeRecipientId='seller-fixture';window.tradeWrites=[];
+  supabaseClient.from=()=>{const q={select:()=>q,single:()=>new Promise((resolve,reject)=>{window.finishTrade=resolve;window.failTrade=reject})};q.insert=value=>{tradeWrites.push(value);return q};return q};
+  sendCollectorEmailForSource=async()=>{};openModal('tradeComposeModal');
+ });
+ await page.locator('#tradeOfferNote').fill('My original trade proposal');
+}
+test('repeated trade submission sends once and a connection error preserves the draft for retry',async({page})=>{
+ await composeFixture(page);await page.locator('#tradeComposeForm button[type="submit"]').click();
+ await page.locator('#tradeComposeForm').dispatchEvent('submit');
+ expect(await page.evaluate(()=>tradeWrites.length)).toBe(1);
+ await page.evaluate(()=>failTrade(Error('Connection lost')));
+ await expect(page.locator('#tradeOfferStatus')).toContainText('Connection lost');
+ await expect(page.locator('#tradeOfferNote')).toHaveValue('My original trade proposal');
+ await expect(page.locator('#tradeComposeForm button[type="submit"]')).toBeEnabled();
+ await page.locator('#tradeComposeForm button[type="submit"]').click();
+ expect(await page.evaluate(()=>tradeWrites.length)).toBe(2);
+ await page.locator('#tradeOfferNote').fill('A newer trade draft');
+ await page.evaluate(()=>finishTrade({data:{id:'sent-trade'},error:null}));
+ await expect(page.locator('#tradeOfferStatus')).toContainText('new draft is ready');
+ await expect(page.locator('#tradeOfferNote')).toHaveValue('A newer trade draft');
+ await expect(page.locator('#tradeComposeModal')).toHaveClass(/open/);
+});
+test('finishing a trade after an account switch cannot reset or close the new account draft',async({page})=>{
+ await composeFixture(page);await page.locator('#tradeComposeForm button[type="submit"]').click();
+ await page.evaluate(()=>{currentUser={id:'other-fixture'};tradeTargetId='different-target';tradeRecipientId='different-seller'});
+ await page.locator('#tradeOfferNote').fill('Other account private draft');
+ await page.evaluate(()=>finishTrade({data:{id:'old-trade'},error:null}));
+ await expect(page.locator('#tradeComposeForm button[type="submit"]')).toBeEnabled();
+ await expect(page.locator('#tradeOfferNote')).toHaveValue('Other account private draft');
+ await expect(page.locator('#tradeComposeModal')).toHaveClass(/open/);
+ expect(await page.evaluate(()=>tradeWrites[0])).toMatchObject({sender_id:'buyer-fixture',recipient_id:'seller-fixture',listing_id:'target-fixture'});
+});
