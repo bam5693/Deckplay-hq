@@ -15,7 +15,7 @@ begin
  or exists(select 1 from public.trade_offers where id=any(trades) and (not(sender_id=any(bots)) or not(recipient_id=any(bots))))
  or exists(select 1 from public.collector_messages where listing_id=any(lids) and (not(sender_id=any(bots)) or not(recipient_id=any(bots))))
  or exists(select 1 from public.saved_listings where listing_id=any(lids) and not(user_id=any(bots))) then raise exception 'Fixture has external participants'; end if;
- delete from public.collector_notifications where user_id=any(bots) and source_id=any(offers||trades||messages||(select coalesce(array_agg(id),'{}') from public.trade_counteroffers where trade_offer_id=any(trades)));
+ delete from public.collector_notifications where user_id=any(bots) and source_id=any(lids||offers||trades||messages||(select coalesce(array_agg(id),'{}') from public.trade_counteroffers where trade_offer_id=any(trades)));
  delete from public.seller_reviews where deal_id in(select id from public.deal_progress where offer_id=any(offers||trades));
  delete from public.deal_progress where offer_id=any(offers||trades) and buyer_id=any(bots) and seller_id=any(bots);
  delete from public.trade_counteroffers where trade_offer_id=any(trades);
