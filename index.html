@@ -1431,7 +1431,7 @@ let inboxDraftUser=null;
 function syncInboxDraftUser(){
  const id=currentUser?.id||null;
  if(inboxDraftUser!==id){
-  inboxDrafts.clear();inboxDraftUser=id;++inboxLoadVersion;++profileLoadVersion;++priceOffersLoadVersion;++tradeOffersLoadVersion;++profileEditorLoadVersion;selectedInboxCollector=null;
+  inboxDrafts.clear();inboxDraftUser=id;++inboxLoadVersion;++profileLoadVersion;++priceOffersLoadVersion;++tradeOffersLoadVersion;++unreadCountLoadVersion;++profileEditorLoadVersion;selectedInboxCollector=null;
   for(const name of ["messageInbox","inboxNotificationList","notificationList","priceOffersList","tradeOffersList"])document.getElementById(name).replaceChildren();
   for(const name of ["profilePageContent","ownSellerRatings"])document.getElementById(name).replaceChildren();
   for(const name of ["pageHandle","pageBio","pageMeta","settingsAccountEmail","settingsSecurityStatus","composeStatus"])document.getElementById(name).textContent="";
@@ -1494,7 +1494,7 @@ async function loadInbox(targetCollectorId=null){
  thread.querySelector(".conversation-bubbles").scrollTop=thread.querySelector(".conversation-bubbles").scrollHeight;
  const panel=thread.querySelector('.chat-deal-panel');
  panel?.addEventListener('toggle',async()=>{if(!panel.open||panel.dataset.loaded)return;panel.dataset.loaded='true';const content=panel.querySelector('[data-deal-details]');try{const html=await dealProgressHtml(entries);if(content.isConnected)content.innerHTML=html}catch{if(content.isConnected)content.textContent='Transaction details could not load. Try refreshing.'}});
- if(unread.length){const {error}=await supabaseClient.from("collector_messages").update({read_at:new Date().toISOString()}).in("id",unread).eq("recipient_id",currentUser.id);if(!error){entries.forEach(x=>{if(unread.includes(x.id))x.read_at=new Date().toISOString()});refreshUnreadCount()}}
+ if(unread.length){const {error}=await supabaseClient.from("collector_messages").update({read_at:new Date().toISOString()}).in("id",unread).eq("recipient_id",currentUser.id);if(!error&&requestId===inboxLoadVersion&&currentUser?.id===userId){entries.forEach(x=>{if(unread.includes(x.id))x.read_at=new Date().toISOString()});el.querySelectorAll("[data-conversation-id]").forEach(contact=>{if(contact.dataset.conversationId===id)contact.querySelector(".conversation-unread")?.remove()});refreshUnreadCount()}}
  };
  el.querySelectorAll("[data-conversation-id]").forEach(b=>b.addEventListener("click",()=>openThread(b.dataset.conversationId)));
  if(requestedTarget&&groups.has(requestedTarget))await openThread(requestedTarget);
@@ -1629,11 +1629,13 @@ document.getElementById("profilePageContent").addEventListener("click",async e=>
 let messageChannel=null,messagePoll=null;
 async function refreshTradeAlerts(){if(!currentUser)return;const userId=currentUser.id;const [offers,counters]=await Promise.all([supabaseClient.from("trade_offers").select("id",{count:"exact",head:true}).eq("recipient_id",currentUser.id).eq("status","pending"),supabaseClient.from("trade_counteroffers").select("id",{count:"exact",head:true}).eq("recipient_id",currentUser.id).eq("status","pending")]);if(currentUser?.id!==userId||offers.error||counters.error)return;const count=(offers.count||0)+(counters.count||0),el=document.getElementById("menuTradeUnread");el.hidden=!count;el.textContent=count>99?"99+":String(count)}
 
+let unreadCountLoadVersion=0;
 async function refreshUnreadCount(){
+ const requestId=++unreadCountLoadVersion;
  if(!currentUser)return;
  const userId=currentUser.id;
  const {count,error}=await supabaseClient.from("collector_messages").select("id",{count:"exact",head:true}).eq("recipient_id",currentUser.id).is("read_at",null);
- if(currentUser?.id!==userId||error)return;
+ if(requestId!==unreadCountLoadVersion||currentUser?.id!==userId||error)return;
  for(const id of ["headerUnread","menuUnread"]){const el=document.getElementById(id);el.hidden=!count;el.textContent=count>99?"99+":String(count||0)}
 }
 let liveInboxTimer=null,liveInboxBusy=false;

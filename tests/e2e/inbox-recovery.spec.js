@@ -4,23 +4,24 @@ test.beforeEach(async({page})=>{
  await page.route('https://prrrzeelltmyugssqnzk.supabase.co/rest/v1/**',route=>route.fulfill({json:[]}));
 });
 async function ready(page){await page.goto('/');await page.waitForLoadState('networkidle')}
-async function inbox(page){
+async function inbox(page,unread=false){
  await ready(page);
- await page.evaluate(async()=>{
+ await page.evaluate(async unread=>{
   await supabaseClient.auth.getSession();currentUser={id:'fixture-seller'};
   const now=new Date().toISOString();window.fixtureWrites=0;
   supabaseClient.from=table=>{
-   let inserting=false;
-   const data=table==='collector_messages'?['buyer-a','buyer-b'].map((id,i)=>({id:'message-'+i,sender_id:id,recipient_id:'fixture-seller',body:'Hello '+id,read_at:now,created_at:now})):table==='profiles'?['buyer-a','buyer-b'].map(id=>({id,username:id})):[];
-   const q={then:(resolve,reject)=>Promise.resolve({data,error:null}).then(resolve,reject)};
-   for(const key of ['select','order','limit','in','eq','is','update','maybeSingle'])q[key]=()=>q;
+   let inserting=false,markingRead=false;
+   const data=table==='collector_messages'?['buyer-a','buyer-b'].map((id,i)=>({id:'message-'+i,sender_id:id,recipient_id:'fixture-seller',body:'Hello '+id,read_at:unread?null:now,created_at:now})):table==='profiles'?['buyer-a','buyer-b'].map(id=>({id,username:id})):[];
+   const q={then:(resolve,reject)=>Promise.resolve({data,error:markingRead&&unread==='fail'?{message:'Read receipt failed'}:null}).then(resolve,reject)};
+   for(const key of ['select','order','limit','in','eq','is','maybeSingle'])q[key]=()=>q;
+   q.update=()=>{markingRead=true;return q};
    q.insert=()=>{inserting=true;window.fixtureWrites++;return q};
    q.single=async()=>{if(inserting)return await new Promise(resolve=>{window.finishFixtureSend=resolve});return {data:null,error:null}};
    return q;
   };
   sendCollectorEmailForSource=async()=>{};
-  await showInboxPage('buyer-a');
- });
+  await showInboxPage(unread?null:'buyer-a');
+ },unread);
 }
 test('message drafts survive refresh, thread switching and inbox navigation',async({page})=>{
  await inbox(page);await page.locator('#chatInput').fill('Draft for A');
@@ -178,4 +179,39 @@ test('newest unread activity count wins when an older same-account count resolve
  await page.evaluate(async()=>{pendingActivityCounts[0]({count:0,error:null});await oldActivityCount});
  await expect(page.locator('#notificationBadge')).toHaveText('2');
  await expect(page.locator('#notificationBadge')).toHaveJSProperty('hidden',false);
+});
+
+
+test('opening an unread conversation clears only that collector unread label',async({page})=>{
+ await inbox(page,true);
+ const first=page.locator('[data-conversation-id="buyer-a"]'),second=page.locator('[data-conversation-id="buyer-b"]');
+ await expect(first.locator('.conversation-unread')).toHaveText('1 new');await expect(second.locator('.conversation-unread')).toHaveText('1 new');
+ await first.click();
+ await expect(first.locator('.conversation-unread')).toHaveCount(0);
+ // On mobile the conversation list is hidden while the thread is open, so
+ // inspect attachment rather than visibility for the other unread label.
+ await expect(second.locator('.conversation-unread')).toHaveText('1 new');
+});
+
+
+test('a failed read receipt preserves the unread label for retry',async({page})=>{
+ await inbox(page,'fail');
+ const contact=page.locator('[data-conversation-id="buyer-a"]');
+ await contact.click();await expect(page.locator('.chat-composer')).toHaveAttribute('data-chat-recipient','buyer-a');
+ await expect(contact.locator('.conversation-unread')).toHaveText('1 new');
+});
+
+test('a delayed unread message count cannot replace a newer badge count',async({page})=>{
+ await ready(page);await page.evaluate(()=>{
+  currentUser={id:'fixture-owner'};syncInboxDraftUser();window.pendingUnreadCounts=[];
+  supabaseClient.from=()=>{const q={then:(resolve,reject)=>new Promise(done=>pendingUnreadCounts.push(done)).then(resolve,reject)};for(const key of ['select','eq','is'])q[key]=()=>q;return q};
+  window.oldUnreadCount=refreshUnreadCount();window.newUnreadCount=refreshUnreadCount();
+ });
+ await expect.poll(()=>page.evaluate(()=>pendingUnreadCounts.length)).toBe(2);
+ await page.evaluate(async()=>{pendingUnreadCounts[1]({count:2,error:null});await newUnreadCount});
+ await expect(page.locator('#headerUnread')).toHaveText('2');
+ await page.evaluate(async()=>{pendingUnreadCounts[0]({count:9,error:null});await oldUnreadCount});
+ for(const id of ['headerUnread','menuUnread']){
+  await expect(page.locator('#'+id)).toHaveText('2');await expect(page.locator('#'+id)).toHaveJSProperty('hidden',false);
+ }
 });
