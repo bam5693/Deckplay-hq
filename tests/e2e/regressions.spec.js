@@ -100,3 +100,35 @@ test('discovery notification opens an available listing rather than redirecting 
  expect(result.modal).toBe(true);
  expect(result.inbox).not.toBe(true);
 });
+
+test('reading one inbox conversation leaves another conversation unread',async({page})=>{
+ await page.goto('/');
+ await page.evaluate(async()=>{
+  await supabaseClient.auth.getSession();
+  currentUser={id:'fixture-owner'};
+  const now=new Date().toISOString();
+  const messages=[
+   {id:'fixture-a',sender_id:'fixture-alice',recipient_id:'fixture-owner',body:'Alice unread',read_at:null,created_at:now},
+   {id:'fixture-b',sender_id:'fixture-bob',recipient_id:'fixture-owner',body:'Bob unread',read_at:null,created_at:now}
+  ];
+  window.fixtureReadUpdates=[];
+  const original=supabaseClient.from;
+  supabaseClient.from=table=>{
+   const data=table==='collector_messages'?messages:table==='profiles'?[{id:'fixture-alice',username:'alice'},{id:'fixture-bob',username:'bob'}]:[];
+   let ids=[];
+   const q={then:(resolve,reject)=>Promise.resolve({data,error:null}).then(resolve,reject)};
+   for(const name of ['select','order','limit','eq','is','maybeSingle'])q[name]=()=>q;
+   q.in=(field,values)=>{if(field==='id')ids=values;return q};
+   q.update=()=>{window.fixtureReadUpdates.push(ids);return q};
+   return q;
+  };
+  window.fixtureOriginalFrom=original;
+  await showInboxPage();
+ });
+ await expect(page.locator('.conversation-unread')).toHaveCount(2);
+ await page.locator('[data-conversation-id="fixture-alice"]').click();
+ await expect(page.locator('#conversationThread')).toContainText('Alice unread');
+ await expect(page.locator('[data-conversation-id="fixture-alice"] .conversation-unread')).toHaveCount(0);
+ await expect(page.locator('[data-conversation-id="fixture-bob"] .conversation-unread')).toContainText('1 new');
+ expect(await page.evaluate(()=>window.fixtureReadUpdates.some(ids=>ids.length===1&&ids[0]==='fixture-a'))).toBe(true);
+});
