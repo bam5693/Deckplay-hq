@@ -660,3 +660,29 @@ test('unfollowing a seller stops new-listing alerts and re-following restores th
   try{setFollowing(original)}finally{ok(api(follower,'/rest/v1/rpc/cleanup_staging_fixture','POST',{p_marker:marker}),204)}
  }
 });
+
+test('blocking ends both follow directions and unblocking does not restore them',()=>{
+ const a='seller',b='buyer',aToB='/rest/v1/seller_follows?follower_id=eq.'+users[a]+'&seller_id=eq.'+users[b],bToA='/rest/v1/seller_follows?follower_id=eq.'+users[b]+'&seller_id=eq.'+users[a];
+ const originalA=ok(api(a,aToB)).length>0,originalB=ok(api(b,bToA)).length>0;
+ const blockPath='/rest/v1/user_blocks?blocker_id=eq.'+users[a]+'&blocked_id=eq.'+users[b];
+ const setFollow=(role,path,other,desired)=>{
+  const present=ok(api(role,path)).length>0;
+  if(desired&&!present)ok(api(role,'/rest/v1/seller_follows','POST',{follower_id:users[role],seller_id:users[other]}),201);
+  if(!desired&&present)ok(api(role,path,'DELETE'),204);
+ };
+ let blocked=false;
+ try{
+  setFollow(a,aToB,b,true);setFollow(b,bToA,a,true);
+  ok(api(a,'/rest/v1/user_blocks','POST',{blocker_id:users[a],blocked_id:users[b]}),201);blocked=true;
+  assert.equal(ok(api(a,aToB)).length,0,'Blocker must unfollow blocked collector');
+  assert.equal(ok(api(b,bToA)).length,0,'Blocked collector must unfollow blocker');
+  assert(api(a,'/rest/v1/seller_follows','POST',{follower_id:users[a],seller_id:users[b]}).status>=400,'Blocker cannot follow during block');
+  assert(api(b,'/rest/v1/seller_follows','POST',{follower_id:users[b],seller_id:users[a]}).status>=400,'Blocked collector cannot follow during block');
+  ok(api(a,blockPath,'DELETE'),204);blocked=false;
+  assert.equal(ok(api(a,aToB)).length,0,'Unblocking must not restore blocker follow');
+  assert.equal(ok(api(b,bToA)).length,0,'Unblocking must not restore blocked collector follow');
+ }finally{
+  if(blocked)ok(api(a,blockPath,'DELETE'),204);
+  setFollow(a,aToB,b,originalA);setFollow(b,bToA,a,originalB);
+ }
+});
