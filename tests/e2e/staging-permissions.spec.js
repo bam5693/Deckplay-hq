@@ -84,3 +84,17 @@ test('signed-out visitor cannot create a simulated checkout order',async({page})
  const result=await page.evaluate(async()=>{const {data,error}=await supabaseClient.from('demo_orders').insert({creator_id:'00000000-0000-0000-0000-000000000000',creator_role:'buyer',item_name:'TEST ONLY unauthorized demo order',item_price:25,shipping_price:5}).select('id');return {data,error:error?.message||null}});
  expect(result.data||[],'Anonymous visitor must not create demo orders').toHaveLength(0);
 });
+
+test('signed-out shopper opens a real synthetic seller profile and following requests sign-in',async({page,browser})=>{
+ test.setTimeout(90000);const title=marker();await signIn(page,'SELLER');
+ const context=await browser.newContext({baseURL:process.env.DECKPLAY_STAGING_URL,viewport:page.viewportSize(),httpCredentials:{username:'deckplay',password:process.env.DECKPLAY_STAGING_ACCESS_PASSWORD},ignoreHTTPSErrors:!!process.env.CODEX_NETWORK_PROXY_ACTIVE});
+ try{
+  const id=await seedListing(page,title);const seller=await page.evaluate(async()=>{const {data,error}=await supabaseClient.from('profiles').select('id,username').eq('id',currentUser.id).single();if(error)throw Error(error.message);return data});const sellerId=seller.id;
+  const guest=await context.newPage();await guest.goto('/',{waitUntil:'domcontentloaded'});
+  await guest.locator('[data-cat="Trading Cards"]').first().click();await guest.locator('#search').fill(title);
+  await guest.locator('[data-view="'+id+'"]').click();await guest.locator('[data-profile-id="'+sellerId+'"]').click();
+  await expect(guest.locator('#publicProfileTitle')).toHaveText('@'+seller.username,{timeout:15000});
+  await guest.locator('[data-follow-profile="'+sellerId+'"]').click();await expect(guest.locator('#authModal')).toHaveClass(/open/);
+  expect(await guest.evaluate(()=>currentUser)).toBeNull();
+ }finally{try{await cleanup(page,title)}finally{await context.close()}}
+});

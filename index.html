@@ -1412,7 +1412,7 @@ async function showPublicProfile(id){
  const content=document.getElementById("publicProfileContent");content.textContent="Loading collector…";openModal("publicProfileModal");
  const [pResult,lResult,wResult,blockResult]=await Promise.all([supabaseClient.from("profiles").select("username,bio,favorite_tcg,location_label,avatar_url").eq("id",id).maybeSingle(),supabaseClient.from("listings").select("id,title,price,image_urls,condition,category,tcg_game,accepts_trades,seller_id").eq("seller_id",id).eq("status","active").order("created_at",{ascending:false}).limit(60),supabaseClient.from("wanted_posts").select("id,title,details,game").eq("user_id",id).order("created_at",{ascending:false}).limit(30),currentUser?supabaseClient.from("user_blocks").select("blocked_id").eq("blocker_id",currentUser.id).eq("blocked_id",id).maybeSingle():Promise.resolve({data:null})]);
  if(pResult.error||!pResult.data){content.textContent="Collector profile unavailable.";return}
- const followResult=currentUser?.id!==id?await supabaseClient.from("seller_follows").select("seller_id").eq("follower_id",currentUser.id).eq("seller_id",id).maybeSingle():{data:null};
+ const followResult=currentUser&&currentUser.id!==id?await supabaseClient.from("seller_follows").select("seller_id").eq("follower_id",currentUser.id).eq("seller_id",id).maybeSingle():{data:null};
  const isFollowing=!!followResult.data;
  const ratingMarkup=await sellerRatingHtml(id);
  const p=pResult.data,avatar=safeImageUrl(p.avatar_url),listings=lResult.data||[],wanted=wResult.data||[],isBlocked=!!blockResult.data;
