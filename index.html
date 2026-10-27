@@ -1048,14 +1048,50 @@ async function uploadPhotos(files,userId){
 }
 
 async function sendCollectorEmailForSource(sourceId){if(!currentUser||!sourceId)return;try{const {data}=await supabaseClient.from("collector_notifications").select("id").eq("actor_id",currentUser.id).eq("source_id",sourceId).order("created_at",{ascending:false}).limit(1);if(data?.[0]?.id)await supabaseClient.functions.invoke("send-collector-notification",{body:{notification_id:data[0].id}})}catch(err){console.warn("Email notification request failed",err)}}
-let priceOfferListingId=null;
-document.getElementById("detailContent").addEventListener("click",e=>{const b=e.target.closest("[data-price-offer-id]");if(!b)return;if(!currentUser){openModal("authModal");return}const item=items.find(x=>x.databaseId===b.dataset.priceOfferId);if(!item||item.sellerId===currentUser.id)return;priceOfferListingId=item.databaseId;document.getElementById("priceOfferContext").textContent=item.n+" · Asking $"+item.p.toFixed(2);document.getElementById("priceOfferAmount").value=item.p.toFixed(2);document.getElementById("priceOfferStatus").textContent="";openModal("priceOfferModal")});
-document.getElementById("priceOfferForm").addEventListener("submit",async e=>{e.preventDefault();if(!currentUser||!priceOfferListingId)return;const status=document.getElementById("priceOfferStatus"),amount=Number(document.getElementById("priceOfferAmount").value);if(!Number.isFinite(amount)||amount<0.01){status.textContent="Enter a valid price.";return}status.textContent="Sending offer…";const {data:offerId,error}=await supabaseClient.rpc("submit_price_offer",{p_listing_id:priceOfferListingId,p_amount:amount});if(error){status.textContent=error.message;return}closeModal("priceOfferModal");toast("Price offer sent!");void sendCollectorEmailForSource(offerId);});
+let priceOfferListingId=null,priceOfferPending=false,priceOfferContextVersion=0,priceOfferDraftVersion=0;
+document.getElementById("priceOfferAmount").addEventListener("input",()=>priceOfferDraftVersion++);
+document.getElementById("detailContent").addEventListener("click",e=>{const b=e.target.closest("[data-price-offer-id]");if(!b)return;if(!currentUser){openModal("authModal");return}const item=items.find(x=>x.databaseId===b.dataset.priceOfferId);if(!item||item.sellerId===currentUser.id)return;priceOfferListingId=item.databaseId;priceOfferContextVersion++;document.getElementById("priceOfferContext").textContent=item.n+" · Asking $"+item.p.toFixed(2);document.getElementById("priceOfferAmount").value=item.p.toFixed(2);document.getElementById("priceOfferStatus").textContent="";openModal("priceOfferModal")});
+document.getElementById("priceOfferForm").addEventListener("submit",async e=>{
+ e.preventDefault();if(!currentUser||!priceOfferListingId||priceOfferPending)return;
+ const status=document.getElementById("priceOfferStatus"),input=document.getElementById("priceOfferAmount"),button=e.currentTarget.querySelector('button[type="submit"]');
+ const amount=Number(input.value);if(!Number.isFinite(amount)||amount<0.01||amount>100000){status.textContent="Enter a valid price between $0.01 and $100,000.";return}
+ const userId=currentUser.id,listingId=priceOfferListingId,contextVersion=priceOfferContextVersion,draftVersion=priceOfferDraftVersion;
+ const current=()=>currentUser?.id===userId&&priceOfferListingId===listingId&&priceOfferContextVersion===contextVersion;
+ priceOfferPending=true;button.disabled=true;button.textContent="Sending…";status.textContent="Sending offer…";
+ try{
+  const {data:offerId,error}=await supabaseClient.rpc("submit_price_offer",{p_listing_id:listingId,p_amount:amount});
+  if(!current())return;if(error)throw error;
+  if(priceOfferDraftVersion===draftVersion){closeModal("priceOfferModal");toast("Price offer sent!")}
+  else status.textContent="Offer sent for $"+amount.toFixed(2)+". Your edited amount has been kept.";
+  void sendCollectorEmailForSource(offerId);
+ }catch(error){if(current())status.textContent=error.message||"Could not send your offer. Check your connection and try again."}
+ finally{priceOfferPending=false;button.disabled=false;button.textContent="Send offer"}
+});
 let priceOffersLoadVersion=0,tradeOffersLoadVersion=0;
+const pendingPriceResponses=new Set();
 async function loadPriceOffers(){const requestId=++priceOffersLoadVersion,userId=currentUser?.id;const el=document.getElementById("priceOffersList");el.textContent="Loading offers…";if(!userId){el.replaceChildren();return}const {data,error}=await supabaseClient.from("price_offers").select("id,listing_id,buyer_id,seller_id,amount,status,last_actor_id,created_at,updated_at").order("updated_at",{ascending:false}).limit(100);if(requestId!==priceOffersLoadVersion||currentUser?.id!==userId)return;if(error){el.textContent=error.message;return}if(!data?.length){el.innerHTML='<p class="muted">No price offers yet. Open a listing and tap Make an offer to start negotiating.</p>';return}const listingIds=[...new Set(data.map(o=>o.listing_id))];const userIds=[...new Set(data.flatMap(o=>[o.buyer_id,o.seller_id]))];const [lr,pr]=await Promise.all([supabaseClient.from("listings").select("id,title,price").in("id",listingIds),supabaseClient.from("profiles").select("id,username").in("id",userIds)]);if(requestId!==priceOffersLoadVersion||currentUser?.id!==userId)return;const listings=new Map((lr.data||[]).map(x=>[x.id,x]));const people=new Map((pr.data||[]).map(x=>[x.id,x.username]));el.innerHTML=data.map(o=>{const other=o.buyer_id===currentUser.id?o.seller_id:o.buyer_id;const yourTurn=o.last_actor_id!==currentUser.id&&["pending","countered"].includes(o.status);const active=["pending","countered"].includes(o.status);return `<article class="price-offer-card"><strong>${escapeHtml(listings.get(o.listing_id)?.title||"Listing")}</strong><p class="muted">With @${escapeHtml(people.get(other)||"collector")} · Asking ${Number(listings.get(o.listing_id)?.price||0).toFixed(2)}</p><div class="price-offer-total">${Number(o.amount).toFixed(2)} <span class="muted">· ${escapeHtml(o.status)}</span></div><p class="muted">${o.status==="accepted"?"Price agreed — item reserved. Payments and shipping are not active.":yourTurn?"Your turn to respond":active?"Waiting for the other collector":""}</p>${`<div class="price-offer-actions"><button class="ghost" type="button" data-offer-conversation="${escapeHtml(other)}">💬 Open conversation</button></div>`}${active?`<div class="price-offer-actions">${yourTurn?`<button class="primary" type="button" data-price-action="accept" data-price-id="${o.id}">Accept</button><button class="ghost" type="button" data-price-action="counter" data-price-id="${o.id}">Counteroffer</button><button class="ghost" type="button" data-price-action="decline" data-price-id="${o.id}">Decline</button>`:`<button class="ghost" type="button" data-price-action="withdraw" data-price-id="${o.id}">Withdraw</button>`}</div>`:""}</article>`}).join("")}
 document.getElementById("priceOffersList").addEventListener("click",async e=>{const b=e.target.closest("[data-offer-conversation]");if(!b)return;closeModal("priceOffersModal");setTimeout(()=>{void showInboxPage(b.dataset.offerConversation)},180)});
 document.getElementById("myPriceOffers").addEventListener("click",async()=>{closeAccountMenu();if(!currentUser)return;openModal("priceOffersModal");await loadPriceOffers()});
-document.getElementById("priceOffersList").addEventListener("click",async e=>{const b=e.target.closest("[data-price-action]");if(!b)return;const action=b.dataset.priceAction,id=b.dataset.priceId;let amount=null;if(action==="counter"){const value=prompt("Enter your counteroffer in USD:");if(value===null)return;amount=Number(value);if(!Number.isFinite(amount)||amount<0.01||amount>100000){toast("Enter a valid amount.");return}}else if(!confirm("Confirm "+action+" for this price offer?"))return;b.disabled=true;const {error}=await supabaseClient.rpc("respond_price_offer",{p_offer_id:id,p_action:action,p_amount:amount});if(error){toast(error.message);if(/reserved|available|closed|active/i.test(error.message))await loadListings()}else{toast(action==="accept"?"Offer accepted — listing reserved. Payment and shipping are not active yet.":"Offer updated.");if(action==="accept"){await loadListings();await refreshNotificationCount();}void sendCollectorEmailForSource(id)}await loadPriceOffers()});
+document.getElementById("priceOffersList").addEventListener("click",async e=>{
+ const b=e.target.closest("[data-price-action]");if(!b||!currentUser||b.disabled)return;
+ const action=b.dataset.priceAction,id=b.dataset.priceId,userId=currentUser.id;if(pendingPriceResponses.has(id))return;
+ let amount=null;
+ if(action==="counter"){const value=prompt("Enter your counteroffer in USD:");if(value===null)return;amount=Number(value);if(!Number.isFinite(amount)||amount<0.01||amount>100000){toast("Enter a valid amount.");return}}
+ else if(!confirm("Confirm "+action+" for this price offer?"))return;
+ pendingPriceResponses.add(id);b.disabled=true;
+ try{
+  const {error}=await supabaseClient.rpc("respond_price_offer",{p_offer_id:id,p_action:action,p_amount:amount});
+  if(currentUser?.id!==userId)return;
+  if(error){toast(error.message);if(/reserved|available|closed|active/i.test(error.message))await loadListings()}
+  else{
+   toast(action==="accept"?"Offer accepted — listing reserved. Payment and shipping are not active yet.":"Offer updated.");
+   void sendCollectorEmailForSource(id);
+   if(action==="accept"){await loadListings();if(currentUser?.id!==userId)return;await refreshNotificationCount()}
+  }
+  if(currentUser?.id===userId)await loadPriceOffers();
+ }catch(error){if(currentUser?.id===userId)toast(error.message||"Could not update this offer. Please try again.")}
+ finally{pendingPriceResponses.delete(id);b.disabled=false}
+});
 
 function showDetails(item){
  const photos=(item.imageUrls||[]).map(safeImageUrl).filter(Boolean);
