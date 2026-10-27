@@ -142,3 +142,40 @@ test('stale favorite responses cannot leak saved listings after switching accoun
  await page.evaluate(async()=>{currentUser=null;await loadSavedListings();pendingSaved['fixture-new']({data:[{listing_id:'private-after-logout'}],error:null});await pendingAfterLogout});
  expect(await page.evaluate(()=>[...saved])).toEqual([]);
 });
+
+test('newest activity refresh wins when an older same-account request resolves last',async({page})=>{
+ await ready(page);
+ await page.evaluate(()=>{
+  currentUser={id:'fixture-collector'};window.pendingActivity=[];
+  supabaseClient.from=table=>{
+   const q={then:(resolve,reject)=>(table==='collector_notifications'?new Promise(done=>pendingActivity.push(done)):Promise.resolve({data:[],error:null})).then(resolve,reject)};
+   for(const key of ['select','eq','order','limit','in'])q[key]=()=>q;return q;
+  };
+  window.oldActivityLoad=loadNotificationCenter();window.newActivityLoad=loadNotificationCenter();
+ });
+ await expect.poll(()=>page.evaluate(()=>pendingActivity.length)).toBe(2);
+ await page.evaluate(async()=>{
+  pendingActivity[1]({data:[{id:'new-activity',kind:'favorite_sold',actor_id:null,source_id:null,created_at:new Date().toISOString(),read_at:null}],error:null});
+  await newActivityLoad;
+ });
+ await expect(page.locator('#notificationList')).toContainText('Favorite sold');
+ await page.evaluate(async()=>{pendingActivity[0]({data:[],error:null});await oldActivityLoad});
+ await expect(page.locator('#notificationList')).toContainText('Favorite sold');
+});
+test('newest unread activity count wins when an older same-account count resolves last',async({page})=>{
+ await ready(page);
+ await page.evaluate(()=>{
+  currentUser={id:'fixture-collector'};window.pendingActivityCounts=[];
+  supabaseClient.from=()=>{
+   const q={then:(resolve,reject)=>new Promise(done=>pendingActivityCounts.push(done)).then(resolve,reject)};
+   for(const key of ['select','eq','is','in'])q[key]=()=>q;return q;
+  };
+  window.oldActivityCount=refreshNotificationCount();window.newActivityCount=refreshNotificationCount();
+ });
+ await expect.poll(()=>page.evaluate(()=>pendingActivityCounts.length)).toBe(2);
+ await page.evaluate(async()=>{pendingActivityCounts[1]({count:2,error:null});await newActivityCount});
+ await expect(page.locator('#notificationBadge')).toHaveText('2');
+ await page.evaluate(async()=>{pendingActivityCounts[0]({count:0,error:null});await oldActivityCount});
+ await expect(page.locator('#notificationBadge')).toHaveText('2');
+ await expect(page.locator('#notificationBadge')).toBeVisible();
+});
