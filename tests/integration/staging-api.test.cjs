@@ -392,3 +392,12 @@ test('favorite activity alerts are invisible to unrelated collectors and anonymo
  assert(spoof.status>=400,'Seller cannot forge a buyer favorite activity alert');
  assert.equal(ok(api('buyer','/rest/v1/collector_notifications?source_id=eq.'+listing.id)).length,1,'Rejected forged alert must not create a duplicate');
 });
+
+test('unsaved listing price drops do not create unrelated activity alerts',()=>{
+ const listing=createListing();activityFixtureIds.push(listing.id);
+ ok(api('seller','/rest/v1/listings?id=eq.'+listing.id,'PATCH',{price:17}),204);
+ assert.equal(ok(api('buyer','/rest/v1/collector_notifications?source_id=eq.'+listing.id)).length,0,'A buyer who did not save the listing must not receive a price-drop alert');
+ assert.equal(ok(api('seller','/rest/v1/collector_notifications?source_id=eq.'+listing.id)).length,0,'Seller must not receive self-alerts');
+ ok(api('seller','/rest/v1/listings?id=eq.'+listing.id,'PATCH',{status:'sold'}),204);
+ assert.equal(ok(api('buyer','/rest/v1/collector_notifications?source_id=eq.'+listing.id)).length,0,'A buyer who did not save the listing must not receive a sold alert');
+});
