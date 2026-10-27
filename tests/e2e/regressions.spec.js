@@ -118,8 +118,8 @@ test('reading one inbox conversation leaves another conversation unread',async({
    let ids=[];
    const q={then:(resolve,reject)=>Promise.resolve({data,error:null}).then(resolve,reject)};
    for(const name of ['select','order','limit','eq','is','maybeSingle'])q[name]=()=>q;
-   q.in=(field,values)=>{if(field==='id')ids=values;return q};
-   q.update=()=>{window.fixtureReadUpdates.push(ids);return q};
+   q.in=(field,values)=>{if(field==='id')window.fixtureReadUpdates.push([...values]);return q};
+   q.update=()=>q;
    return q;
   };
   window.fixtureOriginalFrom=original;
