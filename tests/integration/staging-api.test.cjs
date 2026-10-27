@@ -518,3 +518,30 @@ test('sold listings reject new price offers and trades without creating pending 
  assert.equal(ok(api('seller','/rest/v1/trade_offers?listing_id=eq.'+activeTarget.id)).length,0,'Rejected trade with sold item must not persist');
  // The marker-scoped after() fixture cleanup removes all four synthetic listings.
 });
+
+test('reserved listings reject new trades as either the requested item or offered collateral',()=>{
+ const reservedTarget=createListing(),activeCollateral=createListing('buyer');
+ const buyerOffer=offer(reservedTarget.id,20,'buyer');
+ ok(respond(buyerOffer,'accept',null,'seller'),204);
+ assert.equal(ok(api('seller','/rest/v1/listings?id=eq.'+reservedTarget.id))[0].status,'reserved');
+ const targetAttempt=api('buyer','/rest/v1/trade_offers','POST',{
+  listing_id:reservedTarget.id,offered_listing_id:activeCollateral.id,
+  sender_id:users.buyer,recipient_id:users.seller,offer_note:run
+ });
+ assert(targetAttempt.status>=400,'A reserved target must reject new trade proposals');
+ assert.equal(ok(api('seller','/rest/v1/trade_offers?listing_id=eq.'+reservedTarget.id)).length,0,'Rejected target trade must not persist');
+ assert.equal(ok(api('buyer','/rest/v1/listings?id=eq.'+activeCollateral.id))[0].status,'active','Rejected proposal must not lock collateral');
+
+ const activeTarget=createListing(),reservedCollateral=createListing('buyer');
+ const sellerOffer=offer(reservedCollateral.id,20,'seller');
+ ok(respond(sellerOffer,'accept',null,'buyer'),204);
+ assert.equal(ok(api('buyer','/rest/v1/listings?id=eq.'+reservedCollateral.id))[0].status,'reserved');
+ const collateralAttempt=api('buyer','/rest/v1/trade_offers','POST',{
+  listing_id:activeTarget.id,offered_listing_id:reservedCollateral.id,
+  sender_id:users.buyer,recipient_id:users.seller,offer_note:run
+ });
+ assert(collateralAttempt.status>=400,'A reserved offered item must not be used as trade collateral');
+ assert.equal(ok(api('seller','/rest/v1/trade_offers?listing_id=eq.'+activeTarget.id)).length,0,'Rejected collateral trade must not persist');
+ assert.equal(ok(api('seller','/rest/v1/listings?id=eq.'+activeTarget.id))[0].status,'active','Rejected trade must leave target available');
+ // The marker-scoped after() fixture cleanup removes all four synthetic listings and negotiations.
+});
