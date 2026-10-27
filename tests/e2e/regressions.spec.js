@@ -190,6 +190,7 @@ test('inbox conversation layout stays within the viewport on mobile and desktop'
 
 test('trading cards hide the generic Used selector while other categories retain it',async({page})=>{
  await page.goto('/');
+ await page.evaluate(()=>document.getElementById('sellModal').classList.add('open'));
  await page.evaluate(()=>{
   const category=document.getElementById('category'),game=document.getElementById('tcgGame');
   category.value='trading_cards';toggleTcgField();syncGradedCondition();
