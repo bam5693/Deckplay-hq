@@ -414,3 +414,15 @@ test('removing a saved favorite stops future price-drop and sold alerts',()=>{
  ok(api('seller','/rest/v1/listings?id=eq.'+listing.id,'PATCH',{status:'sold'}),204);
  assert.equal(ok(api('buyer','/rest/v1/collector_notifications?source_id=eq.'+listing.id)).length,0,'Unfavorited item must not generate a sold alert');
 });
+
+test('saving a listing after an earlier price drop does not send retroactive alerts',()=>{
+ const listing=createListing();activityFixtureIds.push(listing.id);
+ ok(api('seller','/rest/v1/listings?id=eq.'+listing.id,'PATCH',{price:21}),204);
+ assert.equal(ok(api('buyer','/rest/v1/collector_notifications?source_id=eq.'+listing.id)).length,0);
+ ok(api('buyer','/rest/v1/saved_listings','POST',{user_id:users.buyer,listing_id:listing.id}),201);
+ assert.equal(ok(api('buyer','/rest/v1/collector_notifications?source_id=eq.'+listing.id)).length,0,'Saving an item must not backfill an old price drop');
+ ok(api('seller','/rest/v1/listings?id=eq.'+listing.id,'PATCH',{price:18}),204);
+ const alerts=ok(api('buyer','/rest/v1/collector_notifications?source_id=eq.'+listing.id));
+ assert.equal(alerts.length,1,'A new price drop after saving must alert the buyer once');
+ assert.equal(alerts[0].kind,'favorite_price_drop');
+});
