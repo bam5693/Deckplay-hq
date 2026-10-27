@@ -36,10 +36,22 @@ jobs:
           const url='https://deckplay-hq-ai-reviewer-staging.cstivers56.workers.dev';
           const evidence='Synthetic staging scenario: a buyer opens a card listing, sends an offer, and the seller accepts. After refreshing the mobile inbox, the buyer still sees the offer as pending. This is fictional test evidence, not a real user transaction.';
           for(const lead of ['Tanner','Jayden']){
-            const res=await fetch(url,{method:'POST',headers:{Authorization:'Bearer '+process.env.REVIEWER_TOKEN,'Content-Type':'application/json'},body:JSON.stringify({lead,evidence})});
-            const body=await res.json();
-            if(!res.ok||body.lead!==lead||typeof body.report!=='string'||!body.report.trim())throw Error(lead+' did not return a real AI report (HTTP '+res.status+')');
-            console.log(lead+' returned a live AI review ('+body.report.length+' characters)');
+            let verified=false;
+            for(let attempt=1;attempt<=8;attempt++){
+              const res=await fetch(url,{method:'POST',headers:{Authorization:'Bearer '+process.env.REVIEWER_TOKEN,'Content-Type':'application/json'},body:JSON.stringify({lead,evidence})});
+              const raw=await res.text();
+              let body;
+              try{body=JSON.parse(raw)}catch{body={}}
+              if(res.ok&&body.lead===lead&&typeof body.report==='string'&&body.report.trim()){
+                console.log(lead+' returned a live AI review ('+body.report.length+' characters)');
+                verified=true;
+                break;
+              }
+              console.log(lead+' verification attempt '+attempt+' returned HTTP '+res.status);
+              if(res.status!==401&&res.status!==503)throw Error(lead+' unexpected response HTTP '+res.status);
+              if(attempt<8)await new Promise(resolve=>setTimeout(resolve,5000));
+            }
+            if(!verified)throw Error(lead+' did not return a verified AI report after retries');
           }
           NODE
       - name: Explain verification boundary
