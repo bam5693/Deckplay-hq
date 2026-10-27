@@ -27,3 +27,15 @@ test('collector session survives page refresh',async({page})=>{
  await page.reload({waitUntil:'domcontentloaded'});
  await expect.poll(()=>page.evaluate(()=>currentUser?.id),{timeout:20000}).toBe(id);
 });
+
+test('staging search recovers after offline interruption',async({page,context})=>{
+ await page.goto('/',{waitUntil:'domcontentloaded'});
+ await expect(page.locator('#search')).toBeVisible();
+ await context.setOffline(true);
+ try{
+  await page.locator('#search').fill('offline test');
+  await expect(page.locator('#search')).toHaveValue('offline test');
+ }finally{await context.setOffline(false)}
+ await page.reload({waitUntil:'domcontentloaded'});
+ await expect(page.locator('#search')).toBeVisible();
+});
