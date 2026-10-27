@@ -58,3 +58,10 @@ test('buyer cannot reopen a reserved listing after accepted offer',async({page,b
   expect(status).toBe('reserved');
  }finally{try{await cleanup(page,title)}finally{await ctx.close()}}
 });
+
+test('signed-out visitor can browse but cannot create a price offer',async({page})=>{
+ await page.goto('/',{waitUntil:'domcontentloaded'});
+ await expect(page.locator('#search')).toBeVisible();
+ const result=await page.evaluate(async()=>{const {data,error}=await supabaseClient.rpc('submit_price_offer',{p_listing_id:'00000000-0000-0000-0000-000000000000',p_amount:20});return {data,error:error?.message||null}});
+ expect(result.error,'Anonymous offers must be refused').toBeTruthy();
+});
