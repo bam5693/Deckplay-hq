@@ -1275,14 +1275,16 @@ document.getElementById("authForgotPassword").addEventListener("click",async()=>
 });
 
 let notificationChannel=null,notificationPoll=null;
-async function refreshNotificationCount(){const bell=document.getElementById("notificationBell"),badge=document.getElementById("notificationBadge");bell.hidden=!currentUser;if(!currentUser){badge.hidden=true;const dot=document.getElementById("dockNotifications");if(dot)dot.hidden=true;return}const {count,error}=await supabaseClient.from("collector_notifications").select("id",{count:"exact",head:true}).eq("user_id",currentUser.id).is("read_at",null).in("kind",["favorite_price_drop","favorite_sold"]);if(error)return;badge.hidden=!count;badge.textContent=count>99?"99+":String(count||0);const dockBadge=document.getElementById("dockNotifications");if(dockBadge){dockBadge.hidden=!count;dockBadge.setAttribute("aria-label",count+" unread notifications")}bell.setAttribute("aria-label",count?count+" unread notifications":"Notifications")}
+async function refreshNotificationCount(){const bell=document.getElementById("notificationBell"),badge=document.getElementById("notificationBadge");bell.hidden=!currentUser;if(!currentUser){badge.hidden=true;const dot=document.getElementById("dockNotifications");if(dot)dot.hidden=true;return}const userId=currentUser.id;const {count,error}=await supabaseClient.from("collector_notifications").select("id",{count:"exact",head:true}).eq("user_id",currentUser.id).is("read_at",null).in("kind",["favorite_price_drop","favorite_sold"]);if(currentUser?.id!==userId||error)return;badge.hidden=!count;badge.textContent=count>99?"99+":String(count||0);const dockBadge=document.getElementById("dockNotifications");if(dockBadge){dockBadge.hidden=!count;dockBadge.setAttribute("aria-label",count+" unread notifications")}bell.setAttribute("aria-label",count?count+" unread notifications":"Notifications")}
 async function markNotificationRead(id){if(!currentUser)return;const ids=String(id).split(",").filter(Boolean);if(!ids.length)return;const {error}=await supabaseClient.from("collector_notifications").update({read_at:new Date().toISOString()}).in("id",ids).eq("user_id",currentUser.id);if(error){toast("Could not mark notification as read.");return}await refreshNotificationCount()}
 const deckplayInboxNotificationKinds=new Set(["message","trade_offer","counteroffer","trade_update","price_offer","price_counter","price_update"]);
 async function loadNotificationCenter(){
  const list=document.getElementById("notificationList");
  if(!currentUser){list.textContent="Sign in to see notifications.";return}
+ const userId=currentUser.id;
  list.textContent="Loading notifications…";
  const {data,error}=await supabaseClient.from("collector_notifications").select("id,actor_id,kind,source_id,created_at,read_at").eq("user_id",currentUser.id).order("created_at",{ascending:false}).limit(100);
+ if(currentUser?.id!==userId)return;
  if(error){list.textContent="Could not load notifications: "+error.message;return}
  const activity=(data||[]).filter(n=>!deckplayInboxNotificationKinds.has(n.kind));
  if(!activity.length){list.innerHTML='<p class="muted">No activity alerts yet. Messages, offers and trades are in your Inbox.</p>';return}
@@ -1293,6 +1295,7 @@ async function loadNotificationCenter(){
  const names=new Map((peopleResult.data||[]).map(p=>[p.id,p.username])),prices=new Map((priceResult.data||[]).map(p=>[p.id,p]));
  const listingIds=[...new Set([...(priceResult.data||[]).map(p=>p.listing_id),...activity.filter(n=>["favorite_price_drop","favorite_sold"].includes(n.kind)).map(n=>n.source_id)].filter(Boolean))];
  const {data:listingRows}=listingIds.length?await supabaseClient.from("listings").select("id,title").in("id",listingIds):{data:[]};
+ if(currentUser?.id!==userId)return;
  const titles=new Map((listingRows||[]).map(l=>[l.id,l.title]));
  const labels={favorite_price_drop:["🏷️ Favorite price dropped","dropped the price on an item you saved"],favorite_sold:["💛 Favorite sold","sold an item you saved"],message:["✉️ New message","sent you a message"],trade_offer:["⇄ New trade offer","sent you a trade offer"],counteroffer:["↩️ Trade counteroffer","sent a trade counteroffer"],trade_update:["⇄ Trade updated","updated a trade"],price_offer:["💵 New price offer","made an offer"],price_counter:["💬 New counteroffer","countered your price"],price_update:["💵 Price offer update","responded to your offer"]};
  list.innerHTML=displayed.map(n=>{
@@ -1573,12 +1576,13 @@ document.getElementById("profilePageContent").addEventListener("click",async e=>
 
 
 let messageChannel=null,messagePoll=null;
-async function refreshTradeAlerts(){if(!currentUser)return;const [offers,counters]=await Promise.all([supabaseClient.from("trade_offers").select("id",{count:"exact",head:true}).eq("recipient_id",currentUser.id).eq("status","pending"),supabaseClient.from("trade_counteroffers").select("id",{count:"exact",head:true}).eq("recipient_id",currentUser.id).eq("status","pending")]);if(offers.error||counters.error)return;const count=(offers.count||0)+(counters.count||0),el=document.getElementById("menuTradeUnread");el.hidden=!count;el.textContent=count>99?"99+":String(count)}
+async function refreshTradeAlerts(){if(!currentUser)return;const userId=currentUser.id;const [offers,counters]=await Promise.all([supabaseClient.from("trade_offers").select("id",{count:"exact",head:true}).eq("recipient_id",currentUser.id).eq("status","pending"),supabaseClient.from("trade_counteroffers").select("id",{count:"exact",head:true}).eq("recipient_id",currentUser.id).eq("status","pending")]);if(currentUser?.id!==userId||offers.error||counters.error)return;const count=(offers.count||0)+(counters.count||0),el=document.getElementById("menuTradeUnread");el.hidden=!count;el.textContent=count>99?"99+":String(count)}
 
 async function refreshUnreadCount(){
  if(!currentUser)return;
+ const userId=currentUser.id;
  const {count,error}=await supabaseClient.from("collector_messages").select("id",{count:"exact",head:true}).eq("recipient_id",currentUser.id).is("read_at",null);
- if(error)return;
+ if(currentUser?.id!==userId||error)return;
  for(const id of ["headerUnread","menuUnread"]){const el=document.getElementById(id);el.hidden=!count;el.textContent=count>99?"99+":String(count||0)}
 }
 let liveInboxTimer=null,liveInboxBusy=false;

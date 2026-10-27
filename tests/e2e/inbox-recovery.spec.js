@@ -100,3 +100,26 @@ test('inbox exposes price and trade offers without activity alerts',async({page}
  await expect(page.locator('#tradesModal')).toHaveClass(/open/);
  expect(await page.evaluate(()=>document.documentElement.scrollWidth-innerWidth)).toBeLessThanOrEqual(2);
 });
+test('late activity responses cannot restore private alerts after sign-out',async({page})=>{
+ await ready(page);await page.evaluate(()=>{
+  currentUser={id:'fixture-old'};syncInboxDraftUser();
+  supabaseClient.from=table=>{const q={then:(resolve,reject)=>(table==='collector_notifications'?new Promise(done=>window.finishOldActivity=done):Promise.resolve({data:[],error:null})).then(resolve,reject)};for(const key of ['select','eq','order','limit','in'])q[key]=()=>q;return q};
+  window.oldActivityLoad=loadNotificationCenter();
+ });
+ await expect.poll(()=>page.evaluate(()=>typeof finishOldActivity)).toBe('function');
+ await page.evaluate(()=>supabaseClient.auth.signOut({scope:'local'}));
+ await page.evaluate(async()=>{finishOldActivity({data:[{id:'private-alert',kind:'favorite_sold',actor_id:null,source_id:null,created_at:new Date().toISOString(),read_at:null}],error:null});await oldActivityLoad});
+ await expect(page.locator('#notificationList')).not.toContainText('Favorite sold');
+});
+test('late unread counts cannot restore account badges after sign-out',async({page})=>{
+ await ready(page);await page.evaluate(()=>{
+  currentUser={id:'fixture-old'};syncInboxDraftUser();
+  window.oldCountReplies={};
+  supabaseClient.from=table=>{const q={then:(resolve,reject)=>(['collector_messages','collector_notifications'].includes(table)?new Promise(done=>oldCountReplies[table]=done):Promise.resolve({data:[],error:null})).then(resolve,reject)};for(const key of ['select','eq','is','in','order','limit'])q[key]=()=>q;return q};
+  window.oldCounts=Promise.all([refreshUnreadCount(),refreshNotificationCount()]);
+ });
+ await expect.poll(()=>page.evaluate(()=>Object.keys(oldCountReplies).length)).toBe(2);
+ await page.evaluate(()=>supabaseClient.auth.signOut({scope:'local'}));
+ await page.evaluate(async()=>{Object.values(oldCountReplies).forEach(done=>done({count:7,error:null}));await oldCounts});
+ for(const id of ['headerUnread','menuUnread','notificationBadge'])await expect(page.locator('#'+id)).toHaveJSProperty('hidden',true);
+});
