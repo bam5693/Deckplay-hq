@@ -179,6 +179,43 @@ test('blocking after trade proposal prevents acceptance without reserving items'
  assert.equal(ok(api('buyer','/rest/v1/listings?id=eq.'+offered.id))[0].status,'reserved');
 });
 
+
+test('blocking after a trade proposal prevents new counteroffers until unblocked',()=>{
+ const target=createListing(),offered=createListing('buyer');
+ const trade=ok(api('buyer','/rest/v1/trade_offers','POST',{listing_id:target.id,offered_listing_id:offered.id,sender_id:users.buyer,recipient_id:users.seller,offer_note:run},{Prefer:'return=representation'}),201)[0];
+ const blockFilter='?blocker_id=eq.'+users.seller+'&blocked_id=eq.'+users.buyer;
+ ok(api('seller','/rest/v1/user_blocks','POST',{blocker_id:users.seller,blocked_id:users.buyer}),201);
+ try{
+  const rejected=api('seller','/rest/v1/rpc/create_trade_counter','POST',{p_offer:trade.id,p_cash:5,p_direction:'sender_pays',p_note:run});
+  assert(rejected.status>=400,'A block must stop new trade counteroffers');
+  assert.equal(ok(api('seller','/rest/v1/trade_counteroffers?trade_offer_id=eq.'+trade.id)).length,0,'Rejected counteroffer must not persist');
+  assert.equal(ok(api('seller','/rest/v1/trade_offers?id=eq.'+trade.id))[0].status,'pending');
+ }finally{ok(api('seller','/rest/v1/user_blocks'+blockFilter,'DELETE'),204)}
+ const counter=ok(api('seller','/rest/v1/rpc/create_trade_counter','POST',{p_offer:trade.id,p_cash:5,p_direction:'sender_pays',p_note:run}));
+ assert(counter,'Unblocking should restore the ability to counter a pending trade');
+});
+
+test('blocking after a trade counteroffer prevents acceptance and item reservations',()=>{
+ const target=createListing(),offered=createListing('buyer');
+ const trade=ok(api('buyer','/rest/v1/trade_offers','POST',{listing_id:target.id,offered_listing_id:offered.id,sender_id:users.buyer,recipient_id:users.seller,offer_note:run},{Prefer:'return=representation'}),201)[0];
+ const counter=ok(api('seller','/rest/v1/rpc/create_trade_counter','POST',{p_offer:trade.id,p_cash:5,p_direction:'sender_pays',p_note:run}));
+ const blockFilter='?blocker_id=eq.'+users.buyer+'&blocked_id=eq.'+users.seller;
+ ok(api('buyer','/rest/v1/user_blocks','POST',{blocker_id:users.buyer,blocked_id:users.seller}),201);
+ try{
+  const rejected=api('buyer','/rest/v1/rpc/respond_trade_counter','POST',{p_counter:counter,p_accept:true});
+  assert(rejected.status>=400,'A blocked trade counteroffer must not be accepted');
+  assert.equal(ok(api('buyer','/rest/v1/trade_counteroffers?id=eq.'+counter))[0].status,'pending','Failed acceptance must roll back counter status');
+  assert.equal(ok(api('buyer','/rest/v1/trade_offers?id=eq.'+trade.id))[0].status,'pending','Failed acceptance must leave original trade pending');
+  for(const [role,id] of [['seller',target.id],['buyer',offered.id]]){
+   assert.equal(ok(api(role,'/rest/v1/listings?id=eq.'+id))[0].status,'active','Failed acceptance must not reserve either item');
+  }
+ }finally{ok(api('buyer','/rest/v1/user_blocks'+blockFilter,'DELETE'),204)}
+ ok(api('buyer','/rest/v1/rpc/respond_trade_counter','POST',{p_counter:counter,p_accept:true}),204);
+ assert.equal(ok(api('buyer','/rest/v1/trade_offers?id=eq.'+trade.id))[0].status,'accepted');
+ assert.equal(ok(api('seller','/rest/v1/listings?id=eq.'+target.id))[0].status,'reserved');
+ assert.equal(ok(api('buyer','/rest/v1/listings?id=eq.'+offered.id))[0].status,'reserved');
+});
+
 test('reports are private to reporter and cannot impersonate another reporter',()=>{
  const report=ok(api('buyer','/rest/v1/user_reports','POST',{reporter_id:users.buyer,reported_id:users.seller,reason:'other',details:run},{Prefer:'return=representation'}),201)[0];
  assert.equal(ok(api('seller','/rest/v1/user_reports?id=eq.'+report.id)).length,0);
