@@ -46,6 +46,19 @@ const entryHtml = fs.readFileSync(entry, 'utf8');
 if (!entryHtml.includes(url) || !entryHtml.includes(key)) throw new Error('Staging Supabase config missing from entry HTML');
 if (!entryHtml.includes('noindex,nofollow')) throw new Error('Staging noindex missing');
 if (entryHtml.includes('yffruutknztvdyioovmp')) throw new Error('Production project leaked into staging entry');
+
+const { Script } = require('node:vm');
+// Fail the fast staging build if any inline classic JavaScript fails to parse.
+// A syntax error here otherwise disables authentication, inbox and navigation at once.
+for (const [index, match] of [...entryHtml.matchAll(/<script\\b([^>]*)>([\\s\\S]*?)<\\/script\\s*>/gi)].entries()) {
+  const attributes = match[1];
+  if (/\\bsrc\\s*=/.test(attributes)) continue;
+  const type = attributes.match(/\\btype\\s*=\\s*["']([^"']+)["']/i)?.[1];
+  if (type && !/^(text\\/javascript|application\\/javascript)$/i.test(type)) continue;
+  try { new Script(match[2], { filename: 'staging inline script ' + (index + 1) }); }
+  catch (error) { throw new Error('Invalid staging inline JavaScript #' + (index + 1) + ': ' + error.message); }
+}
+
 console.log('Prepared isolated staging assets: ' + count + ' files. Production project references checked.');
 
 fs.writeFileSync(path.join(target,"robots.txt"),"User-agent: *\nDisallow: /\n");
