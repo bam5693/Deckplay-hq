@@ -15,6 +15,6 @@ module.exports = defineConfig({
   reporter: [['list'], ['html', { open: 'never',outputFolder:'playwright-report/staging' }], ['junit', { outputFile: 'test-results/staging-junit.xml' }]],
   use: { baseURL,
     ...(process.env.HTTPS_PROXY ? {launchOptions:{proxy:{server:process.env.HTTPS_PROXY}},ignoreHTTPSErrors:!!process.env.CODEX_NETWORK_PROXY_ACTIVE} : {}),
-    httpCredentials:{username:'deckplay',password:process.env.DECKPLAY_STAGING_ACCESS_PASSWORD||''}, trace: 'retain-on-failure', screenshot: 'only-on-failure', video: 'on' },
+    httpCredentials:{username:'deckplay',password:process.env.DECKPLAY_STAGING_ACCESS_PASSWORD||''}, trace: 'off', screenshot: 'off', video: 'off' },
   projects: [{ name: 'staging-desktop', use: devices['Desktop Chrome'] },{name:'staging-mobile',use:devices['Pixel 7']}]
 });
