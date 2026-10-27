@@ -272,3 +272,56 @@ test('another collector cannot remove a buyer saved listing',()=>{
   ok(api('seller','/rest/v1/listings?id=eq.'+listing.id,'DELETE'),204);
  }
 });
+
+test('price-offer notifications follow seller counter and buyer acceptance without duplicate inbox entries',()=>{
+ const listing=createListing(),id=offer(listing.id,19);
+ const notifications=role=>ok(api(role,'/rest/v1/collector_notifications?source_id=eq.'+id));
+ const sellerInitial=notifications('seller');
+ assert.equal(sellerInitial.length,1,'Submitting an offer must create one seller notification');
+ assert.equal(sellerInitial[0].kind,'price_offer');
+ assert.equal(sellerInitial[0].user_id,users.seller);
+ assert.equal(sellerInitial[0].actor_id,users.buyer);
+ assert.equal(sellerInitial[0].read_at,null);
+ assert.equal(notifications('buyer').length,0,'Buyer must not see seller notification');
+ ok(respond(id,'counter',22,'seller'),204);
+ const buyerCounter=notifications('buyer');
+ assert.equal(buyerCounter.length,1,'Counteroffer must create one buyer notification');
+ assert.equal(buyerCounter[0].kind,'price_counter');
+ assert.equal(buyerCounter[0].actor_id,users.seller);
+ assert.equal(notifications('seller').length,1,'Counter must not duplicate the original seller alert');
+ ok(respond(id,'accept',null,'buyer'),204);
+ const sellerFinal=notifications('seller');
+ assert.equal(sellerFinal.length,2,'Acceptance must add one seller update to the original offer alert');
+ assert.deepEqual(sellerFinal.map(n=>n.kind).sort(),['price_offer','price_update']);
+ assert.equal(notifications('buyer').length,1,'Buyer must not receive their own acceptance alert');
+ ok(api('seller','/rest/v1/collector_notifications?id=eq.'+sellerInitial[0].id,'PATCH',{read_at:new Date().toISOString()}),204);
+ const readBack=notifications('seller');
+ assert(readBack.find(n=>n.id===sellerInitial[0].id).read_at,'Seller can mark the original alert read');
+ assert.equal(readBack.find(n=>n.kind==='price_update').read_at,null,'Reading one alert must not mark another read');
+ assert.equal(ok(api('seller','/rest/v1/price_offers?id=eq.'+id))[0].status,'accepted');
+});
+
+test('declined trade updates the sender inbox once while both listings remain available',()=>{
+ const target=createListing(),offered=createListing('buyer');
+ const trade=ok(api('buyer','/rest/v1/trade_offers','POST',{listing_id:target.id,offered_listing_id:offered.id,sender_id:users.buyer,recipient_id:users.seller,offer_note:run},{Prefer:'return=representation'}),201)[0];
+ const notifications=role=>ok(api(role,'/rest/v1/collector_notifications?source_id=eq.'+trade.id));
+ const sellerAlert=notifications('seller');
+ assert.equal(sellerAlert.length,1,'Proposal must notify its recipient exactly once');
+ assert.equal(sellerAlert[0].kind,'trade_offer');
+ assert.equal(sellerAlert[0].actor_id,users.buyer);
+ assert.equal(notifications('buyer').length,0,'Sender must not see recipient-only proposal alert');
+ ok(api('seller','/rest/v1/rpc/respond_trade_offer','POST',{p_offer:trade.id,p_action:'declined'}),204);
+ const buyerUpdate=notifications('buyer');
+ assert.equal(buyerUpdate.length,1,'Decline must create one trade update for the sender');
+ assert.equal(buyerUpdate[0].kind,'trade_update');
+ assert.equal(buyerUpdate[0].actor_id,users.seller);
+ assert.equal(buyerUpdate[0].read_at,null);
+ assert.equal(notifications('seller').length,1,'Declining must not duplicate recipient proposal alert');
+ assert.equal(ok(api('buyer','/rest/v1/trade_offers?id=eq.'+trade.id))[0].status,'declined');
+ for(const [role,id] of [['seller',target.id],['buyer',offered.id]]){
+  assert.equal(ok(api(role,'/rest/v1/listings?id=eq.'+id))[0].status,'active','Declined trade must leave both items available');
+ }
+ ok(api('buyer','/rest/v1/collector_notifications?id=eq.'+buyerUpdate[0].id,'PATCH',{read_at:new Date().toISOString()}),204);
+ assert(notifications('buyer')[0].read_at,'Sender can mark their own update read');
+ assert.equal(notifications('seller')[0].read_at,null,'Sender read action must not affect recipient inbox');
+});
