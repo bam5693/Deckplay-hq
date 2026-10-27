@@ -64,3 +64,24 @@ test('page element IDs are unique so notifications have one working target',asyn
  const duplicates=await page.locator('[id]').evaluateAll(elements=>{const counts=new Map();elements.forEach(e=>counts.set(e.id,(counts.get(e.id)||0)+1));return [...counts].filter(([,n])=>n>1).map(([id])=>id)});
  expect(duplicates).toEqual([]);
 });
+
+test('notification bell counts discovery alerts without counting inbox negotiations',async({page})=>{
+ await page.goto('/');
+ const result=await page.evaluate(async()=>{
+  await supabaseClient.auth.getSession();
+  currentUser={id:'fixture-alert-user'};
+  let kinds=null;
+  const original=supabaseClient.from;
+  supabaseClient.from=table=>{
+   const query={select:()=>query,eq:()=>query,is:()=>query,in:(column,values)=>{if(column==='kind')kinds=values;return query},then:(resolve,reject)=>Promise.resolve({count:3,error:null}).then(resolve,reject)};
+   return query;
+  };
+  try{await refreshNotificationCount();return {kinds,badge:document.getElementById('notificationBadge').textContent,hidden:document.getElementById('notificationBadge').hidden}}
+  finally{supabaseClient.from=original;currentUser=null}
+ });
+ expect(result.kinds).toEqual(expect.arrayContaining(['favorite_price_drop','favorite_sold','followed_seller_listing','wanted_match']));
+ expect(result.kinds).not.toContain('message');
+ expect(result.kinds).not.toContain('price_offer');
+ expect(result.badge).toBe('3');
+ expect(result.hidden).toBe(false);
+});
