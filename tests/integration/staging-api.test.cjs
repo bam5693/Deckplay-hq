@@ -98,6 +98,14 @@ test('private messages persist, notify recipient, and cannot be rewritten',()=>{
  ok(api('seller','/rest/v1/collector_notifications?id=eq.'+n[0].id,'PATCH',{read_at:new Date().toISOString()}),204);
  assert(api('buyer','/rest/v1/collector_messages','POST',{sender_id:users.seller,recipient_id:users.buyer,body:run}).status>=400);
 });
+test('sender cannot mark recipient private message read',()=>{
+ const msg=ok(api('buyer','/rest/v1/collector_messages','POST',{sender_id:users.buyer,recipient_id:users.seller,body:run+' privacy read test'},{Prefer:'return=representation'}),201)[0];
+ const attempt=api('buyer','/rest/v1/collector_messages?id=eq.'+msg.id,'PATCH',{read_at:new Date().toISOString()},{Prefer:'return=representation'});
+ assert(attempt.status>=400||Array.isArray(attempt.data)&&attempt.data.length===0,'Sender cannot mark recipient message read');
+ assert.equal(ok(api('seller','/rest/v1/collector_messages?id=eq.'+msg.id))[0].read_at,null,'Recipient unread state must remain intact');
+ ok(api('seller','/rest/v1/collector_messages?id=eq.'+msg.id,'PATCH',{read_at:new Date().toISOString()}),204);
+ assert(ok(api('seller','/rest/v1/collector_messages?id=eq.'+msg.id))[0].read_at,'Recipient may mark their own message read');
+});
 test('counteroffer changes turns, accepts atomically, and locks the listing',()=>{
  const l=createListing(),id=offer(l.id);assert(respond(id,'accept',null,'buyer').status>=400);
  ok(respond(id,'counter',22),204);assert.equal(ok(api('buyer','/rest/v1/price_offers?id=eq.'+id))[0].amount,22);
