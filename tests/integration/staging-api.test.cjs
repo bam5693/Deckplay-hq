@@ -147,6 +147,20 @@ test('blocking prevents messages and price offers until unblocked',()=>{
  }finally{ok(api('seller','/rest/v1/user_blocks?blocker_id=eq.'+users.seller+'&blocked_id=eq.'+users.buyer,'DELETE'),204)}
  ok(api('buyer','/rest/v1/collector_messages','POST',{sender_id:users.buyer,recipient_id:users.seller,body:run}),201);
 });
+test('blocked collectors cannot initiate trades, and unblocking restores trading',()=>{
+ const target=createListing(),offered=createListing('buyer');
+ const blockFilter='?blocker_id=eq.'+users.seller+'&blocked_id=eq.'+users.buyer;
+ const payload={listing_id:target.id,offered_listing_id:offered.id,sender_id:users.buyer,recipient_id:users.seller,offer_note:run};
+ ok(api('seller','/rest/v1/user_blocks','POST',{blocker_id:users.seller,blocked_id:users.buyer}),201);
+ try{
+  const rejected=api('buyer','/rest/v1/trade_offers','POST',payload);
+  assert(rejected.status>=400,'A blocked buyer must not propose a trade');
+  assert.equal(ok(api('seller','/rest/v1/trade_offers?listing_id=eq.'+target.id)).length,0,'Rejected trade must not persist');
+ }finally{ok(api('seller','/rest/v1/user_blocks'+blockFilter,'DELETE'),204)}
+ const accepted=ok(api('buyer','/rest/v1/trade_offers','POST',payload,{Prefer:'return=representation'}),201)[0];
+ assert(accepted.id,'Unblocked collectors should be able to trade again');
+});
+
 test('reports are private to reporter and cannot impersonate another reporter',()=>{
  const report=ok(api('buyer','/rest/v1/user_reports','POST',{reporter_id:users.buyer,reported_id:users.seller,reason:'other',details:run},{Prefer:'return=representation'}),201)[0];
  assert.equal(ok(api('seller','/rest/v1/user_reports?id=eq.'+report.id)).length,0);
