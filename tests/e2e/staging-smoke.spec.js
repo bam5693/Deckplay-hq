@@ -56,3 +56,13 @@ test('deployed homepage matches the staging branch being tested',async({request}
   const digest=value=>createHash('sha256').update(value).digest('hex');
   expect(digest(await response.text()),'Deploy the current staging homepage before certifying its UI').toBe(digest(readFileSync('dist-staging/index.html','utf8')));
 });
+
+test('signed-out password recovery is reachable and rejects an empty email without sending a request',async({page})=>{
+  const resetRequests=[];page.on('request',r=>{if(r.url().includes('/auth/v1/recover'))resetRequests.push(r.url())});
+  await page.goto('/',{waitUntil:'domcontentloaded'});
+  const opener=await page.locator('#accountButton').isVisible()?page.locator('#accountButton'):page.locator('[data-dock="profile"]');await opener.click();
+  await page.getByRole('button',{name:'Forgot password?',exact:true}).click();
+  await expect(page.locator('#authStatus')).toContainText('valid email address');
+  await expect(page.locator('#authModal')).toHaveClass(/open/);
+  expect(resetRequests,'Invalid recovery input must not send password-reset emails').toEqual([]);
+});
