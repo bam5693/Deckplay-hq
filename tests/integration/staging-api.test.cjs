@@ -579,3 +579,25 @@ test('fixture cleanup removes its messages and alerts while preserving another r
   ok(api('seller','/rest/v1/rpc/cleanup_staging_fixture','POST',{p_marker:markers[1]}),204);
  }
 });
+
+test('simultaneous price and trade acceptances allow one deal without locking losing collateral',async()=>{
+ const target=createListing(),collateral=createListing('buyer'),priceId=offer(target.id,20);
+ const trade=ok(api('buyer','/rest/v1/trade_offers','POST',{
+  listing_id:target.id,offered_listing_id:collateral.id,sender_id:users.buyer,recipient_id:users.seller,offer_note:run
+ },{Prefer:'return=representation'}),201)[0];
+ const {httpAsync}=require('../../scripts/staging-http.cjs');
+ const headers={apikey:key,'Content-Type':'application/json',Authorization:'Bearer '+sessions.seller.access_token};
+ const results=await Promise.all([
+  httpAsync(base+'/rest/v1/rpc/respond_price_offer',{method:'POST',headers,body:{p_offer_id:priceId,p_action:'accept',p_amount:null}}),
+  httpAsync(base+'/rest/v1/rpc/respond_trade_offer',{method:'POST',headers,body:{p_offer:trade.id,p_action:'accepted'}})
+ ]);
+ assert.equal(results.filter(r=>r.status===204).length,1,'Exactly one conflicting acceptance must succeed');
+ assert.equal(results.filter(r=>r.status>=400).length,1,'The other acceptance must fail');
+ const price=ok(api('seller','/rest/v1/price_offers?id=eq.'+priceId))[0];
+ const tradeRow=ok(api('seller','/rest/v1/trade_offers?id=eq.'+trade.id))[0];
+ assert.equal([price,tradeRow].filter(row=>row.status==='accepted').length,1,'Only one deal may persist as accepted');
+ assert.equal(ok(api('seller','/rest/v1/listings?id=eq.'+target.id))[0].status,'reserved','Winning deal must reserve the target');
+ assert.equal(ok(api('buyer','/rest/v1/listings?id=eq.'+collateral.id))[0].status,tradeRow.status==='accepted'?'reserved':'active','Collateral may be reserved only for a winning trade');
+ const loser=price.status==='accepted'?tradeRow:price;
+ assert(!['pending','countered','accepted'].includes(loser.status),'Losing negotiation must be closed');
+});
