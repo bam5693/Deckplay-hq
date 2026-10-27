@@ -377,3 +377,18 @@ test('favorite activity alert cannot be marked read by another collector',()=>{
  ok(api('buyer','/rest/v1/collector_notifications?id=eq.'+alert.id,'PATCH',{read_at:new Date().toISOString()}),204);
  assert(ok(api('buyer','/rest/v1/collector_notifications?id=eq.'+alert.id))[0].read_at,'Buyer can mark their own activity read');
 });
+
+test('favorite activity alerts are invisible to unrelated collectors and anonymous visitors',()=>{
+ const listing=createListing();activityFixtureIds.push(listing.id);
+ ok(api('buyer','/rest/v1/saved_listings','POST',{user_id:users.buyer,listing_id:listing.id}),201);
+ ok(api('seller','/rest/v1/listings?id=eq.'+listing.id,'PATCH',{price:18}),204);
+ const own=ok(api('buyer','/rest/v1/collector_notifications?source_id=eq.'+listing.id));
+ assert.equal(own.length,1);
+ assert.equal(own[0].kind,'favorite_price_drop');
+ const id=own[0].id;
+ assert.equal(ok(api('seller','/rest/v1/collector_notifications?id=eq.'+id)).length,0,'Seller cannot read buyer activity alert');
+ assert.equal(ok(api(null,'/rest/v1/collector_notifications?id=eq.'+id)).length,0,'Anonymous visitors cannot read activity alerts');
+ const spoof=api('seller','/rest/v1/collector_notifications','POST',{user_id:users.buyer,actor_id:users.seller,kind:'favorite_price_drop',source_id:listing.id});
+ assert(spoof.status>=400,'Seller cannot forge a buyer favorite activity alert');
+ assert.equal(ok(api('buyer','/rest/v1/collector_notifications?source_id=eq.'+listing.id)).length,1,'Rejected forged alert must not create a duplicate');
+});
