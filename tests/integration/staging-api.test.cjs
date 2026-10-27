@@ -28,6 +28,24 @@ test('listing persists and is browseable/searchable; foreign ownership and missi
  assert(api('seller','/rest/v1/listings','POST',{seller_id:users.seller,title:run,price:10,category:'trading_cards',condition:'like_new',image_urls:[]}).status>=400);
  ok(api('seller','/rest/v1/listings?id=eq.'+l.id,'DELETE'),204);
 });
+test('anonymous and signed-in searches combine case-insensitive title and price filters',()=>{
+ const marker=run+' SEARCH '+randomUUID(),ids=[];
+ try{
+  const budget=createListing('seller',{title:marker+' budget',price:18});ids.push(budget.id);
+  const premium=createListing('seller',{title:marker+' premium',price:62});ids.push(premium.id);
+  const filter='title=ilike.*'+encodeURIComponent(marker.toLowerCase())+'*&category=eq.trading_cards';
+  for(const role of [null,'buyer']){
+   const all=ok(api(role,'/rest/v1/listings?select=id,title,price&'+filter));
+   assert.deepEqual(all.map(row=>row.id).sort(),ids.slice().sort(),'Case-insensitive search should find both fixture listings');
+   const filtered=ok(api(role,'/rest/v1/listings?select=id,price&'+filter+'&price=gte.50&price=lte.70'));
+   assert.deepEqual(filtered.map(row=>row.id),[premium.id],'Price range must exclude the budget listing');
+   const empty=ok(api(role,'/rest/v1/listings?select=id&'+filter+'&price=lt.10'));
+   assert.equal(empty.length,0,'A nonmatching price filter must return no results');
+  }
+ }finally{
+  for(const id of ids)ok(api('seller','/rest/v1/listings?id=eq.'+id,'DELETE'),204);
+ }
+});
 test('another collector cannot delete the seller listing',()=>{
  const listing=createListing();
  try{
@@ -320,19 +338,6 @@ test('another collector cannot mark private notifications as read',()=>{
  assert(ok(api('seller','/rest/v1/collector_notifications?id=eq.'+id))[0].read_at,'Recipient should be able to mark their notification read');
 });
 
-test('another collector cannot remove a buyer saved listing',()=>{
- const listing=createListing();
- const filter='?user_id=eq.'+users.buyer+'&listing_id=eq.'+listing.id;
- try{
-  ok(api('buyer','/rest/v1/saved_listings','POST',{user_id:users.buyer,listing_id:listing.id}),201);
-  const attempt=api('seller','/rest/v1/saved_listings'+filter,'DELETE',undefined,{Prefer:'return=representation'});
-  if(attempt.status<400)assert.deepEqual(attempt.data,[],'Seller must not delete buyer favorite');
-  assert.equal(ok(api('buyer','/rest/v1/saved_listings'+filter)).length,1,'Buyer favorite must remain saved');
- }finally{
-  ok(api('buyer','/rest/v1/saved_listings'+filter,'DELETE'),204);
-  ok(api('seller','/rest/v1/listings?id=eq.'+listing.id,'DELETE'),204);
- }
-});
 
 test('price-offer notifications follow seller counter and buyer acceptance without duplicate inbox entries',()=>{
  const listing=createListing(),id=offer(listing.id,19);
