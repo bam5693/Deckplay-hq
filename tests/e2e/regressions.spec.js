@@ -160,3 +160,30 @@ test('an older inbox refresh cannot replace a newer conversation',async({page})=
  await expect(page.locator('[data-conversation-id="fixture-bob"]')).toHaveClass(/active/);
  await expect(page.locator('#conversationThread')).not.toContainText('Alice thread');
 });
+
+test('inbox conversation layout stays within the viewport on mobile and desktop',async({page})=>{
+ await page.goto('/');
+ await page.evaluate(async()=>{
+  await supabaseClient.auth.getSession();
+  currentUser={id:'fixture-owner'};
+  const now=new Date().toISOString();
+  supabaseClient.from=table=>{
+   const data=table==='collector_messages'?[{id:'fixture-layout-message',sender_id:'fixture-sender',recipient_id:'fixture-owner',body:'A long collectible discussion that should wrap naturally on narrow screens without causing sideways scrolling or clipping.',read_at:now,created_at:now}]:table==='profiles'?[{id:'fixture-sender',username:'collector_layout_test'}]:[];
+   const q={then:(resolve,reject)=>Promise.resolve({data,error:null}).then(resolve,reject)};
+   for(const name of ['select','order','limit','in','eq','is','update','maybeSingle'])q[name]=()=>q;
+   return q;
+  };
+  await showInboxPage('fixture-sender');
+ });
+ await expect(page.locator('#inboxPage')).toHaveClass(/thread-open/);
+ await expect(page.locator('#conversationThread')).toContainText('A long collectible discussion');
+ const layout=await page.evaluate(()=>{
+  const thread=document.getElementById('conversationThread'),list=document.querySelector('#messageInbox .conversation-list');
+  const rect=thread.getBoundingClientRect();
+  return {width:innerWidth,left:rect.left,right:rect.right,listHidden:getComputedStyle(list).display==='none',pageOverflow:document.documentElement.scrollWidth-innerWidth};
+ });
+ expect(layout.listHidden).toBe(true);
+ expect(layout.left).toBeGreaterThanOrEqual(-2);
+ expect(layout.right).toBeLessThanOrEqual(layout.width+2);
+ expect(layout.pageOverflow).toBeLessThanOrEqual(2);
+});
