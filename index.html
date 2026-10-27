@@ -784,6 +784,18 @@ footer p,html[data-theme="dark"] footer p{color:#d6deea!important}
 #notificationBell:not([hidden]){display:inline-flex!important;align-items:center;justify-content:center;color:#d9b675!important;background:transparent!important;border:0!important;position:relative;min-width:42px;min-height:42px;font-size:23px}
 #notificationBell .unread-pill:not([hidden]){position:absolute;top:0;right:0}
 @media(max-width:700px){.header-actions{display:flex;align-items:center;gap:6px}#notificationBell:not([hidden]){display:inline-flex!important}}
+
+/* Balanced five-card mobile dock inspired by the approved preview. */
+@media(max-width:700px){
+ #mobileDock{display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr))!important;gap:5px!important;padding:9px 8px calc(9px + env(safe-area-inset-bottom,0px))!important;background:#142f39!important;align-items:stretch!important}
+ #mobileDock>button{display:flex!important;flex-direction:column!important;justify-content:center!important;align-items:center!important;gap:7px!important;min-width:0!important;min-height:67px!important;padding:9px 2px!important;border-radius:16px!important;background:#223b46!important;color:#e4e9ed!important;box-shadow:none!important;transform:none!important}
+ #mobileDock>button>span:first-child{display:flex!important;align-items:center!important;justify-content:center!important;font-size:27px!important;line-height:1!important;width:32px!important;height:32px!important;margin:0!important;transform:none!important}
+ #mobileDock>button>small{font-size:clamp(10px,2.6vw,13px)!important;line-height:1.15!important;color:inherit!important;font-weight:650!important}
+ #mobileDock>button[aria-current="page"]:not(.dock-sell){background:#2c4955!important;color:#e8c47a!important}
+ #mobileDock>button.dock-sell{background:#d1a548!important;color:#142333!important;border-radius:17px!important;box-shadow:0 3px 12px #0003!important}
+ #mobileDock>button.dock-sell>span:first-child{width:39px!important;height:39px!important;border-radius:50%!important;background:#e2bb6d!important;box-shadow:0 3px 7px #0003!important;font-size:31px!important}
+ #mobileDock #dockUnread:not([hidden]){position:absolute;top:7px;right:14%;}
+}
 </style>
 </head>
 <body>
