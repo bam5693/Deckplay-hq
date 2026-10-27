@@ -78,3 +78,9 @@ test('anonymous visitor cannot change another collector profile',async({page})=>
  const result=await page.evaluate(async()=>{const {data,error}=await supabaseClient.from('profiles').update({bio:'TEST ONLY unauthorized edit'}).eq('id','00000000-0000-0000-0000-000000000000').select('id');return {data,error:error?.message||null}});
  expect(result.data||[],'Signed-out visitor must not modify profiles').toHaveLength(0);
 });
+
+test('signed-out visitor cannot create a simulated checkout order',async({page})=>{
+ await page.goto('/',{waitUntil:'domcontentloaded'});
+ const result=await page.evaluate(async()=>{const {data,error}=await supabaseClient.from('demo_orders').insert({creator_id:'00000000-0000-0000-0000-000000000000',creator_role:'buyer',item_name:'TEST ONLY unauthorized demo order',item_price:25,shipping_price:5}).select('id');return {data,error:error?.message||null}});
+ expect(result.data||[],'Anonymous visitor must not create demo orders').toHaveLength(0);
+});
