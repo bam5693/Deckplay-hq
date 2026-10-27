@@ -39,3 +39,22 @@ test('staging search recovers after offline interruption',async({page,context})=
  await page.reload({waitUntil:'domcontentloaded'});
  await expect(page.locator('#search')).toBeVisible();
 });
+
+test('buyer cannot reopen a reserved listing after accepted offer',async({page,browser})=>{
+ test.setTimeout(120000);
+ const {seedListing,cleanup,marker}=require('../helpers/staging.cjs');
+ const title=marker();
+ await signIn(page,'SELLER');
+ const id=await seedListing(page,title);
+ const ctx=await browser.newContext({baseURL:process.env.DECKPLAY_STAGING_URL,httpCredentials:{username:'deckplay',password:process.env.DECKPLAY_STAGING_ACCESS_PASSWORD}});
+ const buyer=await ctx.newPage();
+ try{
+  await signIn(buyer,'BUYER');
+  const offer=await buyer.evaluate(async id=>{const {data,error}=await supabaseClient.rpc('submit_price_offer',{p_listing_id:id,p_amount:20});if(error)throw Error(error.message);return data},id);
+  await page.evaluate(async offer=>{const {error}=await supabaseClient.rpc('respond_price_offer',{p_offer_id:offer,p_action:'accept',p_amount:null});if(error)throw Error(error.message)},offer);
+  const result=await buyer.evaluate(async id=>{const {data,error}=await supabaseClient.rpc('submit_price_offer',{p_listing_id:id,p_amount:21});return {data,error:error?.message||null}},id);
+  expect(result.error,'Reserved listing must reject a new buyer offer').toBeTruthy();
+  const status=await page.evaluate(async id=>{const {data,error}=await supabaseClient.from('listings').select('status').eq('id',id).single();if(error)throw Error(error.message);return data.status},id);
+  expect(status).toBe('reserved');
+ }finally{try{await cleanup(page,title)}finally{await ctx.close()}}
+});
