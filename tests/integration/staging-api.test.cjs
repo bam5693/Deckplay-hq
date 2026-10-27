@@ -362,3 +362,18 @@ test('saved favorite sold alert is private and emitted only on transition to sol
  ok(api('seller','/rest/v1/listings?id=eq.'+listing.id,'PATCH',{description:run+' sold'}),204);
  assert.equal(ok(api('buyer','/rest/v1/collector_notifications?source_id=eq.'+listing.id)).length,1,'Editing a sold listing must not duplicate the alert');
 });
+
+test('favorite activity alert cannot be marked read by another collector',()=>{
+ const listing=createListing();activityFixtureIds.push(listing.id);
+ ok(api('buyer','/rest/v1/saved_listings','POST',{user_id:users.buyer,listing_id:listing.id}),201);
+ ok(api('seller','/rest/v1/listings?id=eq.'+listing.id,'PATCH',{price:19}),204);
+ const alerts=ok(api('buyer','/rest/v1/collector_notifications?source_id=eq.'+listing.id));
+ assert.equal(alerts.length,1);
+ const alert=alerts[0];
+ assert.equal(alert.kind,'favorite_price_drop');
+ const attempt=api('seller','/rest/v1/collector_notifications?id=eq.'+alert.id,'PATCH',{read_at:new Date().toISOString()},{Prefer:'return=representation'});
+ if(attempt.status<400)assert.deepEqual(attempt.data,[],'Seller must not update buyer activity alert');
+ assert.equal(ok(api('buyer','/rest/v1/collector_notifications?id=eq.'+alert.id))[0].read_at,null,'Foreign update must not mark buyer activity read');
+ ok(api('buyer','/rest/v1/collector_notifications?id=eq.'+alert.id,'PATCH',{read_at:new Date().toISOString()}),204);
+ assert(ok(api('buyer','/rest/v1/collector_notifications?id=eq.'+alert.id))[0].read_at,'Buyer can mark their own activity read');
+});
