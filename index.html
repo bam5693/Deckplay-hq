@@ -1587,8 +1587,30 @@ document.getElementById("composeForm").addEventListener("submit",async e=>{
 });
 
 
-let tradeTargetId=null,tradeRecipientId=null;
-document.getElementById("detailContent").addEventListener("click",async e=>{const button=e.target.closest("[data-trade-id]");if(!button)return;if(!currentUser){setAuthMode("signin");openModal("authModal");return}tradeTargetId=button.dataset.tradeId;tradeRecipientId=button.dataset.tradeSeller;const item=items.find(x=>String(x.databaseId)===tradeTargetId);document.getElementById("tradeTargetLabel").textContent="Trading for: "+(item?.n||"this listing");const select=document.getElementById("tradeOfferedListing");select.innerHTML='<option value="">Other item / describe below</option>';const {data,error}=await supabaseClient.from("listings").select("id,title").eq("seller_id",currentUser.id).eq("status","active").limit(100);if(error){toast("Could not load your listings: "+error.message)}else for(const row of data||[]){const option=document.createElement("option");option.value=row.id;option.textContent=row.title;select.appendChild(option)}document.getElementById("tradeOfferStatus").textContent="";openModal("tradeComposeModal")});
+let tradeTargetId=null,tradeRecipientId=null,tradePickerVersion=0;
+document.getElementById("detailContent").addEventListener("click",async e=>{
+ const button=e.target.closest("[data-trade-id]");if(!button)return;
+ if(!currentUser){setAuthMode("signin");openModal("authModal");return}
+ const requestId=++tradePickerVersion,userId=currentUser.id,targetId=button.dataset.tradeId;
+ tradeTargetId=targetId;tradeRecipientId=button.dataset.tradeSeller;
+ const item=items.find(x=>String(x.databaseId)===targetId);
+ document.getElementById("tradeTargetLabel").textContent="Trading for: "+(item?.n||"this listing");
+ const select=document.getElementById("tradeOfferedListing"),status=document.getElementById("tradeOfferStatus");
+ select.innerHTML='<option value="">Other item / describe below</option>';
+ status.textContent="Loading your listings…";select.disabled=true;openModal("tradeComposeModal");
+ const current=()=>requestId===tradePickerVersion&&currentUser?.id===userId&&tradeTargetId===targetId;
+ try{
+  const rows=[];
+  for(let offset=0;;offset+=100){
+   const {data,error}=await supabaseClient.from("listings").select("id,title").eq("seller_id",userId).eq("status","active").order("created_at",{ascending:false}).order("id").range(offset,offset+99);
+   if(!current())return;if(error)throw error;
+   rows.push(...(data||[]));if((data||[]).length<100)break;
+  }
+  const seen=new Set();for(const row of rows){if(seen.has(row.id))continue;seen.add(row.id);const option=document.createElement("option");option.value=row.id;option.textContent=row.title;select.appendChild(option)}
+  status.textContent="";
+ }catch(error){if(current())status.textContent="Could not load your listings: "+(error.message||"Please try again.")}
+ finally{if(current())select.disabled=false}
+});
 document.getElementById("tradeCashDirection").addEventListener("change",e=>{const field=document.getElementById("tradeCashAmount");field.disabled=e.target.value==="none";field.required=e.target.value!=="none";if(field.disabled)field.value="0";else if(Number(field.value)===0)field.value=""});
 document.getElementById("tradeComposeForm").addEventListener("submit",async e=>{e.preventDefault();const status=document.getElementById("tradeOfferStatus");if(!currentUser||!tradeTargetId)return;const note=document.getElementById("tradeOfferNote").value.trim();if(!note){status.textContent="Describe your offer.";return}const cashDirection=document.getElementById("tradeCashDirection").value,cashAmount=Number(document.getElementById("tradeCashAmount").value);if(!Number.isFinite(cashAmount)||cashAmount<0||cashAmount>100000||(cashDirection!=="none"&&cashAmount<=0)){status.textContent="Enter a valid cash amount.";return}status.textContent="Sending offer…";const {data:sentTrade,error}=await supabaseClient.from("trade_offers").insert({cash_amount:cashDirection==="none"?0:cashAmount,cash_direction:cashDirection,listing_id:tradeTargetId,sender_id:currentUser.id,recipient_id:tradeRecipientId,offered_listing_id:document.getElementById("tradeOfferedListing").value||null,offer_note:note}).select("id").single();if(error){status.textContent=error.message;return}e.target.reset();document.getElementById("tradeCashAmount").disabled=true;closeModal("tradeComposeModal");toast("Trade offer sent!");void sendCollectorEmailForSource(sentTrade?.id)});
 document.getElementById("myTrades").addEventListener("click",async()=>{closeAccountMenu();if(!currentUser)return;openModal("tradesModal");await loadTradeOffers()});
