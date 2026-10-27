@@ -7,7 +7,7 @@ module.exports = defineConfig({
   workers: 2,
   reporter: [['list'], ['html',{open:'never',outputFolder:'playwright-report/local'}], ['junit',{outputFile:'test-results/local-junit.xml'}]],
   testMatch: ['every-option.spec.js', 'selling-category-matrix.spec.js', 'checkout-simulation.spec.js', 'marketplace-safety.spec.js', 'flows.spec.js', 'wanted-matches.spec.js', 'smoke.spec.js', 'regressions.spec.js', 'auth-errors.spec.js'],
-  use: { baseURL: 'http://127.0.0.1:8765', trace: 'retain-on-failure', screenshot: 'only-on-failure' },
+  use: { baseURL: 'http://127.0.0.1:8765', trace: 'off', screenshot: 'off', video: 'off' },
   projects: [
     { name: 'local-mobile', use: devices['Pixel 7'] },
     { name: 'local-desktop', use: devices['Desktop Chrome'] }
