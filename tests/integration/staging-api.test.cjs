@@ -160,3 +160,32 @@ test('shared demo order creates, joins, advances and deletes without a real purc
   assert.equal(ok(api('buyer','/rest/v1/orders?item_title=eq.'+encodeURIComponent(run))).length,0);
  }finally{ok(api('seller','/rest/v1/rpc/delete_deckplay_demo_order','POST',{p_id:order.id}),204)}
 });
+
+test('another collector cannot mark private notifications as read',()=>{
+ const message=ok(api('buyer','/rest/v1/collector_messages','POST',{sender_id:users.buyer,recipient_id:users.seller,body:run},{Prefer:'return=representation'}),201)[0];
+ const notifications=ok(api('seller','/rest/v1/collector_notifications?source_id=eq.'+message.id));
+ assert.equal(notifications.length,1,'Message should create exactly one recipient notification');
+ const id=notifications[0].id;
+ assert.equal(notifications[0].read_at,null,'New notification must be unread');
+ const attempt=api('buyer','/rest/v1/collector_notifications?id=eq.'+id,'PATCH',{read_at:new Date().toISOString()},{Prefer:'return=representation'});
+ if(attempt.status<400)assert.deepEqual(attempt.data,[],'Foreign notification update must affect no rows');
+ const unchanged=ok(api('seller','/rest/v1/collector_notifications?id=eq.'+id));
+ assert.equal(unchanged.length,1);
+ assert.equal(unchanged[0].read_at,null,'Recipient notification must remain unread');
+ ok(api('seller','/rest/v1/collector_notifications?id=eq.'+id,'PATCH',{read_at:new Date().toISOString()}),204);
+ assert(ok(api('seller','/rest/v1/collector_notifications?id=eq.'+id))[0].read_at,'Recipient should be able to mark their notification read');
+});
+
+test('another collector cannot remove a buyer saved listing',()=>{
+ const listing=createListing();
+ const filter='?user_id=eq.'+users.buyer+'&listing_id=eq.'+listing.id;
+ try{
+  ok(api('buyer','/rest/v1/saved_listings','POST',{user_id:users.buyer,listing_id:listing.id}),201);
+  const attempt=api('seller','/rest/v1/saved_listings'+filter,'DELETE',undefined,{Prefer:'return=representation'});
+  if(attempt.status<400)assert.deepEqual(attempt.data,[],'Seller must not delete buyer favorite');
+  assert.equal(ok(api('buyer','/rest/v1/saved_listings'+filter)).length,1,'Buyer favorite must remain saved');
+ }finally{
+  ok(api('buyer','/rest/v1/saved_listings'+filter,'DELETE'),204);
+  ok(api('seller','/rest/v1/listings?id=eq.'+listing.id,'DELETE'),204);
+ }
+});
