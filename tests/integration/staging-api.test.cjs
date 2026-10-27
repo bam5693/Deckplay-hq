@@ -28,6 +28,24 @@ test('listing persists and is browseable/searchable; foreign ownership and missi
  assert(api('seller','/rest/v1/listings','POST',{seller_id:users.seller,title:run,price:10,category:'trading_cards',condition:'like_new',image_urls:[]}).status>=400);
  ok(api('seller','/rest/v1/listings?id=eq.'+l.id,'DELETE'),204);
 });
+test('another collector cannot delete the seller listing',()=>{
+ const listing=createListing();
+ try{
+  const attempt=api('buyer','/rest/v1/listings?id=eq.'+listing.id,'DELETE',undefined,{Prefer:'return=representation'});
+  assert([200,204].includes(attempt.status),'Unauthorized delete should be filtered by row-level security');
+  assert.equal(ok(api('seller','/rest/v1/listings?id=eq.'+listing.id)).length,1,'Seller listing must remain after unauthorized deletion');
+ }finally{ok(api('seller','/rest/v1/listings?id=eq.'+listing.id,'DELETE'),204)}
+});
+test('wanted posts reject impersonation and foreign edits',()=>{
+ const post=ok(api('buyer','/rest/v1/wanted_posts','POST',{user_id:users.buyer,title:run,game:'one_piece',budget:50,details:'TEST ONLY'},{Prefer:'return=representation'}),201)[0];
+ try{
+  const spoof=api('buyer','/rest/v1/wanted_posts','POST',{user_id:users.seller,title:run,game:'one_piece',budget:50,details:'TEST ONLY spoof'});
+  assert(spoof.status>=400,'A buyer must not publish a wanted post under the seller identity');
+  const edit=api('seller','/rest/v1/wanted_posts?id=eq.'+post.id,'PATCH',{details:'TEST ONLY foreign edit'},{Prefer:'return=representation'});
+  assert([200,204].includes(edit.status),'Foreign edits should affect no rows');
+  assert.equal(ok(api('buyer','/rest/v1/wanted_posts?id=eq.'+post.id))[0].details,'TEST ONLY','Original wanted post must be unchanged');
+ }finally{ok(api('buyer','/rest/v1/wanted_posts?id=eq.'+post.id,'DELETE'),204)}
+});
 test('favorites persist privately and can be removed',()=>{const l=createListing();ok(api('buyer','/rest/v1/saved_listings','POST',{user_id:users.buyer,listing_id:l.id}),201);assert.equal(ok(api('buyer','/rest/v1/saved_listings?listing_id=eq.'+l.id)).length,1);assert.equal(ok(api('seller','/rest/v1/saved_listings?listing_id=eq.'+l.id)).length,0);ok(api('buyer','/rest/v1/saved_listings?listing_id=eq.'+l.id,'DELETE'),204);ok(api('seller','/rest/v1/listings?id=eq.'+l.id,'DELETE'),204)});
 test('wanted posts publish, browse and enforce owner deletion',()=>{const p=ok(api('buyer','/rest/v1/wanted_posts','POST',{user_id:users.buyer,title:run,game:'one_piece',budget:50,details:'TEST ONLY'},{Prefer:'return=representation'}),201)[0];assert.equal(ok(api(null,'/rest/v1/wanted_posts?id=eq.'+p.id)).length,1);assert.equal(ok(api('seller','/rest/v1/wanted_posts?id=eq.'+p.id,'DELETE',undefined,{Prefer:'return=representation'})).length,0);ok(api('buyer','/rest/v1/wanted_posts?id=eq.'+p.id,'DELETE'),204)});
 test('private messages persist, notify recipient, and cannot be rewritten',()=>{
