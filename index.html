@@ -471,7 +471,7 @@ body.inbox-focus .inbox-page-heading{margin-top:12px}
 @media(max-width:600px){#inboxPage .chat-composer{bottom:calc(72px + env(safe-area-inset-bottom));margin-left:-3px;margin-right:-3px}}
 
 /* Hidden listing controls must stay hidden even when modal select styles set display. */
-#listingModal #condition[hidden],#listingModal label[for="condition"][hidden]{display:none!important}
+.dialog #condition[hidden],.dialog label[for="condition"][hidden]{display:none!important}
 /* Inbox visual system: consistent rows, previews and conversation spacing. */
 #inboxPage #messageInbox .conversation-list{max-height:none;overflow:visible;border:0}
 #inboxPage #messageInbox .conversation-contact{
