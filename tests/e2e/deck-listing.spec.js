@@ -12,7 +12,7 @@ test('complete deck listing shows deck details and requires a photo',async({page
  await page.locator('#price').fill('40');
  await expect(page.locator('#deckLeader')).toHaveValue('Black Yamato');
  await expect(page.locator('#deckCardCount')).toHaveValue('51');
- await expect(page.locator('#deckList')).toContainText('OP16-097');
+ await expect(page.locator('#deckList')).toHaveValue(/OP16-097/);
  await page.locator('#publishButton').click();
  await expect(page.locator('#sellModal')).toHaveClass(/open/);
  await expect(page.locator('#listingPhotoCount')).toContainText('0 of 5');
