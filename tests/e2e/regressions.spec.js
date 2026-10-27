@@ -132,3 +132,31 @@ test('reading one inbox conversation leaves another conversation unread',async({
  await expect(page.locator('[data-conversation-id="fixture-bob"] .conversation-unread')).toContainText('1 new');
  expect(await page.evaluate(()=>window.fixtureReadUpdates.some(ids=>ids.length===1&&ids[0]==='fixture-a'))).toBe(true);
 });
+
+test('an older inbox refresh cannot replace a newer conversation',async({page})=>{
+ await page.goto('/');
+ await page.evaluate(async()=>{
+  await supabaseClient.auth.getSession();
+  currentUser={id:'fixture-owner'};
+  const now=new Date().toISOString();
+  let calls=0,release;
+  window.releaseOldInbox=()=>release?.();
+  const oldGate=new Promise(resolve=>{release=resolve});
+  supabaseClient.from=table=>{
+   const isMessages=table==='collector_messages';
+   const data=isMessages?[{id:'fixture-old',sender_id:'fixture-alice',recipient_id:'fixture-owner',body:'Alice thread',read_at:now,created_at:now},{id:'fixture-new',sender_id:'fixture-bob',recipient_id:'fixture-owner',body:'Bob thread',read_at:now,created_at:now}]:table==='profiles'?[{id:'fixture-alice',username:'alice'},{id:'fixture-bob',username:'bob'}]:[];
+   const thisCall=isMessages?++calls:0;
+   const q={then:(resolve,reject)=>(thisCall===2?oldGate:Promise.resolve()).then(()=>({data,error:null})).then(resolve,reject)};
+   for(const name of ['select','order','limit','in','eq','is','update','maybeSingle'])q[name]=()=>q;
+   return q;
+  };
+  await showInboxPage('fixture-alice');
+  window.oldInboxRefresh=loadInbox('fixture-alice');
+ });
+ await page.evaluate(()=>loadInbox('fixture-bob'));
+ await expect(page.locator('#conversationThread')).toContainText('Bob thread');
+ await page.evaluate(async()=>{window.releaseOldInbox();await window.oldInboxRefresh});
+ await expect(page.locator('#conversationThread')).toContainText('Bob thread');
+ await expect(page.locator('[data-conversation-id="fixture-bob"]')).toHaveClass(/active/);
+ await expect(page.locator('#conversationThread')).not.toContainText('Alice thread');
+});
