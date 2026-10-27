@@ -52,3 +52,10 @@ Escalation format:
 - **Decision needed:** only if product preference is ambiguous
 
 Never silently redesign a major feature. The owner is corporate; the development lead reviews proposed changes. Keep staged changes reversible.
+
+## Hands-on persona execution (October 27)
+The private staging push workflow runs Charles's API checks and Kyle's general browser journeys. Existing deck and trade journeys now assign Tanner and Jayden explicit roles rather than duplicating tests. Desktop: Tanner sells sports cards and counters trades while Jayden offers TCG collateral; Jayden publishes a complete One Piece deck for Tanner to inspect. Mobile swaps the lead roles. Both use the existing disposable SELLER/BUYER accounts, exact UUID fixture markers, and cleanup RPC. They are four test personas sharing two isolated accounts, not four independent browser agents or four new user accounts.
+
+Tanner specializes in sports cards, memorabilia, condition, grading, photos, pricing and collectibles. Jayden is a TCG player/deck builder, video-game fan and collector focused on Pokemon, One Piece, playable singles, decklists, game collectibles and trading. Browser annotations and test steps identify the acting persona. The AI reviewer prompts carry those specialties; the separate manual AI workflow must deploy and verify prompt changes before reporting them as live inference. Persona browser results and AI reviewer responses are separate evidence.
+
+Leads report UX concerns, suspicious behavior and product-policy questions to the user (manager) and ChatGPT (supervisor). Test scripts assert existing behavior; they do not make product decisions or activate payments/shipping.

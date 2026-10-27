@@ -18,7 +18,9 @@ test('complete deck listing shows deck details and requires a photo',async({page
  await expect(page.locator('#listingPhotoCount')).toContainText('0 of 5');
 });
 
-test('seller publishes a complete deck and a separate buyer sees its full decklist',async({page,browser})=>{
+test('Jayden and Tanner publish and inspect a complete deck with a separate buyer',async({page,browser},testInfo)=>{
+ const sellerLead=testInfo.project.name.endsWith('mobile')?'Tanner':'Jayden',buyerLead=sellerLead==='Jayden'?'Tanner':'Jayden';
+ testInfo.annotations.push({type:'persona',description:sellerLead+' publishes a One Piece deck with photo and decklist; '+buyerLead+' searches and inspects it. Deterministic hands-on browser simulation.'});
  test.setTimeout(150000);
  const {signIn,cleanup,marker}=require('../helpers/staging.cjs');
  const title=marker();

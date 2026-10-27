@@ -32,8 +32,8 @@ async function menu(page,id){
  await expect(action).toBeVisible({timeout:10000});
  await action.click({timeout:10000});
 }
-async function seedListing(page,title){
- return page.evaluate(async title=>{const {data,error}=await supabaseClient.from('listings').insert({seller_id:currentUser.id,title,price:25,category:'trading_cards',condition:'like_new',image_urls:['https://prrrzeelltmyugssqnzk.supabase.co/storage/v1/object/public/listing-images/test.jpg'],accepts_trades:true,accepts_price_offers:true,tcg_game:'one_piece'}).select('id').single();if(error)throw Error(error.message);return data.id},title);
+async function seedListing(page,title,details={}){
+ return page.evaluate(async ({title,details})=>{const {data,error}=await supabaseClient.from('listings').insert({...details,seller_id:currentUser.id,title,price:25,category:'trading_cards',condition:'like_new',image_urls:['https://prrrzeelltmyugssqnzk.supabase.co/storage/v1/object/public/listing-images/test.jpg'],accepts_trades:true,accepts_price_offers:true,tcg_game:details.tcg_game||'one_piece'}).select('id').single();if(error)throw Error(error.message);return data.id},{title,details});
 }
 async function cleanup(page,title){
  await page.evaluate(async title=>{const {data,error}=await supabaseClient.from('listings').select('image_urls').eq('title',title).eq('seller_id',currentUser.id);if(error)throw Error(error.message);const prefix='https://prrrzeelltmyugssqnzk.supabase.co/storage/v1/object/public/listing-images/';const paths=(data||[]).flatMap(x=>x.image_urls||[]).filter(x=>x.startsWith(prefix+currentUser.id+'/')).map(x=>x.slice(prefix.length));if(paths.length){const {error}=await supabaseClient.storage.from('listing-images').remove(paths);if(error)throw Error(error.message)}},title);

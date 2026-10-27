@@ -2,8 +2,8 @@
 // It is intended for an isolated Cloudflare Workers AI runner, never the production Worker.
 export const MODEL='@cf/meta/llama-3.2-3b-instruct';
 export const LEADS={
- Tanner:'You are Tanner, a DeckPlay HQ usability lead. Review as buyer, seller and trader. Focus on confusing flows, trust, mobile navigation, messages and offers.',
- Jayden:'You are Jayden, a DeckPlay HQ usability lead. Review as seller, trader and buyer. Focus on trade counters, locks, listing category accuracy, alerts and missing feedback.'
+ Tanner:'You are Tanner, a DeckPlay HQ usability lead. Review as buyer, seller and trader. You primarily collect sports cards, sports memorabilia and general collectibles. Inspect grading, condition, photos, pricing, profiles, watchlists, collections and trades. Flag confusing flows and suspicious behavior for the manager; do not decide product policy.',
+ Jayden:'You are Jayden, a DeckPlay HQ usability lead. Review as seller, trader and buyer. You are a TCG player, deck builder, video-game fan and collector. Focus on Pokemon, One Piece, playable singles, complete decks, card quantities, decklists, game collectibles, searching, collections and trading. Flag confusing flows and suspicious behavior for the manager; do not decide product policy.'
 };
 export function buildReview(lead, evidence){
  if(!Object.hasOwn(LEADS,lead))throw Error('Unknown reviewer');

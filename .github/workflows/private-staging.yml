@@ -58,7 +58,7 @@ jobs:
         if: ${{ !cancelled() }}
         run: npx playwright install chromium --only-shell
         timeout-minutes: 8
-      - name: Kyle — verify deployed mobile and desktop buyer-seller journeys
+      - name: Kyle, Tanner and Jayden — deployed buyer/seller/trader journeys
         if: ${{ !cancelled() && env.DECKPLAY_STAGING_URL != '' }}
         run: npx playwright test --config=playwright.staging.config.js
       - name: Save durable staging feature result
@@ -78,8 +78,8 @@ jobs:
       - name: Summarize feature bot result
         if: always()
         run: |
-          echo '## DeckPlay test department — Charles and Kyle' >> "$GITHUB_STEP_SUMMARY"
-          echo 'Result: ${{ job.status }}. Charles checks API transactions and authorization; Kyle checks deployed mobile/desktop browser journeys. Tanner and Jayden are separate rotating reviewer tests, not yet connected to independent AI inference. Reports include traces and screenshots where configured. Payment/shipping remain previews.' >> "$GITHUB_STEP_SUMMARY"
+          echo '## DeckPlay test department — Charles, Kyle, Tanner and Jayden' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Result: ${{ job.status }}. Charles checks API transactions and authorization; Kyle checks deployed mobile/desktop browser journeys. Tanner and Jayden rotate seller/buyer roles in complete-deck and sports/TCG trade browser simulations using the same two disposable accounts. These are deterministic actions; AI inference is verified separately by the manual lead-review workflow. Reports contain persona annotations and named steps. Payment/shipping remain previews.' >> "$GITHUB_STEP_SUMMARY"
 
   report-failure:
     name: Report staging failures without stopping tests
