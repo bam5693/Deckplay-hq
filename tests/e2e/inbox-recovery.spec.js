@@ -215,3 +215,29 @@ test('a delayed unread message count cannot replace a newer badge count',async({
   await expect(page.locator('#'+id)).toHaveText('2');await expect(page.locator('#'+id)).toHaveJSProperty('hidden',false);
  }
 });
+
+test('activity bell excludes negotiations while retaining favorite alerts and a separate unread count',async({page})=>{
+ await ready(page);
+ await page.evaluate(async()=>{
+  currentUser={id:'fixture-owner'};syncInboxDraftUser();
+  const now=new Date().toISOString();
+  const alerts=[
+   {id:'a1',kind:'message',actor_id:'buyer-a',source_id:null,created_at:now,read_at:null},
+   {id:'a2',kind:'price_offer',actor_id:'buyer-a',source_id:null,created_at:now,read_at:null},
+   {id:'a3',kind:'trade_offer',actor_id:'buyer-b',source_id:null,created_at:now,read_at:null},
+   {id:'a4',kind:'favorite_price_drop',actor_id:null,source_id:'saved-1',created_at:now,read_at:null}
+  ];
+  supabaseClient.from=table=>{
+   const q={then:(resolve,reject)=>Promise.resolve(table==='collector_notifications'?{data:alerts,count:1,error:null}:table==='listings'?{data:[{id:'saved-1',title:'Saved collectible'}],error:null}:{data:[],error:null}).then(resolve,reject)};
+   for(const key of ['select','eq','is','in','order','limit'])q[key]=()=>q;
+   return q;
+  };
+  await Promise.all([loadNotificationCenter(),refreshNotificationCount()]);
+ });
+ await expect(page.locator('#notificationList')).toContainText('Favorite price dropped');
+ await expect(page.locator('#notificationList')).toContainText('Saved collectible');
+ await expect(page.locator('#notificationList')).not.toContainText('New message');
+ await expect(page.locator('#notificationList')).not.toContainText('New price offer');
+ await expect(page.locator('#notificationList')).not.toContainText('New trade offer');
+ await expect(page.locator('#notificationBadge')).toHaveText('1');
+});
