@@ -161,6 +161,24 @@ test('blocked collectors cannot initiate trades, and unblocking restores trading
  assert(accepted.id,'Unblocked collectors should be able to trade again');
 });
 
+test('blocking after trade proposal prevents acceptance without reserving items',()=>{
+ const target=createListing(),offered=createListing('buyer');
+ const trade=ok(api('buyer','/rest/v1/trade_offers','POST',{listing_id:target.id,offered_listing_id:offered.id,sender_id:users.buyer,recipient_id:users.seller,offer_note:run},{Prefer:'return=representation'}),201)[0];
+ const blockFilter='?blocker_id=eq.'+users.seller+'&blocked_id=eq.'+users.buyer;
+ ok(api('seller','/rest/v1/user_blocks','POST',{blocker_id:users.seller,blocked_id:users.buyer}),201);
+ try{
+  const attempt=api('seller','/rest/v1/rpc/respond_trade_offer','POST',{p_offer:trade.id,p_action:'accepted'});
+  assert(attempt.status>=400,'A pending trade must not be accepted after a collector blocks the other');
+  assert.equal(ok(api('seller','/rest/v1/trade_offers?id=eq.'+trade.id))[0].status,'pending','Rejected acceptance must leave the trade pending');
+  for(const [role,id] of [['seller',target.id],['buyer',offered.id]]){
+   assert.equal(ok(api(role,'/rest/v1/listings?id=eq.'+id))[0].status,'active','Blocked trade must not reserve either item');
+  }
+ }finally{ok(api('seller','/rest/v1/user_blocks'+blockFilter,'DELETE'),204)}
+ ok(api('seller','/rest/v1/rpc/respond_trade_offer','POST',{p_offer:trade.id,p_action:'accepted'}),204);
+ assert.equal(ok(api('seller','/rest/v1/listings?id=eq.'+target.id))[0].status,'reserved');
+ assert.equal(ok(api('buyer','/rest/v1/listings?id=eq.'+offered.id))[0].status,'reserved');
+});
+
 test('reports are private to reporter and cannot impersonate another reporter',()=>{
  const report=ok(api('buyer','/rest/v1/user_reports','POST',{reporter_id:users.buyer,reported_id:users.seller,reason:'other',details:run},{Prefer:'return=representation'}),201)[0];
  assert.equal(ok(api('seller','/rest/v1/user_reports?id=eq.'+report.id)).length,0);
