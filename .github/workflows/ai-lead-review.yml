@@ -28,6 +28,20 @@ jobs:
           fi
           npx --yes wrangler@4 deploy --config wrangler.ai-reviewer.jsonc
           printf '%s' "$REVIEWER_TOKEN" | npx --yes wrangler@4 secret put REVIEWER_TOKEN --config wrangler.ai-reviewer.jsonc
+      - name: Verify both AI leads actually respond
+        env:
+          REVIEWER_TOKEN: ${{ secrets.DECKPLAY_AI_REVIEWER_TOKEN }}
+        run: |
+          node --input-type=module <<'NODE'
+          const url='https://deckplay-hq-ai-reviewer-staging.cstivers56.workers.dev';
+          const evidence='Synthetic staging scenario: a buyer opens a card listing, sends an offer, and the seller accepts. After refreshing the mobile inbox, the buyer still sees the offer as pending. This is fictional test evidence, not a real user transaction.';
+          for(const lead of ['Tanner','Jayden']){
+            const res=await fetch(url,{method:'POST',headers:{Authorization:'Bearer '+process.env.REVIEWER_TOKEN,'Content-Type':'application/json'},body:JSON.stringify({lead,evidence})});
+            const body=await res.json();
+            if(!res.ok||body.lead!==lead||typeof body.report!=='string'||!body.report.trim())throw Error(lead+' did not return a real AI report (HTTP '+res.status+')');
+            console.log(lead+' returned a live AI review ('+body.report.length+' characters)');
+          }
+          NODE
       - name: Explain verification boundary
         if: always()
         run: |
