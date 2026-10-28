@@ -1,0 +1,43 @@
+name: Verify isolated DeckPlay staging from main launcher
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    environment: deckplay-staging
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: test/staging-reporting
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Build expected staging assets
+        env:
+          DECKPLAY_STAGING_SUPABASE_URL: https://prrrzeelltmyugssqnzk.supabase.co
+          DECKPLAY_STAGING_SUPABASE_KEY: sb_publishable_0omvNnv_ZOvXrZ-LHPMyIQ_a9zxD-yh
+        run: node scripts/build-staging.cjs
+      - name: Compare deployed staging homepage with branch
+        env:
+          DECKPLAY_STAGING_ACCESS_PASSWORD: ${{ secrets.DECKPLAY_STAGING_ACCESS_PASSWORD }}
+        run: |
+          node - <<'NODE'
+          const fs=require('node:fs'),crypto=require('node:crypto');
+          const expected=fs.readFileSync('dist-staging/index.html');
+          const url='https://deckplay-hq-staging.cstivers56.workers.dev/';
+          const password=process.env.DECKPLAY_STAGING_ACCESS_PASSWORD;
+          const headers=password?{Authorization:'Basic '+Buffer.from('deckplay:'+password).toString('base64')}:{};
+          (async()=>{
+            const response=await fetch(url,{headers,redirect:'error'});
+            if(!response.ok)throw Error('Staging returned HTTP '+response.status);
+            const actual=Buffer.from(await response.arrayBuffer());
+            const sha=b=>crypto.createHash('sha256').update(b).digest('hex');
+            if(sha(actual)!==sha(expected))throw Error('Deployed staging homepage differs from current staging branch');
+            console.log('PASS: deployed staging homepage matches staging branch');
+          })().catch(e=>{console.error(e.message);process.exitCode=1});
+          NODE
