@@ -51,6 +51,8 @@ jobs:
       - run: npm ci
       - name: Verify fixture cleanup safety before real staging transactions
         run: node --test tests/security/fixture-cleanup.test.cjs
+      - name: Validate private photo image and endpoint boundaries
+        run: node --test tests/security/private-photos.test.mjs
       - name: Cache Playwright browser
         uses: actions/cache@v4
         with:
@@ -75,7 +77,7 @@ jobs:
         run: node scripts/report-staging-results.cjs
       - name: Verify local inbox, account privacy and listing regressions on desktop and mobile
         if: ${{ !cancelled() }}
-        run: npx playwright test --config=playwright.local.config.js inbox-request-order.spec.js inbox-recovery.spec.js trade-picker.spec.js inbox-trade-details.spec.js collection-sharing.spec.js marketplace-filter-boundaries.spec.js account-boundaries.spec.js listing-description.spec.js discovery-profiles.spec.js tcg-sets.spec.js listing-publication.spec.js moderation-security.spec.js moderator-access.spec.js
+        run: npx playwright test --config=playwright.local.config.js inbox-request-order.spec.js inbox-recovery.spec.js private-message-photos.spec.js trade-picker.spec.js inbox-trade-details.spec.js collection-sharing.spec.js marketplace-filter-boundaries.spec.js account-boundaries.spec.js listing-description.spec.js discovery-profiles.spec.js tcg-sets.spec.js listing-publication.spec.js moderation-security.spec.js moderator-access.spec.js
       - uses: actions/upload-artifact@v4
         if: always()
         with:

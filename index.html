@@ -847,6 +847,8 @@ footer p,html[data-theme="dark"] footer p{color:#d6deea!important}
 .trade-bundle-items{padding:0;list-style:none}.trade-bundle-items li{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid #dde4df}.trade-bundle-items button{min-height:44px}.trade-snapshot-item{padding:10px 0;border-bottom:1px solid #dde4df;overflow-wrap:anywhere}.trade-snapshot-item img{width:64px;height:80px;object-fit:cover;border-radius:6px}.trade-snapshot-item strong,.trade-snapshot-item small{display:block}.chat-trade-items>div{min-width:0}.trade-snapshot-item summary{min-height:30px}
 
 .listing-cloud-draft{margin:14px 0;padding:12px;border:1px solid #d7dfdb;border-radius:12px}.listing-cloud-draft summary{cursor:pointer;font-weight:700;min-height:32px}.listing-draft-actions{display:flex;flex-wrap:wrap;gap:8px}.listing-draft-actions button{min-height:44px}
+
+.chat-photo-tools{display:flex;flex-wrap:wrap;gap:8px;width:100%;align-items:center}.chat-photo-tools small{flex:1;min-width:140px}.chat-photo-drafts{display:flex;gap:10px;width:100%;overflow:auto}.chat-photo-drafts:empty{display:none}.chat-photo-drafts>span{position:relative;flex-shrink:0}.chat-photo-drafts img{width:84px;height:84px;object-fit:cover;border-radius:8px}.chat-photo-drafts button{position:absolute;top:0;right:0;min-width:44px;background:#172033e6;color:white}.chat-private-photos{display:flex;flex-wrap:wrap;gap:8px;max-width:100%}.chat-private-photos img{display:block;max-width:180px;max-height:180px;object-fit:contain;border-radius:8px}.chat-private-photos span{font-size:12px;width:100%}
 </style>
 </head>
 <body>
@@ -1734,8 +1736,8 @@ document.getElementById("messageInbox").addEventListener("click",async e=>{const
 // Drafts stay in memory, scoped to the signed-in collector and conversation.
 const inboxDrafts=new Map(),inboxSending=new Set(),messageSendAttempts=new Map();
 async function sendCollectorMessageOnce(payload){
- const key=JSON.stringify([payload.sender_id,payload.recipient_id,payload.listing_id||null,payload.body]);
- const id=messageSendAttempts.get(key)||crypto.randomUUID();messageSendAttempts.set(key,id);
+ const key=JSON.stringify([payload.sender_id,payload.recipient_id,payload.listing_id||null,payload.body,payload.attachment_ids||[]]);
+ const id=payload.id||messageSendAttempts.get(key)||crypto.randomUUID();messageSendAttempts.set(key,id);
  let failure;
  try{
   const result=await supabaseClient.from("collector_messages").insert({...payload,id}).select("id").single();
@@ -1746,9 +1748,9 @@ async function sendCollectorMessageOnce(payload){
  // The server may have committed before the network response was lost.
  // A retry reuses the primary key; confirm the exact sender, thread and body.
  try{
-  const found=await supabaseClient.from("collector_messages").select("id,sender_id,recipient_id,listing_id,body").eq("id",id).eq("sender_id",payload.sender_id).maybeSingle();
+  const found=await supabaseClient.from("collector_messages").select("id,sender_id,recipient_id,listing_id,body,attachment_ids").eq("id",id).eq("sender_id",payload.sender_id).maybeSingle();
   const row=found.data;
-  if(!found.error&&row?.id===id&&row.sender_id===payload.sender_id&&row.recipient_id===payload.recipient_id&&(row.listing_id||null)===(payload.listing_id||null)&&row.body===payload.body){if(messageSendAttempts.get(key)===id)messageSendAttempts.delete(key);return {data:{id},error:null}}
+  if(!found.error&&row?.id===id&&row.sender_id===payload.sender_id&&row.recipient_id===payload.recipient_id&&(row.listing_id||null)===(payload.listing_id||null)&&row.body===payload.body&&JSON.stringify(row.attachment_ids||[])===JSON.stringify(payload.attachment_ids||[])){if(messageSendAttempts.get(key)===id)messageSendAttempts.delete(key);return {data:{id},error:null}}
  }catch{/* Preserve the original failure and the same retry reference. */}
  throw failure;
 }
@@ -1758,7 +1760,7 @@ function syncInboxDraftUser(){
  if(inboxDraftUser!==id){
   ++messageAccountVersion;
   ++listingAccountVersion;++cloudDraftRequestVersion;cloudDraftBusy=false;cloudDraftControls(false);document.getElementById("listingCloudDraftStatus").textContent="";document.getElementById("listingForm").reset();document.getElementById("listingType").dispatchEvent(new Event("change"));listingSelectedPhotos=[];renderListingPhotos();syncCategoryFields();syncGradedCondition();document.getElementById("deckFields").hidden=true;document.getElementById("listingStatus").textContent="";closeModal("sellModal");
-  inboxDrafts.clear();messageSendAttempts.clear();inboxConversationFilter={search:"",unread:false};inboxDraftUser=id;tradeBundleSelection=[];document.getElementById("tradeBundleItems").replaceChildren();document.getElementById("tradeBundleCount").textContent="";
+  window.privateMessagePhotos?.reset();inboxDrafts.clear();messageSendAttempts.clear();inboxConversationFilter={search:"",unread:false};inboxDraftUser=id;tradeBundleSelection=[];document.getElementById("tradeBundleItems").replaceChildren();document.getElementById("tradeBundleCount").textContent="";
   ++blockedCollectorsLoadVersion;blockedCollectorIds.clear();document.getElementById("blockedUsersList").replaceChildren();document.getElementById("settingsBlockCount").textContent="";
   ++reportDialogVersion;reportTargetUser=null;reportTargetListing=null;reportTargetBlocked=false;document.getElementById("reportForm").reset();document.getElementById("reportStatus").textContent="";document.querySelector('#reportForm button[type="submit"]').disabled=false;closeModal("reportModal");
   ++notificationSettingsVersion;notificationSettingsOwner=null;notificationSettingsLoading=false;notificationPreferenceControls(true);document.querySelectorAll("[data-notify-pref]").forEach(input=>input.checked=false);document.getElementById("notificationSettingsStatus").textContent="";++inboxLoadVersion;++profileLoadVersion;++priceOffersLoadVersion;++tradeOffersLoadVersion;++unreadCountLoadVersion;++profileEditorLoadVersion;selectedInboxCollector=null;
@@ -1822,7 +1824,7 @@ async function loadInbox(targetCollectorId=null){
  const requestedTarget=targetCollectorId||(document.getElementById("inboxPage").classList.contains("thread-open")?previous:null);
  el.textContent="Loading inbox…";
  const [mr,pr,tr,hr,cr]=await Promise.all([
- supabaseClient.from("collector_messages").select("id,sender_id,recipient_id,body,created_at,read_at").order("created_at",{ascending:false}).limit(500),
+ supabaseClient.from("collector_messages").select("id,sender_id,recipient_id,body,created_at,read_at,attachment_ids").order("created_at",{ascending:false}).limit(500),
  supabaseClient.from("price_offers").select("id,buyer_id,seller_id,amount,status,last_actor_id,updated_at").order("updated_at",{ascending:false}).limit(200),
  supabaseClient.from("trade_offers").select("id,listing_id,offered_listing_id,offered_listing_ids,item_snapshots,initial_terms,sender_id,recipient_id,status,offer_note,cash_amount,cash_direction,created_at").order("created_at",{ascending:false}).limit(200),
  supabaseClient.from("price_offer_history").select("id,offer_id,buyer_id,seller_id,actor_id,action,amount,created_at").order("created_at",{ascending:false}).limit(700),
@@ -1874,9 +1876,10 @@ if(tradeById.size){
  document.getElementById("inboxPage").classList.add("thread-open");
  el.querySelectorAll("[data-conversation-id]").forEach(b=>b.classList.toggle("active",b.dataset.conversationId===id));
  const person=names.get(id),thread=document.getElementById("conversationThread");
- thread.innerHTML=`<div class="chat-person"><span class="chat-avatar">${escapeHtml((person?.username||"C")[0].toUpperCase())}</span><div><h3>@${escapeHtml(person?.username||"collector")}</h3><p class="muted">${entries.length} conversation updates</p></div></div>${entries.some(x=>(x.type==="price"&&x.currentOffer?.status==="accepted")||(x.type==="trade"&&x.status==="accepted"))?`<details class="chat-deal-panel"><summary>✓ Accepted deal <span>View progress & details</span></summary><div data-deal-details>Open to view transaction progress.</div><details class="deal-guidance"><summary>Exchange tips <span>Safety & shipping</span></summary><div class="deal-guidance-body"><p>DeckPlay does not process payments, issue shipping labels, or verify delivery yet.</p><ol><li>Agree on the item, price and shipping method.</li><li>Share tracking details in messages.</li><li>Confirm completion only when your part is finished.</li></ol><p>Never share passwords or verification codes.</p></div></details></details>`:""}<div class="conversation-bubbles" role="log" aria-label="Conversation history">${entries.map(x=>x.type==="message"?`<div class="message-bubble chat-text ${x.sender_id===currentUser.id?"mine":"theirs"}"><p>${escapeHtml(x.body)}</p><small>${new Date(x.date).toLocaleString([], {hour:"numeric",minute:"2-digit"})}</small></div>`:x.type==="price"?`<div class="message-bubble inbox-offer chat-event ${x.actor_id===currentUser.id?"inbox-mine":""}"><strong>${x.action==="offered"?"💵 Offer made":x.action==="countered"?"↩️ Counteroffer":x.action==="accepted"?"✓ Offer accepted":x.action==="declined"?"✕ Offer declined":x.action==="withdrawn"?"↩ Offer withdrawn":"💵 Offer update"} · ${Number(x.amount).toFixed(2)}</strong><p>${x.actor_id===currentUser.id?"You":"@"+escapeHtml(person?.username||"collector")} · ${escapeHtml(x.action)}</p><small>${new Date(x.date).toLocaleString()}</small>${x.isLatest&&["pending","countered"].includes(x.currentOffer.status)?`<p class="price-offer-actions">${x.currentOffer.last_actor_id!==currentUser.id?`<button type="button" class="primary" data-inbox-price="accept" data-offer="${escapeHtml(x.offer_id)}">Accept</button><button type="button" class="ghost" data-inbox-price="counter" data-offer="${escapeHtml(x.offer_id)}">Counter</button><button type="button" class="ghost" data-inbox-price="decline" data-offer="${escapeHtml(x.offer_id)}">Decline</button>`:`<span class="muted">Waiting for their reply</span>`}</p>`:""}</div>`:x.type==="trade_counter"?inboxTradeCounterHtml(x,userId):inboxTradeHtml(x,tradeListings,cr.data||[],cr.error)).join("")}</div><form class="chat-composer" data-chat-recipient="${escapeHtml(id)}"><label class="sr-only" for="chatInput">Message</label><textarea id="chatInput" name="message" rows="1" maxlength="2000" required placeholder="Message @${escapeHtml(person?.username||"collector")}…" aria-label="Write a message"></textarea><button class="primary" type="submit" aria-label="Send message" disabled>Send ➤</button><span class="chat-length-hint" aria-live="polite" hidden></span><p class="chat-send-status" aria-live="polite"></p></form>`;
+ thread.innerHTML=`<div class="chat-person"><span class="chat-avatar">${escapeHtml((person?.username||"C")[0].toUpperCase())}</span><div><h3>@${escapeHtml(person?.username||"collector")}</h3><p class="muted">${entries.length} conversation updates</p></div></div>${entries.some(x=>(x.type==="price"&&x.currentOffer?.status==="accepted")||(x.type==="trade"&&x.status==="accepted"))?`<details class="chat-deal-panel"><summary>✓ Accepted deal <span>View progress & details</span></summary><div data-deal-details>Open to view transaction progress.</div><details class="deal-guidance"><summary>Exchange tips <span>Safety & shipping</span></summary><div class="deal-guidance-body"><p>DeckPlay does not process payments, issue shipping labels, or verify delivery yet.</p><ol><li>Agree on the item, price and shipping method.</li><li>Share tracking details in messages.</li><li>Confirm completion only when your part is finished.</li></ol><p>Never share passwords or verification codes.</p></div></details></details>`:""}<div class="conversation-bubbles" role="log" aria-label="Conversation history">${entries.map(x=>x.type==="message"?`<div class="message-bubble chat-text ${x.sender_id===currentUser.id?"mine":"theirs"}"><p>${escapeHtml(x.body)}</p>${window.privateMessagePhotos?.messageHtml(x)||""}<small>${new Date(x.date).toLocaleString([], {hour:"numeric",minute:"2-digit"})}</small></div>`:x.type==="price"?`<div class="message-bubble inbox-offer chat-event ${x.actor_id===currentUser.id?"inbox-mine":""}"><strong>${x.action==="offered"?"💵 Offer made":x.action==="countered"?"↩️ Counteroffer":x.action==="accepted"?"✓ Offer accepted":x.action==="declined"?"✕ Offer declined":x.action==="withdrawn"?"↩ Offer withdrawn":"💵 Offer update"} · ${Number(x.amount).toFixed(2)}</strong><p>${x.actor_id===currentUser.id?"You":"@"+escapeHtml(person?.username||"collector")} · ${escapeHtml(x.action)}</p><small>${new Date(x.date).toLocaleString()}</small>${x.isLatest&&["pending","countered"].includes(x.currentOffer.status)?`<p class="price-offer-actions">${x.currentOffer.last_actor_id!==currentUser.id?`<button type="button" class="primary" data-inbox-price="accept" data-offer="${escapeHtml(x.offer_id)}">Accept</button><button type="button" class="ghost" data-inbox-price="counter" data-offer="${escapeHtml(x.offer_id)}">Counter</button><button type="button" class="ghost" data-inbox-price="decline" data-offer="${escapeHtml(x.offer_id)}">Decline</button>`:`<span class="muted">Waiting for their reply</span>`}</p>`:""}</div>`:x.type==="trade_counter"?inboxTradeCounterHtml(x,userId):inboxTradeHtml(x,tradeListings,cr.data||[],cr.error)).join("")}</div><form class="chat-composer" data-chat-recipient="${escapeHtml(id)}"><label class="sr-only" for="chatInput">Message</label><textarea id="chatInput" name="message" rows="1" maxlength="2000" required placeholder="Message @${escapeHtml(person?.username||"collector")}…" aria-label="Write a message"></textarea><button class="primary" type="submit" aria-label="Send message" disabled>Send ➤</button><span class="chat-length-hint" aria-live="polite" hidden></span><p class="chat-send-status" aria-live="polite"></p></form>`;
  const composer=thread.querySelector(".chat-composer"),input=composer.querySelector("textarea"),sending=inboxSending.has(userId+":"+id);
  input.value=inboxDrafts.get(id)||"";resizeInboxComposer(input);updateInboxLengthHint(input);input.readOnly=sending;composer.querySelector("button").disabled=sending||!input.value.trim();
+ window.privateMessagePhotos?.mount(composer);
  thread.querySelector(".conversation-bubbles").scrollTop=thread.querySelector(".conversation-bubbles").scrollHeight;
  const panel=thread.querySelector('.chat-deal-panel');
  panel?.addEventListener('toggle',async()=>{if(!panel.open||panel.dataset.loaded)return;panel.dataset.loaded='true';const content=panel.querySelector('[data-deal-details]');try{const html=await dealProgressHtml(entries);if(content.isConnected)content.innerHTML=html}catch{if(content.isConnected)content.textContent='Transaction details could not load. Try refreshing.'}});
@@ -1889,13 +1892,15 @@ if(tradeById.size){
 document.getElementById("messageInbox").addEventListener("submit",async e=>{
  const form=e.target.closest(".chat-composer");if(!form)return;e.preventDefault();if(!currentUser)return;
  const input=form.querySelector("textarea"),button=form.querySelector('button[type="submit"]'),status=form.querySelector(".chat-send-status"),body=input.value.trim(),recipient=form.dataset.chatRecipient,userId=currentUser.id,key=userId+":"+recipient,accountVersion=messageAccountVersion;
- if(!body||!recipient||inboxSending.has(key))return;
+ if((!body&&!window.privateMessagePhotos?.has(recipient))||!recipient||inboxSending.has(key))return;
  inboxSending.add(key);button.disabled=true;input.readOnly=true;status.textContent="Sending…";
  try{
-  const {data,error}=await sendCollectorMessageOnce({sender_id:userId,recipient_id:recipient,body});
+  const photoPayload=await window.privateMessagePhotos?.prepare(recipient,body);
+  if(currentUser?.id!==userId||messageAccountVersion!==accountVersion)return;
+  const {data,error}=await sendCollectorMessageOnce(photoPayload||{sender_id:userId,recipient_id:recipient,body});
   if(error)throw error;
   if(currentUser?.id!==userId||messageAccountVersion!==accountVersion)return;
-  inboxDrafts.delete(recipient);input.value="";resizeInboxComposer(input);status.textContent="";
+  window.privateMessagePhotos?.clear(recipient);inboxDrafts.delete(recipient);input.value="";resizeInboxComposer(input);status.textContent="";
   const active=document.querySelector("#messageInbox .chat-composer");
   if(active?.dataset.chatRecipient===recipient){const visible=active.querySelector("textarea");visible.value="";resizeInboxComposer(visible)};
   if(selectedInboxCollector===recipient&&!document.getElementById("inboxPage").hidden){try{await loadInbox(recipient)}catch{toast("Message sent. Refresh the inbox to see it.")}}
@@ -1908,7 +1913,7 @@ document.getElementById("messageInbox").addEventListener("submit",async e=>{
  finally{
   inboxSending.delete(key);button.disabled=!input.value.trim();input.readOnly=false;
   const active=document.querySelector("#messageInbox .chat-composer");
-  if(currentUser?.id===userId&&active?.dataset.chatRecipient===recipient){active.querySelector("button").disabled=!active.querySelector("textarea").value.trim();active.querySelector("textarea").readOnly=false}
+  if(currentUser?.id===userId&&active?.dataset.chatRecipient===recipient){active.querySelector("button").disabled=!active.querySelector("textarea").value.trim();active.querySelector("textarea").readOnly=false;window.privateMessagePhotos?.update(active)}
  }
 });
 document.getElementById("messageInbox").addEventListener("keydown",e=>{if(e.target.matches(".chat-composer textarea")&&e.key==="Enter"&&!e.shiftKey&&!e.isComposing){e.preventDefault();e.target.closest("form").requestSubmit()}});
@@ -2291,5 +2296,6 @@ window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();installProm
 button.addEventListener("click",async()=>{if(installed()){update();return}if(installPrompt){const p=installPrompt;installPrompt=null;try{await p.prompt();const choice=await p.userChoice;status.textContent=choice.outcome==="accepted"?"Installation requested. Check your home screen.":"Installation canceled. You can try again from your browser menu."}catch(e){status.textContent="Use your browser menu and choose Install app or Add to Home screen."}update();return}
 const ios=/iPad|iPhone|iPod/.test(navigator.userAgent);status.textContent=ios?"In Safari, tap Share, then Add to Home Screen.":"Open DeckPlay HQ in Chrome or your preferred browser, tap the three-dot menu, then choose Install app or Add to Home screen. If that option is missing, the browser may not support installation yet.";});update();})();
 </script>
+<script src="private-message-photos.js"></script>
 </body>
 </html>

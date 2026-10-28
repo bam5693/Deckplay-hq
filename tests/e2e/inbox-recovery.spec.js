@@ -47,7 +47,7 @@ test('Send stays disabled for empty drafts and re-enables only for message text'
  await expect(send).toBeDisabled();
  await page.evaluate(()=>finishFixtureSend({data:{id:'sent'},error:null}));
  await expect(page.locator('#chatInput')).toHaveValue('');
- await expect(page.locator('.chat-composer button')).toBeDisabled();
+ await expect(page.locator('.chat-composer button[type="submit"]')).toBeDisabled();
 });
 test('rapid Enter submits once and a service exception allows retry without losing text',async({page})=>{
  await inbox(page);await page.locator('#chatInput').fill('One message');
@@ -55,7 +55,7 @@ test('rapid Enter submits once and a service exception allows retry without losi
  expect(await page.evaluate(()=>fixtureWrites)).toBe(1);
  await page.evaluate(()=>finishFixtureSend(Promise.reject(Error('Connection lost'))));
  await expect(page.locator('.chat-send-status')).toContainText('Connection lost');
- await expect(page.locator('#chatInput')).toHaveValue('One message');await expect(page.locator('.chat-composer button')).toBeEnabled();
+ await expect(page.locator('#chatInput')).toHaveValue('One message');await expect(page.locator('.chat-composer button[type="submit"]')).toBeEnabled();
  await page.locator('#chatInput').press('Enter');expect(await page.evaluate(()=>fixtureWrites)).toBe(2);
  await page.evaluate(()=>finishFixtureSend({data:{id:'sent'},error:null}));
  await expect(page.locator('#chatInput')).toHaveValue('');
@@ -89,13 +89,13 @@ test('marketplace search tolerates accents, case and extra spaces',async({page})
 });
 test('refresh during a pending send clears the sent draft and shows errors on the current form',async({page})=>{
  await inbox(page);await page.locator('#chatInput').fill('Send while refreshing');await page.locator('#chatInput').press('Enter');
- await page.evaluate(()=>loadInbox());await expect(page.locator('.chat-composer button')).toBeDisabled();
+ await page.evaluate(()=>loadInbox());await expect(page.locator('.chat-composer button[type="submit"]')).toBeDisabled();
  await page.evaluate(()=>finishFixtureSend({data:{id:'sent'},error:null}));
  await expect(page.locator('#chatInput')).toHaveValue('');
  await page.locator('#chatInput').fill('Retry after refresh');await page.locator('#chatInput').press('Enter');
  await page.evaluate(()=>loadInbox());await page.evaluate(()=>finishFixtureSend({error:{message:'Try again later'}}));
  await expect(page.locator('.chat-send-status')).toContainText('Try again later');
- await expect(page.locator('#chatInput')).toHaveValue('Retry after refresh');await expect(page.locator('.chat-composer button')).toBeEnabled();
+ await expect(page.locator('#chatInput')).toHaveValue('Retry after refresh');await expect(page.locator('.chat-composer button[type="submit"]')).toBeEnabled();
 });
 test('an older listing response cannot replace newer marketplace results',async({page})=>{
  await ready(page);await page.evaluate(async()=>{
