@@ -77,13 +77,18 @@
    if(!active())return;
    if(result.error||!result.data?.id||!result.data.totp?.secret||!result.data.totp?.qr_code)throw Error('enroll');
    let qr=result.data.totp.qr_code;
-   // The pinned Supabase client returns an SVG data URL; raw SVG is also
-   // accepted for compatibility. Re-encode it as an image, never HTML.
+   // Supabase may return raw SVG, percent-encoded SVG, or base64 SVG with
+   // an XML declaration. Keep it in an image data URL, never inject HTML.
+   if(typeof qr!=='string'||qr.length>200000)throw Error('qr');
+   qr=qr.trim();
    if(/^data:image\/svg\+xml(?:;[^,]*)?,/i.test(qr)){
-    qr=qr.slice(qr.indexOf(',')+1);
-    if(/^%3c/i.test(qr))qr=decodeURIComponent(qr);
+    const comma=qr.indexOf(','),meta=qr.slice(0,comma),payload=qr.slice(comma+1);
+    qr=/;base64(?:;|$)/i.test(meta)
+     ?new TextDecoder().decode(Uint8Array.from(atob(payload),c=>c.charCodeAt(0)))
+     :decodeURIComponent(payload);
    }
-   if(!/^\s*<svg[\s>]/i.test(qr))throw Error('qr');
+   qr=qr.replace(/^\uFEFF/,'').trimStart().replace(/^<\?xml[\s\S]*?\?>\s*/i,'');
+   if(!/^<svg(?:\s|>)/i.test(qr)||/<script\b|<foreignObject\b|\bon[a-z]+\s*=/i.test(qr))throw Error('qr');
    factors=[{id:result.data.id,factor_type:'totp',status:'unverified',friendly_name:'DeckPlay authenticator'}];renderFactors();
    el('setupSecret').textContent=result.data.totp.secret;
    el('setupQr').src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(qr);el('setupMaterial').hidden=false;
