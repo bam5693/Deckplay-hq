@@ -260,3 +260,7 @@ This supersedes the earlier suggestion to display item+fees+estimated shipping a
 ### Active development checkpoint — 2026-10-28
 
 See [roadmap development](2026-10-28-roadmap-development.md) for current evidence. Inbox Android Back fixes are deployed with exact Worker read-back; 88 targeted local UI and 33 security checks passed. Matching real API/deployed checks pending publication. Preserve historical counts separately. Next unfinished branch: precise custom listing identity and seller fallback UX.
+
+### 2026-10-28 follow-up
+
+Inbox Back is VERIFIED at `460438c` / run `40680128125` (48 API, 44 deployed, 86 selected local, 11 cleanup checks). Exact card printing/custom metadata and storefront description parity are deployed at `50bb34f`, awaiting run `40681070226`. Block-list/preference account-isolation fixes are locally passing; see the dated development report. Legacy `moderation.html` exists, but staging has none of its four authorization/queue/action RPCs: admin backend remains NEW. Private attachments still need a private bucket and server authorization; external inquiry opt-in remains NEW. Do not label these finished merely because a page or historical test exists.

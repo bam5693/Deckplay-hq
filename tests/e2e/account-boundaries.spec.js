@@ -62,3 +62,67 @@ for(const [label,loader,table,list,modal] of [
   await expect(page.locator('#'+list)).toBeEmpty();await expect(page.locator('#'+modal)).not.toHaveClass(/open/);
  });
 }
+
+test('old blocked-collector requests cannot replace the new account block list',async({page})=>{
+ await page.evaluate(()=>{
+  currentUser={id:'former-collector'};syncInboxDraftUser();window.pendingBlocks={};
+  supabaseClient.from=()=>{let owner;const q={select:()=>q,eq:(field,id)=>{owner=id;return q},then:(resolve,reject)=>new Promise(done=>pendingBlocks[owner]=done).then(resolve,reject)};return q};
+  window.oldBlocks=loadBlockedCollectors();currentUser={id:'current-collector'};syncInboxDraftUser();window.newBlocks=loadBlockedCollectors();
+ });
+ await expect.poll(()=>page.evaluate(()=>Object.keys(pendingBlocks).length)).toBe(2);
+ await page.evaluate(async()=>{pendingBlocks['current-collector']({data:[{blocked_id:'current-block'}],error:null});await newBlocks;pendingBlocks['former-collector']({data:[{blocked_id:'former-private-block'}],error:null});await oldBlocks});
+ expect(await page.evaluate(()=>[...blockedCollectorIds])).toEqual(['current-block']);
+});
+
+test('old notification preferences cannot overwrite a switched collector settings',async({page})=>{
+ await page.evaluate(()=>{
+  currentUser={id:'former-collector'};syncInboxDraftUser();window.pendingPreferences={};
+  supabaseClient.from=()=>{let owner;const q={select:()=>q,eq:(field,id)=>{owner=id;return q},maybeSingle:()=>new Promise(done=>pendingPreferences[owner]=done)};return q};
+  window.oldPreferences=loadNotificationSettings();currentUser={id:'current-collector'};syncInboxDraftUser();window.newPreferences=loadNotificationSettings();
+ });
+ await page.evaluate(async()=>{
+  pendingPreferences['current-collector']({data:{messages:false,trade_offers:false},error:null});await newPreferences;
+  pendingPreferences['former-collector']({data:{messages:true,trade_offers:true},error:null});await oldPreferences;
+ });
+ await expect(page.locator('[data-notify-pref="messages"]')).not.toBeChecked();
+ await expect(page.locator('[data-notify-pref="trade_offers"]')).not.toBeChecked();
+});
+
+test('a delayed block mutation cannot alter the next collector block list',async({page})=>{
+ await page.evaluate(()=>{
+  currentUser={id:'former-collector'};syncInboxDraftUser();
+  supabaseClient.from=()=>({insert:()=>new Promise(done=>window.finishFormerBlock=done)});
+  window.formerBlock=toggleUserBlock('former-private-block',false);
+  currentUser={id:'current-collector'};syncInboxDraftUser();blockedCollectorIds.add('current-block');
+ });
+ await page.evaluate(async()=>{finishFormerBlock({error:null});await formerBlock});
+ expect(await page.evaluate(()=>[...blockedCollectorIds])).toEqual(['current-block']);
+});
+
+test('notification preferences recover from service errors and ignore a former account save',async({page})=>{
+ await page.evaluate(async()=>{
+  currentUser={id:'former-collector'};syncInboxDraftUser();
+  supabaseClient.from=()=>({select(){return this},eq(){return this},maybeSingle:async()=>{throw Error('Connection interrupted')}});
+  await loadNotificationSettings();
+ });
+ await expect(page.locator('#notificationSettingsStatus')).toContainText('Could not load preferences');
+ await expect(page.locator('[data-notify-pref="messages"]')).toBeDisabled();
+ await page.evaluate(async()=>{
+  supabaseClient.from=()=>({select(){return this},eq(){return this},maybeSingle:async()=>({data:null,error:null}),upsert:payload=>{window.savedPreferencesPayload=payload;return new Promise(done=>window.finishFormerPreferenceSave=done)}});
+  await loadNotificationSettings();document.querySelector('[data-notify-pref="messages"]').checked=false;
+  document.querySelector('[data-notify-pref="messages"]').dispatchEvent(new Event('change'));
+ });
+ await expect(page.locator('[data-notify-pref="messages"]')).toBeDisabled();
+ expect(await page.evaluate(()=>savedPreferencesPayload.user_id)).toBe('former-collector');
+ await page.evaluate(async()=>{
+  currentUser={id:'current-collector'};syncInboxDraftUser();await loadNotificationSettings();
+  finishFormerPreferenceSave({error:{message:'Former account save failed'}});
+ });
+ await expect(page.locator('[data-notify-pref="messages"]')).toBeChecked();
+ await expect(page.locator('[data-notify-pref="messages"]')).toBeEnabled();
+ await expect(page.locator('#notificationSettingsStatus')).toContainText('Preferences saved to your account');
+ await page.evaluate(()=>{currentUser=null;syncInboxDraftUser()});
+ await expect(page.locator('[data-notify-pref="messages"]')).not.toBeChecked();
+ await expect(page.locator('[data-notify-pref="messages"]')).toBeDisabled();
+ await expect(page.locator('#notificationSettingsStatus')).toBeEmpty();
+});

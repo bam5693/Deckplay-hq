@@ -941,7 +941,17 @@ function itemArtwork(item){const image=safeImageUrl(item.imageUrls?.[0]);return 
 let passwordResetPending=false;
 let onlyMyListings=false,onlySavedListings=false;
 const blockedCollectorIds=new Set();
-async function loadBlockedCollectors(){blockedCollectorIds.clear();if(!currentUser)return;const {data,error}=await supabaseClient.from("user_blocks").select("blocked_id").eq("blocker_id",currentUser.id);if(error){console.warn("Unable to load blocked collectors",error);return}(data||[]).forEach(x=>blockedCollectorIds.add(x.blocked_id))}
+let blockedCollectorsLoadVersion=0;
+async function loadBlockedCollectors(){
+ const request=++blockedCollectorsLoadVersion,userId=currentUser?.id;
+ if(!userId){blockedCollectorIds.clear();return}
+ try{
+  const {data,error}=await supabaseClient.from("user_blocks").select("blocked_id").eq("blocker_id",userId);
+  if(request!==blockedCollectorsLoadVersion||currentUser?.id!==userId)return;
+  if(error)throw error;
+  blockedCollectorIds.clear();(data||[]).forEach(x=>blockedCollectorIds.add(x.blocked_id));
+ }catch(error){if(request===blockedCollectorsLoadVersion&&currentUser?.id===userId)console.warn("Unable to load blocked collectors",error)}
+}
 let sellerRatingCache=new Map();
 async function refreshSellerRatingCache(){
  const {data,error}=await supabaseClient.from("seller_reviews").select("seller_id,rating").limit(3000);
@@ -1340,8 +1350,8 @@ let reportTargetBlocked=false;
 async function updateReportBlockButton(){const area=document.getElementById("reportBlockArea"),btn=document.getElementById("reportBlockButton");area.hidden=!reportTargetUser;if(!reportTargetUser||!currentUser)return;btn.disabled=true;btn.textContent="Checking…";const {data,error}=await supabaseClient.from("user_blocks").select("blocked_id").eq("blocker_id",currentUser.id).eq("blocked_id",reportTargetUser).maybeSingle();reportTargetBlocked=!!data;btn.textContent=reportTargetBlocked?"Unblock collector":"Block collector";btn.disabled=!!error;if(error)toast("Could not check block status.")}
 document.getElementById("reportBlockButton").addEventListener("click",async()=>{if(!reportTargetUser)return;const id=reportTargetUser,blocked=reportTargetBlocked;if(!blocked&&!confirm("Block this collector? You will no longer be able to message each other."))return;await toggleUserBlock(id,blocked);closeModal("reportModal")});
 document.getElementById("reportForm").addEventListener("submit",async e=>{e.preventDefault();if(!currentUser)return;const status=document.getElementById("reportStatus");status.textContent="Submitting…";const {error}=await supabaseClient.from("user_reports").insert({reporter_id:currentUser.id,reported_id:reportTargetUser,listing_id:reportTargetListing,reason:document.getElementById("reportReason").value,details:document.getElementById("reportDetails").value.trim()||null});if(error){status.textContent=error.message;return}closeModal("reportModal");toast("Report submitted. Thank you for helping keep DeckPlay HQ safe.");if(reportTargetUser&&!reportTargetBlocked&&confirm("Report submitted. Would you also like to block this collector?"))await toggleUserBlock(reportTargetUser,false)});
-async function toggleUserBlock(id,blocked){if(!currentUser){setAuthMode("signin");openModal("authModal");return}if(id===currentUser.id)return;const result=blocked?await supabaseClient.from("user_blocks").delete().eq("blocker_id",currentUser.id).eq("blocked_id",id):await supabaseClient.from("user_blocks").insert({blocker_id:currentUser.id,blocked_id:id});if(result.error){toast(result.error.message);return}if(blocked)blockedCollectorIds.delete(id);else blockedCollectorIds.add(id);render();await Promise.all([loadListings(),loadWanted()]);toast(blocked?"Collector unblocked. Their listings are visible again.":"Collector blocked. Their listings and wanted posts are hidden.");if(document.getElementById("publicProfileModal").classList.contains("open"))closeModal("publicProfileModal");if(document.getElementById("blockedUsersModal").classList.contains("open"))await showBlockedCollectors()}
-async function showBlockedCollectors(){const el=document.getElementById("blockedUsersList");el.textContent="Loading blocked collectors…";const ids=[...blockedCollectorIds];if(!ids.length){el.innerHTML='<p class="muted">You have not blocked anyone.</p>';return}const {data,error}=await supabaseClient.from("profiles").select("id,username").in("id",ids);if(error){el.textContent="Could not load blocked collectors.";return}const names=new Map((data||[]).map(p=>[p.id,p.username]));el.innerHTML=ids.map(id=>`<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid #e2e7ef"><strong style="overflow-wrap:anywhere">@${escapeHtml(names.get(id)||"collector")}</strong><button class="ghost" type="button" data-unblock-user="${escapeHtml(id)}">Unblock</button></div>`).join("")}
+async function toggleUserBlock(id,blocked){if(!currentUser){setAuthMode("signin");openModal("authModal");return}if(id===currentUser.id)return;const userId=currentUser.id,accountVersion=listingAccountVersion;const result=blocked?await supabaseClient.from("user_blocks").delete().eq("blocker_id",userId).eq("blocked_id",id):await supabaseClient.from("user_blocks").insert({blocker_id:userId,blocked_id:id});if(currentUser?.id!==userId||listingAccountVersion!==accountVersion)return;if(result.error){toast(result.error.message);return}++blockedCollectorsLoadVersion;if(blocked)blockedCollectorIds.delete(id);else blockedCollectorIds.add(id);render();await Promise.all([loadListings(),loadWanted()]);toast(blocked?"Collector unblocked. Their listings are visible again.":"Collector blocked. Their listings and wanted posts are hidden.");if(document.getElementById("publicProfileModal").classList.contains("open"))closeModal("publicProfileModal");if(document.getElementById("blockedUsersModal").classList.contains("open"))await showBlockedCollectors()}
+async function showBlockedCollectors(){const userId=currentUser?.id,request=blockedCollectorsLoadVersion;if(!userId)return;const el=document.getElementById("blockedUsersList");el.textContent="Loading blocked collectors…";const ids=[...blockedCollectorIds];if(!ids.length){el.innerHTML='<p class="muted">You have not blocked anyone.</p>';return}const {data,error}=await supabaseClient.from("profiles").select("id,username").in("id",ids);if(currentUser?.id!==userId||request!==blockedCollectorsLoadVersion)return;if(error){el.textContent="Could not load blocked collectors.";return}const names=new Map((data||[]).map(p=>[p.id,p.username]));el.innerHTML=ids.map(id=>`<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid #e2e7ef"><strong style="overflow-wrap:anywhere">@${escapeHtml(names.get(id)||"collector")}</strong><button class="ghost" type="button" data-unblock-user="${escapeHtml(id)}">Unblock</button></div>`).join("")}
 
 const THEME_STORAGE_KEY="deckplayhq-theme";
 function readThemePreference(){try{const value=localStorage.getItem(THEME_STORAGE_KEY);return ["light","dark","auto"].includes(value)?value:"auto"}catch{return "auto"}}
@@ -1452,9 +1462,37 @@ document.getElementById("notificationList").addEventListener("click",async e=>{c
 document.getElementById("markAllNotifications").addEventListener("click",async()=>{if(!currentUser)return;const {error}=await supabaseClient.from("collector_notifications").update({read_at:new Date().toISOString()}).eq("user_id",currentUser.id).is("read_at",null);if(error){toast("Could not mark notifications read.");return}await Promise.all([loadNotificationCenter(),refreshNotificationCount()])});
 function startNotificationUpdates(){if(notificationChannel){supabaseClient.removeChannel(notificationChannel);notificationChannel=null}if(notificationPoll){clearInterval(notificationPoll);notificationPoll=null}document.getElementById("notificationBell").hidden=!currentUser;if(!currentUser){document.getElementById("notificationBadge").hidden=true;return}refreshNotificationCount();notificationChannel=supabaseClient.channel("deckplay-notifications-"+currentUser.id).on("postgres_changes",{event:"INSERT",schema:"public",table:"collector_notifications",filter:"user_id=eq."+currentUser.id},()=>{refreshNotificationCount();if(document.getElementById("notificationModal").classList.contains("open"))loadNotificationCenter();scheduleLiveInboxRefresh()}).subscribe();notificationPoll=setInterval(()=>{if(!document.hidden){refreshNotificationCount();if(document.getElementById("notificationModal").classList.contains("open"))loadNotificationCenter()}},30000)}
 const NOTIFICATION_KEYS=["messages","trade_offers","wanted_matches","product_updates"];
-let notificationSettingsLoading=false;
-async function loadNotificationSettings(){if(!currentUser)return;const status=document.getElementById("notificationSettingsStatus");notificationSettingsLoading=true;status.textContent="Loading preferences…";const {data,error}=await supabaseClient.from("notification_preferences").select(NOTIFICATION_KEYS.join(",")).eq("user_id",currentUser.id).maybeSingle();if(error){status.textContent="Could not load preferences. Please try again.";notificationSettingsLoading=false;return}for(const key of NOTIFICATION_KEYS){document.querySelector('[data-notify-pref="'+key+'"]').checked=data?!!data[key]:key!=="product_updates"}notificationSettingsLoading=false;status.textContent="Preferences saved to your account. In-app notifications follow these preferences."}
-for(const input of document.querySelectorAll("[data-notify-pref]"))input.addEventListener("change",async()=>{if(notificationSettingsLoading||!currentUser)return;const status=document.getElementById("notificationSettingsStatus");status.textContent="Saving…";const payload={user_id:currentUser.id};for(const key of NOTIFICATION_KEYS)payload[key]=document.querySelector('[data-notify-pref="'+key+'"]').checked;const {error}=await supabaseClient.from("notification_preferences").upsert(payload,{onConflict:"user_id"});if(error){status.textContent="Could not save: "+error.message;return}status.textContent="Preferences saved. In-app notifications follow these preferences."});
+let notificationSettingsLoading=false,notificationSettingsVersion=0,notificationSettingsOwner=null;
+function notificationPreferenceControls(disabled){document.querySelectorAll("[data-notify-pref]").forEach(input=>input.disabled=disabled)}
+async function loadNotificationSettings(){
+ const userId=currentUser?.id,request=++notificationSettingsVersion,status=document.getElementById("notificationSettingsStatus");
+ const active=()=>currentUser?.id===userId&&request===notificationSettingsVersion;
+ notificationSettingsOwner=null;notificationSettingsLoading=true;notificationPreferenceControls(true);
+ document.querySelectorAll("[data-notify-pref]").forEach(input=>input.checked=false);
+ if(!userId){notificationSettingsLoading=false;status.textContent="";return}
+ status.textContent="Loading preferences…";
+ try{
+  const {data,error}=await supabaseClient.from("notification_preferences").select(NOTIFICATION_KEYS.join(",")).eq("user_id",userId).maybeSingle();
+  if(!active())return;if(error)throw error;
+  for(const key of NOTIFICATION_KEYS)document.querySelector('[data-notify-pref="'+key+'"]').checked=data?!!data[key]:key!=="product_updates";
+  notificationSettingsOwner=userId;notificationPreferenceControls(false);
+  status.textContent="Preferences saved to your account. In-app notifications follow these preferences.";
+ }catch(error){if(active())status.textContent="Could not load preferences. Reopen Settings to try again."}
+ finally{if(active())notificationSettingsLoading=false}
+}
+for(const input of document.querySelectorAll("[data-notify-pref]"))input.addEventListener("change",async()=>{
+ const userId=currentUser?.id;if(notificationSettingsLoading||!userId||notificationSettingsOwner!==userId)return;
+ const request=++notificationSettingsVersion,status=document.getElementById("notificationSettingsStatus"),payload={user_id:userId};
+ const active=()=>currentUser?.id===userId&&request===notificationSettingsVersion;
+ for(const key of NOTIFICATION_KEYS)payload[key]=document.querySelector('[data-notify-pref="'+key+'"]').checked;
+ notificationSettingsLoading=true;notificationPreferenceControls(true);status.textContent="Saving…";
+ try{
+  const {error}=await supabaseClient.from("notification_preferences").upsert(payload,{onConflict:"user_id"});
+  if(!active())return;if(error)throw error;
+  status.textContent="Preferences saved. In-app notifications follow these preferences.";
+ }catch(error){if(active())status.textContent="Could not save: "+(error.message||"Please try again.")}
+ finally{if(active()){notificationSettingsLoading=false;notificationPreferenceControls(false)}}
+});
 document.getElementById("settingsResetPassword").addEventListener("click",async()=>{
  const status=document.getElementById("settingsSecurityStatus"),button=document.getElementById("settingsResetPassword");if(!currentUser?.email||button.disabled)return;
  button.disabled=true;status.textContent="Sending reset email…";
@@ -1534,7 +1572,9 @@ function syncInboxDraftUser(){
  const id=currentUser?.id||null;
  if(inboxDraftUser!==id){
   ++listingAccountVersion;document.getElementById("listingForm").reset();document.getElementById("listingType").dispatchEvent(new Event("change"));listingSelectedPhotos=[];renderListingPhotos();syncCategoryFields();syncGradedCondition();document.getElementById("deckFields").hidden=true;document.getElementById("listingStatus").textContent="";closeModal("sellModal");
-  inboxDrafts.clear();inboxDraftUser=id;++inboxLoadVersion;++profileLoadVersion;++priceOffersLoadVersion;++tradeOffersLoadVersion;++unreadCountLoadVersion;++profileEditorLoadVersion;selectedInboxCollector=null;
+  inboxDrafts.clear();inboxDraftUser=id;
+  ++blockedCollectorsLoadVersion;blockedCollectorIds.clear();document.getElementById("blockedUsersList").replaceChildren();document.getElementById("settingsBlockCount").textContent="";
+  ++notificationSettingsVersion;notificationSettingsOwner=null;notificationSettingsLoading=false;notificationPreferenceControls(true);document.querySelectorAll("[data-notify-pref]").forEach(input=>input.checked=false);document.getElementById("notificationSettingsStatus").textContent="";++inboxLoadVersion;++profileLoadVersion;++priceOffersLoadVersion;++tradeOffersLoadVersion;++unreadCountLoadVersion;++profileEditorLoadVersion;selectedInboxCollector=null;
   for(const name of ["messageInbox","inboxNotificationList","notificationList","priceOffersList","tradeOffersList"])document.getElementById(name).replaceChildren();
   for(const name of ["profilePageContent","ownSellerRatings"])document.getElementById(name).replaceChildren();
   for(const name of ["pageHandle","pageBio","pageMeta","settingsAccountEmail","settingsSecurityStatus","composeStatus"])document.getElementById(name).textContent="";
