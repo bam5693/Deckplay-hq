@@ -166,3 +166,24 @@ test('Jayden: saved TCG singles remain isolated from unsaved and blocked cards w
  await expect(page.locator('#grid')).not.toContainText('Zoro card from blocked seller');
  await expect(page.locator('#grid')).not.toContainText('Nami playable single');
 });
+
+
+test('Jayden can find exact card variants and language in seller descriptions without seeing blocked listings',async({page})=>{
+ await installFixture(page,[
+  {id:'op-japanese',n:'Monkey D. Luffy',c:'Trading Cards',game:'one_piece',gameLabel:'One Piece',p:95,s:'TCG seller',sellerId:'allowed-op',cond:'Near Mint',description:'Set: OP-17\\nVariant: Manga rare\\nLanguage: Japanese\\nEdition: First printing',e:'🃏'},
+  {id:'op-english',n:'Monkey D. Luffy',c:'Trading Cards',game:'one_piece',gameLabel:'One Piece',p:8,s:'TCG seller',sellerId:'allowed-op',cond:'Played',description:'Set: OP-17\\nVariant: Regular\\nLanguage: English',e:'🃏'},
+  {id:'op-blocked',n:'Monkey D. Luffy',c:'Trading Cards',game:'one_piece',gameLabel:'One Piece',p:1,s:'blocked seller',sellerId:'blocked-op',cond:'Near Mint',description:'Set: OP-17\\nVariant: Manga rare\\nLanguage: Japanese',e:'🃏'}
+ ],['blocked-op']);
+ await page.locator('#search').fill('japanese manga');
+ await expect(page.locator('#grid [data-view]')).toHaveCount(1);
+ await expect(page.locator('#grid [data-view="op-japanese"]')).toBeVisible();
+ await page.locator('#search').fill('english regular');
+ await expect(page.locator('#grid [data-view]')).toHaveCount(1);
+ await expect(page.locator('#grid [data-view="op-english"]')).toBeVisible();
+ await page.locator('#search').fill('near mint');
+ await expect(page.locator('#grid [data-view]')).toHaveCount(1);
+ await expect(page.locator('#grid [data-view="op-japanese"]')).toBeVisible();
+ await page.locator('#search').fill('OP-17');
+ await expect(page.locator('#grid [data-view]')).toHaveCount(2);
+ await expect(page.locator('#grid [data-view="op-blocked"]')).toHaveCount(0);
+});
