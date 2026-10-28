@@ -11,7 +11,7 @@ async function installFixture(page,listings,blocked=[]){
  await page.evaluate(({listings,blocked})=>{
   window.__marketFilterFixture={
    items,query,cat,filter,game,onlyMyListings,onlySavedListings,
-   blocked:[...blockedCollectorIds]
+   blocked:[...blockedCollectorIds],saved:[...saved]
   };
   items=listings;query='';cat='All';filter='All';game='All';
   onlyMyListings=false;onlySavedListings=false;
@@ -31,6 +31,7 @@ test.afterEach(async({page})=>{
   items=f.items;query=f.query;cat=f.cat;filter=f.filter;game=f.game;
   onlyMyListings=f.onlyMyListings;onlySavedListings=f.onlySavedListings;
   blockedCollectorIds.clear();f.blocked.forEach(id=>blockedCollectorIds.add(id));
+  saved.clear();f.saved.forEach(id=>saved.add(id));
   document.getElementById('search').value=query;
   document.getElementById('marketCategory').value=cat;
   document.getElementById('marketGame').value=game;
@@ -115,4 +116,53 @@ test('switching TCG game filters and searching never reveals a blocked collector
  await page.locator('#search').fill('');
  await page.locator('#marketGame').selectOption('sports_cards');
  await expect(page.locator('#grid h3')).toHaveText(['Baseball rookie allowed']);
+});
+
+test('Tanner: saved sports cards and memorabilia honor blocked sellers, price limits and sort order',async({page})=>{
+ await installFixture(page,[
+  {id:'tanner-graded',n:'PSA 10 rookie card',c:'Trading Cards',game:'sports_cards',p:95,s:'sports collector',sellerId:'tanner-sports',cond:'Graded',e:'🃏'},
+  {id:'tanner-jersey',n:'Signed baseball jersey',c:'Collectibles',collectibleSubcategory:'sports_memorabilia',p:25,s:'memorabilia seller',sellerId:'tanner-memorabilia',cond:'Used',e:'🧢'},
+  {id:'tanner-blocked',n:'Blocked graded rookie',c:'Trading Cards',game:'sports_cards',p:10,s:'blocked collector',sellerId:'blocked-sports',cond:'Graded',e:'🃏'},
+  {id:'jayden-unsaved',n:'Unsaved Luffy card',c:'Trading Cards',game:'one_piece',p:5,s:'tcg collector',sellerId:'tcg-seller',cond:'Near Mint',e:'🃏'}
+ ],['blocked-sports']);
+ await page.evaluate(()=>{
+  saved.clear();['tanner-graded','tanner-jersey','tanner-blocked'].forEach(id=>saved.add(id));
+  document.getElementById('myFavorites').click();
+ });
+ await expect(page.locator('#market h2')).toHaveText('Saved items');
+ await page.locator('#marketSort').selectOption('low');
+ await expect(page.locator('#grid h3')).toHaveText(['Signed baseball jersey','PSA 10 rookie card']);
+ await page.locator('#marketFilterToggle').click();
+ await page.locator('#marketMaxPrice').fill('50');
+ await expect(page.locator('#grid h3')).toHaveText(['Signed baseball jersey']);
+ await page.locator('#marketClearFilters').click();
+ await expect(page.locator('#grid h3')).toHaveText(['Signed baseball jersey','PSA 10 rookie card']);
+ await expect(page.locator('#grid')).not.toContainText('Blocked graded rookie');
+ await expect(page.locator('#grid')).not.toContainText('Unsaved Luffy card');
+});
+
+test('Jayden: saved TCG singles remain isolated from unsaved and blocked cards while switching games',async({page})=>{
+ await installFixture(page,[
+  {id:'saved-luffy',n:'Luffy playable single',c:'Trading Cards',game:'one_piece',p:12,s:'TCG seller',sellerId:'op-seller',cond:'Near Mint',e:'🃏'},
+  {id:'saved-pokemon',n:'Charizard collection card',c:'Trading Cards',game:'pokemon',p:30,s:'TCG seller',sellerId:'pokemon-seller',cond:'Near Mint',e:'🃏'},
+  {id:'unsaved-nami',n:'Nami playable single',c:'Trading Cards',game:'one_piece',p:5,s:'TCG seller',sellerId:'nami-seller',cond:'Near Mint',e:'🃏'},
+  {id:'blocked-zoro',n:'Zoro card from blocked seller',c:'Trading Cards',game:'one_piece',p:1,s:'blocked collector',sellerId:'blocked-tcg',cond:'Near Mint',e:'🃏'}
+ ],['blocked-tcg']);
+ await page.evaluate(()=>{
+  saved.clear();['saved-luffy','saved-pokemon','blocked-zoro'].forEach(id=>saved.add(id));
+  document.getElementById('myFavorites').click();
+ });
+ await page.locator('#marketFilterToggle').click();
+ await page.locator('#marketCategory').selectOption('Trading Cards');
+ await page.locator('#marketGame').selectOption('one_piece');
+ await expect(page.locator('#grid h3')).toHaveText(['Luffy playable single']);
+ await page.locator('#search').fill('Nami');
+ await expect(page.locator('#grid h3')).toHaveCount(0);
+ await page.locator('#search').fill('');
+ await page.locator('#marketGame').selectOption('pokemon');
+ await expect(page.locator('#grid h3')).toHaveText(['Charizard collection card']);
+ await page.locator('#marketClearFilters').click();
+ await expect(page.locator('#grid h3')).toHaveCount(2);
+ await expect(page.locator('#grid')).not.toContainText('Zoro card from blocked seller');
+ await expect(page.locator('#grid')).not.toContainText('Nami playable single');
 });
