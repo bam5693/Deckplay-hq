@@ -78,3 +78,12 @@ test('a failed trade from the previous account cannot show its error on a new ac
  await expect(page.locator('#tradeComposeModal')).toHaveClass(/open/);
  expect(await page.evaluate(()=>tradeWrites.length)).toBe(1);
 });
+
+test('signing out during trade submission cannot display the former account error',async({page})=>{
+ await composeFixture(page);
+ await page.locator('#tradeComposeForm button[type="submit"]').click();
+ await page.evaluate(()=>{currentUser=null;tradeTargetId=null;tradeRecipientId=null});
+ await page.evaluate(()=>failTrade(Error('Private trade submission failed')));
+ await expect(page.locator('#tradeOfferStatus')).not.toContainText('Private trade submission failed');
+ expect(await page.evaluate(()=>tradeWrites.length)).toBe(1);
+});
