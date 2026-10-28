@@ -1322,6 +1322,8 @@ function updateDeckQuantityStatus(){
 for(const id of ["deckCardCount","deckList"])document.getElementById(id).addEventListener("input",updateDeckQuantityStatus);
 document.getElementById("listingType").addEventListener("change",updateDeckQuantityStatus);
 document.getElementById("listingForm").addEventListener("reset",()=>queueMicrotask(updateDeckQuantityStatus));
+// Preserve seller text while the dialog is closed; photos remain in the existing in-memory selection.
+document.getElementById("listingForm").addEventListener("input",()=>{const status=document.getElementById("listingStatus");if(status.textContent==="Your listing is live. Your newer edits and photos have been kept.")status.textContent=""});
 document.getElementById("listingForm").addEventListener("submit",async event=>{
  event.preventDefault();if(!currentUser){closeModal("sellModal");openModal("authModal");return}
  const form=event.currentTarget;const status=document.getElementById("listingStatus");const files=[...listingSelectedPhotos];if(!files.length){status.textContent="Add at least one photo before posting.";document.getElementById("photos").focus();return}if(files.length>5){status.textContent="Please choose no more than 5 photos.";return}if(document.getElementById("condition").value==="graded"&&document.getElementById("category").value!=="trading_cards"){status.textContent="Graded condition is only available for trading cards.";return}
