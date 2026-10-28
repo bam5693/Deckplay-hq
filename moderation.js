@@ -12,7 +12,7 @@
   if(error||!data?.user)deny('Sign in to DeckPlay first, then return to this page.');
   const assurance=await client.auth.mfa.getAuthenticatorAssuranceLevel();
   if(!active())return null;
-  if(assurance.error||assurance.data?.currentLevel!=='aal2')deny('MFA required. Complete two-factor verification before using moderator tools. If MFA setup is unavailable, these tools remain locked.');
+  if(assurance.error||assurance.data?.currentLevel!=='aal2')deny('MFA required. Use the authenticator setup link to set up or verify two-factor authentication before using moderator tools.');
   const role=await client.rpc('is_deckplay_moderator');
   if(!active())return null;
   if(role.error||role.data!==true)deny('Access restricted to DeckPlay moderators. Moderator services must be configured before this queue can be used.');

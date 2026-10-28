@@ -4,7 +4,8 @@ Read the latest checkpoint first. Earlier reports remain historical evidence and
 
 | Order | Report | Scope |
 |---|---|---|
-| Latest | [Moderator authorization and audit foundation](2026-10-28-admin-foundation.md) | Server role/MFA/session enforcement, reasoned review, private audits; operator onboarding remains unfinished |
+| Latest | [Authenticator setup and access verification](2026-10-28-mfa-onboarding.md) | Deliberate TOTP setup, transient key privacy and signed-session test; lasting operator grants remain separate |
+| Previous | [Moderator authorization and audit foundation](2026-10-28-admin-foundation.md) | Server role/MFA/session enforcement, reasoned review, private audits; operator onboarding remains unfinished |
 | Previous | [Roadmap development, six staging batches](2026-10-28-roadmap-development.md) | Inbox Back, exact printing, account/report privacy, moderation UI, deck quantity checks; see per-build CI evidence |
 | Previous | [Listing description formatting](2026-10-27-listing-description.md) | Readable generated descriptions; final served code `91df349` |
 | Previous | [Price-offer recovery](2026-10-27-price-offer-recovery.md) | Duplicate send/response guards, exceptions, draft/account boundaries |
