@@ -1,9 +1,8 @@
 name: Private staging feature bots
 on:
   workflow_dispatch:
-  push:
-    branches: [test/staging-reporting]
-    paths-ignore: ['tests/reports/**']
+  # Manual runs only while the staging deployment and MFA test are being repaired.
+  # Restore push triggers after both issues are verified fixed.
 permissions:
   contents: read
   id-token: write
