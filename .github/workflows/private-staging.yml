@@ -94,6 +94,7 @@ jobs:
     permissions:
       contents: read
       issues: write
+      actions: read
     steps:
       - uses: actions/github-script@v7
         with:
@@ -102,5 +103,11 @@ jobs:
             const link=process.env.GITHUB_SERVER_URL+'/'+process.env.GITHUB_REPOSITORY+'/actions/runs/'+process.env.GITHUB_RUN_ID;
             const {data:items}=await github.rest.issues.listForRepo({...context.repo,state:'open',per_page:100});
             const issue=items.find(i=>!i.pull_request&&i.title===title);
-            if(issue) await github.rest.issues.createComment({...context.repo,issue_number:issue.number,body:'New failed run: '+link});
-            else await github.rest.issues.create({...context.repo,title,body:'Staging test failure: '+link+'\nInspect logs and artifacts. Do not modify production or enable payments.'});
+            const {data:jobsPage}=await github.rest.actions.listJobsForWorkflowRun({...context.repo,run_id:context.runId,per_page:100});
+            const failures=jobsPage.jobs.filter(j=>j.conclusion==='failure').map(j=>{
+              const steps=(j.steps||[]).filter(s=>s.conclusion==='failure').map(s=>'- '+s.name).slice(0,8);
+              return '**'+j.name+'**\\n'+(steps.length?steps.join('\\n'):'- Check job logs')+'\\n'+j.html_url;
+            });
+            const body=['**Failed staging run:** '+link,'**Commit:** '+context.sha,'**Failed jobs and steps:**',...(failures.length?failures:['Job details unavailable; inspect run logs.']),'Artifacts: private-staging-feature-report (retained 3 days).','Staging only; do not modify production.'].join('\\n\\n');
+            if(issue) await github.rest.issues.createComment({...context.repo,issue_number:issue.number,body});
+            else await github.rest.issues.create({...context.repo,title,body});
