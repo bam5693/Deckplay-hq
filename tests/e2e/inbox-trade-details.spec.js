@@ -1,0 +1,34 @@
+const {test,expect}=require('@playwright/test');
+async function fixture(page,failed=false){
+ await page.route('https://challenges.cloudflare.com/**',r=>r.abort());
+ await page.route('https://prrrzeelltmyugssqnzk.supabase.co/**',r=>r.fulfill({json:[]}));
+ await page.goto('/');await page.waitForLoadState('networkidle');
+ await page.evaluate(async failed=>{
+  await supabaseClient.auth.getSession();currentUser={id:'jayden'};syncInboxDraftUser();
+  const now=new Date().toISOString();window.decisionWrites=[];
+  const rows={trade_offers:[{id:'trade-1',sender_id:'jayden',recipient_id:'tanner',listing_id:'sports',offered_listing_id:'tcg',status:'pending',offer_note:'Two collectors exchange',cash_amount:3,cash_direction:'recipient_pays',created_at:now}],trade_counteroffers:[{id:'counter-1',trade_offer_id:'trade-1',proposer_id:'tanner',recipient_id:'jayden',status:'pending',offer_note:'Please include the foil printing',cash_amount:7,cash_direction:'sender_pays',created_at:now}],listings:[{id:'sports',title:'Tanner PSA sports card',description:'PSA 9 · cert 123'},{id:'tcg',title:'Jayden One Piece foil',description:'Japanese stamped variant'}],profiles:[{id:'tanner',username:'Tanner'}]};
+  supabaseClient.from=table=>{const q={then:(a,b)=>Promise.resolve({data:rows[table]||[],error:failed&&table==='trade_counteroffers'?{message:'Unavailable'}:null}).then(a,b)};for(const key of ['select','order','limit','in','eq'])q[key]=()=>q;return q};
+  supabaseClient.rpc=(name,args)=>new Promise(resolve=>{decisionWrites.push({name,args});window.finishDecision=resolve});
+  await showInboxPage('tanner');
+ },failed);
+}
+test('Jayden sees exact items and counter terms in Tanner conversation and replies once',async({page})=>{
+ await fixture(page);
+ const thread=page.locator('#conversationThread');
+ await expect(thread).toContainText('You give');await expect(thread).toContainText('Jayden One Piece foil');
+ await expect(thread).toContainText('You receive');await expect(thread).toContainText('Tanner PSA sports card');
+ await expect(thread).toContainText('Please include the foil printing');await expect(thread).toContainText('You pay $7.00');
+ await expect(thread.locator('[data-inbox-trade="accepted"]')).toHaveCount(0);
+ page.on('dialog',d=>d.accept());
+ await thread.locator('[data-inbox-counter="accept"]').click();
+ await expect(thread.locator('[data-inbox-counter="decline"]')).toBeDisabled();
+ await thread.locator('[data-inbox-counter="decline"]').evaluate(b=>b.click());
+ expect(await page.evaluate(()=>decisionWrites)).toEqual([{name:'respond_trade_counter',args:{p_counter:'counter-1',p_accept:true}}]);
+ await page.evaluate(()=>finishDecision({error:{message:'Temporary outage'}}));
+ await expect(page.locator('[data-inbox-counter="accept"]')).toBeEnabled();
+});
+test('unavailable counter terms fail closed instead of offering stale acceptance',async({page})=>{
+ await fixture(page,true);
+ await expect(page.locator('#conversationThread')).toContainText('Trade terms could not load');
+ await expect(page.locator('#conversationThread [data-inbox-trade],#conversationThread [data-inbox-counter]')).toHaveCount(0);
+});

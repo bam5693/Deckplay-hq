@@ -837,6 +837,8 @@ footer p,html[data-theme="dark"] footer p{color:#d6deea!important}
  header .header-actions>[data-sell]{display:none!important}
 }
 .trade-offer-card.trade-offer-focused{outline:3px solid #e5bd67;outline-offset:3px;scroll-margin:16px}
+
+.chat-trade-items{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:12px 0}.chat-trade-items strong{display:block;overflow-wrap:anywhere}.chat-trade-items p,.chat-trade-history p{white-space:pre-wrap;overflow-wrap:anywhere}.chat-trade-history section{padding:10px 0;border-top:1px solid #d5dfdb}.chat-trade-history summary{padding:10px 0;cursor:pointer}
 </style>
 </head>
 <body>
@@ -1701,6 +1703,17 @@ function inboxTradeCounterHtml(x,userId){
  const cash=amount>0?"$"+amount.toFixed(2)+" cash · "+direction:"No cash added";
  return `<div class="message-bubble inbox-offer chat-event ${x.proposer_id===userId?"inbox-mine":""}"><strong>↩ Trade counteroffer · ${escapeHtml(x.status)}</strong><p>${escapeHtml(x.offer_note||"No additional note")}</p><p>${escapeHtml(cash)}</p><small>${new Date(x.date).toLocaleString()}</small>${x.status==="pending"&&x.recipient_id===userId?'<p class="price-offer-actions"><button type="button" class="primary" data-inbox-trade-review="${escapeHtml(x.trade_offer_id)}">Review and respond</button></p>':""}</div>`;
 }
+function tradeCashHtml(amount,direction,offer){
+ if(!Number(amount))return '<p class="muted">No cash added</p>';
+ const payer=direction==="sender_pays"?offer.sender_id:offer.recipient_id;
+ return `<p class="trade-cash">${payer===currentUser?.id?"You pay":"They pay"} $${Number(amount).toFixed(2)} in addition to the items</p>`;
+}
+function inboxTradeHtml(o,listings,counters,counterError){
+ const mine=o.sender_id===currentUser.id,related=counters.filter(c=>c.trade_offer_id===o.id).sort((a,b)=>new Date(b.created_at)-new Date(a.created_at)),pending=related.find(c=>c.status==="pending");
+ const item=(id,label)=>{const l=listings.get(id);return `<div><small>${label}</small><strong>${escapeHtml(l?.title||(id?"Listing unavailable":"Items described in proposal"))}</strong>${l?.description?`<details><summary>Item details</summary><p>${escapeHtml(l.description)}</p></details>`:""}</div>`};
+ const actions=pending?pending.recipient_id===currentUser.id?`<p class="price-offer-actions"><button class="primary" data-inbox-counter="accept" data-offer="${escapeHtml(o.id)}" data-counter="${escapeHtml(pending.id)}">Accept counter</button><button class="ghost" data-inbox-counter="decline" data-offer="${escapeHtml(o.id)}" data-counter="${escapeHtml(pending.id)}">Decline counter</button></p>`:'<p class="muted">Waiting for their counteroffer reply</p>':`<p class="price-offer-actions">${!mine?`<button class="primary" data-inbox-trade="accepted" data-offer="${escapeHtml(o.id)}">Accept</button><button class="ghost" data-inbox-trade="counter" data-offer="${escapeHtml(o.id)}">Counter</button><button class="ghost" data-inbox-trade="declined" data-offer="${escapeHtml(o.id)}">Decline</button>`:`<button class="ghost" data-inbox-trade="cancelled" data-offer="${escapeHtml(o.id)}">Cancel</button>`}</p>`;
+ return `<div class="message-bubble inbox-offer chat-event"><strong>⇄ Trade proposal · ${escapeHtml(o.status)}</strong><div class="chat-trade-items">${item(mine?o.offered_listing_id:o.listing_id,"You give")}${item(mine?o.listing_id:o.offered_listing_id,"You receive")}</div><p>${escapeHtml(o.offer_note||"")}</p>${tradeCashHtml(o.cash_amount,o.cash_direction,o)}<small>${new Date(o.created_at).toLocaleString()}</small>${pending?`<p>Current counteroffer: ${escapeHtml(pending.offer_note)}</p>${tradeCashHtml(pending.cash_amount,pending.cash_direction,o)}`:""}${counterError?'<p role="status">Trade terms could not load. Refresh before responding.</p>':o.status==="pending"?actions:""}</div>`;
+}
 let inboxLoadVersion=0,selectedInboxCollector=null;
 async function loadInbox(targetCollectorId=null){
  const el=document.getElementById("messageInbox");if(!currentUser)return;
@@ -1709,11 +1722,12 @@ async function loadInbox(targetCollectorId=null){
  const previous=selectedInboxCollector||el.querySelector(".conversation-contact.active")?.dataset.conversationId;
  const requestedTarget=targetCollectorId||(document.getElementById("inboxPage").classList.contains("thread-open")?previous:null);
  el.textContent="Loading inbox…";
- const [mr,pr,tr,hr]=await Promise.all([
+ const [mr,pr,tr,hr,cr]=await Promise.all([
  supabaseClient.from("collector_messages").select("id,sender_id,recipient_id,body,created_at,read_at").order("created_at",{ascending:false}).limit(500),
  supabaseClient.from("price_offers").select("id,buyer_id,seller_id,amount,status,last_actor_id,updated_at").order("updated_at",{ascending:false}).limit(200),
- supabaseClient.from("trade_offers").select("id,sender_id,recipient_id,status,offer_note,created_at").order("created_at",{ascending:false}).limit(200),
- supabaseClient.from("price_offer_history").select("id,offer_id,buyer_id,seller_id,actor_id,action,amount,created_at").order("created_at",{ascending:false}).limit(700)
+ supabaseClient.from("trade_offers").select("id,listing_id,offered_listing_id,sender_id,recipient_id,status,offer_note,cash_amount,cash_direction,created_at").order("created_at",{ascending:false}).limit(200),
+ supabaseClient.from("price_offer_history").select("id,offer_id,buyer_id,seller_id,actor_id,action,amount,created_at").order("created_at",{ascending:false}).limit(700),
+ supabaseClient.from("trade_counteroffers").select("id,trade_offer_id,proposer_id,recipient_id,cash_amount,cash_direction,offer_note,status,created_at").order("created_at",{ascending:false}).limit(700)
  ]);
  if(requestId!==inboxLoadVersion||currentUser?.id!==userId)return;
  if(mr.error||pr.error||tr.error){el.textContent="Could not load inbox: "+(mr.error||pr.error||tr.error).message;return}
@@ -1723,13 +1737,17 @@ async function loadInbox(targetCollectorId=null){
  const offers=new Map((pr.data||[]).map(o=>[o.id,o]));const historyOffers=new Set();
  if(!hr.error)for(const h of hr.data||[]){const offer=offers.get(h.offer_id);if(!offer)continue;historyOffers.add(h.offer_id);add(h.buyer_id===currentUser.id?h.seller_id:h.buyer_id,{type:"price",date:h.created_at,id:h.id,offer_id:h.offer_id,action:({submitted:"offered",counter:"countered",accept:"accepted",decline:"declined",withdraw:"withdrawn"})[h.action]||h.action,actor_id:h.actor_id,amount:h.amount,isLatest:false,...{currentOffer:offer}})}
  for(const o of pr.data||[])if(!historyOffers.has(o.id))add(o.buyer_id===currentUser.id?o.seller_id:o.buyer_id,{type:"price",date:o.updated_at,action:o.status,amount:o.amount,actor_id:o.last_actor_id,offer_id:o.id,currentOffer:o});
+ const tradeListingIds=[...new Set((tr.data||[]).flatMap(o=>[o.listing_id,o.offered_listing_id]).filter(Boolean))];
+ const tradeListingResult=tradeListingIds.length?await supabaseClient.from("listings").select("id,title,description").in("id",tradeListingIds):{data:[]};
+ if(requestId!==inboxLoadVersion||currentUser?.id!==userId)return;
+ const tradeListings=new Map((tradeListingResult.data||[]).map(l=>[l.id,l]));
  for(const o of tr.data||[])add(o.sender_id===currentUser.id?o.recipient_id:o.sender_id,{type:"trade",date:o.created_at,...o});
  const tradeById=new Map((tr.data||[]).map(o=>[o.id,o]));
 const pendingTradeCounterByOffer=new Map();
 if(tradeById.size){
- const cr=await supabaseClient.from("trade_counteroffers").select("id,trade_offer_id,proposer_id,recipient_id,cash_amount,cash_direction,offer_note,status,created_at").in("trade_offer_id",[...tradeById.keys()]).order("created_at",{ascending:false}).limit(400);
+
  if(requestId!==inboxLoadVersion||currentUser?.id!==userId)return;
- if(cr.error){el.textContent="Could not load trade counteroffers: "+cr.error.message;return}
+
  for(const c of cr.data||[]){
   const offer=tradeById.get(c.trade_offer_id);if(!offer)continue;
   if(c.status==="pending")pendingTradeCounterByOffer.set(c.trade_offer_id,c);
@@ -1754,7 +1772,7 @@ if(tradeById.size){
  document.getElementById("inboxPage").classList.add("thread-open");
  el.querySelectorAll("[data-conversation-id]").forEach(b=>b.classList.toggle("active",b.dataset.conversationId===id));
  const person=names.get(id),thread=document.getElementById("conversationThread");
- thread.innerHTML=`<div class="chat-person"><span class="chat-avatar">${escapeHtml((person?.username||"C")[0].toUpperCase())}</span><div><h3>@${escapeHtml(person?.username||"collector")}</h3><p class="muted">${entries.length} conversation updates</p></div></div>${entries.some(x=>(x.type==="price"&&x.currentOffer?.status==="accepted")||(x.type==="trade"&&x.status==="accepted"))?`<details class="chat-deal-panel"><summary>✓ Accepted deal <span>View progress & details</span></summary><div data-deal-details>Open to view transaction progress.</div><details class="deal-guidance"><summary>Exchange tips <span>Safety & shipping</span></summary><div class="deal-guidance-body"><p>DeckPlay does not process payments, issue shipping labels, or verify delivery yet.</p><ol><li>Agree on the item, price and shipping method.</li><li>Share tracking details in messages.</li><li>Confirm completion only when your part is finished.</li></ol><p>Never share passwords or verification codes.</p></div></details></details>`:""}<div class="conversation-bubbles" role="log" aria-label="Conversation history">${entries.map(x=>x.type==="message"?`<div class="message-bubble chat-text ${x.sender_id===currentUser.id?"mine":"theirs"}"><p>${escapeHtml(x.body)}</p><small>${new Date(x.date).toLocaleString([], {hour:"numeric",minute:"2-digit"})}</small></div>`:x.type==="price"?`<div class="message-bubble inbox-offer chat-event ${x.actor_id===currentUser.id?"inbox-mine":""}"><strong>${x.action==="offered"?"💵 Offer made":x.action==="countered"?"↩️ Counteroffer":x.action==="accepted"?"✓ Offer accepted":x.action==="declined"?"✕ Offer declined":x.action==="withdrawn"?"↩ Offer withdrawn":"💵 Offer update"} · ${Number(x.amount).toFixed(2)}</strong><p>${x.actor_id===currentUser.id?"You":"@"+escapeHtml(person?.username||"collector")} · ${escapeHtml(x.action)}</p><small>${new Date(x.date).toLocaleString()}</small>${x.isLatest&&["pending","countered"].includes(x.currentOffer.status)?`<p class="price-offer-actions">${x.currentOffer.last_actor_id!==currentUser.id?`<button type="button" class="primary" data-inbox-price="accept" data-offer="${escapeHtml(x.offer_id)}">Accept</button><button type="button" class="ghost" data-inbox-price="counter" data-offer="${escapeHtml(x.offer_id)}">Counter</button><button type="button" class="ghost" data-inbox-price="decline" data-offer="${escapeHtml(x.offer_id)}">Decline</button>`:`<span class="muted">Waiting for their reply</span>`}</p>`:""}</div>`:x.type==="trade_counter"?inboxTradeCounterHtml(x,userId):`<div class="message-bubble inbox-offer chat-event"><strong>⇄ Trade offer</strong><p>${escapeHtml(x.status)}${x.offer_note?" · "+escapeHtml(x.offer_note):""}</p><small>${new Date(x.date).toLocaleString()}</small>${x.status==="pending"&&!pendingTradeCounterByOffer.has(x.id)?`<p class="price-offer-actions">${x.recipient_id===currentUser.id?`<button type="button" class="primary" data-inbox-trade="accepted" data-offer="${escapeHtml(x.id)}">Accept</button><button type="button" class="ghost" data-inbox-trade="counter" data-offer="${escapeHtml(x.id)}">Counter</button><button type="button" class="ghost" data-inbox-trade="declined" data-offer="${escapeHtml(x.id)}">Decline</button>`:`<button type="button" class="ghost" data-inbox-trade="cancelled" data-offer="${escapeHtml(x.id)}">Cancel</button>`}</p>`:""}</div>`).join("")}</div><form class="chat-composer" data-chat-recipient="${escapeHtml(id)}"><label class="sr-only" for="chatInput">Message</label><textarea id="chatInput" name="message" rows="1" maxlength="2000" required placeholder="Message @${escapeHtml(person?.username||"collector")}…" aria-label="Write a message"></textarea><button class="primary" type="submit" aria-label="Send message" disabled>Send ➤</button><span class="chat-length-hint" aria-live="polite" hidden></span><p class="chat-send-status" aria-live="polite"></p></form>`;
+ thread.innerHTML=`<div class="chat-person"><span class="chat-avatar">${escapeHtml((person?.username||"C")[0].toUpperCase())}</span><div><h3>@${escapeHtml(person?.username||"collector")}</h3><p class="muted">${entries.length} conversation updates</p></div></div>${entries.some(x=>(x.type==="price"&&x.currentOffer?.status==="accepted")||(x.type==="trade"&&x.status==="accepted"))?`<details class="chat-deal-panel"><summary>✓ Accepted deal <span>View progress & details</span></summary><div data-deal-details>Open to view transaction progress.</div><details class="deal-guidance"><summary>Exchange tips <span>Safety & shipping</span></summary><div class="deal-guidance-body"><p>DeckPlay does not process payments, issue shipping labels, or verify delivery yet.</p><ol><li>Agree on the item, price and shipping method.</li><li>Share tracking details in messages.</li><li>Confirm completion only when your part is finished.</li></ol><p>Never share passwords or verification codes.</p></div></details></details>`:""}<div class="conversation-bubbles" role="log" aria-label="Conversation history">${entries.map(x=>x.type==="message"?`<div class="message-bubble chat-text ${x.sender_id===currentUser.id?"mine":"theirs"}"><p>${escapeHtml(x.body)}</p><small>${new Date(x.date).toLocaleString([], {hour:"numeric",minute:"2-digit"})}</small></div>`:x.type==="price"?`<div class="message-bubble inbox-offer chat-event ${x.actor_id===currentUser.id?"inbox-mine":""}"><strong>${x.action==="offered"?"💵 Offer made":x.action==="countered"?"↩️ Counteroffer":x.action==="accepted"?"✓ Offer accepted":x.action==="declined"?"✕ Offer declined":x.action==="withdrawn"?"↩ Offer withdrawn":"💵 Offer update"} · ${Number(x.amount).toFixed(2)}</strong><p>${x.actor_id===currentUser.id?"You":"@"+escapeHtml(person?.username||"collector")} · ${escapeHtml(x.action)}</p><small>${new Date(x.date).toLocaleString()}</small>${x.isLatest&&["pending","countered"].includes(x.currentOffer.status)?`<p class="price-offer-actions">${x.currentOffer.last_actor_id!==currentUser.id?`<button type="button" class="primary" data-inbox-price="accept" data-offer="${escapeHtml(x.offer_id)}">Accept</button><button type="button" class="ghost" data-inbox-price="counter" data-offer="${escapeHtml(x.offer_id)}">Counter</button><button type="button" class="ghost" data-inbox-price="decline" data-offer="${escapeHtml(x.offer_id)}">Decline</button>`:`<span class="muted">Waiting for their reply</span>`}</p>`:""}</div>`:x.type==="trade_counter"?inboxTradeCounterHtml(x,userId):inboxTradeHtml(x,tradeListings,cr.data||[],cr.error)).join("")}</div><form class="chat-composer" data-chat-recipient="${escapeHtml(id)}"><label class="sr-only" for="chatInput">Message</label><textarea id="chatInput" name="message" rows="1" maxlength="2000" required placeholder="Message @${escapeHtml(person?.username||"collector")}…" aria-label="Write a message"></textarea><button class="primary" type="submit" aria-label="Send message" disabled>Send ➤</button><span class="chat-length-hint" aria-live="polite" hidden></span><p class="chat-send-status" aria-live="polite"></p></form>`;
  const composer=thread.querySelector(".chat-composer"),input=composer.querySelector("textarea"),sending=inboxSending.has(userId+":"+id);
  input.value=inboxDrafts.get(id)||"";resizeInboxComposer(input);updateInboxLengthHint(input);input.readOnly=sending;composer.querySelector("button").disabled=sending||!input.value.trim();
  thread.querySelector(".conversation-bubbles").scrollTop=thread.querySelector(".conversation-bubbles").scrollHeight;
@@ -1826,6 +1844,23 @@ document.getElementById("messageInbox").addEventListener("click",async e=>{
    }
   }catch(error){if(currentUser?.id===userId){toast(error.message||"Offer update failed. Please retry.","error");await loadInbox().catch(()=>{})}}
   finally{pendingInboxDealActions.delete(key);if(currentUser?.id===userId)buttons.forEach(button=>{if(button.isConnected)button.disabled=false})}
+  return;
+ }
+ const counter=e.target.closest("[data-inbox-counter]");
+ if(counter){
+  const userId=currentUser?.id,id=counter.dataset.offer,key=userId+":trade:"+id;
+  if(!userId||pendingInboxDealActions.has(key))return;
+  const accept=counter.dataset.inboxCounter==="accept";
+  if(!confirm(accept?"Accept these counteroffer terms? Items will be reserved; no payment is taken.":"Decline this counteroffer?"))return;
+  pendingInboxDealActions.add(key);const buttons=[...counter.closest(".price-offer-actions").querySelectorAll("button")];buttons.forEach(b=>b.disabled=true);
+  try{
+   const {error}=await supabaseClient.rpc("respond_trade_counter",{p_counter:counter.dataset.counter,p_accept:accept});
+   if(currentUser?.id!==userId)return;
+   if(error)throw error;
+   if(accept)await loadListings();
+   await loadInbox();refreshTradeAlerts();toast(accept?"Counteroffer accepted — items reserved. No payment taken.":"Counteroffer declined");
+  }catch(error){if(currentUser?.id===userId){toast(error.message||"Could not update counteroffer. Refresh and retry.","error");await loadInbox().catch(()=>{})}}
+  finally{pendingInboxDealActions.delete(key);if(currentUser?.id===userId)buttons.forEach(b=>{if(b.isConnected)b.disabled=false})}
   return;
  }
  const trade=e.target.closest("[data-inbox-trade]");
@@ -1949,10 +1984,10 @@ async function loadTradeOffers(focusOfferId=null){
 document.getElementById("tradeOffersList").addEventListener("click",async e=>{
  if(!currentUser)return;
  const counter=e.target.closest("[data-counter-start]");if(counter){activeCounterOffer=counter.dataset.counterStart;++counterComposeVersion;document.getElementById("counterForm").reset();document.getElementById("counterStatus").textContent="";openModal("counterModal");return}
- const reply=e.target.closest("[data-counter-response]");if(reply){const accept=reply.dataset.counterResponse==="accept";if(!confirm(accept?"Accept these counteroffer terms?":"Decline this counteroffer?"))return;reply.disabled=true;const {error}=await supabaseClient.rpc("respond_trade_counter",{p_counter:reply.dataset.counterId,p_accept:accept});if(error){toast(error.message);reply.disabled=false;return}await loadTradeOffers();refreshTradeAlerts();toast(accept?"Counteroffer accepted":"Counteroffer declined");return}
+ const reply=e.target.closest("[data-counter-response]");if(reply){const accept=reply.dataset.counterResponse==="accept";if(!confirm(accept?"Accept these counteroffer terms?":"Decline this counteroffer?"))return;reply.disabled=true;const {error}=await supabaseClient.rpc("respond_trade_counter",{p_counter:reply.dataset.counterId,p_accept:accept});if(error){toast(error.message);reply.disabled=false;return}await loadTradeOffers();if(!document.getElementById("inboxPage").hidden)await loadInbox();refreshTradeAlerts();toast(accept?"Counteroffer accepted":"Counteroffer declined");return}
  const button=e.target.closest("[data-trade-action]");if(!button)return;const action=button.dataset.tradeAction;
  if(!confirm(action==="accepted"?"Accept this proposal? You will still need to arrange the exchange safely.":"Change this offer to "+action+"?"))return;
- button.disabled=true;const column=action==="cancelled"?"sender_id":"recipient_id";const {error}=await supabaseClient.rpc("respond_trade_offer",{p_offer:button.dataset.offerId,p_action:action});if(error){toast(error.message);button.disabled=false;return}await loadTradeOffers();refreshTradeAlerts();if(action==="accepted"){await loadListings();await refreshNotificationCount();toast("Trade accepted — listing reserved. Arrange exchange safely; payments are not active.")}else toast("Offer "+action)
+ button.disabled=true;const column=action==="cancelled"?"sender_id":"recipient_id";const {error}=await supabaseClient.rpc("respond_trade_offer",{p_offer:button.dataset.offerId,p_action:action});if(error){toast(error.message);button.disabled=false;return}await loadTradeOffers();if(!document.getElementById("inboxPage").hidden)await loadInbox();refreshTradeAlerts();if(action==="accepted"){await loadListings();await refreshNotificationCount();toast("Trade accepted — listing reserved. Arrange exchange safely; payments are not active.")}else toast("Offer "+action)
 });
 document.getElementById("counterForm").addEventListener("submit",async e=>{
  e.preventDefault();
@@ -1971,7 +2006,7 @@ document.getElementById("counterForm").addEventListener("submit",async e=>{
   if(!current())return;
   if(directionInput.value===direction&&amountInput.value===rawAmount&&noteInput.value===rawNote){status.textContent="";closeModal("counterModal");toast("Counteroffer sent")}
   else status.textContent="Counteroffer sent. Your newer draft is preserved.";
-  await loadTradeOffers();void refreshTradeAlerts();
+  await loadTradeOffers();if(current()&&!document.getElementById("inboxPage").hidden)await loadInbox();void refreshTradeAlerts();
  }catch(error){if(current())status.textContent="Could not send counteroffer: "+(error.message||"Please try again.")}
  finally{
   delete form.dataset.pending;form.removeAttribute("aria-busy");button.disabled=false;

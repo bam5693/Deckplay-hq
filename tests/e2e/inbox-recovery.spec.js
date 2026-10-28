@@ -560,7 +560,7 @@ test('message length hint appears near the limit and follows restored drafts',as
  await page.evaluate(()=>document.querySelector('[data-conversation-id="buyer-b"]').click());
  await page.evaluate(()=>document.querySelector('[data-conversation-id="buyer-a"]').click());
  await expect(input).toHaveValue('x'.repeat(1999));
- await expect(hint).toHaveText('1 characters remaining');
+ await expect(hint).toHaveText('1 character remaining');
  await input.fill('Short');
  await expect(hint).toBeHidden();
 });
