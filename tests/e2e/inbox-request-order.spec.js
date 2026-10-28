@@ -94,3 +94,35 @@ test('a former account inbox response arriving first cannot flash private messag
  await expect(page.locator('#messageInbox')).toContainText('Current account conversation');
  await expect(page.locator('#messageInbox')).not.toContainText('Former account private message');
 });
+
+test('sign-out during an inbox request never restores private conversations',async({page})=>{
+ await page.route('https://challenges.cloudflare.com/**',route=>route.abort());
+ await page.route('https://prrrzeelltmyugssqnzk.supabase.co/rest/v1/**',route=>route.fulfill({json:[]}));
+ await page.goto('/');
+ await page.waitForLoadState('networkidle');
+ await page.evaluate(async()=>{
+  await supabaseClient.auth.getSession();
+  currentUser={id:'fixture-signing-out'};
+  syncInboxDraftUser();
+  window.pendingInboxMessages=[];
+  supabaseClient.from=table=>{
+   const q={then:(resolve,reject)=>(table==='collector_messages'
+    ?new Promise(done=>pendingInboxMessages.push(done))
+    :Promise.resolve({data:[],error:null})).then(resolve,reject)};
+   for(const method of ['select','order','limit','in','eq','is'])q[method]=()=>q;
+   return q;
+  };
+  window.inFlightInbox=loadInbox();
+ });
+ await expect.poll(()=>page.evaluate(()=>pendingInboxMessages.length)).toBe(1);
+ await page.evaluate(()=>{currentUser=null;syncInboxDraftUser()});
+ await page.evaluate(async()=>{
+  pendingInboxMessages[0]({data:[{
+   id:'signed-out-message',sender_id:'private-contact',recipient_id:'fixture-signing-out',
+   body:'Private message after sign-out',read_at:null,created_at:new Date().toISOString()
+  }],error:null});
+  await inFlightInbox;
+ });
+ await expect(page.locator('#messageInbox')).not.toContainText('Private message after sign-out');
+ await expect(page.locator('#messageInbox [data-conversation-id="private-contact"]')).toHaveCount(0);
+});
