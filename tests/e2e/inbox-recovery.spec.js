@@ -670,3 +670,25 @@ test('inbox search and unread filters survive refresh but reset on account chang
  await expect(search).toHaveValue('');await expect(unread).not.toBeChecked();
  await expect(page.locator('[data-conversation-id="buyer-a"]')).toBeVisible();
 });
+
+test('Jayden can retry an offline inbox without losing his TCG inquiry draft',async({page})=>{
+ await inbox(page);
+ await page.locator('#chatInput').fill('Is your One Piece deck still available?');
+ await page.evaluate(()=>{
+  const originalFrom=supabaseClient.from;
+  let offlineOnce=true;
+  supabaseClient.from=table=>{
+   if(table==='collector_messages'&&offlineOnce){
+    offlineOnce=false;
+    return {select:()=>({order:()=>({limit:()=>Promise.reject(new Error('Offline'))})})};
+   }
+   return originalFrom(table);
+  };
+ });
+ await page.evaluate(()=>loadInbox());
+ await expect(page.locator('[data-inbox-retry]')).toBeVisible();
+ await expect(page.locator('[role="alert"]')).toContainText('Could not load conversations');
+ await page.locator('[data-inbox-retry]').click();
+ await expect(page.locator('#chatInput')).toHaveValue('Is your One Piece deck still available?');
+ await expect(page.locator('[data-inbox-retry]')).toHaveCount(0);
+});
