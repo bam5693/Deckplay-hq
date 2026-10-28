@@ -264,3 +264,7 @@ See [roadmap development](2026-10-28-roadmap-development.md) for current evidenc
 ### 2026-10-28 follow-up
 
 Inbox Back is VERIFIED at `460438c` / run `40680128125` (48 API, 44 deployed, 86 selected local, 11 cleanup checks). Exact card printing/custom metadata and storefront description parity are deployed at `50bb34f`, awaiting run `40681070226`. Block-list/preference account-isolation fixes are locally passing; see the dated development report. Legacy `moderation.html` exists, but staging has none of its four authorization/queue/action RPCs: admin backend remains NEW. Private attachments still need a private bucket and server authorization; external inquiry opt-in remains NEW. Do not label these finished merely because a page or historical test exists.
+
+### Current security/intake progress
+
+See [development ledger](2026-10-28-roadmap-development.md). Block/preference isolation is VERIFIED at `ae063ba` / run `40681791376`. The legacy moderation UI is hardened and deployed at `8827f74`; server moderator roles, enforced MFA and audit RPCs remain NEW. Report draft/submission privacy and counterfeit/photo categories are locally passing, pending deployment. Exact card metadata is VERIFIED at `50bb34f`. Next listing gap: explicit decklist quantity mismatch warnings/validation, with no game-legality claims.

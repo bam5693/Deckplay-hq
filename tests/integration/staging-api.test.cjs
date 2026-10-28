@@ -320,7 +320,8 @@ test('blocking after a trade counteroffer prevents acceptance and item reservati
 });
 
 test('reports are private to reporter and cannot impersonate another reporter',()=>{
- const report=ok(api('buyer','/rest/v1/user_reports','POST',{reporter_id:users.buyer,reported_id:users.seller,reason:'other',details:run},{Prefer:'return=representation'}),201)[0];
+ const report=ok(api('buyer','/rest/v1/user_reports','POST',{reporter_id:users.buyer,reported_id:users.seller,reason:'counterfeit',details:run},{Prefer:'return=representation'}),201)[0];
+ assert.equal(report.reason,'counterfeit','Counterfeit report category must persist exactly');
  assert.equal(ok(api('seller','/rest/v1/user_reports?id=eq.'+report.id)).length,0);
  assert.equal(ok(api(null,'/rest/v1/user_reports?id=eq.'+report.id)).length,0);
  assert(api('buyer','/rest/v1/user_reports','POST',{reporter_id:users.seller,reported_id:users.buyer,reason:'other',details:run}).status>=400);

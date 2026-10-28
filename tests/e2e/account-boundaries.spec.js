@@ -126,3 +126,58 @@ test('notification preferences recover from service errors and ignore a former a
  await expect(page.locator('[data-notify-pref="messages"]')).toBeDisabled();
  await expect(page.locator('#notificationSettingsStatus')).toBeEmpty();
 });
+
+async function reportDraft(page){
+ await page.evaluate(()=>{
+  currentUser={id:'fixture-reporter'};syncInboxDraftUser();window.reportWrites=0;
+  supabaseClient.from=table=>table==='user_reports'?{insert:payload=>{reportWrites++;window.reportPayload=payload;return new Promise(done=>window.finishReport=done)}}:{select(){return this},eq(){return this},maybeSingle:async()=>({data:null,error:null})};
+  startReport('fixture-reported');
+ });
+ await page.locator('#reportDetails').fill('Private synthetic report details');
+}
+test('report submissions prevent duplicate taps and preserve details after service errors',async({page})=>{
+ await reportDraft(page);await page.locator('#reportReason').selectOption('counterfeit');
+ await page.evaluate(()=>{reportForm.requestSubmit();reportForm.requestSubmit()});
+ expect(await page.evaluate(()=>reportWrites)).toBe(1);
+ expect(await page.evaluate(()=>reportPayload)).toMatchObject({reporter_id:'fixture-reporter',reported_id:'fixture-reported',reason:'counterfeit',details:'Private synthetic report details'});
+ await page.evaluate(()=>finishReport(Promise.reject(Error('Report connection interrupted'))));
+ await expect(page.locator('#reportStatus')).toContainText('Report connection interrupted');
+ await expect(page.locator('#reportDetails')).toHaveValue('Private synthetic report details');
+ await expect(page.locator('#reportForm button[type="submit"]')).toBeEnabled();
+ await page.locator('#reportForm button[type="submit"]').click();await page.evaluate(()=>finishReport({error:null}));
+ await expect(page.locator('#reportModal')).not.toHaveClass(/open/);
+});
+test('account switches erase report drafts and ignore former account submission results',async({page})=>{
+ await reportDraft(page);await page.locator('#reportForm button[type="submit"]').click();
+ await page.evaluate(()=>{window.reportConfirms=0;window.confirm=()=>{reportConfirms++;return true};currentUser={id:'next-reporter'};syncInboxDraftUser()});
+ await expect(page.locator('#reportModal')).not.toHaveClass(/open/);
+ await expect(page.locator('#reportDetails')).toHaveValue('');
+ await page.evaluate(()=>finishReport({error:null}));
+ expect(await page.evaluate(()=>reportConfirms)).toBe(0);
+});
+test('block-status lookups cannot overwrite the next report target',async({page})=>{
+ await page.evaluate(()=>{
+  currentUser={id:'fixture-reporter'};syncInboxDraftUser();window.reportBlockReplies={};
+  supabaseClient.from=()=>{let target;return {select(){return this},eq(field,id){if(field==='blocked_id')target=id;return this},maybeSingle:()=>new Promise(done=>reportBlockReplies[target]=done)}};
+  startReport('former-target');startReport('current-target');
+ });
+ await page.evaluate(()=>reportBlockReplies['current-target']({data:null,error:null}));
+ await expect(page.locator('#reportBlockButton')).toHaveText('Block collector');
+ await page.evaluate(()=>reportBlockReplies['former-target']({data:{blocked_id:'former-target'},error:null}));
+ await expect(page.locator('#reportBlockButton')).toHaveText('Block collector');
+});
+
+test('a successful older report preserves newer edits and does not close another target',async({page})=>{
+ await reportDraft(page);await page.locator('#reportForm button[type="submit"]').click();
+ await page.locator('#reportDetails').fill('Newer evidence not yet submitted');
+ await page.evaluate(()=>finishReport({error:null}));
+ await expect(page.locator('#reportModal')).toHaveClass(/open/);
+ await expect(page.locator('#reportDetails')).toHaveValue('Newer evidence not yet submitted');
+ await expect(page.locator('#reportStatus')).toContainText('Your newer details have been kept');
+ await page.locator('#reportForm button[type="submit"]').click();
+ await page.evaluate(()=>startReport('different-reported-collector'));
+ await page.locator('#reportDetails').fill('Different collector evidence');
+ await page.evaluate(()=>finishReport({error:null}));
+ await expect(page.locator('#reportModal')).toHaveClass(/open/);
+ await expect(page.locator('#reportDetails')).toHaveValue('Different collector evidence');
+});

@@ -61,3 +61,21 @@ Reproduction: the legacy page displayed synthetic reports with AAL1 and retained
 Security boundary: these are UI privacy/MFA safeguards, not a substitute for server authorization. Staging has no `is_deckplay_moderator`, `moderation_report_queue`, `review_deckplay_report` or `hide_deckplay_listing` functions. No roles were granted, no real reports read/changed, and no working admin backend/audit trail is claimed. Backend least-privilege roles, server-enforced MFA and audit logging remain NEW. Added a real deployed ordinary-collector denial case, pending matching build CI. No billing or auth-plan changes.
 
 VERIFY: deployment pending Batch 3 completion. Next confirmed defects: report dialog allows duplicate submissions, retains private drafts after account switches and accepts stale block-status lookups from the previous target. Targeted regressions reproduced each on desktop/mobile; fix these before expanding moderation features.
+
+### Batch 3 deployed completion
+
+VERIFIED at `ae063ba`, [run 40681791376](https://github.com/bam5693/Deckplay-hq/actions/runs/40681791376): 48 real API, 46 deployed browser, 158 selected local and 11 cleanup checks passed. The larger local selection includes previously existing account/listing regressions added to this workflow; it is not 72 newly implemented features.
+
+### Batch 4 deployment
+
+Code `8827f7455c8b71ed21843b63a74c18542bffb95b`, deployment `a12f7a10a1854489829627584ca616d9`, exact complete Worker read-back matched. [Run 40682581715](https://github.com/bam5693/Deckplay-hq/actions/runs/40682581715) is the matching CI run; pending at this checkpoint. Local mobile screenshot review confirms readable locked access with no report data or controls.
+
+## Batch 5 — Private report intake and counterfeit/photo categories
+
+POLISH: report submissions now guard duplicate taps, snapshot the reporter/target/reason/details before awaiting, preserve newer edits on success and retain drafts with retry controls after errors. Switching accounts immediately erases report drafts/targets and closes the dialog; old submissions cannot affect the new account. Block-status lookups are scoped to account and report target. Blocking remains a separate explicit control.
+
+NEW: suspected counterfeit/altered-item and stolen/misleading-photo report categories. Existing staging report schema accepts these text categories; no migration needed. Expanded the existing report privacy API test to verify the counterfeit category persists while preserving cross-user/anonymous/impersonation denial checks.
+
+Validation: three initial report regressions failed on both mobile and desktop. After fixes, 62 targeted desktop/mobile account/report, option and marketplace-safety checks passed. The existing 33 security tests passed against current sources. Full local suite: **318 passed**, no failures; deployment waits for Batch 4's exact build checks. No real report or user data changed.
+
+Next independent listing branch: deck quantity consistency. Current deployed synthetic deck fixture declares 51 cards but only lists 9; current UI does not flag the mismatch. Implement explicit-quantity arithmetic without claiming game-specific deck legality.
