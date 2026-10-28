@@ -199,3 +199,60 @@ This supersedes the earlier suggestion to display item+fees+estimated shipping a
 10. Later: rule-based support triage and optional AI drafts; never autonomous bans, refunds or real financial actions.
 
 **Execution:** security and audit foundations first; then dashboard, moderation, support, monitoring, and account controls. Invite-only/public beta gates must pass before real users; payments/shipping branches stay disabled until explicit approval. Charles checks access controls and audit tests, Kyle mobile workflows, Tanner seller/collector support, Jayden buyer/trade support. Verify existing code and tests before marking each branch VERIFIED; don't duplicate already passing tests. 
+
+
+## MASTER EXECUTION PLAN — Eight trunks, phased and anti-duplicate (2026-10-28)
+
+**Status:** consolidated implementation order approved by owner; this is a plan, NOT a claim of feature implementation or current test pass. Follow the detailed sections above; later corrections supersede earlier ideas. In particular, listing display is **seller price + buyer mandatory fees, excluding shipping**; shipping choices/prices are separate and final total (including applicable tax) is shown before payment. Do not assume $5 shipping for a single card.
+
+### Phase 0 — Baseline and security (gate for all further work)
+- Inspect latest staging branch and draft PR #2, recent commits, CI, deployment and isolated Supabase; record actual results and avoid overlapping hourly automation changes.
+- Inventory current code, deployed features and tests; distinguish VERIFIED historically, POLISH, VERIFY, NEW and LATER. Preserve verified features.
+- Trunks 6/8: admin authorization, least privilege, privileged MFA, audit trail, staging/production isolation, RLS, account privacy, report/block safety, rollback/backup review. Prioritize confirmed security defects over new features.
+- Charles owns API/RLS/admin negative cases; Kyle verifies admin mobile access and safe denial; Tanner/Jayden exercise user-visible trust and reporting flows.
+
+### Phase 1 — Make existing marketplace excellent (before invite beta)
+1. Trunk 2: inbox single-thread mobile layout, back behavior, message composer, unread counts, offer/trade deep links and account-switch privacy. Fix reproduced issues in 1–2 change batches.
+2. Trunk 3: offers/counteroffers/trades, multi-item proposals, idempotent locking, deal snapshots and retry/error recovery; do not activate payment.
+3. Trunk 4: useful favorite-price-drop/sold/followed-seller alerts; route messages and negotiations to inbox, not generic Alerts.
+4. Trunk 1: precise variant/printing/condition listing and custom fallback, photos, drafts, quantities/lots, seller listing controls; preserve existing free-text listing and grading.
+5. Trunk 5: Android Back, five-tab nav, mobile keyboard, readable type, tap targets, responsive layout, listing preview and PWA updates.
+6. Trunk 2: private conversation photo attachments with private storage and authorization; only after RLS/storage review and free-tier budget check.
+7. Trunk 4: external collection profile links with inquiry opt-in OFF by default, spam protections and no assumed sale availability.
+8. Trunk 1/3/6: fee-inclusive display below listed price **excluding shipping**, separate buyer-selectable eligible shipping options, honest tax estimates and checkout preview only. Fee ownership and exact rates require later owner decision.
+
+### Phase 2 — Operate the beta safely
+- Trunk 8 order: (1) admin security/audits, (2) mobile Command Center, (3) reports/moderation/counterfeit queue, (4) support tickets/Help Center, (5) health/kill switches/rollback, (6) account management/appeals, (7) feedback/announcements. Financial operations and automation follow later.
+- Trunk 6: signup protection, recovery, moderation policy, abuse detection, account deletion/export, backups, terms/privacy/community rules, accessibility, smoke tests, incident playbook.
+- Trunk 7: shareable listing links, SEO, lightweight analytics and seller storefronts; invite/referral tracking and founding member badges if simple. No paid promotions, ads or marketing APIs yet.
+- **Invite-only beta gate:** verified access controls, no cross-user leaks, functioning reports/support, stable listings/inbox/offers/trades, mobile smoke tests, backup/rollback, transparent no-checkout/no-shipping labels and support ownership. No live money movement. Beta transactions are simulations, clearly labeled.
+
+### Phase 3 — Enable real commerce only with explicit owner approval
+- Trunks 3/6/8: provider-supported marketplace checkout/onboarding/payouts, refund and dispute processes, ledger reconciliation, idempotent inventory/payment state and seller/buyer protections.
+- Trunks 1/3/6: shipping eligibility and choices for economy letters where valid, tracked parcel options, combined shipping, postage quotes/labels, lost/damaged claims and carrier requirements. **Never claim untracked envelope is insured/tracked.**
+- Show seller asking price, price including mandatory buyer fees (not shipping), separate selectable shipping cost, applicable tax and exact final payable total before confirming. Show seller net proceeds separately. Avoid duplicate payment fees on bundles.
+- Document actual provider pricing, fee cap, small-order break-even, refund/chargeback exposure, tax/compliance, and operating cost alerts; seek owner approval before enabling paid services, live payments, labels or production changes.
+
+### Phase 4 — Grow without compromising collector trust
+- Trunk 7: seller analytics, storefronts, referral metrics, local shop outreach, search-zero-results metrics, share cards, seller vacation mode, founding collector badges and retention funnel.
+- Later only: scan-to-list licensed catalog/pricing, optional paid promotions/ads, advanced AI support/recommendations, native app stores and collection imports. Require provider rights, privacy and budget review.
+- Trunk 8: expand ticket automation and financial operations only when justified by volume.
+
+### Status and implementation ledger (starting snapshot; confirm in code/deployment before changing)
+| Trunk | Historical working baseline | First unfinished work | Initial classification |
+|---|---|---|---|
+| 1 Listings | CRUD, photos, grading, search | precise custom variants, listing/quantity UX | POLISH / NEW |
+| 2 Inbox | private messages and threads | mobile polish, photo attachments | POLISH / NEW |
+| 3 Transactions | offer, counteroffer, trade and locking basics | multi-item trade UX, failure recovery | VERIFY / NEW |
+| 4 Discovery | favorites, follows, wanted and alerts basics | alert routing, collection inquiry controls | POLISH / NEW |
+| 5 Mobile | installable PWA and core nav | keyboard/Back/spacing/accessibility | POLISH |
+| 6 Security | staging isolation and synthetic checks | admin hardening, policies, beta gates | VERIFY / NEW |
+| 7 Growth | some share/follow primitives | SEO, storefront analytics, referrals | VERIFY / NEW |
+| 8 Operations | no comprehensive admin suite verified | secure Command Center, moderation, support | NEW |
+
+### Continuous work rules
+- Each batch: read latest branch/PR/CI, select highest-value **unfinished** task, inspect existing implementation, reproduce or define acceptance, change at most 1–2 related behaviors, run targeted tests, deploy exact staging build if applicable, verify and log evidence.
+- Four deterministic personas: Charles security/API, Kyle deployed mobile/desktop, Tanner sports collector/seller, Jayden TCG player/deck builder/trader; rotate leads. No assertion that four autonomous paid AI agents are running.
+- Do not inflate check totals, rerun passing workflows unnecessarily, overwrite concurrent automation work, or claim deployment without verification.
+- Never touch main/production or real user data, merge PR, enable real money/shipping, incur paid services, or run destructive SQL without explicit authorization.
+- Next development batch after baseline: first confirmed security blocker, otherwise a reproducible inbox/navigation defect; then move across trunks rather than repeatedly polishing one area.
