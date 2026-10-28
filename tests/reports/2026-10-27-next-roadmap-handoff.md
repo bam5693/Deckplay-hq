@@ -146,3 +146,14 @@ Prioritize **one or two real customer-facing fixes per development batch**, with
 **Future, conditional:** deep link to individual cards, optional import/sync only if provider permissions, commercial terms, user consent and cost allow. Never pay for API/integration without explicit approval.
 
 **Acceptance:** a synthetic collector without listings can share a valid public collection link; another synthetic user can view it and initiate a private inquiry; owner can disable inquiries; unsafe URLs and blocked users are rejected; no listing or sale is fabricated.
+
+
+### Trunk 4.13 addendum — prevent unwanted collector inquiries (approved 2026-10-28)
+
+**Privacy-first default:** external collection links may be visible without accepting any sale/trade inquiries. Collection inquiry permission is OFF by default (opt-in); never equate a public collection with an item being for sale.
+
+**Controls:** Showcase Only (no collection inquiry CTA), Trades Only, Buy/Trade Inquiries; allow instant pause/mute; later optional per-card availability flags. Respect block/privacy controls. Hide inquiry CTA for disabled modes, and enforce denial server-side even if someone submits a crafted request.
+
+**Anti-spam:** rate-limit first-contact collection inquiries and repeated requests; prevent duplicate unanswered requests for the same collector/card; allow dismiss/report/block. Keep collection inquiries separate/filterable from active listing/deal conversations so sellers can prioritize actual transactions. Do not imply off-platform collector apps grant access to card-specific availability or messaging.
+
+**Tests:** a large-collection synthetic user with default settings receives no collection inquiries; opting in permits controlled first-contact requests; turning off inquiries blocks subsequent new requests without deleting existing conversations; blocked users cannot initiate contact. Preserve existing normal listing messaging.
