@@ -241,3 +241,36 @@ test('activity bell excludes negotiations while retaining favorite alerts and a 
  await expect(page.locator('#notificationList')).not.toContainText('New trade offer');
  await expect(page.locator('#notificationBadge')).toHaveText('1');
 });
+
+test('a former account unread count cannot overwrite the current account badge',async({page})=>{
+ await ready(page);
+ await page.evaluate(()=>{
+  currentUser={id:'fixture-former-owner'};syncInboxDraftUser();
+  window.pendingUnreadCounts=[];
+  supabaseClient.from=()=>{
+   const q={then:(resolve,reject)=>new Promise(done=>pendingUnreadCounts.push(done)).then(resolve,reject)};
+   for(const key of ['select','eq','is'])q[key]=()=>q;
+   return q;
+  };
+  window.formerUnreadCount=refreshUnreadCount();
+ });
+ await expect.poll(()=>page.evaluate(()=>pendingUnreadCounts.length)).toBe(1);
+ await page.evaluate(()=>{
+  currentUser={id:'fixture-current-owner'};syncInboxDraftUser();
+  window.currentUnreadCount=refreshUnreadCount();
+ });
+ await expect.poll(()=>page.evaluate(()=>pendingUnreadCounts.length)).toBe(2);
+ await page.evaluate(async()=>{
+  pendingUnreadCounts[1]({count:3,error:null});
+  await currentUnreadCount;
+ });
+ await expect(page.locator('#headerUnread')).toHaveText('3');
+ await page.evaluate(async()=>{
+  pendingUnreadCounts[0]({count:11,error:null});
+  await formerUnreadCount;
+ });
+ for(const id of ['headerUnread','menuUnread']){
+  await expect(page.locator('#'+id)).toHaveText('3');
+  await expect(page.locator('#'+id)).toHaveJSProperty('hidden',false);
+ }
+});
