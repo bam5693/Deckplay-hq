@@ -45,3 +45,12 @@ test('trade dialog locks competing decisions and releases them after transport f
  await expect(page.locator('#tradeOffersList [data-counter-response="accept"]')).toBeEnabled();
  await expect(page.locator('#tradeOffersList [data-counter-response="decline"]')).toBeEnabled();
 });
+
+test('saved multi-item details remain visible when live listings are missing or edited',async({page})=>{
+ await fixture(page);
+ await page.evaluate(()=>{
+  const offer={id:'saved',sender_id:'jayden',recipient_id:'tanner',listing_id:'sports',offered_listing_id:'foil',offered_listing_ids:['foil','game'],status:'accepted',offer_note:'Counter agreement',cash_amount:10,cash_direction:'sender_pays',initial_terms:{note:'Original bundle',cash_amount:0,cash_direction:'none'},created_at:new Date().toISOString(),item_snapshots:[{listing_id:'sports',owner_id:'tanner',title:'PSA 9 original',description:'Original certification'},{listing_id:'foil',owner_id:'jayden',title:'Japanese stamped foil',description:'Variant saved exactly'},{listing_id:'game',owner_id:'jayden',title:'Complete game',description:'Original case included'}]};
+  document.getElementById('conversationThread').innerHTML=inboxTradeHtml(offer,new Map([['foil',{title:'Edited live title'}]]),[],null);
+ });
+ await expect(page.locator('#conversationThread')).toContainText('Japanese stamped foil');await expect(page.locator('#conversationThread')).toContainText('Complete game');await expect(page.locator('#conversationThread')).toContainText('PSA 9 original');await expect(page.locator('#conversationThread')).not.toContainText('Edited live title');await expect(page.locator('#conversationThread')).toContainText('Original bundle');await expect(page.locator('#conversationThread')).toContainText('saved when this proposal was sent');
+});

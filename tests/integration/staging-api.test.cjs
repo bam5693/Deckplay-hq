@@ -722,3 +722,44 @@ test('blocking ends both follow directions and unblocking does not restore them'
   setFollow(a,aToB,b,originalA);setFollow(b,bToA,a,originalB);
  }
 });
+
+test('multi-item trade saves disclosures and a cash counter reserves every selected listing',()=>{
+ const target=createListing('seller'),one=createListing('buyer',{description:'Japanese foil disclosed'}),two=createListing('buyer',{description:'Stamped promo with corner wear'});
+ const trade=ok(api('buyer','/rest/v1/trade_offers','POST',{listing_id:target.id,sender_id:users.buyer,recipient_id:users.seller,offered_listing_ids:[one.id,two.id],offer_note:'Two distinct printings for the graded card',item_snapshots:[{title:'Forged title'}]},{Prefer:'return=representation'}),201)[0];
+ assert.equal(trade.item_snapshots.length,3);assert(!JSON.stringify(trade.item_snapshots).includes('Forged title'));assert.equal(trade.item_snapshots.find(x=>x.listing_id===two.id).description,'Stamped promo with corner wear');
+ const counter=ok(api('seller','/rest/v1/rpc/create_trade_counter','POST',{p_offer:trade.id,p_cash:5,p_direction:'sender_pays',p_note:'Same items plus five'}));
+ ok(api('buyer','/rest/v1/rpc/respond_trade_counter','POST',{p_counter:counter,p_accept:true}),204);
+ for(const [role,ids] of [['seller',[target.id]],['buyer',[one.id,two.id]]])for(const id of ids)assert.equal(ok(api(role,'/rest/v1/listings?id=eq.'+id))[0].status,'reserved');
+ const saved=ok(api('buyer','/rest/v1/trade_offers?id=eq.'+trade.id))[0];assert.equal(saved.initial_terms.note,'Two distinct printings for the graded card');assert.equal(saved.cash_amount,5);
+});
+
+test('edited extra-item disclosure rejects trade acceptance without partial reservations',()=>{
+ const target=createListing('seller'),one=createListing('buyer'),two=createListing('buyer',{description:'Original condition'});
+ const trade=ok(api('buyer','/rest/v1/trade_offers','POST',{listing_id:target.id,sender_id:users.buyer,recipient_id:users.seller,offered_listing_ids:[one.id,two.id],offer_note:run},{Prefer:'return=representation'}),201)[0];
+ ok(api('buyer','/rest/v1/listings?id=eq.'+two.id,'PATCH',{description:'Damaged corner now disclosed'}),204);
+ assert(api('seller','/rest/v1/rpc/respond_trade_offer','POST',{p_offer:trade.id,p_action:'accepted'}).status>=400);
+ for(const id of [target.id,one.id,two.id])assert.equal(ok(api('buyer','/rest/v1/listings?id=eq.'+id))[0].status,'active');
+ assert.equal(ok(api('buyer','/rest/v1/trade_offers?id=eq.'+trade.id))[0].status,'pending');
+});
+
+test('price acceptance on extra trade collateral closes the bundle without reserving its other items',()=>{
+ const target=createListing('seller'),one=createListing('buyer'),two=createListing('buyer');
+ const trade=ok(api('buyer','/rest/v1/trade_offers','POST',{listing_id:target.id,sender_id:users.buyer,recipient_id:users.seller,offered_listing_ids:[one.id,two.id],offer_note:run},{Prefer:'return=representation'}),201)[0];
+ const price=offer(two.id,20,'seller');ok(respond(price,'accept',null,'buyer'),204);
+ assert.equal(ok(api('buyer','/rest/v1/trade_offers?id=eq.'+trade.id))[0].status,'declined');
+ assert.equal(ok(api('buyer','/rest/v1/listings?id=eq.'+one.id))[0].status,'active');
+ assert.equal(ok(api('seller','/rest/v1/listings?id=eq.'+target.id))[0].status,'active');
+});
+
+test('simultaneous bundle and price acceptance on additional collateral has one winner',async()=>{
+ const target=createListing('seller'),one=createListing('buyer'),two=createListing('buyer');
+ const trade=ok(api('buyer','/rest/v1/trade_offers','POST',{listing_id:target.id,sender_id:users.buyer,recipient_id:users.seller,offered_listing_ids:[one.id,two.id],offer_note:run},{Prefer:'return=representation'}),201)[0],price=offer(two.id,20,'seller');
+ const {httpAsync}=require('../../scripts/staging-http.cjs');const headers=role=>({apikey:key,'Content-Type':'application/json',Authorization:'Bearer '+sessions[role].access_token});
+ const results=await Promise.all([
+  httpAsync(base+'/rest/v1/rpc/respond_trade_offer',{method:'POST',headers:headers('seller'),body:{p_offer:trade.id,p_action:'accepted'}}),
+  httpAsync(base+'/rest/v1/rpc/respond_price_offer',{method:'POST',headers:headers('buyer'),body:{p_offer_id:price,p_action:'accept',p_amount:null}})
+ ]);
+ assert.equal(results.filter(r=>r.status===204).length,1,'Exactly one negotiation may reserve the additional item');
+ const bundleWon=results[0].status===204;
+ for(const [role,id,wanted] of [['seller',target.id,bundleWon?'reserved':'active'],['buyer',one.id,bundleWon?'reserved':'active'],['buyer',two.id,'reserved']])assert.equal(ok(api(role,'/rest/v1/listings?id=eq.'+id))[0].status,wanted);
+});

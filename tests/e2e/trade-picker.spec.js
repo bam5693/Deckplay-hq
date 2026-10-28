@@ -144,3 +144,22 @@ test('late counteroffer results never close another draft or reveal a prior acco
  await expect(page.locator('#counterModal')).toHaveClass(/open/);
  expect(await page.evaluate(()=>counterReloads)).toBe(0);
 });
+
+test('multi-item trade submits every selected listing once and keeps the bundle after failure',async({page})=>{
+ await composeFixture(page);
+ await page.evaluate(()=>{document.getElementById('tradeOfferedListing').innerHTML='<option value="">Choose</option><option value="foil">Japanese foil</option><option value="promo">Stamped promo</option><option value="game">Complete game</option>';renderTradeBundle()});
+ for(const id of ['foil','promo']){await page.locator('#tradeOfferedListing').selectOption(id);await page.locator('#tradeAddItem').click()}
+ await page.locator('#tradeOfferedListing').selectOption('game');
+ await expect(page.locator('#tradeBundleCount')).toContainText('3 listed items selected');
+ await page.locator('#tradeComposeForm button[type="submit"]').click();
+ expect(await page.evaluate(()=>tradeWrites[0])).toMatchObject({offered_listing_id:'foil',offered_listing_ids:['foil','promo','game']});
+ await page.evaluate(()=>failTrade(Error('Temporary bundle failure')));
+ await expect(page.locator('#tradeBundleItems li')).toHaveCount(2);await expect(page.locator('#tradeOfferedListing')).toHaveValue('game');
+ await page.locator('[data-remove-trade-item="promo"]').click();await expect(page.locator('#tradeBundleCount')).toContainText('2 listed items selected');
+});
+
+test('selected trade inventory clears across account changes',async({page})=>{
+ await composeFixture(page);
+ await page.evaluate(()=>{document.getElementById('tradeOfferedListing').innerHTML='<option value="">Choose</option><option value="private">Private card</option>';tradeBundleSelection=['private'];renderTradeBundle();inboxDraftUser=currentUser.id;currentUser={id:'new-account'};syncInboxDraftUser()});
+ await expect(page.locator('#tradeBundleItems')).toBeEmpty();expect(await page.evaluate(()=>tradeBundleSelection)).toEqual([]);
+});
