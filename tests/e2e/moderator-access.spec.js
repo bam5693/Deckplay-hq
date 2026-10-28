@@ -143,3 +143,26 @@ test('a stale AAL2 claim without any verified factor cannot display verified mod
  await expect(page.locator('#verifiedPanel')).toBeHidden();await expect(page.locator('#openCommandCenter')).toBeHidden();
  expect(await page.evaluate(()=>mfaCalls)).not.toContain('is_deckplay_moderator');
 });
+
+
+test('same-account token refresh during authenticator enrollment preserves the QR until sign-out',async({page})=>{
+ await install(page);
+ await page.evaluate(()=>{
+  const original=mfaFixture.auth.mfa.enroll;
+  mfaFixture.auth.mfa.enroll=async payload=>{
+   const result=await original(payload);
+   fireMfaAuth('TOKEN_REFRESHED',{user:fixtureIdentity});
+   fireMfaAuth('SIGNED_IN',{user:fixtureIdentity});
+   return result;
+  };
+ });
+ await begin(page);
+ await expect(page.locator('#setupMaterial')).toBeVisible();
+ await expect(page.locator('#setupSecret')).toHaveText(secret);
+ await page.evaluate(()=>fireMfaAuth('TOKEN_REFRESHED',{user:fixtureIdentity}));
+ await expect(page.locator('#setupMaterial')).toBeVisible();
+ await page.evaluate(()=>{fixtureIdentity=null;fireMfaAuth('SIGNED_OUT',null)});
+ await expect(page.locator('#setupMaterial')).toBeHidden();
+ await expect(page.locator('#setupSecret')).toBeEmpty();
+ await expect(page.locator('#setupQr')).not.toHaveAttribute('src');
+});

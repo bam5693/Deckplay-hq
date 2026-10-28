@@ -117,6 +117,9 @@
  el('reloadAccess').addEventListener('click',refresh);
  client.auth.onAuthStateChange((event,session)=>{
   if(event==='INITIAL_SESSION')return;
+  // A same-user Supabase token refresh during enrollment must not erase its one-time QR.
+  // Different-user sign-in, sign-out and page hiding still scrub setup material.
+  if((event==='SIGNED_IN'||event==='TOKEN_REFRESHED')&&session?.user?.id===owner&&!document.hidden&&(busy||!el('setupMaterial').hidden))return;
   invalidate('Account security changed. Checking your session…');
   if(!session?.user||event==='PASSWORD_RECOVERY'){status.textContent='Sign in to set up or verify your authenticator.';el('signedOutHelp').hidden=false;return}
   const version=generation;setTimeout(()=>{if(version===generation&&!document.hidden)refresh()},0);
