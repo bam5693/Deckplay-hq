@@ -68,9 +68,9 @@ jobs:
         env:
           STAGING_JOB_STATUS: ${{ job.status }}
         run: node scripts/report-staging-results.cjs
-      - name: Verify inbox request-order privacy on desktop and mobile
+      - name: Verify inbox privacy, unread counts and trade recovery on desktop and mobile
         if: ${{ !cancelled() }}
-        run: npx playwright test --config=playwright.local.config.js inbox-request-order.spec.js
+        run: npx playwright test --config=playwright.local.config.js inbox-request-order.spec.js inbox-recovery.spec.js trade-picker.spec.js
       - uses: actions/upload-artifact@v4
         if: always()
         with:
