@@ -30,3 +30,15 @@ Trunks 6/8 have an implemented, database-verified authorization/audit foundation
 ## Staging publication checkpoint
 
 Deployment `7ef9cb60bb69470ba100e0fb99286916`: full Worker source read-back matched the uploaded byte sequence (608,350 characters, within the returned multipart body). Existing three secret bindings, compatibility date and scheduled handler remained. Waited until the prior combined deck/search run's deployed browser step completed before changing the served build. Branch publication and matching real API/deployed CI are the remaining verification step at this checkpoint.
+
+## Safe fallback and next acceptance gates
+
+If this foundation must be disabled, deny EXECUTE on its three public moderator RPCs for `authenticated` and restore the previously verified staging Worker content. Preserve reports and audit tables; no DROP, data deletion or broad policy relaxation is needed. No role bootstrap exists to undo in this batch. This is a documented fallback, not a performed rollback/restore drill.
+
+Next operator-setup acceptance must cover deliberate TOTP enrollment/challenge, account-switch/sign-out erasure of setup secrets and private UI, retry/error recovery, actual signed AAL1 denial/AAL2 acceptance and fresh-session/role revocation. Do not put TOTP secrets, recovery material or tokens in logs/artifacts. Choose an operator identity explicitly before granting a lasting role; do not infer authority from email, username or user metadata. Keep the queue inaccessible by default until this is verified. Support intake and listing enforcement follow this security gate.
+
+## Final matching staging verification
+
+**VERIFIED for this foundation batch** at code `616cc03d25e001d229de3311aca80b48455724de`, [run 40685434694](https://github.com/bam5693/Deckplay-hq/actions/runs/40685434694): **49 real staging API**, **48 deployed desktop/mobile**, **182 selected local** and **11 cleanup-safety** checks passed; workflow conclusion success. The selected local checks overlap the separately run 326-check full local suite; cleanup overlaps the 33-check security suite. Do not add overlapping subsets. Real API checks require authorization denial from existing moderator RPCs and reject reporter-selected resolved status. Private staging still returns HTTP 401 without access credentials. Production/main remain untouched and PR #2 remains draft/unmerged.
+
+The broader operator setup, signed privileged MFA journey, listing enforcement, support and beta gates above remain unfinished. No lasting moderator grants were created. This is a staging foundation verification, not a trunk-completion percentage or production readiness certification.

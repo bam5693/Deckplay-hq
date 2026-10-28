@@ -127,3 +127,11 @@ Batch 5 is VERIFIED at `aa4fcaa`, [run 40683363764](https://github.com/bam5693/D
 ### Trunks 6/8 — server moderator foundation
 
 See [moderator authorization and audit foundation](2026-10-28-admin-foundation.md) for the current security batch. Staging now has explicit private moderator grants, live session/MFA enforcement, bounded report reads and reasoned status-review RPCs with atomic private audits. Initial report status must be open. Database authorization simulations passed with every fixture/grant rolled back; **326 current-source local checks and 33 security checks passed**. No lasting role grants, real operator onboarding or actual signed privileged MFA journey is claimed. Operator setup and the remaining admin/support/beta gates remain unfinished. Matching exact deployment/API CI evidence is pending publication.
+
+### Deck/search combined staging verification
+
+The preserved collector-search and deck-quantity build `2cf2b1d953e7c5f1e4cfa5bd1c11cc26a90a0560` completed [run 40684599015](https://github.com/bam5693/Deckplay-hq/actions/runs/40684599015) successfully: 48 real API, 48 deployed desktop/mobile, 180 selected local and 11 cleanup checks. This verifies the integrated deck/search checkpoint before the moderator-foundation batch; it does not certify game legality or complete Trunk 1.
+
+### Moderator foundation final matching CI
+
+Foundation code `616cc03`, exact deployment `7ef9cb60bb69470ba100e0fb99286916`, [run 40685434694](https://github.com/bam5693/Deckplay-hq/actions/runs/40685434694): **49 real API, 48 deployed browser, 182 selected local and 11 cleanup checks passed**. The separately executed full local suite passed 326; security passed 33. Selected/cleanup subsets overlap. Trunks 6/8 now have a staging-verified access/audit foundation; operator MFA setup/onboarding and the actual signed privileged journey remain the next security gate. No lasting roles or live commerce were enabled.

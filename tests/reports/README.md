@@ -13,11 +13,11 @@ Read the latest checkpoint first. Earlier reports remain historical evidence and
 
 ## Next priorities
 
-1. Continue asynchronous listing-publication and upload/account boundary coverage; inspect requests that read form fields or currentUser after awaiting service calls.
-2. Extend remaining inbox/trade response error recovery, unread-state and keyboard accessibility coverage.
-3. Define and test deck quantity consistency and game-specific decklist rules before claiming legality validation.
-4. Evaluate collection/missing-card workflows and remaining moderation/fulfillment authorization.
-5. Verify real email/reset and full upload lifecycle behavior within an explicitly isolated test setup.
+1. Complete deliberate MFA enrollment/challenge and safe operator onboarding; verify actual signed-session acceptance before granting lasting admin access.
+2. Extend the protected moderation queue, audit visibility, evidence/enforcement and support intake after the security gate passes.
+3. Continue confirmed marketplace/inbox/trade reliability defects and physical Android/PWA verification. Explicit deck quantity consistency is implemented; game legality is not certified.
+4. Verify email/reset delivery, backup/rollback, account deletion/export and remaining beta gates within the isolated test setup.
+5. Private attachments and external collection inquiries require private authorization and opt-in/spam protections; neither is complete.
 
 Payments and shipping remain disabled/preview-only. AI lead review of actual worker findings is not yet automatic. Four named testing personas share two disposable staging accounts; deterministic browser actions and model inference have separate verification boundaries.
 
