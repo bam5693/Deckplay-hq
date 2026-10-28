@@ -1030,7 +1030,7 @@ function setAuthMode(mode){
  document.getElementById("authForgotPassword").hidden=mode!=="signin";
  authMode=mode;document.getElementById("displayNameWrap").hidden=mode!=="signup";document.getElementById("username").required=false;document.getElementById("username").disabled=mode!=="signup";document.getElementById("authPassword").autocomplete=mode==="signup"?"new-password":"current-password";document.getElementById("authPassword").minLength=mode==="signup"?8:1;document.getElementById("authSubmit").textContent=mode==="signup"?"Create account":"Sign in";document.getElementById("authSubmit").disabled=false;document.getElementById("authSubmit").style.opacity="";document.querySelectorAll("[data-auth-mode]").forEach(button=>button.classList.toggle("active",button.dataset.authMode===mode));document.getElementById("passwordHint").hidden=mode!=="signup";document.getElementById("signupCaptchaWrap").hidden=false;initSignupCaptcha();if(!window.turnstile){let retries=0;const wait=setInterval(()=>{if(window.turnstile||++retries>40){clearInterval(wait);initSignupCaptcha();}},250)}resetSignupCaptcha();updatePasswordStrength();showAuthStatus("");
 }
-async function openSell(){if(!currentUser){setAuthMode("signin");openModal("authModal");toast("Sign in before creating a listing.");return}openModal("sellModal")}
+async function openSell(){if(!currentUser){setAuthMode("signin");openModal("authModal");toast("Sign in before creating a listing.");return}openModal("sellModal");document.getElementById("item").focus()}
 async function prepareListingPhoto(file){
  if(!["image/jpeg","image/png","image/webp"].includes(file.type))throw new Error("Photos must be JPG, PNG or WebP.");
  if(file.size<=5*1024*1024)return file;
