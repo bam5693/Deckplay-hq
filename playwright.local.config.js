@@ -6,7 +6,7 @@ module.exports = defineConfig({
   outputDir:'test-results/local',
   workers: 2,
   reporter: [['list'], ['html',{open:'never',outputFolder:'playwright-report/local'}], ['junit',{outputFile:'test-results/local-junit.xml'}]],
-  testMatch: ['every-option.spec.js', 'selling-category-matrix.spec.js', 'checkout-simulation.spec.js', 'marketplace-safety.spec.js', 'flows.spec.js', 'wanted-matches.spec.js', 'smoke.spec.js', 'regressions.spec.js', 'auth-errors.spec.js', 'inbox-recovery.spec.js', 'inbox-request-order.spec.js', 'auth-recovery.spec.js', 'account-boundaries.spec.js', 'profile-edit.spec.js', 'trade-picker.spec.js', 'marketplace-filter-boundaries.spec.js', 'tcg-sets.spec.js', 'discovery-profiles.spec.js', 'price-offer-recovery.spec.js', 'listing-description.spec.js', 'listing-publication.spec.js'],
+  testMatch: ['every-option.spec.js', 'selling-category-matrix.spec.js', 'checkout-simulation.spec.js', 'marketplace-safety.spec.js', 'flows.spec.js', 'wanted-matches.spec.js', 'smoke.spec.js', 'regressions.spec.js', 'auth-errors.spec.js', 'inbox-recovery.spec.js', 'inbox-request-order.spec.js', 'auth-recovery.spec.js', 'account-boundaries.spec.js', 'profile-edit.spec.js', 'trade-picker.spec.js', 'marketplace-filter-boundaries.spec.js', 'tcg-sets.spec.js', 'discovery-profiles.spec.js', 'price-offer-recovery.spec.js', 'listing-description.spec.js', 'listing-publication.spec.js', 'moderation-security.spec.js'],
   use: { baseURL: 'http://127.0.0.1:8765', trace: 'off', screenshot: 'off', video: 'off' },
   projects: [
     { name: 'local-mobile', use: devices['Pixel 7'] },

@@ -43,3 +43,21 @@ Fixes: account/request guards on block-list reads and block mutations; stale blo
 Local evidence: 94 desktop/mobile checks passed across account boundaries, inbox ordering/recovery and profile editing. The expanded account suite then passed 28 checks, covering delayed block mutations and failed-load/retry/former-account-save behavior. These overlap; do not sum them as unique checks. Added relevant existing listing/account specs to the single private staging workflow so new regressions actually run in its CI path.
 
 VERIFY: exact deployment and matching CI pending, waiting for Batch 2 to finish. Next: harden the legacy moderation page's session/MFA boundaries; staging currently has no moderator authorization/queue RPCs, so a functioning admin backend remains NEW, not certified.
+
+### Batch 2 deployed completion
+
+VERIFIED at `50bb34f`, [run 40681070226](https://github.com/bam5693/Deckplay-hq/actions/runs/40681070226): 48 real API, 46 deployed browser, 86 selected local and 11 cleanup checks passed. Exact custom text and storefront disclosure parity passed against real synthetic saved rows.
+
+### Batch 3 deployment
+
+Code `ae063ba56b965cb6a6dbd08ab5bc0e79603a3efe`, deployment `a256360bdfb94e548b7e060d22761a68`, complete Worker read-back matched. [Run 40681791376](https://github.com/bam5693/Deckplay-hq/actions/runs/40681791376) is the matching CI run; pending at this checkpoint.
+
+## Batch 4 — Command Center moderation UI security
+
+POLISH: existing `moderation.html` now uses the vendored Supabase client, a mobile-friendly Command Center shell, live status messages and 44px action buttons. It verifies the current user, requires AAL2 MFA and then the server moderator-role RPC before requesting reports. Administrative writes revalidate identity/MFA/role. Losing authorization clears reports and controls. Auth events immediately clear private data; old queue results cannot restore it. Pending actions disable duplicate controls, and service failures remain visible.
+
+Reproduction: the legacy page displayed synthetic reports with AAL1 and retained them after sign-out; four mobile/desktop regressions failed before the fix. Four focused scenarios (eight mobile/desktop cases) now cover MFA denial, sign-out clearing, stale queue rejection and revalidation before writes. Full local suite after this batch: **310 passed**, no failures. It includes existing marketplace tests; this is not additive to earlier local counts.
+
+Security boundary: these are UI privacy/MFA safeguards, not a substitute for server authorization. Staging has no `is_deckplay_moderator`, `moderation_report_queue`, `review_deckplay_report` or `hide_deckplay_listing` functions. No roles were granted, no real reports read/changed, and no working admin backend/audit trail is claimed. Backend least-privilege roles, server-enforced MFA and audit logging remain NEW. Added a real deployed ordinary-collector denial case, pending matching build CI. No billing or auth-plan changes.
+
+VERIFY: deployment pending Batch 3 completion. Next confirmed defects: report dialog allows duplicate submissions, retains private drafts after account switches and accepts stale block-status lookups from the previous target. Targeted regressions reproduced each on desktop/mobile; fix these before expanding moderation features.

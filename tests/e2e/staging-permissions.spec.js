@@ -98,3 +98,12 @@ test('signed-out shopper opens a real synthetic seller profile and following req
   expect(await guest.evaluate(()=>currentUser)).toBeNull();
  }finally{try{await cleanup(page,title)}finally{await context.close()}}
 });
+
+test('ordinary collector cannot open private Command Center reports',async({page})=>{
+ await signIn(page,'BUYER');
+ const queueRequests=[];page.on('request',request=>{if(request.url().includes('/rpc/moderation_report_queue'))queueRequests.push(request.url())});
+ await page.goto('/moderation.html',{waitUntil:'domcontentloaded'});
+ await expect(page.locator('#state')).toContainText(/MFA required|Access restricted/,{timeout:15000});
+ await expect(page.locator('#reports')).toBeEmpty();
+ expect(queueRequests,'Ordinary password-only collector must not request private reports').toEqual([]);
+});
