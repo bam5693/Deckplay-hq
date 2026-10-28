@@ -61,3 +61,20 @@ test('finishing a trade after an account switch cannot reset or close the new ac
  await expect(page.locator('#tradeComposeModal')).toHaveClass(/open/);
  expect(await page.evaluate(()=>tradeWrites[0])).toMatchObject({sender_id:'buyer-fixture',recipient_id:'seller-fixture',listing_id:'target-fixture'});
 });
+
+test('a failed trade from the previous account cannot show its error on a new account draft',async({page})=>{
+ await composeFixture(page);
+ await page.locator('#tradeComposeForm button[type="submit"]').click();
+ await page.evaluate(()=>{
+  currentUser={id:'other-fixture'};
+  tradeTargetId='different-target';
+  tradeRecipientId='different-seller';
+ });
+ await page.locator('#tradeOfferNote').fill('Other account private draft');
+ await page.evaluate(()=>failTrade(Error('Former account trade failure')));
+ await expect(page.locator('#tradeOfferNote')).toHaveValue('Other account private draft');
+ await expect(page.locator('#tradeComposeForm button[type="submit"]')).toBeEnabled();
+ await expect(page.locator('#tradeOfferStatus')).not.toContainText('Former account trade failure');
+ await expect(page.locator('#tradeComposeModal')).toHaveClass(/open/);
+ expect(await page.evaluate(()=>tradeWrites.length)).toBe(1);
+});
