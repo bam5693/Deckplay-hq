@@ -564,3 +564,26 @@ test('message length hint appears near the limit and follows restored drafts',as
  await input.fill('Short');
  await expect(hint).toBeHidden();
 });
+
+test('pending trade counteroffers show terms in the thread and suspend original trade actions',async({page})=>{
+ await ready(page);
+ await page.evaluate(async()=>{
+  currentUser={id:'fixture-buyer'};syncInboxDraftUser();
+  const now=new Date().toISOString();
+  const offer={id:'trade-1',sender_id:'fixture-buyer',recipient_id:'fixture-seller',listing_id:'item-a',offered_listing_id:'item-b',offer_note:'Trade my card',status:'pending',created_at:now};
+  const counter={id:'counter-1',trade_offer_id:'trade-1',proposer_id:'fixture-seller',recipient_id:'fixture-buyer',cash_amount:5,cash_direction:'sender_pays',offer_note:'Add five dollars',status:'pending',created_at:new Date(Date.now()+1000).toISOString()};
+  supabaseClient.from=table=>{
+   const data=table==='trade_offers'?[offer]:table==='trade_counteroffers'?[counter]:table==='profiles'?[{id:'fixture-seller',username:'sports-seller'}]:[];
+   const q={then:(resolve,reject)=>Promise.resolve({data,error:null}).then(resolve,reject)};
+   for(const name of ['select','eq','in','order','limit','maybeSingle'])q[name]=()=>q;
+   return q;
+  };
+  await showInboxPage('fixture-seller');
+ });
+ await expect(page.locator('#conversationThread')).toContainText('Trade counteroffer');
+ await expect(page.locator('#conversationThread')).toContainText('$5.00 cash');
+ await expect(page.locator('#conversationThread')).toContainText('Add five dollars');
+ await expect(page.locator('[data-inbox-trade="accepted"]')).toHaveCount(0);
+ await page.locator('[data-inbox-trade-review]').click();
+ await expect(page.locator('#tradesModal')).toHaveClass(/open/);
+});
