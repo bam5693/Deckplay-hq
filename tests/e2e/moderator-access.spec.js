@@ -54,14 +54,14 @@ test('Supabase base64 SVG with XML declaration opens the authenticator setup QR'
   const original=mfaFixture.auth.mfa.enroll;
   mfaFixture.auth.mfa.enroll=async payload=>{
    const result=await original(payload);
-   const svg='<?xml version="1.0" encoding="UTF-8"?>\\n<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1 1"><path d="M0 0h1v1H0z"/></svg>';
+   const svg='<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1 1"><path d="M0 0h1v1H0z"/></svg>';
    result.data.totp.qr_code='data:image/svg+xml;base64,'+btoa(svg);
    return result;
   };
  });
  await begin(page);
  await expect(page.locator('#setupMaterial')).toBeVisible();
- await expect(page.locator('#setupQr')).toHaveAttribute('src',/^data:image\\/svg\\+xml;charset=utf-8,/);
+ await expect(page.locator('#setupQr')).toHaveAttribute('src',/^data:image\/svg\+xml;charset=utf-8,/);
  await expect(page.locator('#setupSecret')).toHaveText(secret);
 });
 
