@@ -763,3 +763,16 @@ test('simultaneous bundle and price acceptance on additional collateral has one 
  const bundleWon=results[0].status===204;
  for(const [role,id,wanted] of [['seller',target.id,bundleWon?'reserved':'active'],['buyer',one.id,bundleWon?'reserved':'active'],['buyer',two.id,'reserved']])assert.equal(ok(api(role,'/rest/v1/listings?id=eq.'+id))[0].status,wanted);
 });
+
+test('account listing draft is private, size bounded and preserves exact seller metadata',()=>{
+ const path='/rest/v1/listing_drafts?user_id=eq.'+users.seller,original=ok(api('seller',path))[0];
+ try{
+  const content={version:1,fields:{item:run,description:'Japanese stamped foil; corner disclosed',price:'37.50',acceptsTrades:true}};
+  ok(api('seller','/rest/v1/listing_drafts','POST',{user_id:users.seller,content},{Prefer:'resolution=merge-duplicates,return=representation'}),201);
+  assert.deepEqual(ok(api('seller',path))[0].content,content);assert.equal(ok(api('buyer',path)).length,0);assert(api(null,path).status>=400);
+  assert(api('buyer','/rest/v1/listing_drafts','POST',{user_id:users.seller,content},{Prefer:'resolution=merge-duplicates'}).status>=400);
+  assert(api('seller',path,'PATCH',{content:{}}).status>=400);assert.deepEqual(ok(api('seller',path))[0].content,content);
+ }finally{
+  if(original)ok(api('seller',path,'PATCH',{content:original.content,updated_at:original.updated_at}),204);else ok(api('seller',path,'DELETE'),204);
+ }
+});

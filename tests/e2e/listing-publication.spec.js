@@ -79,3 +79,40 @@ test('publishing a deck resets hidden required fields so the next single-item li
  await submit(page);await expect(page.locator('#sellModal')).not.toHaveClass(/open/);
  expect(await page.evaluate(()=>['deckLeader','deckCardCount','deckList'].map(id=>document.getElementById(id).required))).toEqual([false,false,false]);
 });
+
+async function cloudDraftFixture(page){
+ await ready(page);
+ await page.evaluate(()=>{syncInboxDraftUser();openModal('sellModal');window.draftPayloads=[];supabaseClient.from=table=>{const q={select:()=>q,eq:()=>q,upsert:async payload=>{draftPayloads.push(payload);return {error:null}},maybeSingle:()=>new Promise(resolve=>window.finishDraftLoad=resolve),delete:()=>q,then:(a,b)=>Promise.resolve({error:null}).then(a,b)};return q}});
+ await page.locator('.listing-cloud-draft summary').click();
+}
+test('private draft saves incomplete text without photos and resumes detailed metadata',async({page})=>{
+ await cloudDraftFixture(page);await page.locator('#item').fill('Japanese foil draft');await page.locator('#description').fill('Stamped printing and corner disclosure');await page.locator('#price').fill('25.50');
+ await page.locator('[data-cloud-draft="save"]').click();await expect(page.locator('#listingCloudDraftStatus')).toContainText('Private draft saved');
+ const payload=await page.evaluate(()=>draftPayloads[0]);expect(payload.user_id).toBe('publish-owner');expect(payload.content.fields.item).toBe('Japanese foil draft');expect(payload.content.fields.photos).toBeUndefined();
+ await page.locator('[data-cloud-draft="load"]').click();await page.evaluate(()=>finishDraftLoad({data:{content:{version:1,fields:{item:'Restored card',listingType:'single',category:'trading_cards',tcgGame:'one_piece',description:'Exact saved variant',price:'42.50',acceptsTrades:true}}},error:null}));
+ await expect(page.locator('#item')).toHaveValue('Restored card');await expect(page.locator('#description')).toHaveValue('Exact saved variant');await expect(page.locator('#price')).toHaveValue('42.50');await expect(page.locator('#acceptsTrades')).toBeChecked();expect(await page.evaluate(()=>listingSelectedPhotos.length)).toBe(0);
+});
+test('a late saved draft cannot overwrite new edits or a different account',async({page})=>{
+ await cloudDraftFixture(page);await page.locator('[data-cloud-draft="load"]').click();await page.locator('#item').fill('Newer unsaved edits');await page.evaluate(()=>finishDraftLoad({data:{content:{version:1,fields:{item:'Older saved title'}}},error:null}));
+ await expect(page.locator('#item')).toHaveValue('Newer unsaved edits');await expect(page.locator('#listingCloudDraftStatus')).toContainText('form changed');
+ await page.locator('[data-cloud-draft="load"]').click();await page.evaluate(()=>{currentUser={id:'other-owner'};syncInboxDraftUser();finishDraftLoad({data:{content:{version:1,fields:{item:'Previous owner private draft'}}},error:null})});
+ await expect(page.locator('#item')).not.toHaveValue('Previous owner private draft');await expect(page.locator('#listingCloudDraftStatus')).toBeEmpty();
+});
+
+test('saved draft restores dependent printing and grading fields regardless of JSON key order',async({page})=>{
+ await cloudDraftFixture(page);
+ const saved=await page.evaluate(()=>{
+  document.getElementById('tcgGame').value='one_piece';document.getElementById('tcgGame').dispatchEvent(new Event('change'));
+  const era=document.getElementById('tcgEra');era.value=[...era.options].find(o=>o.value)?.value||'';era.dispatchEvent(new Event('change'));
+  const set=document.getElementById('tcgSet');set.value=[...set.options].find(o=>o.value)?.value||'';
+  for(const [id,value] of Object.entries({tcgCustomSet:'Japanese event release',tcgCustomVariant:'Stamped alternate foil',tcgRarity:'Promo',tcgEdition:'First printing',tcgLanguage:'Japanese',cardCondition:'graded',gradingCompany:'PSA',gradingScore:'9'}))document.getElementById(id).value=value;
+  return {fields:Object.fromEntries(Object.entries(collectListingDraftValues()).reverse()),set:set.value};
+ });
+ await page.locator('[data-cloud-draft="load"]').click();await page.evaluate(saved=>finishDraftLoad({data:{content:{version:1,fields:saved.fields}},error:null}),saved);
+ await expect(page.locator('#tcgGame')).toHaveValue('one_piece');await expect(page.locator('#tcgSet')).toHaveValue(saved.set);await expect(page.locator('#tcgCustomVariant')).toHaveValue('Stamped alternate foil');await expect(page.locator('#tcgLanguage')).toHaveValue('Japanese');await expect(page.locator('#gradingCompany')).toHaveValue('PSA');await expect(page.locator('#gradingScore')).toHaveValue('9');
+});
+
+test('failed account draft save preserves the form and releases its controls',async({page})=>{
+ await cloudDraftFixture(page);await page.locator('#item').fill('Unfinished seller draft');await page.evaluate(()=>{supabaseClient.from=()=>({upsert:async()=>{throw Error('Draft network down')}})});
+ await page.locator('[data-cloud-draft="save"]').click();await expect(page.locator('#listingCloudDraftStatus')).toContainText('Draft network down');await expect(page.locator('#item')).toHaveValue('Unfinished seller draft');await expect(page.locator('[data-cloud-draft="save"]')).toBeEnabled();
+});
