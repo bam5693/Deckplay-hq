@@ -4,7 +4,8 @@ Read the latest checkpoint first. Earlier reports remain historical evidence and
 
 | Order | Report | Scope |
 |---|---|---|
-| Latest | [Roadmap development, six staging batches](2026-10-28-roadmap-development.md) | Inbox Back, exact printing, account/report privacy, moderation UI, deck quantity checks; see per-build CI evidence |
+| Latest | [Moderator authorization and audit foundation](2026-10-28-admin-foundation.md) | Server role/MFA/session enforcement, reasoned review, private audits; operator onboarding remains unfinished |
+| Previous | [Roadmap development, six staging batches](2026-10-28-roadmap-development.md) | Inbox Back, exact printing, account/report privacy, moderation UI, deck quantity checks; see per-build CI evidence |
 | Previous | [Listing description formatting](2026-10-27-listing-description.md) | Readable generated descriptions; final served code `91df349` |
 | Previous | [Price-offer recovery](2026-10-27-price-offer-recovery.md) | Duplicate send/response guards, exceptions, draft/account boundaries |
 | Previous | [Cleanup safeguards](2026-10-27-cleanup-safety.md) | Exact synthetic markers, verified IDs/ownership, isolated transport |

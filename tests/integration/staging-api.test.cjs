@@ -325,6 +325,23 @@ test('reports are private to reporter and cannot impersonate another reporter',(
  assert.equal(ok(api('seller','/rest/v1/user_reports?id=eq.'+report.id)).length,0);
  assert.equal(ok(api(null,'/rest/v1/user_reports?id=eq.'+report.id)).length,0);
  assert(api('buyer','/rest/v1/user_reports','POST',{reporter_id:users.seller,reported_id:users.buyer,reason:'other',details:run}).status>=400);
+ assert.equal(report.status,'open','Submitted reports must start open');
+ assert.equal(api('buyer','/rest/v1/user_reports','POST',{reporter_id:users.buyer,reported_id:users.seller,reason:'other',details:run,status:'resolved'}).status,403,'Reporters cannot select an already-reviewed status');
+});
+test('server moderator RPCs deny collectors and anonymous visitors independently of the UI',()=>{
+ for(const role of ['buyer','seller']){
+  assert.equal(ok(api(role,'/rest/v1/rpc/is_deckplay_moderator','POST',{})),false,'Ordinary collector has no moderator access');
+  for(const [name,payload] of [['moderation_report_queue',{}],['review_deckplay_report',{p_report_id:randomUUID(),p_status:'resolved',p_reason:'TEST ONLY unauthorized review',p_expected_status:'open'}]]){
+   const result=api(role,'/rest/v1/rpc/'+name,'POST',payload);
+   assert.equal(result.status,403,'Existing server RPC must reject collector access');
+   assert.equal(result.data.code,'42501','Denial must be authorization, not a missing RPC');
+  }
+ }
+ for(const [name,payload] of [['is_deckplay_moderator',{}],['moderation_report_queue',{}],['review_deckplay_report',{p_report_id:randomUUID(),p_status:'resolved',p_reason:'TEST ONLY anonymous review',p_expected_status:'open'}]]){
+  const result=api(null,'/rest/v1/rpc/'+name,'POST',payload);
+  assert([401,403].includes(result.status),'Anonymous moderator access must be rejected');
+  assert.equal(result.data.code,'42501','Anonymous denial must be authorization, not a missing RPC');
+ }
 });
 test('empty messages, invalid photos and broad cleanup attempts fail',()=>{
  assert(api('buyer','/rest/v1/collector_messages','POST',{sender_id:users.buyer,recipient_id:users.seller,body:'   '}).status>=400);

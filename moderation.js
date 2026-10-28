@@ -4,7 +4,7 @@
  const client=window.supabase.createClient('https://yffruutknztvdyioovmp.supabase.co','sb_publishable_cHzM8sQmrqfcCH8lhESytg_FMJrQtCX');
  let generation=0,authorizedUser=null,busy=false;
  function clearPrivate(){authorizedUser=null;busy=false;out.replaceChildren();status.textContent=''}
- function controls(disabled){out.querySelectorAll('button').forEach(button=>button.disabled=disabled)}
+ function controls(disabled){out.querySelectorAll('button,textarea').forEach(control=>control.disabled=disabled)}
  function deny(message){const error=Error(message);error.accessDenied=true;throw error}
  async function verifyAccess(active){
   const {data,error}=await client.auth.getUser();
@@ -51,16 +51,21 @@
   for(const [label,value] of Object.entries({Status:report.status,Created:report.created_at,Details:report.details,Listing:report.listing_id,'Reported user':report.reported_id,'Report ID':report.id})){
    const row=document.createElement('p'),title=document.createElement('strong');title.textContent=label+': ';row.append(title,document.createTextNode(String(value??'—')));card.append(row);
   }
+  const reasonLabel=document.createElement('label');reasonLabel.textContent='Reason for review action (required)';
+  const reviewReason=document.createElement('textarea');reviewReason.maxLength=1000;reviewReason.rows=3;reviewReason.placeholder='Explain the evidence and review decision';
+  reasonLabel.append(reviewReason);card.append(reasonLabel);
   const actions=document.createElement('div');actions.className='controls';
   for(const [label,next] of [['Mark reviewing','reviewing'],['Resolve report','resolved'],['Reopen','open']]){
    const button=document.createElement('button');button.type='button';button.textContent=label;
-   button.addEventListener('click',()=>act(button,'review_deckplay_report',{p_report_id:report.id,p_status:next},'Change report status to '+next+'?'));
+   button.addEventListener('click',()=>{
+    const reason=reviewReason.value.trim();
+    if(reason.length<8){status.textContent='Enter a moderation reason of 8–1,000 characters before changing this report.';reviewReason.focus();return}
+    act(button,'review_deckplay_report',{p_report_id:report.id,p_status:next,p_reason:reason,p_expected_status:report.status},'Change report status to '+next+'? This reason will be recorded in the private audit log.');
+   });
    actions.append(button);
   }
   if(report.listing_id){
-   const button=document.createElement('button');button.type='button';button.className='danger';button.textContent='Remove reported listing';
-   button.addEventListener('click',()=>act(button,'hide_deckplay_listing',{p_listing_id:report.listing_id,p_report_id:report.id},'Remove this listing? This administrative action requires a recorded moderation reason and server authorization.'));
-   actions.append(button);
+   const note=document.createElement('p');note.textContent='Listing removal is not available yet. Reviewing a report does not remove its listing.';card.append(note);
   }
   card.append(actions);out.append(card);
  }

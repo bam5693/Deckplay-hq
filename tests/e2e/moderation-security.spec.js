@@ -8,7 +8,7 @@ async function moderator(page,level='aal2'){
    getUser:async()=>({data:{user:{id:'fixture-moderator'}},error:null}),
    mfa:{getAuthenticatorAssuranceLevel:async()=>({data:{currentLevel:level},error:null})},
    onAuthStateChange:callback=>{moderationListeners.push(callback);return {data:{subscription:{unsubscribe(){}}}}}
-  },rpc:async name=>{moderationCalls.push(name);return {data:name==='is_deckplay_moderator'?true:name==='moderation_report_queue'?[{id:'synthetic-report',reason:'Counterfeit suspicion',details:'Private synthetic evidence',status:'open',listing_id:null}]:null,error:null}}};
+  },rpc:async (name,payload)=>{moderationCalls.push(name);if(payload)window.lastModerationPayload=payload;return {data:name==='is_deckplay_moderator'?true:name==='moderation_report_queue'?[{id:'synthetic-report',reason:'Counterfeit suspicion',details:'Private synthetic evidence',status:'open',listing_id:null}]:null,error:null}}};
   window.fireModerationAuth=(event,session)=>moderationListeners.forEach(callback=>callback(event,session));
  },level);
  await page.goto('/moderation.html');
@@ -41,9 +41,20 @@ test('a delayed moderation queue cannot restore reports after sign-out',async({p
 test('moderation actions recheck MFA before sending any write',async({page})=>{
  await moderator(page);await expect(page.locator('#reports')).toContainText('Private synthetic evidence');
  await page.evaluate(()=>{moderationFixture.auth.mfa.getAuthenticatorAssuranceLevel=async()=>({data:{currentLevel:'aal1'},error:null})});
+ await page.getByRole('textbox',{name:'Reason for review action (required)'}).fill('Synthetic evidence checked.');
  page.once('dialog',dialog=>dialog.accept());await page.getByRole('button',{name:'Resolve report',exact:true}).click();
  await expect(page.locator('#state')).toContainText('MFA required');
  await expect(page.locator('#reports')).toBeEmpty();
  expect(await page.evaluate(()=>moderationCalls)).not.toContain('review_deckplay_report');
  await expect(page.getByRole('button',{name:'Resolve report',exact:true})).toHaveCount(0);
+});
+
+test('report review requires a reason and sends the displayed status for concurrency protection',async({page})=>{
+ await moderator(page);await expect(page.locator('#reports')).toContainText('Private synthetic evidence');
+ await page.getByRole('button',{name:'Resolve report',exact:true}).click();
+ await expect(page.locator('#actionStatus')).toContainText('Enter a moderation reason');
+ expect(await page.evaluate(()=>moderationCalls)).not.toContain('review_deckplay_report');
+ await page.getByRole('textbox',{name:'Reason for review action (required)'}).fill('Reviewed synthetic counterfeit evidence.');
+ page.once('dialog',dialog=>dialog.accept());await page.getByRole('button',{name:'Resolve report',exact:true}).click();
+ await expect.poll(()=>page.evaluate(()=>lastModerationPayload)).toEqual({p_report_id:'synthetic-report',p_status:'resolved',p_reason:'Reviewed synthetic counterfeit evidence.',p_expected_status:'open'});
 });
