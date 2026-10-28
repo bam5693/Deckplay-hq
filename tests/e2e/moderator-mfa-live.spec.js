@@ -16,7 +16,7 @@ test('disposable collector completes real authenticator setup with a signed MFA 
   expect(response.ok(),'Authenticator enrollment failed; response body intentionally withheld').toBeTruthy();
   const enrolled=await response.json();
   expect(typeof enrolled.id==='string'&&/^[a-f0-9-]{36}$/.test(enrolled.id),'Enrollment must identify its exact factor').toBeTruthy();factorId=enrolled.id;
-  await expect(page.locator('#setupMaterial')).toBeVisible({timeout:15000});
+  await expect(page.locator('#setupMaterial'), 'Enrollment response succeeded but setup panel stayed hidden; public status: '+await page.locator('#mfaStatus').textContent()).toBeVisible({timeout:15000});
   const secret=await page.locator('#setupSecret').textContent();
   expect(typeof secret==='string'&&/^[A-Z2-7]+=*$/i.test(secret),'Setup must provide a TOTP key; value intentionally withheld').toBeTruthy();
   // Avoid including a live code in Playwright's locator call-log arguments.
