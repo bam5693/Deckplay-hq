@@ -9,3 +9,24 @@ test('a stale seller overview cannot show private totals after an account switch
 test('seller overview failure stays retryable without inventing totals',async({page})=>{
  await ready(page);await page.evaluate(()=>supabaseClient.rpc=async()=>({error:{message:'Unavailable'}}));await page.locator('#sellerOverview summary').click();await expect(page.locator('#sellerOverviewContent')).toContainText('could not load');await expect(page.locator('.seller-overview-stats')).toHaveCount(0);await expect(page.locator('[data-seller-overview="refresh"]')).toBeEnabled();
 });
+
+test('seller can open pending price and trade decisions directly from the overview',async({page})=>{
+ await ready(page);
+ await page.evaluate(()=>{window.openModal=id=>{window.overviewOpenedModal=id};window.loadPriceOffers=async()=>{window.overviewPriceLoaded=true};window.loadTradeOffers=async()=>{window.overviewTradesLoaded=true}});
+ await page.locator('#sellerOverview summary').click();
+ await expect(page.locator('[data-seller-overview="price"]')).toHaveText('Review 3 price offers');
+ await expect(page.locator('[data-seller-overview="trade"]')).toHaveText('Review 1 trade proposal');
+ await page.locator('[data-seller-overview="price"]').click();
+ await expect.poll(()=>page.evaluate(()=>[window.overviewOpenedModal,!!window.overviewPriceLoaded])).toEqual(['priceOffersModal',true]);
+ await page.locator('[data-seller-overview="trade"]').click();
+ await expect.poll(()=>page.evaluate(()=>[window.overviewOpenedModal,!!window.overviewTradesLoaded])).toEqual(['tradesModal',true]);
+ await expect(page.locator('[data-seller-overview="inbox"]')).toBeVisible();
+});
+test('seller overview hides reply shortcuts when there is nothing to answer',async({page})=>{
+ await ready(page);
+ await page.evaluate(()=>supabaseClient.rpc=async()=>({data:{active:1,reserved:0,sold:0,removed:0,active_asking_total:20,price_replies:0,trade_replies:0}}));
+ await page.locator('#sellerOverview summary').click();
+ await expect(page.locator('[data-seller-overview="price"]')).toHaveCount(0);
+ await expect(page.locator('[data-seller-overview="trade"]')).toHaveCount(0);
+ await expect(page.locator('[data-seller-overview="inbox"]')).toBeVisible();
+});
