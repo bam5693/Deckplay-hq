@@ -18,7 +18,9 @@ test('disposable collector completes real authenticator setup with a signed MFA 
   const response=await responsePromise;
   expect(response.ok(),'Authenticator enrollment failed; response body intentionally withheld').toBeTruthy();
   const enrolled=await response.json();
-  expect(typeof enrolled.id==='string'&&/^[a-f0-9-]{36}$/.test(enrolled.id),'Enrollment must identify its exact factor').toBeTruthy();factorId=enrolled.id;
+  // Capture the new factor before asserting so finally can clean up if validation fails.
+  if(typeof enrolled.id==='string'&&/^[a-f0-9-]{36}$/.test(enrolled.id))factorId=enrolled.id;
+  expect(factorId,'Enrollment must identify its exact factor').toBeTruthy();
   await expect(page.locator('#setupMaterial'), 'Enrollment response succeeded but setup panel stayed hidden; public status: '+await page.locator('#mfaStatus').textContent()).toBeVisible({timeout:15000});
   const secret=await page.locator('#setupSecret').textContent();
   expect(typeof secret==='string'&&/^[A-Z2-7]+=*$/i.test(secret),'Setup must provide a TOTP key; value intentionally withheld').toBeTruthy();
