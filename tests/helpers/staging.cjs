@@ -48,6 +48,15 @@ async function cleanup(page,title){
   const {data,error}=await supabaseClient.from('listings').select('id,title,seller_id,image_urls').eq('title',title).eq('seller_id',user.id).abortSignal(signal);
   if(error)throw Error(error.message);
   unchanged();
+  // Confirm the actual Supabase session, not just the browser's cached currentUser.
+  // This also protects the no-photo path before its destructive cleanup RPC.
+  const verifiedSession=async()=>{
+   const {data,error:sessionError}=await supabaseClient.auth.getSession();
+   if(sessionError||data?.session?.user?.id!==user.id||data?.session?.user?.email!==user.email)throw Error('Cleanup session changed');
+   unchanged();
+   return data.session;
+  };
+  await verifiedSession();
   const prefix=origin+'/storage/v1/object/public/listing-images/';
   const paths=[];
   for(const row of data||[]){
@@ -61,11 +70,11 @@ async function cleanup(page,title){
   }
   if(paths.length){
    // Use fetch so a stalled storage request has a real abort deadline.
-   const {data:{session},error}=await supabaseClient.auth.getSession();
-   if(error||session?.user.id!==user.id)throw Error('Cleanup session changed');
-   unchanged();
+   const session=await verifiedSession();
    const response=await fetch(origin+'/storage/v1/object/listing-images',{method:'DELETE',headers:{apikey:SUPABASE_PUBLISHABLE_KEY,Authorization:'Bearer '+session.access_token,'Content-Type':'application/json'},body:JSON.stringify({prefixes:[...new Set(paths)]}),signal});
    if(!response.ok)throw Error('Fixture photo cleanup failed: HTTP '+response.status);
+   // A session change while the storage request was pending must not delete rows.
+   await verifiedSession();
   }
   unchanged();
   const result=await supabaseClient.rpc('cleanup_staging_fixture',{p_marker:title}).abortSignal(signal);

@@ -16,7 +16,7 @@ function fixture(changes={}){
   auth:{async getSession(){return {data:{session:{user:changes.sessionUser||user,access_token:'synthetic-token'}},error:null}}},
   rpc(name,args){calls.push({name,args});return {async abortSignal(signal){assert(signal instanceof AbortSignal);return {error:null}}}}
  };
- context.fetch=async(url,options)=>{calls.push({url,options});assert(options.signal instanceof AbortSignal);if(changes.switchAccountDuringStorage)context.currentUser={id:'different'};return {ok:!changes.storageFails,status:changes.storageFails?503:200}};
+ context.fetch=async(url,options)=>{calls.push({url,options});assert(options.signal instanceof AbortSignal);if(changes.switchAccountDuringStorage)context.currentUser={id:'different'};if(changes.switchSessionDuringStorage)changes.sessionUser={id:'different',email:user.email};return {ok:!changes.storageFails,status:changes.storageFails?503:200}};
  const page={async evaluate(fn,arg){return vm.runInNewContext('('+fn.toString()+')',context)(arg)}};
  return {page,calls};
 }
@@ -74,4 +74,19 @@ test('duplicate verified photo references are removed only once',async()=>{
  assert.equal(calls.length,2);
  assert.deepEqual(JSON.parse(calls[0].options.body),{prefixes:[id+'/33333333-3333-4333-8333-333333333333.png']});
  assert.equal(calls[1].name,'cleanup_staging_fixture');
+});
+
+test('no-photo cleanup requires the authenticated disposable session',async()=>{
+ for(const sessionUser of [{id:'different',email:'deckplay-seller@deckplay.test'},{id,email:'other@example.test'}]){
+  const {page,calls}=fixture({rows:[],sessionUser});
+  await assert.rejects(()=>cleanup(page,marker),/Cleanup session changed/);
+  assert.equal(calls.length,0,'No cleanup RPC may run with a mismatched session');
+ }
+});
+
+test('session switching during photo deletion prevents the database cleanup RPC',async()=>{
+ const {page,calls}=fixture({switchSessionDuringStorage:true});
+ await assert.rejects(()=>cleanup(page,marker),/Cleanup session changed/);
+ assert.equal(calls.length,1,'Only the already-started storage request is allowed');
+ assert(calls[0].url.endsWith('/storage/v1/object/listing-images'));
 });
