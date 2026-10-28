@@ -8,6 +8,7 @@ permissions:
 jobs:
   verify:
     name: Compare deployed homepage with staging branch
+    if: github.ref == 'refs/heads/test/staging-reporting'
     runs-on: ubuntu-latest
     timeout-minutes: 3
     environment: deckplay-staging
