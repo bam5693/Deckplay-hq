@@ -655,3 +655,18 @@ test('returning to the same account cannot let an earlier send clear its newer d
  await page.evaluate(()=>finishFixtureSend({data:{id:'earlier-send'},error:null}));
  await expect(page.locator('#chatInput')).toHaveValue('New draft after signing back in');await expect(page.locator('#chatInput')).not.toHaveJSProperty('readOnly',true);
 });
+
+test('inbox search and unread filters survive refresh but reset on account change',async({page})=>{
+ await inbox(page,true);
+ const search=page.locator('[data-conversation-search]'),unread=page.locator('[data-conversation-unread]');
+ await search.fill('buyer-b');await unread.check();
+ await expect(page.locator('[data-conversation-id="buyer-a"]')).toBeHidden();
+ await expect(page.locator('[data-conversation-id="buyer-b"]')).toBeVisible();
+ await page.evaluate(()=>loadInbox());
+ await expect(search).toHaveValue('buyer-b');await expect(unread).toBeChecked();
+ await expect(page.locator('[data-conversation-id="buyer-a"]')).toBeHidden();
+ await expect(page.locator('[data-conversation-id="buyer-b"]')).toBeVisible();
+ await page.evaluate(async()=>{currentUser={id:'fixture-another-collector'};syncInboxDraftUser();await showInboxPage()});
+ await expect(search).toHaveValue('');await expect(unread).not.toBeChecked();
+ await expect(page.locator('[data-conversation-id="buyer-a"]')).toBeVisible();
+});

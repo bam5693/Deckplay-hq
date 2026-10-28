@@ -1718,13 +1718,13 @@ async function sendCollectorMessageOnce(payload){
  }catch{/* Preserve the original failure and the same retry reference. */}
  throw failure;
 }
-let inboxDraftUser=null,messageAccountVersion=0;
+let inboxDraftUser=null,messageAccountVersion=0,inboxConversationFilter={search:"",unread:false};
 function syncInboxDraftUser(){
  const id=currentUser?.id||null;
  if(inboxDraftUser!==id){
   ++messageAccountVersion;
   ++listingAccountVersion;document.getElementById("listingForm").reset();document.getElementById("listingType").dispatchEvent(new Event("change"));listingSelectedPhotos=[];renderListingPhotos();syncCategoryFields();syncGradedCondition();document.getElementById("deckFields").hidden=true;document.getElementById("listingStatus").textContent="";closeModal("sellModal");
-  inboxDrafts.clear();messageSendAttempts.clear();inboxDraftUser=id;tradeBundleSelection=[];document.getElementById("tradeBundleItems").replaceChildren();document.getElementById("tradeBundleCount").textContent="";
+  inboxDrafts.clear();messageSendAttempts.clear();inboxConversationFilter={search:"",unread:false};inboxDraftUser=id;tradeBundleSelection=[];document.getElementById("tradeBundleItems").replaceChildren();document.getElementById("tradeBundleCount").textContent="";
   ++blockedCollectorsLoadVersion;blockedCollectorIds.clear();document.getElementById("blockedUsersList").replaceChildren();document.getElementById("settingsBlockCount").textContent="";
   ++reportDialogVersion;reportTargetUser=null;reportTargetListing=null;reportTargetBlocked=false;document.getElementById("reportForm").reset();document.getElementById("reportStatus").textContent="";document.querySelector('#reportForm button[type="submit"]').disabled=false;closeModal("reportModal");
   ++notificationSettingsVersion;notificationSettingsOwner=null;notificationSettingsLoading=false;notificationPreferenceControls(true);document.querySelectorAll("[data-notify-pref]").forEach(input=>input.checked=false);document.getElementById("notificationSettingsStatus").textContent="";++inboxLoadVersion;++profileLoadVersion;++priceOffersLoadVersion;++tradeOffersLoadVersion;++unreadCountLoadVersion;++profileEditorLoadVersion;selectedInboxCollector=null;
@@ -1774,7 +1774,8 @@ function inboxTradeHtml(o,listings,counters,counterError){
 }
 let inboxLoadVersion=0,selectedInboxCollector=null;
 function filterInboxConversations(){
- const el=document.getElementById("messageInbox"),query=(el.querySelector("[data-conversation-search]")?.value||"").trim().toLocaleLowerCase(),unreadOnly=el.querySelector("[data-conversation-unread]")?.checked;let visible=0;
+ const el=document.getElementById("messageInbox"),searchInput=el.querySelector("[data-conversation-search]"),unreadInput=el.querySelector("[data-conversation-unread]");if(!searchInput||!unreadInput)return;
+ inboxConversationFilter={search:searchInput.value,unread:unreadInput.checked};const query=searchInput.value.trim().toLocaleLowerCase(),unreadOnly=unreadInput.checked;let visible=0;
  el.querySelectorAll("[data-conversation-id]").forEach(contact=>{const match=(!query||contact.textContent.toLocaleLowerCase().includes(query))&&(!unreadOnly||!!contact.querySelector(".conversation-unread"));contact.hidden=!match;if(match)visible++});
  const status=el.querySelector("[data-conversation-filter-status]");if(status)status.textContent=visible?visible+" conversation"+(visible===1?"":"s"):"No matching conversations. Clear search or turn off Unread.";
 }
@@ -1828,8 +1829,9 @@ if(tradeById.size){
  if(requestId!==inboxLoadVersion||currentUser?.id!==userId)return;
  const preview=x=>x.type==="message"?"✉ "+x.body:x.type==="price"?"💰 Offer · $"+Number(x.amount).toFixed(2)+" · "+x.action:x.type==="trade_counter"?"↩ Trade counteroffer · "+x.status:"⇄ Trade · "+x.status;
  el.innerHTML='<div class="conversation-layout"><div class="conversation-list"><div class="conversation-filters"><label for="conversationSearch">Find a conversation</label><input id="conversationSearch" type="search" data-conversation-search placeholder="Name or recent update" maxlength="100"><label class="conversation-unread-filter"><input type="checkbox" data-conversation-unread> Unread only</label><p class="muted" data-conversation-filter-status role="status"></p></div>'+ordered.map(([id,entries])=>{const person=names.get(id),avatar=safeImageUrl(person?.avatar_url),unread=entries.filter(x=>x.type==="message"&&x.recipient_id===currentUser.id&&!x.read_at).length;return `<button type="button" class="conversation-contact" data-conversation-id="${escapeHtml(id)}">${avatar?`<img src="${escapeHtml(avatar)}" alt="">`:`<span class="conversation-initial">${escapeHtml((person?.username||"C")[0].toUpperCase())}</span>`}<span class="conversation-summary"><strong>@${escapeHtml(person?.username||"collector")}${unread?` <em class="conversation-unread">${unread} new</em>`:""}</strong>${dealStatusByUser.has(id)?`<small class="deal-status-label">Deal: ${escapeHtml(dealStatusByUser.get(id))}</small>`:""}<small class="conversation-preview">${escapeHtml(preview(entries.at(-1)).slice(0,70))}</small><small class="conversation-date">${new Date(entries.at(-1).date).toLocaleDateString(undefined,{month:"short",day:"numeric"})}</small></span></button>`}).join("")+'</div><div class="conversation-thread" id="conversationThread"><p class="muted">Select a collector</p></div></div>';
- el.querySelector("[data-conversation-search]").addEventListener("input",filterInboxConversations);
- el.querySelector("[data-conversation-unread]").addEventListener("change",filterInboxConversations);filterInboxConversations();
+ const searchInput=el.querySelector("[data-conversation-search]"),unreadInput=el.querySelector("[data-conversation-unread]");searchInput.value=inboxConversationFilter.search;unreadInput.checked=inboxConversationFilter.unread;
+ searchInput.addEventListener("input",filterInboxConversations);
+ unreadInput.addEventListener("change",filterInboxConversations);filterInboxConversations();
  const openThread=async id=>{
  rememberInboxDraft();
  const entries=groups.get(id)||[],unread=entries.filter(x=>x.type==="message"&&x.recipient_id===currentUser.id&&!x.read_at).map(x=>x.id);
