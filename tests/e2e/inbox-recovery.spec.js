@@ -508,3 +508,41 @@ test('mobile inbox composer stays usable with the on-screen keyboard viewport',a
  expect(metrics.sendRight).toBeLessThanOrEqual(metrics.width+2);
  await expect(page.locator('.chat-composer button[type="submit"]')).toBeEnabled();
 });
+
+
+test('Alerts remain visible after a busy inbox and query discovery kinds at the source',async({page})=>{
+ await ready(page);
+ await page.evaluate(async()=>{
+  currentUser={id:'fixture-jayden'};syncInboxDraftUser();
+  const now=new Date().toISOString();
+  const messages=Array.from({length:100},(_,i)=>({id:'message-'+i,kind:'message',actor_id:'fixture-charles',source_id:null,created_at:now,read_at:null}));
+  const favorite={id:'favorite-1',kind:'favorite_price_drop',actor_id:null,source_id:'one-piece-card',created_at:now,read_at:null};
+  window.activityFilterUsed=false;
+  supabaseClient.from=table=>{
+   let allowed=null,limit=100;
+   const q={select:()=>q,eq:()=>q,order:()=>q,in:(key,values)=>{if(table==='collector_notifications'&&key==='kind'){allowed=new Set(values);window.activityFilterUsed=true}return q},limit:n=>{limit=n;return q},then:(resolve,reject)=>{
+    const data=table==='collector_notifications'?[...messages,favorite].filter(row=>!allowed||allowed.has(row.kind)).slice(0,limit):table==='listings'?[{id:'one-piece-card',title:'Jayden manga rare'}]:[];
+    return Promise.resolve({data,error:null}).then(resolve,reject);
+   }};return q;
+  };
+  await loadNotificationCenter();
+ });
+ expect(await page.evaluate(()=>activityFilterUsed)).toBe(true);
+ await expect(page.locator('#notificationList')).toContainText('Favorite price dropped');
+ await expect(page.locator('#notificationList')).toContainText('Jayden manga rare');
+ await expect(page.locator('#notificationList')).not.toContainText('New message');
+});
+
+test('Mark all activity read does not mark inbox messages or negotiations read',async({page})=>{
+ await ready(page);
+ await page.evaluate(()=>{
+  currentUser={id:'fixture-tanner'};syncInboxDraftUser();window.activityReadFilter=null;
+  supabaseClient.from=table=>{
+   let updating=false;
+   const q={select:()=>q,update:()=>{updating=true;return q},eq:()=>q,is:()=>q,order:()=>q,limit:()=>q,in:(key,values)=>{if(updating&&table==='collector_notifications'&&key==='kind')activityReadFilter=values;return q},then:(resolve,reject)=>Promise.resolve({data:[],count:0,error:null}).then(resolve,reject)};
+   return q;
+  };
+  document.getElementById('markAllNotifications').click();
+ });
+ await expect.poll(()=>page.evaluate(()=>activityReadFilter)).toEqual(['favorite_price_drop','favorite_sold','followed_seller_listing','wanted_match']);
+});
