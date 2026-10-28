@@ -1727,7 +1727,7 @@ function inboxTradeCounterHtml(x,userId){
  const amount=Number(x.cash_amount)||0;
  const direction=x.cash_direction==="sender_pays"?"Original buyer pays":"Listing owner pays";
  const cash=amount>0?"$"+amount.toFixed(2)+" cash · "+direction:"No cash added";
- return `<div class="message-bubble inbox-offer chat-event ${x.proposer_id===userId?"inbox-mine":""}"><strong>↩ Trade counteroffer · ${escapeHtml(x.status)}</strong><p>${escapeHtml(x.offer_note||"No additional note")}</p><p>${escapeHtml(cash)}</p><small>${new Date(x.date).toLocaleString()}</small>${x.status==="pending"&&x.recipient_id===userId?'<p class="price-offer-actions"><button type="button" class="primary" data-inbox-trade-review="${escapeHtml(x.trade_offer_id)}">Review and respond</button></p>':""}</div>`;
+ return `<div class="message-bubble inbox-offer chat-event ${x.proposer_id===userId?"inbox-mine":""}"><strong>↩ Trade counteroffer · ${escapeHtml(x.status)}</strong><p>${escapeHtml(x.offer_note||"No additional note")}</p><p>${escapeHtml(cash)}</p><small>${new Date(x.date).toLocaleString()}</small>${x.status==="pending"&&x.recipient_id===userId?`<p class="price-offer-actions"><button type="button" class="primary" data-inbox-trade-review="${escapeHtml(x.trade_offer_id)}">Review and respond</button></p>`:""}</div>`;
 }
 function tradeCashHtml(amount,direction,offer){
  if(!Number(amount))return '<p class="muted">No cash added</p>';
@@ -1990,7 +1990,7 @@ let activeCounterOffer=null,counterComposeVersion=0;
 async function loadTradeOffers(focusOfferId=null){
  const requestId=++tradeOffersLoadVersion,userId=currentUser?.id;
  const el=document.getElementById("tradeOffersList");el.textContent="Loading offers…";if(!userId){el.replaceChildren();return}
- const {data,error}=await supabaseClient.from("trade_offers").select("id,listing_id,offered_listing_id,sender_id,recipient_id,offer_note,cash_amount,cash_direction,status,created_at").order("created_at",{ascending:false}).limit(100);
+ let {data,error}=await supabaseClient.from("trade_offers").select("id,listing_id,offered_listing_id,sender_id,recipient_id,offer_note,cash_amount,cash_direction,status,created_at").order("created_at",{ascending:false}).limit(100);
  if(requestId!==tradeOffersLoadVersion||currentUser?.id!==userId)return;
  if(error){el.textContent=error.message;return}
  // Deep links remain usable even when the trade has fallen outside the latest 100.
