@@ -491,3 +491,20 @@ test('inbox offer and trade decisions lock sibling actions until the server resp
  await page.evaluate(()=>pendingInboxDecisions[1].resolve({error:{message:'Temporary trade outage'}}));
  await expect(page.locator('#tradeDecision button').first()).toBeEnabled();await expect(page.locator('#tradeDecision button').last()).toBeEnabled();
 });
+
+
+test('mobile inbox composer stays usable with the on-screen keyboard viewport',async({page})=>{
+ await page.setViewportSize({width:390,height:650});
+ await inbox(page);
+ await page.locator('#chatInput').fill('Can you send a photo of the card back?');
+ const metrics=await page.locator('#chatInput').evaluate(el=>{
+  const rect=el.getBoundingClientRect();
+  const send=document.querySelector('.chat-composer button[type="submit"]').getBoundingClientRect();
+  return {inputLeft:rect.left,inputRight:rect.right,sendLeft:send.left,sendRight:send.right,width:innerWidth};
+ });
+ expect(metrics.inputLeft).toBeGreaterThanOrEqual(-2);
+ expect(metrics.inputRight).toBeLessThanOrEqual(metrics.width+2);
+ expect(metrics.sendLeft).toBeGreaterThanOrEqual(-2);
+ expect(metrics.sendRight).toBeLessThanOrEqual(metrics.width+2);
+ await expect(page.locator('.chat-composer button[type="submit"]')).toBeEnabled();
+});
