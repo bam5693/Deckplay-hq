@@ -1698,13 +1698,33 @@ document.getElementById("messageInbox").addEventListener("change",async e=>{cons
 document.getElementById("messageInbox").addEventListener("click",async e=>{const button=e.target.closest("[data-submit-review]");if(!button)return;const id=button.dataset.submitReview,rating=Number(document.querySelector('[data-review-rating="'+id+'"]').value),comment=document.querySelector('[data-review-comment="'+id+'"]').value;const {data:deal}=await supabaseClient.from("deal_progress").select("seller_id").eq("id",id).single();if(!deal)return;const {error}=await supabaseClient.from("seller_reviews").insert({deal_id:id,reviewer_id:currentUser.id,seller_id:deal.seller_id,rating,comment});if(error)toast(error.message,"error");else{toast("Review posted");await loadInbox()}});
 
 // Drafts stay in memory, scoped to the signed-in collector and conversation.
-const inboxDrafts=new Map(),inboxSending=new Set();
-let inboxDraftUser=null;
+const inboxDrafts=new Map(),inboxSending=new Set(),messageSendAttempts=new Map();
+async function sendCollectorMessageOnce(payload){
+ const key=JSON.stringify([payload.sender_id,payload.recipient_id,payload.listing_id||null,payload.body]);
+ const id=messageSendAttempts.get(key)||crypto.randomUUID();messageSendAttempts.set(key,id);
+ let failure;
+ try{
+  const result=await supabaseClient.from("collector_messages").insert({...payload,id}).select("id").single();
+  if(!result.error&&result.data?.id){if(messageSendAttempts.get(key)===id)messageSendAttempts.delete(key);return result}
+  failure=result.error||new Error("Message delivery could not be confirmed. Retry to check the same message.");
+ }catch(error){failure=error}
+ if(failure?.code&&failure.code!=="23505")throw failure;
+ // The server may have committed before the network response was lost.
+ // A retry reuses the primary key; confirm the exact sender, thread and body.
+ try{
+  const found=await supabaseClient.from("collector_messages").select("id,sender_id,recipient_id,listing_id,body").eq("id",id).eq("sender_id",payload.sender_id).maybeSingle();
+  const row=found.data;
+  if(!found.error&&row?.id===id&&row.sender_id===payload.sender_id&&row.recipient_id===payload.recipient_id&&(row.listing_id||null)===(payload.listing_id||null)&&row.body===payload.body){if(messageSendAttempts.get(key)===id)messageSendAttempts.delete(key);return {data:{id},error:null}}
+ }catch{/* Preserve the original failure and the same retry reference. */}
+ throw failure;
+}
+let inboxDraftUser=null,messageAccountVersion=0;
 function syncInboxDraftUser(){
  const id=currentUser?.id||null;
  if(inboxDraftUser!==id){
+  ++messageAccountVersion;
   ++listingAccountVersion;document.getElementById("listingForm").reset();document.getElementById("listingType").dispatchEvent(new Event("change"));listingSelectedPhotos=[];renderListingPhotos();syncCategoryFields();syncGradedCondition();document.getElementById("deckFields").hidden=true;document.getElementById("listingStatus").textContent="";closeModal("sellModal");
-  inboxDrafts.clear();inboxDraftUser=id;tradeBundleSelection=[];document.getElementById("tradeBundleItems").replaceChildren();document.getElementById("tradeBundleCount").textContent="";
+  inboxDrafts.clear();messageSendAttempts.clear();inboxDraftUser=id;tradeBundleSelection=[];document.getElementById("tradeBundleItems").replaceChildren();document.getElementById("tradeBundleCount").textContent="";
   ++blockedCollectorsLoadVersion;blockedCollectorIds.clear();document.getElementById("blockedUsersList").replaceChildren();document.getElementById("settingsBlockCount").textContent="";
   ++reportDialogVersion;reportTargetUser=null;reportTargetListing=null;reportTargetBlocked=false;document.getElementById("reportForm").reset();document.getElementById("reportStatus").textContent="";document.querySelector('#reportForm button[type="submit"]').disabled=false;closeModal("reportModal");
   ++notificationSettingsVersion;notificationSettingsOwner=null;notificationSettingsLoading=false;notificationPreferenceControls(true);document.querySelectorAll("[data-notify-pref]").forEach(input=>input.checked=false);document.getElementById("notificationSettingsStatus").textContent="";++inboxLoadVersion;++profileLoadVersion;++priceOffersLoadVersion;++tradeOffersLoadVersion;++unreadCountLoadVersion;++profileEditorLoadVersion;selectedInboxCollector=null;
@@ -1832,13 +1852,13 @@ if(tradeById.size){
 }
 document.getElementById("messageInbox").addEventListener("submit",async e=>{
  const form=e.target.closest(".chat-composer");if(!form)return;e.preventDefault();if(!currentUser)return;
- const input=form.querySelector("textarea"),button=form.querySelector('button[type="submit"]'),status=form.querySelector(".chat-send-status"),body=input.value.trim(),recipient=form.dataset.chatRecipient,userId=currentUser.id,key=userId+":"+recipient;
+ const input=form.querySelector("textarea"),button=form.querySelector('button[type="submit"]'),status=form.querySelector(".chat-send-status"),body=input.value.trim(),recipient=form.dataset.chatRecipient,userId=currentUser.id,key=userId+":"+recipient,accountVersion=messageAccountVersion;
  if(!body||!recipient||inboxSending.has(key))return;
  inboxSending.add(key);button.disabled=true;input.readOnly=true;status.textContent="Sending…";
  try{
-  const {data,error}=await supabaseClient.from("collector_messages").insert({sender_id:userId,recipient_id:recipient,body}).select("id").single();
+  const {data,error}=await sendCollectorMessageOnce({sender_id:userId,recipient_id:recipient,body});
   if(error)throw error;
-  if(currentUser?.id!==userId)return;
+  if(currentUser?.id!==userId||messageAccountVersion!==accountVersion)return;
   inboxDrafts.delete(recipient);input.value="";resizeInboxComposer(input);status.textContent="";
   const active=document.querySelector("#messageInbox .chat-composer");
   if(active?.dataset.chatRecipient===recipient){const visible=active.querySelector("textarea");visible.value="";resizeInboxComposer(visible)};
@@ -1847,7 +1867,7 @@ document.getElementById("messageInbox").addEventListener("submit",async e=>{
  }catch(error){
   const message="Could not send: "+(error.message||"Please try again.");status.textContent=message;
   const active=document.querySelector("#messageInbox .chat-composer");
-  if(currentUser?.id===userId&&active?.dataset.chatRecipient===recipient)active.querySelector(".chat-send-status").textContent=message;
+  if(currentUser?.id===userId&&messageAccountVersion===accountVersion&&active?.dataset.chatRecipient===recipient)active.querySelector(".chat-send-status").textContent=message;
  }
  finally{
   inboxSending.delete(key);button.disabled=!input.value.trim();input.readOnly=false;
@@ -1937,18 +1957,18 @@ document.getElementById("messageInbox").addEventListener("click",async e=>{
  const b=e.target.closest("[data-reply-to],[data-thread-reply]");if(!b)return;composeRecipient=b.dataset.replyTo||b.dataset.threadReply;composeListing=b.dataset.replyListing||null;document.getElementById("composeContext").textContent="Reply to collector";openModal("composeModal")});
 document.getElementById("composeForm").addEventListener("submit",async e=>{
  e.preventDefault();const form=e.currentTarget;if(!currentUser||!composeRecipient||form.dataset.pending)return;
- const status=document.getElementById("composeStatus"),input=document.getElementById("composeBody"),button=form.querySelector('button[type="submit"]'),draft=input.value,body=draft.trim(),userId=currentUser.id,recipient=composeRecipient,listing=composeListing;
+ const status=document.getElementById("composeStatus"),input=document.getElementById("composeBody"),button=form.querySelector('button[type="submit"]'),draft=input.value,body=draft.trim(),userId=currentUser.id,recipient=composeRecipient,listing=composeListing,accountVersion=messageAccountVersion;
  if(!body)return;form.dataset.pending="true";form.setAttribute("aria-busy","true");button.disabled=true;status.textContent="Sending…";
  try{
-  const {data:sentMessage,error}=await supabaseClient.from("collector_messages").insert({sender_id:userId,recipient_id:recipient,listing_id:listing||null,body}).select("id").single();if(error)throw error;
-  if(currentUser?.id!==userId)return;
+  const {data:sentMessage,error}=await sendCollectorMessageOnce({sender_id:userId,recipient_id:recipient,listing_id:listing||null,body});if(error)throw error;
+  if(currentUser?.id!==userId||messageAccountVersion!==accountVersion)return;
   if(composeRecipient===recipient&&composeListing===listing){
    if(input.value===draft){form.reset();status.textContent="";closeModal("composeModal");toast("Message sent")}
    else status.textContent="Message sent. Your new draft is ready.";
   }
   if(!document.getElementById("inboxPage").hidden){try{await loadInbox()}catch{toast("Message sent. Refresh your inbox to see it.")}}
   void sendCollectorEmailForSource(sentMessage?.id);
- }catch(error){if(currentUser?.id===userId&&composeRecipient===recipient)status.textContent="Could not send: "+(error.message||"Please try again.")}
+ }catch(error){if(currentUser?.id===userId&&messageAccountVersion===accountVersion&&composeRecipient===recipient)status.textContent="Could not send: "+(error.message||"Please try again.")}
  finally{delete form.dataset.pending;form.removeAttribute("aria-busy");button.disabled=false;if((currentUser?.id!==userId||composeRecipient!==recipient)&&status.textContent==="Sending…")status.textContent=""}
 });
 

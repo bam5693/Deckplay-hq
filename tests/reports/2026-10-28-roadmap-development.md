@@ -205,3 +205,15 @@ All selected listing rows lock in stable UUID order. Trade/counter acceptance re
 Validation before publication: 96 targeted desktop/mobile picker/inbox/trade checks passed; staging transaction/role suite passed and rolled back all generated accounts, notifications, listings and offers (follow-up fixture count zero). It covers server-generated snapshots, ownership, duplicate/target-item injection, outsider denials, multi-item counter reservation, stale-term rollback and extra-item competing-offer closure. Staging advisor has only the existing leaked-password warning. Full local suite and matching deployed API/browser run are pending at this checkpoint. Four real API cases and the existing deployed sports/TCG journey now exercise multi-item inventory, saved disclosures and concurrent bundle/price acceptance.
 
 Only staging schema and branch were changed; production/main, payments/shipping, billing and PR merge remain excluded. The pre-existing isolated MFA probe account remains a separate confined cleanup item until deletion is confirmed.
+
+### Structured bundle matching verification
+
+Bundle code `c52bd49afdb1d07825ce98ed8c7e4542ff35e135` is VERIFIED at [run 40762847460](https://github.com/bam5693/Deckplay-hq/actions/runs/40762847460). The isolated Worker version is `b47477df-2aef-4702-ab79-e6dbaa7c8bdc`; full source read-back matched (653,163 characters), SHA-256 `d814dd51b3d0ea6e820c86ad467f3dc67fc6c7047d41e526d2380444113ebe72`. Full local: 412 passed. The security suite passed 37. Matching CI confirms all real API/browser/local/cleanup steps succeeded, including the expanded multi-item trade journey and concurrency coverage. Counts/subsets overlap.
+
+## Next batch — recover uncertain message delivery without duplicate sends
+
+Trunk 2: inbox and listing/profile compose now assign one client-generated message ID per exact pending draft, scoped to sender, recipient, listing context and body. If a response is lost after server commit, the client checks the exact saved row. A retry keeps the same primary key, preventing duplicate inserts; only an exact sender/thread/context/body match can confirm delivery. Known authoritative server rejections do not add unnecessary recovery reads. Failure retains the draft and retry reference. Attempts remain in memory and clear on account changes; full-page offline durability is not claimed.
+
+Account generations prevent an earlier send result clearing a newer draft after switching away and signing back into the same account. A late result also cannot remove a newer attempt's reference. Targeted desktop/mobile inbox/account/order suite: 120 passed. No database/schema, payments or billing change in this batch.
+
+Confined diagnostic cleanup retry returned the Supabase connector error `Invalid or expired requestState`; no deletion success is claimed. This provider failure is kept separate from the working marketplace batches, and no alternative privileged bypass was introduced.

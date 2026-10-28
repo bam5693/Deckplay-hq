@@ -614,3 +614,44 @@ test('collectors find loaded conversations by recent update and filter unread wi
  await page.locator('[data-conversation-id="buyer-a"]').click();
  await expect(page.locator('#chatInput')).toHaveValue('Keep this private draft');
 });
+
+test('a committed message survives a lost response and retry without inserting a duplicate',async({page})=>{
+ await inbox(page);
+ await page.evaluate(()=>{
+  window.attemptedMessageIds=[];window.storedMessage=null;window.lookupCount=0;const previous=supabaseClient.from;
+  supabaseClient.from=table=>{
+   if(table!=='collector_messages')return previous(table);
+   let inserted=false,payload=null,lookingUp=false;
+   const q={then:(a,b)=>Promise.resolve({data:storedMessage?[storedMessage]:[],error:null}).then(a,b)};
+   for(const method of ['order','limit','in','is'])q[method]=()=>q;
+   q.select=()=>q;q.eq=()=>{lookingUp=true;return q};q.update=()=>q;
+   q.insert=value=>{inserted=true;payload=value;attemptedMessageIds.push(value.id);return q};
+   q.single=async()=>{if(inserted){if(!storedMessage){storedMessage={...payload,created_at:new Date().toISOString(),read_at:null};throw Error('Response lost after server commit')}return {data:null,error:{code:'23505',message:'Duplicate reference'}}}return {data:null,error:null}};
+   q.maybeSingle=async()=>{lookupCount++;if(lookupCount===1)throw Error('Network still unavailable');return {data:storedMessage,error:null}};
+   return q;
+  };
+ });
+ await page.locator('#chatInput').fill('One copy of this message');await page.locator('#chatInput').press('Enter');
+ await expect(page.locator('.chat-send-status')).toContainText('Response lost');await expect(page.locator('#chatInput')).toHaveValue('One copy of this message');
+ await page.locator('#chatInput').press('Enter');await expect(page.locator('#chatInput')).toHaveValue('');
+ expect(await page.evaluate(()=>attemptedMessageIds.length)).toBe(2);expect(await page.evaluate(()=>new Set(attemptedMessageIds).size)).toBe(1);
+ expect(await page.evaluate(()=>messageSendAttempts.size)).toBe(0);
+});
+
+test('delivery recovery never treats a different thread or body as the sent message',async({page})=>{
+ await inbox(page);
+ const result=await page.evaluate(async()=>{
+  let sent;
+  supabaseClient.from=()=>{const q={select:()=>q,eq:()=>q,insert:value=>{sent=value;return q},single:async()=>({error:{code:'23505',message:'Reference collision'}}),maybeSingle:async()=>({data:{...sent,recipient_id:'different-collector',body:'Different private content'},error:null})};return q};
+  try{await sendCollectorMessageOnce({sender_id:currentUser.id,recipient_id:'buyer-a',body:'Expected body'});return 'incorrect success'}catch(error){return error.message}
+ });
+ expect(result).toBe('Reference collision');
+ await page.evaluate(()=>{currentUser={id:'another-account'};syncInboxDraftUser()});expect(await page.evaluate(()=>messageSendAttempts.size)).toBe(0);
+});
+
+test('returning to the same account cannot let an earlier send clear its newer draft',async({page})=>{
+ await inbox(page);await page.locator('#chatInput').fill('Earlier account send');await page.locator('#chatInput').press('Enter');
+ await page.evaluate(async()=>{currentUser={id:'other-account'};syncInboxDraftUser();currentUser={id:'fixture-seller'};syncInboxDraftUser();inboxDrafts.set('buyer-a','New draft after signing back in');await showInboxPage('buyer-a')});
+ await page.evaluate(()=>finishFixtureSend({data:{id:'earlier-send'},error:null}));
+ await expect(page.locator('#chatInput')).toHaveValue('New draft after signing back in');await expect(page.locator('#chatInput')).not.toHaveJSProperty('readOnly',true);
+});
