@@ -98,3 +98,49 @@ test('a stale successful trade cannot replace a draft after sign-out',async({pag
  await expect(page.locator('#tradeComposeModal')).toHaveClass(/open/);
  expect(await page.evaluate(()=>tradeWrites.length)).toBe(1);
 });
+
+async function counterFixture(page){
+ await page.route('https://challenges.cloudflare.com/**',r=>r.abort());
+ await page.route('https://prrrzeelltmyugssqnzk.supabase.co/rest/v1/**',r=>r.fulfill({json:[]}));
+ await page.goto('/');await page.waitForLoadState('networkidle');
+ await page.evaluate(async()=>{
+  await supabaseClient.auth.getSession();
+  currentUser={id:'counter-seller'};activeCounterOffer='offer-1';counterComposeVersion++;
+  window.counterWrites=[];window.counterReloads=0;
+  supabaseClient.rpc=(name,args)=>{counterWrites.push({name,args});return new Promise((resolve,reject)=>{window.finishCounter=resolve;window.failCounter=reject})};
+  loadTradeOffers=async()=>{counterReloads++};refreshTradeAlerts=async()=>{};
+  openModal('counterModal');
+ });
+ await page.locator('#counterDirection').selectOption('sender_pays');
+ await page.locator('#counterAmount').fill('5');
+ await page.locator('#counterNote').fill('Jayden offers another One Piece card');
+}
+test('trade counteroffer sends once and preserves cash, note and retry after network failure',async({page})=>{
+ await counterFixture(page);
+ await page.locator('#counterForm button[type="submit"]').click();
+ await page.locator('#counterForm').dispatchEvent('submit');
+ expect(await page.evaluate(()=>counterWrites.length)).toBe(1);
+ await expect(page.locator('#counterForm button[type="submit"]')).toBeDisabled();
+ await page.evaluate(()=>failCounter(Error('Network unavailable')));
+ await expect(page.locator('#counterStatus')).toContainText('Network unavailable');
+ await expect(page.locator('#counterNote')).toHaveValue('Jayden offers another One Piece card');
+ await expect(page.locator('#counterAmount')).toHaveValue('5');
+ await expect(page.locator('#counterForm button[type="submit"]')).toBeEnabled();
+ await page.locator('#counterForm button[type="submit"]').click();
+ expect(await page.evaluate(()=>counterWrites.length)).toBe(2);
+ await page.evaluate(()=>finishCounter({error:null}));
+ await expect(page.locator('#counterModal')).not.toHaveClass(/open/);
+ expect(await page.evaluate(()=>counterReloads)).toBe(1);
+});
+test('late counteroffer results never close another draft or reveal a prior account error',async({page})=>{
+ await counterFixture(page);
+ await page.locator('#counterForm button[type="submit"]').click();
+ await page.evaluate(()=>{currentUser={id:'another-collector'};activeCounterOffer='offer-2';counterComposeVersion++});
+ await page.locator('#counterNote').fill('Different collector private draft');
+ await page.evaluate(()=>failCounter(Error('Private prior-account failure')));
+ await expect(page.locator('#counterNote')).toHaveValue('Different collector private draft');
+ await expect(page.locator('#counterStatus')).not.toContainText('Private prior-account failure');
+ await expect(page.locator('#counterForm button[type="submit"]')).toBeEnabled();
+ await expect(page.locator('#counterModal')).toHaveClass(/open/);
+ expect(await page.evaluate(()=>counterReloads)).toBe(0);
+});
