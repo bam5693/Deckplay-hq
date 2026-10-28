@@ -1325,6 +1325,10 @@ document.getElementById("listingForm").addEventListener("reset",()=>queueMicrota
 document.getElementById("listingForm").addEventListener("submit",async event=>{
  event.preventDefault();if(!currentUser){closeModal("sellModal");openModal("authModal");return}
  const form=event.currentTarget;const status=document.getElementById("listingStatus");const files=[...listingSelectedPhotos];if(!files.length){status.textContent="Add at least one photo before posting.";document.getElementById("photos").focus();return}if(files.length>5){status.textContent="Please choose no more than 5 photos.";return}if(document.getElementById("condition").value==="graded"&&document.getElementById("category").value!=="trading_cards"){status.textContent="Graded condition is only available for trading cards.";return}
+ if(document.getElementById("listingType").value==="lot"&&!document.getElementById("description").value.trim()){
+  status.textContent="Describe the items included in this lot, their quantities, and their condition before posting.";
+  document.getElementById("description").focus();return;
+ }
  if(document.getElementById("listingType").value==="deck"){
   const quantities=updateDeckQuantityStatus();
   if(quantities.invalid||quantities.mismatch){status.textContent=document.getElementById("deckQuantityStatus").textContent;document.getElementById("deckList").focus();return}
