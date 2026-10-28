@@ -116,3 +116,18 @@ Prioritize **one or two real customer-facing fixes per development batch**, with
 6. Roll out in stages: manual catalog search → photo-assisted candidate lookup → condition-aware price suggestion → optional bulk scanning. Preserve fallback description and manual posting throughout.
 
 **Research note:** TCGplayer API documentation currently says it is not granting new API access; don't assume free integration. Alternative catalogs/price providers require terms, commercial rights, coverage, accuracy and cost review before integration. No paid API or deployment authorized.
+
+
+## Trunk 2 — Private conversation photo sharing (approved 2026-10-28)
+
+**Status: APPROVED / NOT YET IMPLEMENTED.** User explicitly wants buyers and sellers to send photos in private conversations (card corners, backs, graded labels, condition evidence). No paid services.
+
+**Feature branches**
+1. **Discovery first:** inspect existing messages schema, listing photo upload/storage, inbox rendering and RLS; avoid duplicating an existing feature or exposing storage.
+2. **Private attachments:** support a limited number of image attachments per message using existing isolated staging storage where feasible. Enforce per-file type, size, count, ownership, conversation membership and server-side authorization; deny cross-thread and anonymous access. Do not use public listing-photo buckets for private images.
+3. **UX:** attach previews before sending; show sending/failure/retry state; display thumbnails inline and full-screen view with accessible controls. Preserve message text and drafts on failures; handle mobile upload/camera capture.
+4. **Safety:** strip or avoid retaining sensitive EXIF metadata where practical; validate file contents, not just extension; protect against malicious file types, oversized images, storage abuse and spam; ensure attachments cannot leak through direct URLs or account switching.
+5. **Testing:** Charles verifies staging API authorization and cross-account denials; Kyle verifies mobile/desktop send/receive/open/retry; Tanner reviews sports-card condition-photo use cases; Jayden reviews TCG card back/rarity use cases.
+6. **Costs and deployment:** stay within existing free staging quotas; estimate storage/egress before enabling at scale. No paid provider, new subscription, production change, real data, real payments/shipping or merge without approval.
+
+**Acceptance:** two authorized synthetic users can exchange and open private card photos on mobile/desktop; unauthorized third party cannot retrieve them; rejected uploads fail clearly without losing drafts; existing text conversations and inbox privacy still pass.
