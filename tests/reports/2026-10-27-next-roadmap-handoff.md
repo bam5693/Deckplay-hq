@@ -157,3 +157,16 @@ Prioritize **one or two real customer-facing fixes per development batch**, with
 **Anti-spam:** rate-limit first-contact collection inquiries and repeated requests; prevent duplicate unanswered requests for the same collector/card; allow dismiss/report/block. Keep collection inquiries separate/filterable from active listing/deal conversations so sellers can prioritize actual transactions. Do not imply off-platform collector apps grant access to card-specific availability or messaging.
 
 **Tests:** a large-collection synthetic user with default settings receives no collection inquiries; opting in permits controlled first-contact requests; turning off inquiries blocks subsequent new requests without deleting existing conversations; blocked users cannot initiate contact. Preserve existing normal listing messaging.
+
+
+## Cross-trunk pricing transparency — listing price plus actual buyer cost (approved 2026-10-28)
+
+**Status: APPROVED REQUIREMENT / NOT IMPLEMENTED.** Applies to Trunks 1 (listing cards/search), 3 (offers/bundles/checkout) and 6 (payments/compliance).
+
+- On every listing card and detail page, show the seller's asking/listed price prominently and, immediately underneath, the **estimated total buyer cost**, itemizing buyer-facing marketplace/protection/service fees and estimated shipping. Include applicable taxes in final checkout; display tax estimate earlier when determinable from destination.
+- Clearly label totals **estimated** until shipping destination, shipping method and applicable taxes are known. When these are known, show the **final payable total** before payment confirmation, including item price, shipping, tax and all mandatory buyer fees; never surprise buyers with a new mandatory fee after confirmation.
+- Never misrepresent a seller-side marketplace commission or card processing cost as an additional buyer charge. Decide and document who pays each fee, whether seller fee is deducted from proceeds, and whether a buyer protection fee exists. Avoid double-counting.
+- On bundle/multi-item orders, calculate per-order charges correctly and combine shipping when feasible; don't multiply fixed payment fees per item unless separate charges actually occur. Show seller payout/fee breakdown separately from buyer cost.
+- For an anonymous viewer or unknown shipping destination, show a transparent estimated total/range or “Shipping/tax calculated with address,” not a falsely exact price. In the invite-only beta with checkout disabled, label any price calculator as preview/simulation, not payable.
+- No paid integrations or live payment/shipping enablement without user approval. Confirm provider rules, fees, and applicable all-in price display requirements before production.
+- Tests: Charles checks arithmetic and fee ownership across small orders/bundles; Kyle checks mobile card/details/checkout legibility; Tanner and Jayden verify collectible/trade examples, including shipping and changing destination.
