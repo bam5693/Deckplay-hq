@@ -87,3 +87,18 @@ Prioritize **one or two real customer-facing fixes per development batch**, with
 4. Prefer breadth: after two consecutive batches in one trunk without a user-visible change, move to the next unfinished branch or explicitly explain the blocker.
 5. Keep a short dated change log: branch, user-visible effect, commit, deployment, local/API/deployed/security results, remaining gap.
 6. Tanner and Jayden identify usability concerns; manager decides product policy. Charles/Kyle exercise deterministic supported workflows.
+
+
+## Marketplace posting-tools branch — exact card identity and seller flexibility (2026-10-28)
+
+**Existing implementation, do not duplicate:** Listing form already has a 2,000-character free-text description, item name, TCG game, optional set, optional card number, optional variant, condition/grading and required photos. Generated metadata and seller description are saved together. Current dropdown already includes regular, reverse holo, holo, illustration rare, special illustration rare, alternate art, manga rare, promo and Other. The optional set selector can be skipped. Existing tests cover publishing and descriptions.
+
+**Next enhancements, separate branches:**
+1. **P1 — Visible free-form fallback:** Label the description as the place to specify any unlisted card/set/variant/rarity, printing, language, edition, foil treatment, serial number and flaws; add contextual examples and show buyers all seller-entered detail. Prefer a targeted UX change rather than new duplicate form fields.
+2. **P1 — Exact card identity:** Offer explicit custom set/variant text when dropdown is missing an option, plus rarity, edition/printing, language and card number. Do not collapse two variants because name/number match. Preserve exact seller text through listing detail, search and messaging.
+3. **P2 — Price and condition:** Seller-entered asking price remains authoritative. Do not infer price from name or apply auto-valuation; condition, grading company, grade, certification, photo proof and seller disclosure must be distinguishable.
+4. **P2 — Quantity and multi-card listings:** Distinguish quantity of identical copies from mixed lots; describe individual variants/conditions separately when needed, avoid silently combining values.
+5. **P3 — Photos and quality:** Require photos, encourage front/back, surface/corners and graded-label photos, preserve photo order and provide an informative preview.
+6. **P3 — Coverage:** Test Pokémon, One Piece, other TCGs, sports cards, memorabilia, sealed items, video games and collectibles; ensure free-text fallback works for unsupported games/sets.
+
+**Acceptance:** Seller can post three same-name/number cards with different rarity/printing/condition/prices as **three distinguishable listings**; unsupported variants can be accurately described without selecting an incorrect dropdown; listing detail displays exact description. Do not change production or enable checkout. Implement in small staging-only UI batches with matching deployed build verification and relevant targeted tests.
