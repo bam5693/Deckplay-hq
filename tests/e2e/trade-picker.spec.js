@@ -87,3 +87,14 @@ test('signing out during trade submission cannot display the former account erro
  await expect(page.locator('#tradeOfferStatus')).not.toContainText('Private trade submission failed');
  expect(await page.evaluate(()=>tradeWrites.length)).toBe(1);
 });
+
+test('a stale successful trade cannot replace a draft after sign-out',async({page})=>{
+ await composeFixture(page);
+ await page.locator('#tradeComposeForm button[type="submit"]').click();
+ await page.evaluate(()=>{currentUser=null;tradeTargetId=null;tradeRecipientId=null});
+ await page.locator('#tradeOfferNote').fill('New private draft after sign-out');
+ await page.evaluate(()=>finishTrade({data:{id:'old-account-trade'},error:null}));
+ await expect(page.locator('#tradeOfferNote')).toHaveValue('New private draft after sign-out');
+ await expect(page.locator('#tradeComposeModal')).toHaveClass(/open/);
+ expect(await page.evaluate(()=>tradeWrites.length)).toBe(1);
+});
