@@ -32,3 +32,16 @@ test('unavailable counter terms fail closed instead of offering stale acceptance
  await expect(page.locator('#conversationThread')).toContainText('Trade terms could not load');
  await expect(page.locator('#conversationThread [data-inbox-trade],#conversationThread [data-inbox-counter]')).toHaveCount(0);
 });
+
+test('trade dialog locks competing decisions and releases them after transport failure',async({page})=>{
+ await fixture(page);
+ await page.evaluate(()=>{document.getElementById('tradeOffersList').innerHTML='<article class="trade-offer-card"><button data-counter-response="accept" data-counter-id="c" data-parent-offer="t">Accept counter</button><button data-counter-response="decline" data-counter-id="c" data-parent-offer="t">Decline counter</button></article>';openModal('tradesModal')});
+ page.on('dialog',d=>d.accept());
+ await page.locator('#tradeOffersList [data-counter-response="accept"]').click();
+ await expect(page.locator('#tradeOffersList [data-counter-response="decline"]')).toBeDisabled();
+ await page.locator('#tradeOffersList [data-counter-response="decline"]').evaluate(b=>b.click());
+ expect(await page.evaluate(()=>decisionWrites.length)).toBe(1);
+ await page.evaluate(()=>finishDecision(Promise.reject(Error('Network failed'))));
+ await expect(page.locator('#tradeOffersList [data-counter-response="accept"]')).toBeEnabled();
+ await expect(page.locator('#tradeOffersList [data-counter-response="decline"]')).toBeEnabled();
+});

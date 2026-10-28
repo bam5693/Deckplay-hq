@@ -595,3 +595,22 @@ test('pending trade counteroffers show terms in the thread and suspend original 
  await expect(focused).toBeFocused();
  await expect(focused).toContainText('Add five dollars');
 });
+
+test('collectors find loaded conversations by recent update and filter unread without losing drafts',async({page})=>{
+ await inbox(page,true);
+ await page.locator('#conversationSearch').fill('Hello buyer-b');
+ await expect(page.locator('[data-conversation-id="buyer-a"]')).toBeHidden();
+ await expect(page.locator('[data-conversation-id="buyer-b"]')).toBeVisible();
+ await page.locator('#conversationSearch').fill('missing collector');
+ await expect(page.locator('[data-conversation-filter-status]')).toContainText('No matching conversations');
+ await page.locator('#conversationSearch').fill('');
+ await page.locator('[data-conversation-unread]').check();
+ await page.locator('[data-conversation-id="buyer-a"]').click();
+ await page.locator('#chatInput').fill('Keep this private draft');
+ await page.locator('#inboxThreadBack').click();
+ await expect(page.locator('[data-conversation-id="buyer-a"]')).toBeHidden();
+ await expect(page.locator('[data-conversation-id="buyer-b"]')).toBeVisible();
+ await page.locator('[data-conversation-unread]').uncheck();
+ await page.locator('[data-conversation-id="buyer-a"]').click();
+ await expect(page.locator('#chatInput')).toHaveValue('Keep this private draft');
+});
