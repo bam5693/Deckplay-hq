@@ -274,3 +274,76 @@ test('a former account unread count cannot overwrite the current account badge',
   await expect(page.locator('#'+id)).toHaveJSProperty('hidden',false);
  }
 });
+
+test('Tanner and Jayden: a former collector activity response cannot replace the new account alerts',async({page})=>{
+ await ready(page);
+ await page.evaluate(()=>{
+  currentUser={id:'fixture-tanner'};syncInboxDraftUser();
+  window.pendingPersonaActivity={};
+  supabaseClient.from=table=>{
+   let owner='';
+   const q={
+    select:()=>q,order:()=>q,limit:()=>q,in:()=>q,
+    eq:(field,value)=>{if(field==='user_id')owner=value;return q},
+    then:(resolve,reject)=>(table==='collector_notifications'
+     ?new Promise(done=>pendingPersonaActivity[owner]=done)
+     :Promise.resolve({data:[],error:null})).then(resolve,reject)
+   };
+   return q;
+  };
+  window.tannerActivity=loadNotificationCenter();
+  currentUser={id:'fixture-jayden'};syncInboxDraftUser();
+  window.jaydenActivity=loadNotificationCenter();
+ });
+ await expect.poll(()=>page.evaluate(()=>Object.keys(pendingPersonaActivity).length)).toBe(2);
+ await page.evaluate(async()=>{
+  pendingPersonaActivity['fixture-jayden']({data:[{
+   id:'jayden-wanted',kind:'wanted_match',actor_id:null,source_id:null,
+   created_at:new Date().toISOString(),read_at:null
+  }],error:null});
+  await jaydenActivity;
+ });
+ await expect(page.locator('#notificationList')).toContainText('Wanted item match');
+ await page.evaluate(async()=>{
+  pendingPersonaActivity['fixture-tanner']({data:[{
+   id:'tanner-private',kind:'favorite_sold',actor_id:null,source_id:null,
+   created_at:new Date().toISOString(),read_at:null
+  }],error:null});
+  await tannerActivity;
+ });
+ await expect(page.locator('#notificationList')).toContainText('Wanted item match');
+ await expect(page.locator('#notificationList')).not.toContainText('Favorite sold');
+});
+
+test('Charles and Kyle: a previous account activity count cannot overwrite the new collector badge',async({page})=>{
+ await ready(page);
+ await page.evaluate(()=>{
+  currentUser={id:'fixture-charles'};syncInboxDraftUser();
+  window.pendingPersonaCounts={};
+  supabaseClient.from=()=>{
+   let owner='';
+   const q={
+    select:()=>q,is:()=>q,in:()=>q,
+    eq:(field,value)=>{if(field==='user_id')owner=value;return q},
+    then:(resolve,reject)=>new Promise(done=>pendingPersonaCounts[owner]=done).then(resolve,reject)
+   };
+   return q;
+  };
+  window.charlesCount=refreshNotificationCount();
+  currentUser={id:'fixture-kyle'};syncInboxDraftUser();
+  window.kyleCount=refreshNotificationCount();
+ });
+ await expect.poll(()=>page.evaluate(()=>Object.keys(pendingPersonaCounts).length)).toBe(2);
+ await page.evaluate(async()=>{
+  pendingPersonaCounts['fixture-kyle']({count:2,error:null});
+  await kyleCount;
+ });
+ await expect(page.locator('#notificationBadge')).toHaveText('2');
+ await page.evaluate(async()=>{
+  pendingPersonaCounts['fixture-charles']({count:17,error:null});
+  await charlesCount;
+ });
+ await expect(page.locator('#notificationBadge')).toHaveText('2');
+ await expect(page.locator('#notificationBadge')).toHaveJSProperty('hidden',false);
+ await expect(page.locator('#notificationBell')).toHaveAttribute('aria-label','2 unread notifications');
+});
