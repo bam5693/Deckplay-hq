@@ -1,9 +1,9 @@
 name: Deploy isolated staging website
 on:
   workflow_dispatch:
-  push:
-    branches: [test/staging-reporting]
-    paths-ignore: ['tests/reports/**']
+  # Manual only until the deckplay-staging environment has valid
+  # CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID credentials.
+  # Do not automatically spend Actions minutes on every staging commit.
 
 permissions:
   contents: read
