@@ -102,3 +102,17 @@ Prioritize **one or two real customer-facing fixes per development batch**, with
 6. **P3 — Coverage:** Test Pokémon, One Piece, other TCGs, sports cards, memorabilia, sealed items, video games and collectibles; ensure free-text fallback works for unsupported games/sets.
 
 **Acceptance:** Seller can post three same-name/number cards with different rarity/printing/condition/prices as **three distinguishable listings**; unsupported variants can be accurately described without selecting an incorrect dropdown; listing detail displays exact description. Do not change production or enable checkout. Implement in small staging-only UI batches with matching deployed build verification and relevant targeted tests.
+
+
+## Future branch — Scan-to-list with price guidance (proposed 2026-10-28)
+
+**Status: LATER / discovery, not implemented.** Do not displace immediate manual listing-detail improvements.
+
+1. Mobile camera/photo upload suggests matching cards by image and/or OCR; never assume one match is definitive.
+2. Present candidate **printings/variants with images**, set, number, rarity, finish, edition, language and other discriminators. Seller confirms exact version or selects manual/custom entry.
+3. Fetch legally licensed, appropriately attributed pricing from a suitable provider; include source, freshness timestamp, currency, raw/graded condition and comparable-sale basis. Do not label cached/daily figures real-time.
+4. Show a suggested price or range, optionally using sold comparable transactions when available. Seller always chooses their own price; no automatic price floor/ceiling or auto-posting.
+5. Never transmit card images to external identification services without consent; account for API quotas, licensing, cost, privacy and incorrect matches.
+6. Roll out in stages: manual catalog search → photo-assisted candidate lookup → condition-aware price suggestion → optional bulk scanning. Preserve fallback description and manual posting throughout.
+
+**Research note:** TCGplayer API documentation currently says it is not granting new API access; don't assume free integration. Alternative catalogs/price providers require terms, commercial rights, coverage, accuracy and cost review before integration. No paid API or deployment authorized.
