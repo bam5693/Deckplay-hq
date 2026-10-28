@@ -1,5 +1,7 @@
 # DeckPlay HQ — active staging roadmap (updated 2026-10-28)
 
+**Latest verified checkpoint:** `616cc03` / [passing run 40685434694](https://github.com/bam5693/Deckplay-hq/actions/runs/40685434694). Read the final entry in [development ledger](2026-10-28-roadmap-development.md) before choosing work. Current full local: 326; real API: 49; deployed: 48; security: 33. Subsets overlap; do not sum historical counts.
+
 **Scope:** GitHub `bam5693/Deckplay-hq`, branch `test/staging-reporting`, draft PR #2; isolated Supabase `prrrzeelltmyugssqnzk` and Cloudflare Worker `deckplay-hq-staging`. Production/main, real users, payments, shipping, billing and PR merge are out of scope.
 
 ## Direction: functional improvements first
@@ -90,6 +92,8 @@ Prioritize **one or two real customer-facing fixes per development batch**, with
 
 
 ## Marketplace posting-tools branch — exact card identity and seller flexibility (2026-10-28)
+
+**Implemented checkpoint:** custom set/variant, rarity, edition/printing, language and explicit description guidance are VERIFIED at `50bb34f` / run `40681070226`, preserved in latest `616cc03`. Storefront descriptions and offer eligibility are retained. Do not rebuild these fields.
 
 **Current checkpoint:** description guidance, custom set/variant, rarity, edition/printing and language are implemented and deployed at `50bb34f`, verified in run `40681070226`. Storefront listings preserve seller disclosures and offer eligibility. Do not rebuild these fields; remaining structured lot/quantity and photo-quality work is listed below.
 
@@ -270,3 +274,12 @@ Inbox Back is VERIFIED at `460438c` / run `40680128125` (48 API, 44 deployed, 86
 ### Current security/intake progress
 
 See [development ledger](2026-10-28-roadmap-development.md). Block/preference isolation is VERIFIED at `ae063ba` / run `40681791376`. The legacy moderation UI is hardened and deployed at `8827f74`; server moderator roles, enforced MFA and audit RPCs remain NEW. Report draft/submission privacy and counterfeit/photo categories are locally passing, pending deployment. Exact card metadata is VERIFIED at `50bb34f`. Next listing gap: explicit decklist quantity mismatch warnings/validation, with no game-legality claims.
+
+
+### VERIFIED current checkpoint — supersedes pending entries above
+
+`616cc03d25e001d229de3311aca80b48455724de` and [workflow 40685434694](https://github.com/bam5693/Deckplay-hq/actions/runs/40685434694) passed: 49 real API, 48 deployed browser, 182 selected local and 11 cleanup cases. Full independent local suite: 326; security suite: 33. Exact Worker read-back matches the current isolated build. Earlier pending labels are historical.
+
+Six development batches cover inbox Back/drafts, exact custom printing and storefront parity, block/preference isolation, moderator UI session/MFA safeguards, private report intake/counterfeit/photo categories and explicit deck quantity checking. Owner description search is preserved. The concurrent server moderator foundation is also integrated: least-privilege private role/audit tables, live-session MFA checks, audited report reads/reviews, mandatory reasons and stale-status guards, with real collector/anonymous denial tests. Reason/status UI wiring is complete. Zero enabled moderators; authentic signed privileged MFA/operator onboarding remains VERIFY.
+
+Next: safe operator onboarding/signed MFA acceptance, bounded queue/audit UX, support and listing-enforcement workflows; then private conversation image storage and external collection links with inquiry opt-in OFF by default. Keep recovery/backup/physical-device beta gates open. Price/fee/shipping previews and growth branches remain unfinished. No production/main, live commerce, paid-service/billing or PR-merge action is authorized by this checkpoint.

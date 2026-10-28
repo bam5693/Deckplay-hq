@@ -135,3 +135,18 @@ The preserved collector-search and deck-quantity build `2cf2b1d953e7c5f1e4cfa5bd
 ### Moderator foundation final matching CI
 
 Foundation code `616cc03`, exact deployment `7ef9cb60bb69470ba100e0fb99286916`, [run 40685434694](https://github.com/bam5693/Deckplay-hq/actions/runs/40685434694): **49 real API, 48 deployed browser, 182 selected local and 11 cleanup checks passed**. The separately executed full local suite passed 326; security passed 33. Selected/cleanup subsets overlap. Trunks 6/8 now have a staging-verified access/audit foundation; operator MFA setup/onboarding and the actual signed privileged journey remain the next security gate. No lasting roles or live commerce were enabled.
+
+
+## Completed batch index — verified 2026-10-28
+
+| Batch | Result | Code | Passing workflow |
+|---|---|---|---|
+| 1 — VERIFIED | Direct-chat Back/contact switching and drafts | `460438c` | `40680128125` |
+| 2 — VERIFIED | Custom card printing and storefront disclosure/offer parity | `50bb34f` | `40681070226` |
+| 3 — VERIFIED | Block-list and notification-preference account isolation | `ae063ba` | `40681791376` |
+| 4 — VERIFIED UI | Moderator UI MFA/session clearing | `8827f74` | `40682581715` |
+| 5 — VERIFIED | Private report intake, duplicate protection, counterfeit/photo categories | `aa4fcaa` | `40683363764` |
+| 6 — VERIFIED | Explicit deck quantity checks with concurrent collector search preserved | `2cf2b1d` | `40684599015` |
+| Integrated foundation — VERIFIED within stated limits | Server role/MFA/session checks, reasoned review and private audits | `616cc03` | `40685434694` |
+
+Current release evidence: 326 full local checks, 49 real API checks, 48 deployed browser cases and 33 security checks passed. CI's 182 selected local and 11 cleanup checks overlap those suites. Current full Worker SHA-256: `a46b8cd76fb292618888b31e6fcd97893c34f014e419ff79a453821e475408d4`; complete current-source read-back matched. Zero enabled moderators were observed. These are staging verification boundaries, not full beta readiness or signed privileged MFA certification. The current foundation report supersedes earlier statements that moderator RPCs were absent or reason/status UI wiring was missing.
