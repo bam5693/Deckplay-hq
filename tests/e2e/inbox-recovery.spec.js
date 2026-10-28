@@ -410,3 +410,20 @@ test('Charles and Kyle: notification count caps visually and clears on zero acro
  if(await dockActivityDot.count())await expect(dockActivityDot).toHaveJSProperty('hidden',true);
  await expect(page.locator('#notificationBell')).toHaveAttribute('aria-label','Notifications');
 });
+
+
+test('composer grows for multiline messages, restores draft height and shrinks after edits',async({page})=>{
+ await inbox(page);
+ const box=page.locator('#chatInput');
+ const initial=await box.evaluate(el=>el.getBoundingClientRect().height);
+ const draft='First line\\nSecond line\\nThird line\\nFourth line'.replaceAll('\\n','\n');
+ await box.fill(draft);
+ const expanded=await box.evaluate(el=>el.getBoundingClientRect().height);
+ expect(expanded).toBeGreaterThan(initial+15);
+ await page.evaluate(()=>document.querySelector('[data-conversation-id="buyer-b"]').click());
+ await page.evaluate(()=>document.querySelector('[data-conversation-id="buyer-a"]').click());
+ await expect(box).toHaveValue(draft);
+ expect(await box.evaluate(el=>el.getBoundingClientRect().height)).toBeGreaterThan(initial+15);
+ await box.fill('Short reply');
+ expect(await box.evaluate(el=>el.getBoundingClientRect().height)).toBeLessThan(expanded);
+});
