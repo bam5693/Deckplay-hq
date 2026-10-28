@@ -27,6 +27,7 @@ test('Jayden can load older TCG conversation messages without losing a draft',as
  await expect(page.locator('.conversation-bubbles')).toContainText('Original Luffy deck inquiry');
  await expect(page.locator('#chatInput')).toHaveValue('My private draft about Zoro');
  await expect(page.locator('[data-inbox-older]')).toHaveCount(0);
+ await expect(page.getByText('Beginning of conversation')).toBeVisible();
  expect(await page.evaluate(()=>window.olderMessageQueries)).toBe(1);
  await page.evaluate(()=>loadInbox('buyer-jayden'));
  await expect(page.locator('.conversation-bubbles')).toContainText('Original Luffy deck inquiry');
