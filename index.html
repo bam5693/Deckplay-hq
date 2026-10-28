@@ -1030,7 +1030,7 @@ function setAuthMode(mode){
  document.getElementById("authForgotPassword").hidden=mode!=="signin";
  authMode=mode;document.getElementById("displayNameWrap").hidden=mode!=="signup";document.getElementById("username").required=false;document.getElementById("username").disabled=mode!=="signup";document.getElementById("authPassword").autocomplete=mode==="signup"?"new-password":"current-password";document.getElementById("authPassword").minLength=mode==="signup"?8:1;document.getElementById("authSubmit").textContent=mode==="signup"?"Create account":"Sign in";document.getElementById("authSubmit").disabled=false;document.getElementById("authSubmit").style.opacity="";document.querySelectorAll("[data-auth-mode]").forEach(button=>button.classList.toggle("active",button.dataset.authMode===mode));document.getElementById("passwordHint").hidden=mode!=="signup";document.getElementById("signupCaptchaWrap").hidden=false;initSignupCaptcha();if(!window.turnstile){let retries=0;const wait=setInterval(()=>{if(window.turnstile||++retries>40){clearInterval(wait);initSignupCaptcha();}},250)}resetSignupCaptcha();updatePasswordStrength();showAuthStatus("");
 }
-async function openSell(){if(!currentUser){setAuthMode("signin");openModal("authModal");toast("Sign in before creating a listing.");return}openModal("sellModal");document.getElementById("item").focus()}
+async function openSell(){if(!currentUser){setAuthMode("signin");openModal("authModal");toast("Sign in before creating a listing.");return}openModal("sellModal");restoreListingDraft();document.getElementById("item").focus()}
 async function prepareListingPhoto(file){
  if(!["image/jpeg","image/png","image/webp"].includes(file.type))throw new Error("Photos must be JPG, PNG or WebP.");
  if(file.size<=5*1024*1024)return file;
@@ -1322,8 +1322,37 @@ function updateDeckQuantityStatus(){
 for(const id of ["deckCardCount","deckList"])document.getElementById(id).addEventListener("input",updateDeckQuantityStatus);
 document.getElementById("listingType").addEventListener("change",updateDeckQuantityStatus);
 document.getElementById("listingForm").addEventListener("reset",()=>queueMicrotask(updateDeckQuantityStatus));
-// Preserve seller text while the dialog is closed; photos remain in the existing in-memory selection.
-document.getElementById("listingForm").addEventListener("input",()=>{const status=document.getElementById("listingStatus");if(status.textContent==="Your listing is live. Your newer edits and photos have been kept.")status.textContent=""});
+// Text-only drafts survive a page reload in this browser tab. Never store photos or credentials.
+const listingDraftKey=id=>"deckplay-listing-draft-v1:"+id;
+function saveListingDraft(){
+ if(!currentUser?.id)return;
+ const form=document.getElementById("listingForm");
+ const fields=[...form.elements].filter(el=>el.id&&["INPUT","SELECT","TEXTAREA"].includes(el.tagName)&&el.type!=="file"&&el.type!=="submit");
+ const values=Object.fromEntries(fields.map(el=>[el.id,el.type==="checkbox"?el.checked:el.value]));
+ try{sessionStorage.setItem(listingDraftKey(currentUser.id),JSON.stringify(values))}catch{}
+}
+function restoreListingDraft(){
+ if(!currentUser?.id)return;
+ let values;try{values=JSON.parse(sessionStorage.getItem(listingDraftKey(currentUser.id))||"null")}catch{return}
+ if(!values||typeof values!=="object"||Array.isArray(values))return;
+ const form=document.getElementById("listingForm");
+ for(const [id,value] of Object.entries(values)){
+  const el=[...form.elements].find(field=>field.id===id);
+  if(!el||el.type==="file"||el.type==="submit")continue;
+  if(el.type==="checkbox"){if(typeof value==="boolean")el.checked=value}
+  else if(typeof value==="string"&&value.length<=6500)el.value=value;
+ }
+ document.getElementById("listingType").dispatchEvent(new Event("change"));
+ document.getElementById("category").dispatchEvent(new Event("change"));
+ syncCategoryFields();syncGradedCondition();updateDeckQuantityStatus();updateListingQuickSummary();
+ document.getElementById("listingStatus").textContent="Draft restored. Add photos again before publishing.";
+}
+document.getElementById("listingForm").addEventListener("input",()=>{
+ const status=document.getElementById("listingStatus");
+ if(status.textContent==="Your listing is live. Your newer edits and photos have been kept.")status.textContent="";
+ saveListingDraft();
+});
+document.getElementById("listingForm").addEventListener("change",saveListingDraft);
 document.getElementById("listingForm").addEventListener("submit",async event=>{
  event.preventDefault();if(!currentUser){closeModal("sellModal");openModal("authModal");return}
  const form=event.currentTarget;const status=document.getElementById("listingStatus");const files=[...listingSelectedPhotos];if(!files.length){status.textContent="Add at least one photo before posting.";document.getElementById("photos").focus();return}if(files.length>5){status.textContent="Please choose no more than 5 photos.";return}if(document.getElementById("condition").value==="graded"&&document.getElementById("category").value!=="trading_cards"){status.textContent="Graded condition is only available for trading cards.";return}
@@ -1357,7 +1386,7 @@ document.getElementById("listingForm").addEventListener("submit",async event=>{
   listing.image_urls=await uploadPhotos(files,userId);if(!current())return;status.textContent="Posting listing...";
   const {error}=await supabaseClient.from("listings").insert(listing);if(!current())return;if(error)throw error;
   const unchanged=draft()===submittedDraft&&files.length===listingSelectedPhotos.length&&files.every((file,i)=>file===listingSelectedPhotos[i]);
-  if(unchanged){form.reset();document.getElementById("listingType").dispatchEvent(new Event("change"));listingSelectedPhotos=[];renderListingPhotos();updateListingQuickSummary();syncGradedCondition();syncCategoryFields();document.getElementById("deckFields").hidden=true;status.textContent="";closeModal("sellModal");toast("Your listing is live!")}else{status.textContent="Your listing is live. Your newer edits and photos have been kept.";toast("Your submitted listing is live!")}await loadListings();
+  if(unchanged){try{sessionStorage.removeItem(listingDraftKey(userId))}catch{}form.reset();document.getElementById("listingType").dispatchEvent(new Event("change"));listingSelectedPhotos=[];renderListingPhotos();updateListingQuickSummary();syncGradedCondition();syncCategoryFields();document.getElementById("deckFields").hidden=true;status.textContent="";closeModal("sellModal");toast("Your listing is live!")}else{status.textContent="Your listing is live. Your newer edits and photos have been kept.";toast("Your submitted listing is live!")}await loadListings();
  }catch(error){if(current()){console.error("Could not publish listing",error);status.textContent=error.message||"The listing could not be published."}}finally{form.classList.remove("busy");publishButton.disabled=false;publishButton.textContent="Post listing"}
 });
 supabaseClient.auth.onAuthStateChange((_event,session)=>{currentUser=session?.user||null;syncInboxDraftUser();updateAccountUI();startMessageUpdates();startNotificationUpdates();loadBlockedCollectors().then(()=>Promise.all([loadSavedListings(),loadListings(),loadWanted()]))});
