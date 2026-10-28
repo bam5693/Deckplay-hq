@@ -836,6 +836,7 @@ footer p,html[data-theme="dark"] footer p{color:#d6deea!important}
  header{position:relative}
  header .header-actions>[data-sell]{display:none!important}
 }
+.trade-offer-card.trade-offer-focused{outline:3px solid #e5bd67;outline-offset:3px;scroll-margin:16px}
 </style>
 </head>
 <body>
@@ -1698,7 +1699,7 @@ function inboxTradeCounterHtml(x,userId){
  const amount=Number(x.cash_amount)||0;
  const direction=x.cash_direction==="sender_pays"?"Original buyer pays":"Listing owner pays";
  const cash=amount>0?"$"+amount.toFixed(2)+" cash · "+direction:"No cash added";
- return `<div class="message-bubble inbox-offer chat-event ${x.proposer_id===userId?"inbox-mine":""}"><strong>↩ Trade counteroffer · ${escapeHtml(x.status)}</strong><p>${escapeHtml(x.offer_note||"No additional note")}</p><p>${escapeHtml(cash)}</p><small>${new Date(x.date).toLocaleString()}</small>${x.status==="pending"&&x.recipient_id===userId?'<p class="price-offer-actions"><button type="button" class="primary" data-inbox-trade-review>Review and respond</button></p>':""}</div>`;
+ return `<div class="message-bubble inbox-offer chat-event ${x.proposer_id===userId?"inbox-mine":""}"><strong>↩ Trade counteroffer · ${escapeHtml(x.status)}</strong><p>${escapeHtml(x.offer_note||"No additional note")}</p><p>${escapeHtml(cash)}</p><small>${new Date(x.date).toLocaleString()}</small>${x.status==="pending"&&x.recipient_id===userId?'<p class="price-offer-actions"><button type="button" class="primary" data-inbox-trade-review="${escapeHtml(x.trade_offer_id)}">Review and respond</button></p>':""}</div>`;
 }
 let inboxLoadVersion=0,selectedInboxCollector=null;
 async function loadInbox(targetCollectorId=null){
@@ -1791,7 +1792,7 @@ document.getElementById("messageInbox").addEventListener("submit",async e=>{
  }
 });
 document.getElementById("messageInbox").addEventListener("keydown",e=>{if(e.target.matches(".chat-composer textarea")&&e.key==="Enter"&&!e.shiftKey&&!e.isComposing){e.preventDefault();e.target.closest("form").requestSubmit()}});
-document.getElementById("messageInbox").addEventListener("click",async e=>{if(!e.target.closest("[data-inbox-trade-review]")||!currentUser)return;openModal("tradesModal");await loadTradeOffers()});
+document.getElementById("messageInbox").addEventListener("click",async e=>{const review=e.target.closest("[data-inbox-trade-review]");if(!review||!currentUser)return;openModal("tradesModal");await loadTradeOffers(review.dataset.inboxTradeReview)});
 document.getElementById("inboxThreadBack").addEventListener("click",()=>{selectedInboxCollector=null;document.getElementById("inboxPage").classList.remove("thread-open")});
 function selectInboxMessages(){document.getElementById("inboxMessagesTab").classList.add("active");document.getElementById("inboxNotificationsTab").classList.remove("active");document.getElementById("messageInbox").hidden=false;document.getElementById("inboxNotificationPanel").hidden=true;document.getElementById("inboxPage").classList.remove("notifications-active")}
 document.getElementById("inboxMessagesTab").addEventListener("click",()=>{selectInboxMessages();loadInbox()});
@@ -1917,12 +1918,19 @@ document.getElementById("tradeComposeForm").addEventListener("submit",async e=>{
 });
 document.getElementById("myTrades").addEventListener("click",async()=>{closeAccountMenu();if(!currentUser)return;openModal("tradesModal");await loadTradeOffers()});
 let activeCounterOffer=null,counterComposeVersion=0;
-async function loadTradeOffers(){
+async function loadTradeOffers(focusOfferId=null){
  const requestId=++tradeOffersLoadVersion,userId=currentUser?.id;
  const el=document.getElementById("tradeOffersList");el.textContent="Loading offers…";if(!userId){el.replaceChildren();return}
  const {data,error}=await supabaseClient.from("trade_offers").select("id,listing_id,offered_listing_id,sender_id,recipient_id,offer_note,cash_amount,cash_direction,status,created_at").order("created_at",{ascending:false}).limit(100);
  if(requestId!==tradeOffersLoadVersion||currentUser?.id!==userId)return;
  if(error){el.textContent=error.message;return}
+ // Deep links remain usable even when the trade has fallen outside the latest 100.
+ if(focusOfferId&&!(data||[]).some(o=>o.id===focusOfferId)){
+  const focused=await supabaseClient.from("trade_offers").select("id,listing_id,offered_listing_id,sender_id,recipient_id,offer_note,cash_amount,cash_direction,status,created_at").eq("id",focusOfferId).maybeSingle();
+  if(requestId!==tradeOffersLoadVersion||currentUser?.id!==userId)return;
+  if(focused.error){el.textContent="Could not load the selected trade: "+focused.error.message;return}
+  if(focused.data)data=[focused.data,...(data||[])];
+ }
  if(!data?.length){el.innerHTML='<p class="muted">No trade offers yet. Find a listing that accepts trades to get started.</p>';return}
  const ids=[...new Set(data.flatMap(o=>[o.sender_id,o.recipient_id]))],listingIds=[...new Set(data.flatMap(o=>[o.listing_id,o.offered_listing_id]).filter(Boolean))];
  const [peopleResult,listingResult,counterResult]=await Promise.all([supabaseClient.from("profiles").select("id,username").in("id",ids),supabaseClient.from("listings").select("id,title,price,image_urls").in("id",listingIds),supabaseClient.from("trade_counteroffers").select("id,trade_offer_id,proposer_id,recipient_id,cash_amount,cash_direction,offer_note,status,created_at").in("trade_offer_id",data.map(o=>o.id)).order("created_at",{ascending:false})]);
@@ -1930,8 +1938,13 @@ async function loadTradeOffers(){
  const names=new Map((peopleResult.data||[]).map(p=>[p.id,p.username])),listings=new Map((listingResult.data||[]).map(l=>[l.id,l])),counters=counterResult.data||[];
  const cashLabel=(amount,direction)=>Number(amount)>0?`<div class="trade-cash">+${Number(amount).toFixed(2)} cash · ${direction==="sender_pays"?"Original buyer pays":"Listing owner pays"}</div>`:'<div class="muted">No cash added</div>';
  const itemCard=(id,caption)=>{const l=listings.get(id),img=safeImageUrl(l?.image_urls?.[0]);return `<div class="trade-compare-item"><small>${caption}</small>${img?`<img src="${escapeHtml(img)}" alt="">`:""}<strong>${escapeHtml(l?.title||"Item described in offer")}</strong>${l?.price!=null?`<span>Listed $ ${Number(l.price).toFixed(2)}</span>`:""}</div>`};
- el.innerHTML=data.map(o=>{const incoming=o.recipient_id===currentUser.id,who=names.get(incoming?o.sender_id:o.recipient_id)||"collector",related=counters.filter(c=>c.trade_offer_id===o.id),pending=related.find(c=>c.status==="pending"),latest=related[0];return `<article class="trade-offer-card"><div class="kind">${incoming?"Received from":"Sent to"} @${escapeHtml(who)} · ${new Date(o.created_at).toLocaleDateString()}</div><div class="trade-comparison">${itemCard(o.listing_id,"Requested item")}${itemCard(o.offered_listing_id,"Offered item")}</div><p>${escapeHtml(o.offer_note)}</p>${cashLabel(o.cash_amount,o.cash_direction)}<p><strong>Original offer: ${escapeHtml(o.status)}</strong></p>${latest?`<div class="counter-summary"><strong>Counteroffer · ${escapeHtml(latest.status)}</strong><p>${escapeHtml(latest.offer_note)}</p>${cashLabel(latest.cash_amount,latest.cash_direction)}${pending&&pending.recipient_id===currentUser.id?`<div class="trade-actions"><button class="primary" data-counter-response="accept" data-counter-id="${escapeHtml(pending.id)}">Accept counter</button><button class="ghost" data-counter-response="decline" data-counter-id="${escapeHtml(pending.id)}">Decline counter</button></div>`:""}</div>`:""}${o.status==="pending"&&!pending?`<div class="trade-actions">${incoming?`<button type="button" class="primary" data-trade-action="accepted" data-offer-id="${escapeHtml(o.id)}">Accept</button><button type="button" class="ghost" data-counter-start="${escapeHtml(o.id)}">Counteroffer</button><button type="button" class="ghost" data-trade-action="declined" data-offer-id="${escapeHtml(o.id)}">Decline</button>`:`<button type="button" class="ghost" data-trade-action="cancelled" data-offer-id="${escapeHtml(o.id)}">Cancel offer</button>`}</div>`:""}</article>`}).join("");
+ el.innerHTML=data.map(o=>{const incoming=o.recipient_id===currentUser.id,who=names.get(incoming?o.sender_id:o.recipient_id)||"collector",related=counters.filter(c=>c.trade_offer_id===o.id),pending=related.find(c=>c.status==="pending"),latest=related[0];return `<article class="trade-offer-card" data-trade-offer-id="${escapeHtml(o.id)}"><div class="kind">${incoming?"Received from":"Sent to"} @${escapeHtml(who)} · ${new Date(o.created_at).toLocaleDateString()}</div><div class="trade-comparison">${itemCard(o.listing_id,"Requested item")}${itemCard(o.offered_listing_id,"Offered item")}</div><p>${escapeHtml(o.offer_note)}</p>${cashLabel(o.cash_amount,o.cash_direction)}<p><strong>Original offer: ${escapeHtml(o.status)}</strong></p>${latest?`<div class="counter-summary"><strong>Counteroffer · ${escapeHtml(latest.status)}</strong><p>${escapeHtml(latest.offer_note)}</p>${cashLabel(latest.cash_amount,latest.cash_direction)}${pending&&pending.recipient_id===currentUser.id?`<div class="trade-actions"><button class="primary" data-counter-response="accept" data-counter-id="${escapeHtml(pending.id)}">Accept counter</button><button class="ghost" data-counter-response="decline" data-counter-id="${escapeHtml(pending.id)}">Decline counter</button></div>`:""}</div>`:""}${o.status==="pending"&&!pending?`<div class="trade-actions">${incoming?`<button type="button" class="primary" data-trade-action="accepted" data-offer-id="${escapeHtml(o.id)}">Accept</button><button type="button" class="ghost" data-counter-start="${escapeHtml(o.id)}">Counteroffer</button><button type="button" class="ghost" data-trade-action="declined" data-offer-id="${escapeHtml(o.id)}">Decline</button>`:`<button type="button" class="ghost" data-trade-action="cancelled" data-offer-id="${escapeHtml(o.id)}">Cancel offer</button>`}</div>`:""}</article>`}).join("");
  if(counterResult.error)toast("Counteroffers could not load: "+counterResult.error.message);
+ if(focusOfferId){
+  const card=[...el.querySelectorAll("[data-trade-offer-id]")].find(node=>node.dataset.tradeOfferId===focusOfferId);
+  if(card){card.classList.add("trade-offer-focused");card.tabIndex=-1;card.focus({preventScroll:true});card.scrollIntoView({block:"nearest"})}
+  else toast("That trade is no longer available in your account.");
+ }
 }
 document.getElementById("tradeOffersList").addEventListener("click",async e=>{
  if(!currentUser)return;

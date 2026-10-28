@@ -590,4 +590,8 @@ test('pending trade counteroffers show terms in the thread and suspend original 
  await expect(page.locator('#conversationThread')).toContainText('Add five dollars');
  await page.locator('[data-inbox-trade-review]').click();
  await expect(page.locator('#tradesModal')).toHaveClass(/open/);
+ const focused=page.locator('#tradeOffersList [data-trade-offer-id="trade-1"]');
+ await expect(focused).toHaveClass(/trade-offer-focused/);
+ await expect(focused).toBeFocused();
+ await expect(focused).toContainText('Add five dollars');
 });
