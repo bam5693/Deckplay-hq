@@ -347,3 +347,64 @@ test('Charles and Kyle: a previous account activity count cannot overwrite the n
  await expect(page.locator('#notificationBadge')).toHaveJSProperty('hidden',false);
  await expect(page.locator('#notificationBell')).toHaveAttribute('aria-label','2 unread notifications');
 });
+
+test('Tanner and Jayden: late listing-title enrichment cannot leak a previous collector activity',async({page})=>{
+ await ready(page);
+ await page.evaluate(()=>{
+  currentUser={id:'fixture-tanner'};syncInboxDraftUser();
+  window.pendingTannerTitles=null;
+  supabaseClient.from=table=>{
+   const q={
+    select:()=>q,eq:()=>q,order:()=>q,limit:()=>q,in:()=>q,
+    then:(resolve,reject)=>{
+     if(table==='collector_notifications'){
+      const isTanner=currentUser?.id==='fixture-tanner';
+      const activity=isTanner
+       ?[{id:'tanner-sold',kind:'favorite_sold',actor_id:null,source_id:'private-sports-card',created_at:new Date().toISOString(),read_at:null}]
+       :[{id:'jayden-wanted',kind:'wanted_match',actor_id:null,source_id:null,created_at:new Date().toISOString(),read_at:null}];
+      return Promise.resolve({data:activity,error:null}).then(resolve,reject);
+     }
+     if(table==='listings')return new Promise(done=>{pendingTannerTitles=done}).then(resolve,reject);
+     return Promise.resolve({data:[],error:null}).then(resolve,reject);
+    }
+   };
+   return q;
+  };
+  window.tannerTitleLoad=loadNotificationCenter();
+ });
+ await expect.poll(()=>page.evaluate(()=>typeof pendingTannerTitles)).toBe('function');
+ await page.evaluate(async()=>{
+  currentUser={id:'fixture-jayden'};syncInboxDraftUser();
+  await loadNotificationCenter();
+ });
+ await expect(page.locator('#notificationList')).toContainText('Wanted item match');
+ await page.evaluate(async()=>{
+  pendingTannerTitles({data:[{id:'private-sports-card',title:'Tanner private graded rookie'}],error:null});
+  await tannerTitleLoad;
+ });
+ await expect(page.locator('#notificationList')).toContainText('Wanted item match');
+ await expect(page.locator('#notificationList')).not.toContainText('Tanner private graded rookie');
+ await expect(page.locator('#notificationList')).not.toContainText('Favorite sold');
+});
+
+test('Charles and Kyle: notification badges cap visually and clear on zero without stale mobile labels',async({page})=>{
+ await ready(page);
+ await page.evaluate(()=>{
+  currentUser={id:'fixture-kyle'};syncInboxDraftUser();
+  window.fixtureActivityCount=120;
+  supabaseClient.from=()=>{
+   const q={select:()=>q,eq:()=>q,is:()=>q,in:()=>q,
+    then:(resolve,reject)=>Promise.resolve({count:fixtureActivityCount,error:null}).then(resolve,reject)};
+   return q;
+  };
+ });
+ await page.evaluate(()=>refreshNotificationCount());
+ await expect(page.locator('#notificationBadge')).toHaveText('99+');
+ await expect(page.locator('#notificationBadge')).toHaveJSProperty('hidden',false);
+ await expect(page.locator('#notificationBell')).toHaveAttribute('aria-label','120 unread notifications');
+ await expect(page.locator('#dockNotifications')).toHaveAttribute('aria-label','120 unread notifications');
+ await page.evaluate(async()=>{fixtureActivityCount=0;await refreshNotificationCount()});
+ await expect(page.locator('#notificationBadge')).toHaveJSProperty('hidden',true);
+ await expect(page.locator('#dockNotifications')).toHaveJSProperty('hidden',true);
+ await expect(page.locator('#notificationBell')).toHaveAttribute('aria-label','Notifications');
+});
