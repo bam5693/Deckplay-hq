@@ -57,4 +57,11 @@ do $$declare f jsonb:=current_setting('deckplay.photo.fixture')::jsonb;denied bo
  denied:=false;begin perform public.prepare_private_message_photo(gen_random_uuid(),(f->>'b')::uuid,gen_random_uuid());exception when raise_exception then denied:=true;end;if not denied then raise exception 'Daily upload cap bypassed';end if;
 end $$;
 reset role;
+insert into public.user_blocks(blocker_id,blocked_id) values((current_setting('deckplay.photo.fixture')::jsonb->>'b')::uuid,(current_setting('deckplay.photo.fixture')::jsonb->>'a')::uuid);
+set local role authenticated;
+do $$declare f jsonb:=current_setting('deckplay.photo.fixture')::jsonb;denied boolean;begin
+ perform set_config('request.jwt.claims',jsonb_build_object('sub',f->>'a','role','authenticated')::text,true);
+ denied:=false;begin perform public.prepare_private_message_photo(gen_random_uuid(),(f->>'b')::uuid,gen_random_uuid());exception when insufficient_privilege then denied:=true;end;if not denied then raise exception 'Recipient block ignored for photo upload';end if;
+end $$;
+reset role;
 rollback;
