@@ -79,8 +79,9 @@
    let qr=result.data.totp.qr_code;
    // The pinned Supabase client returns an SVG data URL; raw SVG is also
    // accepted for compatibility. Re-encode it as an image, never HTML.
-   if(/^data:image\/svg\+xml;(?:utf-8|charset=utf-8),/i.test(qr)){
-    qr=qr.slice(qr.indexOf(',')+1);if(/^%/i.test(qr))qr=decodeURIComponent(qr);
+   if(/^data:image\/svg\+xml(?:;[^,]*)?,/i.test(qr)){
+    qr=qr.slice(qr.indexOf(',')+1);
+    if(/^%3c/i.test(qr))qr=decodeURIComponent(qr);
    }
    if(!/^\s*<svg[\s>]/i.test(qr))throw Error('qr');
    factors=[{id:result.data.id,factor_type:'totp',status:'unverified',friendly_name:'DeckPlay authenticator'}];renderFactors();
