@@ -1822,13 +1822,24 @@ supabaseClient.auth.getSession().then(({data})=>{currentUser=data.session?.user|
  showHomePage=function(){return navigate("home",()=>{suppress=true;try{return originalHome()}finally{suppress=false}})};
  showMainMarketplace=function(){return navigate("market",()=>originalMarket())};
  showCollectorPage=function(tab){return navigate("profile",()=>originalProfile(tab))};
- showInboxPage=function(id){return navigate("inbox",()=>originalInbox(id))};
+ showInboxPage=function(id){
+  const result=navigate("inbox",()=>originalInbox(id));
+  if(id&&currentUser)recordThread(id);
+  return result;
+ };
+ function recordThread(id){
+  if(suppress)return;
+  const entry={type:"thread",id};
+  if(states.at(-1)?.type==="thread"){
+   states[states.length-1]=entry;
+   history.replaceState({...history.state,deckplayNav:true,deckplayDepth:states.length-1},"");
+  }else push(entry);
+ }
  // Keep inbox conversations in Android's navigation stack.
  document.getElementById("messageInbox")?.addEventListener("click",function(e){
   const conversation=e.target.closest("[data-conversation-id]");
   if(!conversation||suppress)return;
-  if(states.at(-1)?.type==="thread")states.pop();
-  push({type:"thread",id:conversation.dataset.conversationId});
+  recordThread(conversation.dataset.conversationId);
  },true);
  document.getElementById("inboxThreadBack")?.addEventListener("click",function(){
   if(states.at(-1)?.type==="thread")history.back();
@@ -1843,7 +1854,10 @@ supabaseClient.auth.getSession().then(({data})=>{currentUser=data.session?.user|
    states.length=depth+1;
    const target=states[depth];
    if(target.type==="thread"){document.getElementById("inboxPage").classList.add("thread-open");return}
-   if(document.getElementById("inboxPage").classList.contains("thread-open"))document.getElementById("inboxPage").classList.remove("thread-open");
+   if(document.getElementById("inboxPage").classList.contains("thread-open")){
+    rememberInboxDraft();selectedInboxCollector=null;
+    document.getElementById("inboxPage").classList.remove("thread-open");
+   }
    if(target.type==="modal"){
     const parent=[...states].reverse().find(x=>x.type==="screen");
     if(parent&&screen!==parent.name)restore(parent.name);

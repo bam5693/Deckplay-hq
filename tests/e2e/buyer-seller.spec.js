@@ -31,6 +31,16 @@ test('seller uploads and lists; buyer saves, messages and offers; seller accepts
   await expect(buyer.locator('#priceOfferModal')).not.toHaveClass(/open/);
   if(await page.locator('[data-dock="inbox"]').isVisible())await page.locator('[data-dock="inbox"]').click();else {await page.locator('#accountButton').click();await page.locator('#myMessages').click()}
   await page.locator('[data-conversation-id]').filter({hasText:'test_buyer'}).click();await expect(page.locator('#conversationThread')).toContainText(title+' — hello',{timeout:15000});
+  const contactId=await page.locator('.chat-composer').getAttribute('data-chat-recipient');
+  await page.locator('#chatInput').fill('Question about the card back');
+  await page.goBack();
+  await expect(page.locator('#inboxPage')).toBeVisible();
+  await expect(page.locator('#inboxPage')).not.toHaveClass(/thread-open/);
+  await page.evaluate(id=>showInboxPage(id),contactId);
+  await expect(page.locator('#chatInput')).toHaveValue('Question about the card back');
+  await page.goBack();
+  await expect(page.locator('#inboxPage')).not.toHaveClass(/thread-open/);
+  await page.locator('[data-conversation-id="'+contactId+'"]').click();
   page.once('dialog',d=>d.accept());await page.locator('[data-inbox-price="accept"][data-offer="'+offerId+'"]').click();
   await expect(page.locator('#conversationThread')).toContainText('accepted',{timeout:20000});
   await buyer.reload({waitUntil:'domcontentloaded',timeout:30000});await buyer.locator('[data-cat="Trading Cards"]').first().click();await buyer.locator('#search').fill(title);await expect.poll(()=>buyer.evaluate(()=>listingSource)).toBe('live');await expect(buyer.locator('#grid .card').filter({hasText:title})).toHaveCount(0,{timeout:20000});

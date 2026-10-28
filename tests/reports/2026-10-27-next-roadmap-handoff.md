@@ -256,3 +256,7 @@ This supersedes the earlier suggestion to display item+fees+estimated shipping a
 - Do not inflate check totals, rerun passing workflows unnecessarily, overwrite concurrent automation work, or claim deployment without verification.
 - Never touch main/production or real user data, merge PR, enable real money/shipping, incur paid services, or run destructive SQL without explicit authorization.
 - Next development batch after baseline: first confirmed security blocker, otherwise a reproducible inbox/navigation defect; then move across trunks rather than repeatedly polishing one area.
+
+### Active development checkpoint — 2026-10-28
+
+See [roadmap development](2026-10-28-roadmap-development.md) for current evidence. Inbox Android Back fixes are deployed with exact Worker read-back; 88 targeted local UI and 33 security checks passed. Matching real API/deployed checks pending publication. Preserve historical counts separately. Next unfinished branch: precise custom listing identity and seller fallback UX.

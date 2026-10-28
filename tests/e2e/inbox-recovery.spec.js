@@ -427,3 +427,25 @@ test('composer grows for multiline messages, restores draft height and shrinks a
  await box.fill('Short reply');
  expect(await box.evaluate(el=>el.getBoundingClientRect().height)).toBeLessThan(expanded);
 });
+
+test('Android Back from a directly opened chat returns to the inbox and keeps its draft',async({page})=>{
+ await inbox(page);
+ await page.locator('#chatInput').fill('Card back photo question');
+ await page.goBack();
+ await expect(page.locator('#inboxPage')).toBeVisible();
+ await expect(page.locator('#inboxPage')).not.toHaveClass(/thread-open/);
+ await expect(page.locator('[data-conversation-id="buyer-a"]')).toBeVisible();
+ await page.locator('[data-conversation-id="buyer-a"]').click();
+ await expect(page.locator('#chatInput')).toHaveValue('Card back photo question');
+});
+
+test('switching inbox contacts does not add phantom Android Back steps',async({page})=>{
+ await inbox(page,true);
+ await page.locator('[data-conversation-id="buyer-a"]').click();
+ await page.evaluate(()=>document.querySelector('[data-conversation-id="buyer-b"]').click());
+ await expect(page.locator('.chat-composer')).toHaveAttribute('data-chat-recipient','buyer-b');
+ await page.locator('#inboxThreadBack').click();
+ await expect(page.locator('#inboxPage')).not.toHaveClass(/thread-open/);
+ await page.goBack();
+ await expect(page.locator('#inboxPage')).toBeHidden();
+});
