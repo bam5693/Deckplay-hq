@@ -33,6 +33,11 @@ test('Jayden and Tanner publish and inspect a complete deck with a separate buye
   await page.locator('#listingType').selectOption('deck');
   await page.locator('#tcgGame').selectOption('one_piece');
   await page.locator('#cardCondition').selectOption('near_mint');
+  await page.locator('#customCardDetails summary').click();
+  await page.locator('#tcgCustomSet').fill('Unlisted tournament release');
+  await page.locator('#tcgCustomVariant').fill('Stamped foil');
+  await page.locator('#tcgLanguage').fill('English');
+  await page.locator('#description').fill('Seller disclosure: light sleeve wear.');
   await page.locator('#deckLeader').fill('Black Yamato');
   await page.locator('#deckCardCount').fill('51');
   await page.locator('#deckList').fill('1x Leader Yamato\n4x OP16-097 Yamato\n4x OP16-081 Otama');
@@ -52,6 +57,10 @@ test('Jayden and Tanner publish and inspect a complete deck with a separate buye
   expect(saved.description).toContain('[Complete Deck]');
   expect(saved.description).toContain('Deck: Black Yamato');
   expect(saved.description).toContain('Cards: 51');
+  expect(saved.description).toContain('Set: Unlisted tournament release');
+  expect(saved.description).toContain('Variant: Stamped foil');
+  expect(saved.description).toContain('Language: English');
+  expect(saved.description).toContain('Seller disclosure: light sleeve wear.');
   expect(saved.description).toContain('[Complete Deck]\nDeck: Black Yamato\nCards: 51\n\nFull decklist:\n');
   expect(saved.description).not.toContain('\\n');
   expect(saved.description).toContain('4x OP16-097 Yamato');
@@ -64,6 +73,12 @@ test('Jayden and Tanner publish and inspect a complete deck with a separate buye
   await card.locator('[data-view]').click();
   await expect(buyer.locator('#detailContent')).toContainText('Black Yamato');
   await expect(buyer.locator('#detailContent')).toContainText('OP16-097');
+  const sellerId=await page.evaluate(()=>currentUser.id);
+  await buyer.locator('[data-profile-id="'+sellerId+'"]').click();
+  await expect(buyer.locator('#publicProfileTitle')).toBeVisible();
+  await buyer.locator('#publicProfileResults .profile-item').filter({hasText:title}).locator('[data-public-listing]').click();
+  await expect(buyer.locator('.detail-description')).toHaveText(saved.description);
+  await expect(buyer.locator('.detail-facts')).toContainText('Trading Cards');
  }finally{
   try{await cleanup(page,title)}finally{await buyerContext.close()}
  }

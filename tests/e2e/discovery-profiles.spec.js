@@ -79,3 +79,27 @@ test('a collector can close an alert listing and open the next activity alert',a
   await expect(page.locator('#detailModal')).not.toHaveClass(/open/);
  }
 });
+
+test('seller storefront listing preserves exact disclosures, category and offer eligibility',async({page})=>{
+ await page.route('https://challenges.cloudflare.com/**',r=>r.abort());
+ await page.route('https://prrrzeelltmyugssqnzk.supabase.co/**',r=>r.fulfill({json:[]}));
+ await page.goto('/');await page.waitForLoadState('networkidle');
+ await page.evaluate(async()=>{
+  await supabaseClient.auth.getSession();currentUser=null;
+  window.storefrontSelection='';
+  const row={id:'custom-printing',seller_id:'fixture-seller',title:'Custom collectible',description:'Set: Japanese promo\nVariant: Stamped foil\nCorner crease disclosed.',price:12,category:'trading_cards',condition:'used',tcg_game:'other_tcg',accepts_trades:true,accepts_price_offers:true,image_urls:[]};
+  supabaseClient.from=table=>{
+   const q={then:resolve=>Promise.resolve({data:table==='listings'?[row]:[],error:null}).then(resolve)};
+   q.select=columns=>{if(table==='listings')storefrontSelection=columns;return q};
+   for(const key of ['eq','order','limit'])q[key]=()=>q;
+   q.maybeSingle=async()=>({data:table==='profiles'?{username:'fixture-seller'}:null,error:null});return q;
+  };
+  await showPublicProfile('fixture-seller');
+ });
+ await page.locator('[data-public-listing="custom-printing"]').click();
+ await expect(page.locator('.detail-description')).toHaveText('Set: Japanese promo\nVariant: Stamped foil\nCorner crease disclosed.');
+ await expect(page.locator('.detail-facts')).toContainText('Trading Cards');
+ await expect(page.locator('[data-price-offer-id="custom-printing"]')).toBeVisible();
+ expect(await page.evaluate(()=>storefrontSelection.split(','))).toContain('description');
+ expect(await page.evaluate(()=>storefrontSelection.split(','))).toContain('accepts_price_offers');
+});
