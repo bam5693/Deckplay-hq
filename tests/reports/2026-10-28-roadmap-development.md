@@ -79,3 +79,47 @@ NEW: suspected counterfeit/altered-item and stolen/misleading-photo report categ
 Validation: three initial report regressions failed on both mobile and desktop. After fixes, 62 targeted desktop/mobile account/report, option and marketplace-safety checks passed. The existing 33 security tests passed against current sources. Full local suite: **318 passed**, no failures; deployment waits for Batch 4's exact build checks. No real report or user data changed.
 
 Next independent listing branch: deck quantity consistency. Current deployed synthetic deck fixture declares 51 cards but only lists 9; current UI does not flag the mismatch. Implement explicit-quantity arithmetic without claiming game-specific deck legality.
+
+## Batch 6 — Explicit deck quantity consistency
+
+NEW / local VERIFIED: deck posting now counts explicit `4x Card`, `4 x Card` and `4× Card` lines. Fully counted decklists must match the stated card count; invalid explicit quantities are rejected before uploads/publication. Notes and unsupported formats are identified as uncounted, with no guessed quantities or legality/completeness certification. Sellers retain their text and choose the correct stated total. This is a client posting safeguard; structured server-side deck inventory enforcement remains future work.
+
+The real synthetic deck fixture now lists 1 leader + 4 named cards + 46 other included cards, matching its stated 51. Its existing deployed journey checks the live count feedback before publication. No claim is made that this generic synthetic list satisfies One Piece rules.
+
+Local validation: 46 desktop/mobile listing description/publication/category checks passed, including mismatch prevention, correction and successful publication, Unicode quantity notation, uncounted notes and zero-quantity feedback. Five inline scripts parse and diff whitespace checks pass. Exact deployment and matching CI pending earlier batch completion.
+
+## Eight-trunk boundary and remaining beta gates
+
+- **Trunk 1 — POLISH:** custom identity/disclosures and quantity feedback implemented this session. Mixed-lot structured inventory, identical-copy quantities, seller vacation controls and durable drafts remain NEW/VERIFY.
+- **Trunk 2 — POLISH:** direct-chat Back, contact switching and report/account privacy improved. Private image attachments remain NEW: existing buckets are public; private storage authorization, content validation and signed access need a separate tested implementation.
+- **Trunk 3 — VERIFIED historically/current regression:** API/browser offer/trade reservation flows pass in cited runs. Server idempotency after uncertain network outcomes and durable offline transaction recovery remain VERIFY. No live commerce.
+- **Trunk 4 — POLISH:** storefront descriptions/offer eligibility preserved; discovery regressions pass. External collection links and server-enforced inquiry opt-in OFF by default remain NEW; no inquiries were silently enabled.
+- **Trunk 5 — POLISH:** Chromium desktop/mobile history and responsive layouts tested. Physical Android device, installed-PWA and mobile keyboard behavior still require device checks.
+- **Trunk 6 — VERIFY:** 23 public tables have RLS; existing API denials and security suite pass. Leaked-password protection warning remains. Full recovery email, backup restore/rollback drill, deletion/export and legal/support readiness remain unresolved.
+- **Trunk 7 — NEW/VERIFY:** no storefront analytics/referrals/founding badges/SEO expansion claimed this session.
+- **Trunk 8 — POLISH/NEW:** moderation UI MFA/session safeguards and counterfeit/photo intake added. Real privileged roles, server-enforced MFA, audit trail, admin queue/action RPCs, support tickets, Help Center and emergency controls remain NEW. Default denial is verified separately; a functioning administrative backend is not certified.
+
+Payment/shipping preparation remains preview-only. Competitive/capped fee ownership and exact rates need owner decisions; fee-inclusive listing displays must exclude shipping and tax, with selectable shipping/final tax-inclusive totals later. No payment provider, shipping labels, purchases, plan upgrades, production edits or PR merge occurred.
+
+
+### Batch 4 deployed completion
+
+VERIFIED UI at `8827f74`, [run 40682581715](https://github.com/bam5693/Deckplay-hq/actions/runs/40682581715): 48 real API, 48 deployed browser (including ordinary-collector Command Center denial), 166 selected local and 11 cleanup checks passed. Backend admin implementation remains NEW.
+
+### Batch 5 deployment
+
+Code `aa4fcaaf7e08377acbe697e419eb435e4e1b9a92`, deployment `0cdcfce9cf1f4c2086aa32cc76d635c4`, exact complete Worker read-back matched. [Run 40683363764](https://github.com/bam5693/Deckplay-hq/actions/runs/40683363764) is the matching CI run; pending at this checkpoint.
+
+### Final local release check
+
+After the deck quantity changes, **322 full local desktop/mobile checks passed**, no failures. This replaces earlier local counts for current source coverage; do not add 310, 318, 322 or targeted subsets together. The 33 security checks are tracked separately; cleanup's 11 are a subset of that suite. Unauthenticated direct staging access returned HTTP 401. Current remediation reference: [Supabase leaked-password protection](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection). No auth setting or subscription was changed.
+
+### Resumed checkpoint — deck quantities
+
+Prior report-intake run `40683363764` completed successfully (all staging jobs). On resume, 46 targeted local desktop/mobile listing checks and all 33 security checks passed. Deck quantity Worker deployment `6e9756740f474a7ba214705cd3db28d5` is staging only; matching CI pending publication. Next priority: least-privilege server moderator access, live session/MFA enforcement and an auditable report-review path. No moderator grants or production changes authorized by this checkpoint.
+
+### Concurrent staging integration
+
+While Batch 6 waited for CI, owner commit `ecf9af27cc884ed33401f27ed002edd297eae8b6` added seller-description/variant/language/condition search and its existing regression. The expected-head lease prevented overwriting it. Batch 6 was rebased onto that commit, preserving both its search text/placeholder changes and its tests. Forty targeted desktop/mobile search, listing-publication and deck-description checks passed on the combined source; full local integration verification is rerunning because the source changed. Earlier `322` is the pre-integration full-suite count, not a current combined claim. Unpublished candidate `65d2c76` is superseded and must not be used as the final checkpoint.
+
+Batch 5 is VERIFIED at `aa4fcaa`, [run 40683363764](https://github.com/bam5693/Deckplay-hq/actions/runs/40683363764): 48 API, 48 deployed, 174 selected local and 11 cleanup checks passed. The final combined build will receive a new exact deployment and matching CI run.

@@ -59,3 +59,37 @@ test('same-name cards retain distinct custom printing, condition and asking pric
  }
  expect(new Set(listings.map(l=>l.description)).size).toBe(3);
 });
+
+test('complete explicit deck quantities must match the stated total before publication',async({page})=>{
+ await page.route('https://challenges.cloudflare.com/**',r=>r.abort());
+ await page.route('https://prrrzeelltmyugssqnzk.supabase.co/**',r=>r.fulfill({json:[]}));
+ await page.goto('/');await page.waitForLoadState('networkidle');
+ await page.evaluate(async()=>{
+  await supabaseClient.auth.getSession();currentUser={id:'quantity-seller'};
+  ensureProfile=async()=>{};uploadPhotos=async()=>['https://example.test/fixture.png'];loadListings=async()=>{};window.deckWrites=[];
+  supabaseClient.from=()=>({insert:async listing=>{deckWrites.push(listing);return {error:null}}});openModal('sellModal');
+ });
+ await page.locator('#item').fill('Synthetic quantity check');await page.locator('#listingType').selectOption('deck');
+ await page.locator('#tcgGame').selectOption('one_piece');await page.locator('#deckLeader').fill('Yamato');
+ await page.locator('#deckCardCount').fill('51');await page.locator('#deckList').fill('1x Leader\n4x Yamato\n4x Otama');await page.locator('#price').fill('40');
+ await page.locator('#photos').setInputFiles({name:'fixture.png',mimeType:'image/png',buffer:Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=','base64')});
+ await expect(page.locator('#deckQuantityStatus')).toContainText('Quantities total 9 cards, but the stated total is 51');
+ await page.locator('#publishButton').click();await expect(page.locator('#listingStatus')).toContainText('Correct the quantities');
+ expect(await page.evaluate(()=>deckWrites)).toHaveLength(0);
+ await page.locator('#deckList').fill('1x Leader\n4 × Yamato\n46x Other included cards');
+ await expect(page.locator('#deckQuantityStatus')).toContainText('Counted 51 cards; the stated total matches');
+ await expect(page.locator('#deckQuantityStatus')).toContainText('game rules and deck completeness are not verified');
+ await page.locator('#publishButton').click();await expect(page.locator('#sellModal')).not.toHaveClass(/open/);
+ expect(await page.evaluate(()=>deckWrites.length)).toBe(1);
+});
+
+test('deck quantity feedback identifies uncounted notes and invalid quantities without guessing',async({page})=>{
+ await page.route('https://challenges.cloudflare.com/**',r=>r.abort());
+ await page.route('https://prrrzeelltmyugssqnzk.supabase.co/**',r=>r.fulfill({json:[]}));
+ await page.goto('/');await page.evaluate(()=>openModal('sellModal'));await page.locator('#listingType').selectOption('deck');
+ await page.locator('#deckCardCount').fill('51');await page.locator('#deckList').fill('4x Yamato\nSideboard notes without a quantity');
+ await expect(page.locator('#deckQuantityStatus')).toContainText('1 line(s) could not be counted');
+ await expect(page.locator('#deckQuantityStatus')).not.toContainText('stated total matches');
+ await page.locator('#deckList').fill('0x Yamato');
+ await expect(page.locator('#deckQuantityStatus')).toContainText('between 1 and 1,000');
+});

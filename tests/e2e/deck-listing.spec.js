@@ -40,7 +40,8 @@ test('Jayden and Tanner publish and inspect a complete deck with a separate buye
   await page.locator('#description').fill('Seller disclosure: light sleeve wear.');
   await page.locator('#deckLeader').fill('Black Yamato');
   await page.locator('#deckCardCount').fill('51');
-  await page.locator('#deckList').fill('1x Leader Yamato\n4x OP16-097 Yamato\n4x OP16-081 Otama');
+  await page.locator('#deckList').fill('1x Leader Yamato\n4x OP16-097 Yamato\n46x Other included cards');
+  await expect(page.locator('#deckQuantityStatus')).toContainText('Counted 51 cards; the stated total matches.');
   await page.locator('#price').fill('40');
   await page.locator('#photos').setInputFiles({name:'deck-test.png',mimeType:'image/png',buffer:Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=','base64')});
   await expect(page.locator('#listingPhotoCount')).toContainText('1 of 5');

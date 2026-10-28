@@ -68,9 +68,9 @@ Prioritize **one or two real customer-facing fixes per development batch**, with
 |---|---|---|---|
 | Marketplace/listings | Listing CRUD, photos, search, favorites | VERIFIED historically | Real staging API/deployed browser tests; avoid rebuilding |
 | Marketplace/listings | Grading, deck metadata, readable generated descriptions | VERIFIED historically | 2026-10-27 listing-description report, run 40588122824 |
-| Marketplace/listings | Deck quantity consistency and missing-card collection workflow | NEW / VERIFY | Inspect existing deck-listing tests and UI before building |
+| Marketplace/listings | Deck quantity consistency and missing-card collection workflow | POLISH / NEW | Explicit-quantity UI checks implemented in the 2026-10-28 development report; missing-card workflow remains NEW |
 | Inbox | Private threads, stale fetches, account isolation | VERIFIED historically | Inbox race/privacy regressions and prior successful runs |
-| Inbox | Mobile chat layout, Back navigation, offer/trade thread deep links | POLISH / VERIFY | Inspect current deployed UI; fix one reproduced defect |
+| Inbox | Mobile chat layout, Back navigation, offer/trade thread deep links | VERIFIED / POLISH | Direct-thread and contact-switch Back fixed at `460438c`, run 40680128125; continue physical Android/PWA checks |
 | Transactions | Offer/counteroffer, trade selection, duplicate submits, locking | VERIFIED historically | 2026-10-27 work-mode and price-offer-recovery reports |
 | Transactions | Transaction history, uncertain-network recovery | VERIFY | Reproduce specific gap before changing behavior |
 | Discovery | Favorites, wanted posts, follow/block and basic alerts | VERIFIED historically | Existing integration and browser tests |
@@ -90,6 +90,8 @@ Prioritize **one or two real customer-facing fixes per development batch**, with
 
 
 ## Marketplace posting-tools branch — exact card identity and seller flexibility (2026-10-28)
+
+**Current checkpoint:** description guidance, custom set/variant, rarity, edition/printing and language are implemented and deployed at `50bb34f`, verified in run `40681070226`. Storefront listings preserve seller disclosures and offer eligibility. Do not rebuild these fields; remaining structured lot/quantity and photo-quality work is listed below.
 
 **Existing implementation, do not duplicate:** Listing form already has a 2,000-character free-text description, item name, TCG game, optional set, optional card number, optional variant, condition/grading and required photos. Generated metadata and seller description are saved together. Current dropdown already includes regular, reverse holo, holo, illustration rare, special illustration rare, alternate art, manga rare, promo and Other. The optional set selector can be skipped. Existing tests cover publishing and descriptions.
 
@@ -241,14 +243,14 @@ This supersedes the earlier suggestion to display item+fees+estimated shipping a
 ### Status and implementation ledger (starting snapshot; confirm in code/deployment before changing)
 | Trunk | Historical working baseline | First unfinished work | Initial classification |
 |---|---|---|---|
-| 1 Listings | CRUD, photos, grading, search | precise custom variants, listing/quantity UX | POLISH / NEW |
+| 1 Listings | CRUD, photos, grading, search, custom printing metadata | structured quantities/lots and seller controls; explicit deck quantity UI added | POLISH / NEW |
 | 2 Inbox | private messages and threads | mobile polish, photo attachments | POLISH / NEW |
 | 3 Transactions | offer, counteroffer, trade and locking basics | multi-item trade UX, failure recovery | VERIFY / NEW |
 | 4 Discovery | favorites, follows, wanted and alerts basics | alert routing, collection inquiry controls | POLISH / NEW |
 | 5 Mobile | installable PWA and core nav | keyboard/Back/spacing/accessibility | POLISH |
 | 6 Security | staging isolation and synthetic checks | admin hardening, policies, beta gates | VERIFY / NEW |
 | 7 Growth | some share/follow primitives | SEO, storefront analytics, referrals | VERIFY / NEW |
-| 8 Operations | no comprehensive admin suite verified | secure Command Center, moderation, support | NEW |
+| 8 Operations | legacy moderation UI hardened at `8827f74` | server moderator roles, MFA enforcement, audit RPCs and support backend | POLISH UI / NEW backend |
 
 ### Continuous work rules
 - Each batch: read latest branch/PR/CI, select highest-value **unfinished** task, inspect existing implementation, reproduce or define acceptance, change at most 1–2 related behaviors, run targeted tests, deploy exact staging build if applicable, verify and log evidence.
