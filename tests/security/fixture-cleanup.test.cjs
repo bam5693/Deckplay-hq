@@ -16,7 +16,7 @@ function fixture(changes={}){
   auth:{async getSession(){return {data:{session:{user:changes.sessionUser||user,access_token:'synthetic-token'}},error:null}}},
   rpc(name,args){calls.push({name,args});return {async abortSignal(signal){assert(signal instanceof AbortSignal);return {error:null}}}}
  };
- context.fetch=async(url,options)=>{calls.push({url,options});assert(options.signal instanceof AbortSignal);return {ok:!changes.storageFails,status:changes.storageFails?503:200}};
+ context.fetch=async(url,options)=>{calls.push({url,options});assert(options.signal instanceof AbortSignal);if(changes.switchAccountDuringStorage)context.currentUser={id:'different'};return {ok:!changes.storageFails,status:changes.storageFails?503:200}};
  const page={async evaluate(fn,arg){return vm.runInNewContext('('+fn.toString()+')',context)(arg)}};
  return {page,calls};
 }
@@ -58,4 +58,20 @@ test('cleanup leaves shared and foreign photo URLs alone and supports already-re
   const {page,calls}=fixture({rows});await cleanup(page,marker);
   assert.equal(calls.length,1);assert.equal(calls[0].name,'cleanup_staging_fixture');
  }
+});
+
+test('account switch during photo cleanup stops before fixture deletion RPC',async()=>{
+ const {page,calls}=fixture({switchAccountDuringStorage:true});
+ await assert.rejects(()=>cleanup(page,marker),/Cleanup account changed/);
+ assert.equal(calls.length,1,'No database cleanup may run under a different account');
+ assert(calls[0].url.endsWith('/storage/v1/object/listing-images'));
+});
+
+test('duplicate verified photo references are removed only once',async()=>{
+ const image=origin+'/storage/v1/object/public/listing-images/'+id+'/33333333-3333-4333-8333-333333333333.png';
+ const {page,calls}=fixture({rows:[{id,title:marker,seller_id:id,image_urls:[image,image]}]});
+ await cleanup(page,marker);
+ assert.equal(calls.length,2);
+ assert.deepEqual(JSON.parse(calls[0].options.body),{prefixes:[id+'/33333333-3333-4333-8333-333333333333.png']});
+ assert.equal(calls[1].name,'cleanup_staging_fixture');
 });
