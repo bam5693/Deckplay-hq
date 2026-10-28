@@ -1779,8 +1779,58 @@ document.getElementById("inboxMarkAllRead").addEventListener("click",()=>documen
 document.getElementById("inboxNotificationList").addEventListener("click",async e=>{const read=e.target.closest("[data-read-notification]");if(read){await markNotificationRead(read.dataset.readNotification);await loadNotificationCenter();return}const open=e.target.closest("[data-open-notification]");if(!open)return;await markNotificationRead(open.dataset.openNotification);await navigateDeckplayNotification(open.dataset.notificationKind,open.dataset.notificationActor,open.dataset.notificationSource)});
 document.getElementById("inboxPage").addEventListener("click",async e=>{const offer=e.target.closest("[data-inbox-offers]");if(offer){if(offer.dataset.inboxOffers==="price"){openModal("priceOffersModal");await loadPriceOffers()}else{openModal("tradesModal");await loadTradeOffers()}return}});
 document.getElementById("refreshInbox").addEventListener("click",()=>document.getElementById("inboxNotificationPanel").hidden?loadInbox():loadNotificationCenter());
-document.getElementById("messageInbox").addEventListener("click",async e=>{const price=e.target.closest("[data-inbox-price]");if(price){const action=price.dataset.inboxPrice,id=price.dataset.offer;let amount=null;if(action==="counter"){const value=prompt("Enter your counteroffer in USD:");if(value===null)return;amount=Number(value);if(!Number.isFinite(amount)||amount<0.01||amount>100000){toast("Enter a valid amount.");return}}else if(!confirm("Confirm "+action+"?"))return;price.disabled=true;const {error}=await supabaseClient.rpc("respond_price_offer",{p_offer_id:id,p_action:action,p_amount:amount});if(error){toast(error.message);price.disabled=false;await loadInbox()}else{toast(action==="accept"?"Offer accepted — item reserved. Payment and shipping are not active.":"Offer updated");if(action==="accept")await loadListings();void sendCollectorEmailForSource(id);await loadInbox()}return}
- const trade=e.target.closest("[data-inbox-trade]");if(trade){const action=trade.dataset.inboxTrade,id=trade.dataset.offer;if(action==="counter"){activeCounterOffer=id;++counterComposeVersion;document.getElementById("counterForm").reset();document.getElementById("counterStatus").textContent="";openModal("counterModal");return}if(!confirm("Confirm "+action+" for this trade?"))return;trade.disabled=true;const column=action==="cancelled"?"sender_id":"recipient_id";const {error}=await supabaseClient.rpc("respond_trade_offer",{p_offer:id,p_action:action});if(error){toast(error.message||"This trade has already changed. Refreshing the conversation.");trade.disabled=false;await loadInbox();return}else{toast(action==="accepted"?"Trade accepted — item reserved. No payment has been taken.":"Trade "+action);if(action==="accepted")await loadListings();await loadInbox();refreshTradeAlerts()}return}
+const pendingInboxDealActions=new Set();
+document.getElementById("messageInbox").addEventListener("click",async e=>{
+ const price=e.target.closest("[data-inbox-price]");
+ if(price){
+  const action=price.dataset.inboxPrice,id=price.dataset.offer,userId=currentUser?.id,key=userId+":price:"+id;
+  if(!userId||pendingInboxDealActions.has(key))return;
+  let amount=null;
+  if(action==="counter"){
+   const value=prompt("Enter your counteroffer in USD:");if(value===null)return;
+   amount=Number(value);if(!Number.isFinite(amount)||amount<0.01||amount>100000){toast("Enter a valid amount.");return}
+  }else if(!confirm("Confirm "+action+"?"))return;
+  pendingInboxDealActions.add(key);
+  const buttons=[...price.closest(".price-offer-actions").querySelectorAll("[data-inbox-price]")];
+  buttons.forEach(button=>button.disabled=true);
+  try{
+   const {error}=await supabaseClient.rpc("respond_price_offer",{p_offer_id:id,p_action:action,p_amount:amount});
+   if(currentUser?.id!==userId)return;
+   if(error){toast(error.message||"Offer changed. Refresh and try again.","error");await loadInbox()}
+   else{
+    toast(action==="accept"?"Offer accepted — item reserved. Payment and shipping are not active.":"Offer updated");
+    if(action==="accept")await loadListings();
+    void sendCollectorEmailForSource(id);await loadInbox();
+   }
+  }catch(error){if(currentUser?.id===userId){toast(error.message||"Offer update failed. Please retry.","error");await loadInbox().catch(()=>{})}}
+  finally{pendingInboxDealActions.delete(key);if(currentUser?.id===userId)buttons.forEach(button=>{if(button.isConnected)button.disabled=false})}
+  return;
+ }
+ const trade=e.target.closest("[data-inbox-trade]");
+ if(trade){
+  const action=trade.dataset.inboxTrade,id=trade.dataset.offer,userId=currentUser?.id,key=userId+":trade:"+id;
+  if(!userId||pendingInboxDealActions.has(key))return;
+  if(action==="counter"){
+   activeCounterOffer=id;++counterComposeVersion;document.getElementById("counterForm").reset();
+   document.getElementById("counterStatus").textContent="";openModal("counterModal");return;
+  }
+  if(!confirm("Confirm "+action+" for this trade?"))return;
+  pendingInboxDealActions.add(key);
+  const buttons=[...trade.closest(".price-offer-actions").querySelectorAll("[data-inbox-trade]")];
+  buttons.forEach(button=>button.disabled=true);
+  try{
+   const {error}=await supabaseClient.rpc("respond_trade_offer",{p_offer:id,p_action:action});
+   if(currentUser?.id!==userId)return;
+   if(error){toast(error.message||"This trade has already changed. Refreshing the conversation.","error");await loadInbox()}
+   else{
+    toast(action==="accepted"?"Trade accepted — item reserved. No payment has been taken.":"Trade "+action);
+    if(action==="accepted")await loadListings();
+    await loadInbox();refreshTradeAlerts();
+   }
+  }catch(error){if(currentUser?.id===userId){toast(error.message||"Trade update failed. Please retry.","error");await loadInbox().catch(()=>{})}}
+  finally{pendingInboxDealActions.delete(key);if(currentUser?.id===userId)buttons.forEach(button=>{if(button.isConnected)button.disabled=false})}
+  return;
+ }
  const b=e.target.closest("[data-reply-to],[data-thread-reply]");if(!b)return;composeRecipient=b.dataset.replyTo||b.dataset.threadReply;composeListing=b.dataset.replyListing||null;document.getElementById("composeContext").textContent="Reply to collector";openModal("composeModal")});
 document.getElementById("composeForm").addEventListener("submit",async e=>{
  e.preventDefault();const form=e.currentTarget;if(!currentUser||!composeRecipient||form.dataset.pending)return;

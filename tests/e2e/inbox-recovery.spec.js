@@ -466,3 +466,28 @@ test('switching inbox contacts does not add phantom Android Back steps',async({p
  await page.goBack();
  await expect(page.locator('#inboxPage')).toBeHidden();
 });
+
+test('inbox offer and trade decisions lock sibling actions until the server responds',async({page})=>{
+ await inbox(page);
+ await page.evaluate(()=>{
+  document.querySelector('#conversationThread .conversation-bubbles').insertAdjacentHTML('beforeend',
+   '<p id="priceDecision" class="price-offer-actions"><button data-inbox-price="accept" data-offer="price-a">Accept</button><button data-inbox-price="decline" data-offer="price-a">Decline</button></p>'+
+   '<p id="tradeDecision" class="price-offer-actions"><button data-inbox-trade="accepted" data-offer="trade-a">Accept</button><button data-inbox-trade="declined" data-offer="trade-a">Decline</button></p>');
+  window.pendingInboxDecisions=[];
+  supabaseClient.rpc=(name,args)=>new Promise(resolve=>pendingInboxDecisions.push({name,args,resolve}));
+  loadInbox=async()=>{};loadListings=async()=>{};refreshTradeAlerts=()=>{};
+ });
+ page.on('dialog',dialog=>dialog.accept());
+ await page.locator('#priceDecision [data-inbox-price="accept"]').click();
+ await expect(page.locator('#priceDecision button')).toBeDisabled();
+ await page.locator('#priceDecision [data-inbox-price="decline"]').evaluate(button=>button.click());
+ expect(await page.evaluate(()=>pendingInboxDecisions.length)).toBe(1);
+ await page.evaluate(()=>pendingInboxDecisions[0].resolve({error:{message:'Temporary offer outage'}}));
+ await expect(page.locator('#priceDecision button')).toBeEnabled();
+ await page.locator('#tradeDecision [data-inbox-trade="accepted"]').click();
+ await expect(page.locator('#tradeDecision button')).toBeDisabled();
+ await page.locator('#tradeDecision [data-inbox-trade="declined"]').evaluate(button=>button.click());
+ expect(await page.evaluate(()=>pendingInboxDecisions.length)).toBe(2);
+ await page.evaluate(()=>pendingInboxDecisions[1].resolve({error:{message:'Temporary trade outage'}}));
+ await expect(page.locator('#tradeDecision button')).toBeEnabled();
+});
