@@ -32,6 +32,23 @@ test('message drafts survive refresh, thread switching and inbox navigation',asy
  await expect(page.locator('#chatInput')).toHaveValue('Draft for A');
  await page.evaluate(()=>showInboxPage('buyer-b'));await expect(page.locator('#chatInput')).toHaveValue('Draft for B');
 });
+test('Send stays disabled for empty drafts and re-enables only for message text',async({page})=>{
+ await inbox(page);
+ const send=page.locator('.chat-composer button[type="submit"]');
+ await expect(send).toBeDisabled();
+ await page.locator('#chatInput').fill('   ');
+ await expect(send).toBeDisabled();
+ await page.locator('#chatInput').fill('Message ready');
+ await expect(send).toBeEnabled();
+ await page.locator('#chatInput').fill('');
+ await expect(send).toBeDisabled();
+ await page.locator('#chatInput').fill('Send once');
+ await page.locator('#chatInput').press('Enter');
+ await expect(send).toBeDisabled();
+ await page.evaluate(()=>finishFixtureSend({data:{id:'sent'},error:null}));
+ await expect(page.locator('#chatInput')).toHaveValue('');
+ await expect(page.locator('.chat-composer button')).toBeDisabled();
+});
 test('rapid Enter submits once and a service exception allows retry without losing text',async({page})=>{
  await inbox(page);await page.locator('#chatInput').fill('One message');
  await page.locator('#chatInput').press('Enter');await page.locator('#chatInput').press('Enter');
