@@ -58,3 +58,32 @@ Prioritize **one or two real customer-facing fixes per development batch**, with
 
 - Earlier roadmap reported 351 checks (230 local UI, 48 real staging API, 44 deployed browser, 29 security) at commit `91df3490ec62796e357a6d7e7cffd999ce848b15`.
 - A later conversation-reported completed run #155 recorded 80 local, 48 API, 44 deployed and 11 cleanup security checks (183 in that run). Counts are **not interchangeable**; verify current run directly before reporting.
+
+
+## Trunk-and-branch tracking — avoid repetitive work
+
+**Status vocabulary:** VERIFIED = working at a cited historical checkpoint; POLISH = functional but a distinct UX gap remains; VERIFY = evidence insufficient or needs a current deployed check; NEW = not yet implemented; LATER = intentionally deferred. Never translate these into ungrounded completion percentages.
+
+| Trunk | Branch | Current status | Existing evidence / next action |
+|---|---|---|---|
+| Marketplace/listings | Listing CRUD, photos, search, favorites | VERIFIED historically | Real staging API/deployed browser tests; avoid rebuilding |
+| Marketplace/listings | Grading, deck metadata, readable generated descriptions | VERIFIED historically | 2026-10-27 listing-description report, run 40588122824 |
+| Marketplace/listings | Deck quantity consistency and missing-card collection workflow | NEW / VERIFY | Inspect existing deck-listing tests and UI before building |
+| Inbox | Private threads, stale fetches, account isolation | VERIFIED historically | Inbox race/privacy regressions and prior successful runs |
+| Inbox | Mobile chat layout, Back navigation, offer/trade thread deep links | POLISH / VERIFY | Inspect current deployed UI; fix one reproduced defect |
+| Transactions | Offer/counteroffer, trade selection, duplicate submits, locking | VERIFIED historically | 2026-10-27 work-mode and price-offer-recovery reports |
+| Transactions | Transaction history, uncertain-network recovery | VERIFY | Reproduce specific gap before changing behavior |
+| Discovery | Favorites, wanted posts, follow/block and basic alerts | VERIFIED historically | Existing integration and browser tests |
+| Discovery | Price-drop/sold/followed-seller alert UX and precise routing | POLISH / VERIFY | Confirm what's already deployed; avoid duplicate alerts |
+| Mobile | Installable web app, core navigation and browser coverage | VERIFIED historically | Existing manifest, local/deployed Playwright |
+| Mobile | Consistent spacing, typography, keyboard/Back, accessibility | POLISH | Audit screens and fix distinct defects |
+| Security/testing | Private staging, synthetic personas, isolation, cleanup | VERIFIED historically | Security and staging reports; keep regression suite |
+| Launch | Account recovery, moderation, disputes, payment/shipping | NEW / LATER | Plan only; no real payments/shipping |
+
+**Anti-repeat rules:**
+1. Before each batch, consult this table, last two commits, current PR head, existing tests and deployed behavior.
+2. Choose an unfinished branch, not a trunk already verified. A test-only change must address a **newly observed failure or concrete missing behavior**; no repeated privacy permutations solely to raise test counts.
+3. Mark a branch VERIFIED only with a commit, matching staging deployment where applicable, and relevant passing checks. Mark POLISH if functional but UX remains imperfect.
+4. Prefer breadth: after two consecutive batches in one trunk without a user-visible change, move to the next unfinished branch or explicitly explain the blocker.
+5. Keep a short dated change log: branch, user-visible effect, commit, deployment, local/API/deployed/security results, remaining gap.
+6. Tanner and Jayden identify usability concerns; manager decides product policy. Charles/Kyle exercise deterministic supported workflows.
