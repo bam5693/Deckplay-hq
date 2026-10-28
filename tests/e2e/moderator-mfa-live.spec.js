@@ -2,6 +2,9 @@ const {test,expect}=require('@playwright/test');
 const {signIn}=require('../helpers/staging.cjs');const {totp}=require('../helpers/totp.cjs');
 const origin='https://prrrzeelltmyugssqnzk.supabase.co',key='sb_publishable_0omvNnv_ZOvXrZ-LHPMyIQ_a9zxD-yh';
 test('disposable collector completes real authenticator setup with a signed MFA session while moderator access stays denied',async({page})=>{
+ // MFA enrollment mutates one shared synthetic account. Run only in the desktop
+ // project to prevent desktop/mobile projects racing to enroll the same user.
+ test.skip(test.info().project.name !== 'staging-desktop', 'Shared MFA enrollment is tested once, not concurrently across devices');
  test.setTimeout(150000);let factorId=null,owner=null;
  await signIn(page,'BUYER');
  const initial=await page.evaluate(async()=>{const {data,error}=await supabaseClient.auth.getUser();if(error)throw Error('Unable to verify dedicated test identity');return {id:data.user.id,email:data.user.email,factors:data.user.factors||[]}});
