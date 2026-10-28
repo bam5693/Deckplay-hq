@@ -1692,7 +1692,7 @@ function rememberInboxDraft(){
  if(form&&currentUser){const value=form.querySelector("textarea").value;value?inboxDrafts.set(form.dataset.chatRecipient,value):inboxDrafts.delete(form.dataset.chatRecipient)}
 }
 function resizeInboxComposer(input){if(!input)return;input.style.height="auto";const full=input.scrollHeight;input.style.height=Math.min(full,130)+"px";input.style.overflowY=full>130?"auto":"hidden"}
-function updateInboxLengthHint(input){const hint=input?.closest(".chat-composer")?.querySelector(".chat-length-hint");if(!hint)return;const remaining=input.maxLength-input.value.length;hint.hidden=remaining>200;hint.textContent=remaining+" "+(remaining===1?"character":"characters")+" remaining"}
+function updateInboxLengthHint(input){const hint=input?.closest(".chat-composer")?.querySelector(".chat-length-hint");if(!hint)return;const remaining=input.maxLength-input.value.length;hint.hidden=remaining>200;hint.textContent=remaining===0?"Message limit reached":remaining+" "+(remaining===1?"character":"characters")+" remaining"}
 document.getElementById("messageInbox").addEventListener("input",e=>{if(e.target.matches(".chat-composer textarea")){rememberInboxDraft();resizeInboxComposer(e.target);updateInboxLengthHint(e.target);const send=e.target.closest("form")?.querySelector('button[type="submit"]');if(send&&!e.target.readOnly)send.disabled=!e.target.value.trim()}});
 let inboxLoadVersion=0,selectedInboxCollector=null;
 async function loadInbox(targetCollectorId=null){
