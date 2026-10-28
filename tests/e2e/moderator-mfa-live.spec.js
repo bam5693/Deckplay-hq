@@ -6,7 +6,7 @@ test('disposable collector completes real authenticator setup with a signed MFA 
  await signIn(page,'BUYER');
  const initial=await page.evaluate(async()=>{const {data,error}=await supabaseClient.auth.getUser();if(error)throw Error('Unable to verify dedicated test identity');return {id:data.user.id,email:data.user.email,factors:data.user.factors||[]}});
  expect(initial.email,'Only the dedicated disposable buyer may enroll a test authenticator').toBe('deckplay-buyer@deckplay.test');
- expect(initial.factors.length,'A pre-existing factor must be investigated, never replaced by this test').toBe(0);owner=initial.id;
+ expect(initial.factors.length, 'Dedicated staging buyer already has MFA factors (' + initial.factors.map(f => String(f.factor_type || 'unknown') + ':' + String(f.status || 'unknown')).join(', ') + '). Inspect the synthetic account in Supabase Auth; never remove an unverified factor automatically.').toBe(0);owner=initial.id;
  try{
   await page.goto('/moderator-access.html',{waitUntil:'domcontentloaded'});await expect(page.locator('#setupOptions')).toBeVisible({timeout:20000});
   await page.locator('#enrollConsent').check();
