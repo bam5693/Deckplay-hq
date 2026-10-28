@@ -87,7 +87,7 @@
      ?new TextDecoder().decode(Uint8Array.from(atob(payload),c=>c.charCodeAt(0)))
      :decodeURIComponent(payload);
    }
-   qr=qr.replace(/^\uFEFF/,'').trimStart().replace(/^<\?xml[\s\S]*?\?>\s*/i,'');
+   qr=qr.replace(/^\uFEFF/,'').trimStart().replace(/^<\?xml[\s\S]*?\?>\s*/i,'').replace(/^(?:<!--[\s\S]*?-->\s*)+/,'');
    if(!/^<svg(?:\s|>)/i.test(qr)||/<script\b|<foreignObject\b|\bon[a-z]+\s*=/i.test(qr))throw Error('qr');
    factors=[{id:result.data.id,factor_type:'totp',status:'unverified',friendly_name:'DeckPlay authenticator'}];renderFactors();
    el('setupSecret').textContent=result.data.totp.secret;

@@ -16,6 +16,7 @@ test('a collector without listings shares external links with inquiries off by d
  await expect(page.locator('.public-collections a')).toHaveAttribute('rel',/noopener noreferrer/);
  await expect(page.locator('.public-collections')).toContainText('Items are not listed for sale');
  await expect(page.locator('[data-collection-inquiry]')).toHaveCount(0);
+ await expect(page.locator('[data-message-profile]')).toHaveCount(0);
  const results=await page.evaluate(()=>['javascript:alert(1)','http://collectr.com/a','https://user@collectr.com/','https://127.0.0.1/','https://collectr.com/?token=secret'].map(safeCollectionUrl));
  expect(results).toEqual(['','','','','']);
 });
