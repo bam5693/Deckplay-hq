@@ -131,3 +131,18 @@ Prioritize **one or two real customer-facing fixes per development batch**, with
 6. **Costs and deployment:** stay within existing free staging quotas; estimate storage/egress before enabling at scale. No paid provider, new subscription, production change, real data, real payments/shipping or merge without approval.
 
 **Acceptance:** two authorized synthetic users can exchange and open private card photos on mobile/desktop; unauthorized third party cannot retrieve them; rejected uploads fail clearly without losing drafts; existing text conversations and inbox privacy still pass.
+
+
+## Trunk 4.13 — External collector app links and collection inquiries (user-approved 2026-10-28)
+
+**Status: APPROVED CONCEPT / NOT IMPLEMENTED.** Collectors can add public collection-profile links (e.g. Holodex, Collectr, CollX or other services) to their DeckPlay profile even if they have no active listings. Other users can open the external collection and send a private inquiry asking if the collector might sell or trade a specific card. Displayed collection ownership **does not** imply an item is listed, available or priced.
+
+**Free-first MVP:** manually add/edit/remove a small set of HTTPS public collection links, provider label and optional custom name; render clearly as external links with a leaving-DeckPlay cue. Do not scrape, synchronize, mirror or claim verified ownership of external inventories. Validate URL scheme and hostname safely, disallow dangerous schemes, sanitize labels, protect against phishing/malicious links, and apply safe external-link handling. Use existing profile/inbox capabilities; no paid APIs.
+
+**Inquiry flow:** message a collector through the existing private inbox, ideally prefilled with a user-editable note identifying the external card and a pasted card URL/name; no automatic offers, transactions or assumptions of availability. Collector controls: allow buy/trade inquiries, trades only, or display-only/no collection inquiries; block/report and spam/rate protections. Ensure messages obey existing privacy/RLS.
+
+**Deal boundary:** if both users want a transaction, require an actual DeckPlay listing or verified trade-item snapshot with photos, variant, condition, quantity, agreed price/terms, mutual confirmation and inventory locking before entering transaction flow. Never transact based only on an external collection page.
+
+**Future, conditional:** deep link to individual cards, optional import/sync only if provider permissions, commercial terms, user consent and cost allow. Never pay for API/integration without explicit approval.
+
+**Acceptance:** a synthetic collector without listings can share a valid public collection link; another synthetic user can view it and initiate a private inquiry; owner can disable inquiries; unsafe URLs and blocked users are rejected; no listing or sale is fabricated.
