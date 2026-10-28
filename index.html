@@ -1893,7 +1893,7 @@ if(tradeById.size){
   const status=thread.querySelector("[data-inbox-older-status]");status.textContent="Loading earlier messages…";
   const distance=bubbles.scrollHeight-bubbles.scrollTop;
   const existingMessages=entries.filter(x=>x.type==="message");
-  const oldest=existingMessages[0]?.date;
+  const oldest=existingMessages.reduce((earliest,m)=>!earliest||m.date<earliest?m.date:earliest,null);
   let query=supabaseClient.from("collector_messages").select("id,sender_id,recipient_id,body,created_at,read_at,attachment_ids").or("and(sender_id.eq."+userId+",recipient_id.eq."+id+"),and(sender_id.eq."+id+",recipient_id.eq."+userId+")").order("created_at",{ascending:false}).limit(50);
   if(oldest)query=query.lt("created_at",oldest);
   let result;try{result=await query}catch(error){result={error}};
@@ -1901,7 +1901,7 @@ if(tradeById.size){
   if(result.error){status.textContent="Could not load earlier messages. Try again.";olderButton.disabled=false;return}
   const known=new Set(existingMessages.map(m=>m.id));
   const fresh=(result.data||[]).filter(m=>!known.has(m.id));
-  if((result.data||[]).length<50||!fresh.length)inboxOlderExhausted.add(id);
+  if((result.data||[]).length<50)inboxOlderExhausted.add(id);
   if(fresh.length){
    const saved=inboxOlderMessages.get(id)||[],savedIds=new Set(saved.map(m=>m.id));
    for(const m of fresh){if(!savedIds.has(m.id))saved.push(m);entries.push({type:"message",date:m.created_at,...m})}
