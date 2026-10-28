@@ -584,6 +584,10 @@ test('pending trade counteroffers show terms in the thread and suspend original 
  await expect(page.locator('#conversationThread')).toContainText('$5.00 cash');
  await expect(page.locator('#conversationThread')).toContainText('Add five dollars');
  await expect(page.locator('[data-inbox-trade="accepted"]')).toHaveCount(0);
+ await page.evaluate(()=>navigateDeckplayNotification('counteroffer','fixture-seller','counter-1'));
+ await expect(page.locator('#inboxPage')).toBeVisible();
+ await expect(page.locator('#tradesModal')).not.toHaveClass(/open/);
+ await expect(page.locator('#conversationThread')).toContainText('Add five dollars');
  await page.locator('[data-inbox-trade-review]').click();
  await expect(page.locator('#tradesModal')).toHaveClass(/open/);
 });
