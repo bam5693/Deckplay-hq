@@ -1,6 +1,9 @@
 name: Deploy isolated staging website
 on:
   workflow_dispatch:
+  push:
+    branches: [test/staging-reporting]
+    paths-ignore: ['tests/reports/**']
 
 permissions:
   contents: read
