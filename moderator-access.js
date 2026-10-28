@@ -1,6 +1,6 @@
 /* MFA setup never grants a moderator role. Secrets remain in transient UI only. */
 (() => {
- const client=window.supabase.createClient('https://yffruutknztvdyioovmp.supabase.co','sb_publishable_cHzM8sQmrqfcCH8lhESytg_FMJrQtCX');
+ const client=window.supabase.createClient('https://prrrzeelltmyugssqnzk.supabase.co','sb_publishable_0omvNnv_ZOvXrZ-LHPMyIQ_a9zxD-yh');
  const el=id=>document.getElementById(id),status=el('mfaStatus');
  let generation=0,owner=null,busy=false,factors=[];
  const inFlightEnrollments=new Set();
