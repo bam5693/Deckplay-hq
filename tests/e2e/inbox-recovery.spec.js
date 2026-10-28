@@ -546,3 +546,21 @@ test('Mark all activity read does not mark inbox messages or negotiations read',
  });
  await expect.poll(()=>page.evaluate(()=>activityReadFilter)).toEqual(['favorite_price_drop','favorite_sold','followed_seller_listing','wanted_match']);
 });
+
+
+test('message length hint appears near the limit and follows restored drafts',async({page})=>{
+ await inbox(page);
+ const input=page.locator('#chatInput');
+ const hint=page.locator('.chat-length-hint');
+ await expect(hint).toBeHidden();
+ await input.fill('x'.repeat(1800));
+ await expect(hint).toHaveText('200 characters remaining');
+ await input.fill('x'.repeat(1999));
+ await expect(hint).toHaveText('1 characters remaining');
+ await page.evaluate(()=>document.querySelector('[data-conversation-id="buyer-b"]').click());
+ await page.evaluate(()=>document.querySelector('[data-conversation-id="buyer-a"]').click());
+ await expect(input).toHaveValue('x'.repeat(1999));
+ await expect(hint).toHaveText('1 characters remaining');
+ await input.fill('Short');
+ await expect(hint).toBeHidden();
+});
