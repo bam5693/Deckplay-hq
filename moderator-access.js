@@ -79,7 +79,7 @@
    let qr=result.data.totp.qr_code;
    // Supabase may return raw SVG, percent-encoded SVG, or base64 SVG with
    // an XML declaration. Keep it in an image data URL, never inject HTML.
-   if(typeof qr!=='string'||qr.length>200000)throw Error('qr');
+   if(typeof qr!=='string'||qr.length>2*1024*1024)throw Error('qr');
    qr=qr.trim();
    if(/^data:image\/svg\+xml(?:;[^,]*)?,/i.test(qr)){
     const comma=qr.indexOf(','),meta=qr.slice(0,comma),payload=qr.slice(comma+1);
