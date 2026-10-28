@@ -387,7 +387,7 @@ test('Tanner and Jayden: late listing-title enrichment cannot leak a previous co
  await expect(page.locator('#notificationList')).not.toContainText('Favorite sold');
 });
 
-test('Charles and Kyle: notification badges cap visually and clear on zero without stale mobile labels',async({page})=>{
+test('Charles and Kyle: notification count caps visually and clears on zero across mobile and desktop',async({page})=>{
  await ready(page);
  await page.evaluate(()=>{
   currentUser={id:'fixture-kyle'};syncInboxDraftUser();
@@ -402,9 +402,11 @@ test('Charles and Kyle: notification badges cap visually and clear on zero witho
  await expect(page.locator('#notificationBadge')).toHaveText('99+');
  await expect(page.locator('#notificationBadge')).toHaveJSProperty('hidden',false);
  await expect(page.locator('#notificationBell')).toHaveAttribute('aria-label','120 unread notifications');
- await expect(page.locator('#dockNotifications')).toHaveAttribute('aria-label','120 unread notifications');
+ // The current five-button dock has no dedicated Alerts dot; check it only if present.
+ const dockActivityDot=page.locator('#dockNotifications');
+ if(await dockActivityDot.count())await expect(dockActivityDot).toHaveAttribute('aria-label','120 unread notifications');
  await page.evaluate(async()=>{fixtureActivityCount=0;await refreshNotificationCount()});
  await expect(page.locator('#notificationBadge')).toHaveJSProperty('hidden',true);
- await expect(page.locator('#dockNotifications')).toHaveJSProperty('hidden',true);
+ if(await dockActivityDot.count())await expect(dockActivityDot).toHaveJSProperty('hidden',true);
  await expect(page.locator('#notificationBell')).toHaveAttribute('aria-label','Notifications');
 });
