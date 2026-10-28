@@ -66,3 +66,21 @@ test('signed-out password recovery is reachable and rejects an empty email witho
   await expect(page.locator('#authModal')).toHaveClass(/open/);
   expect(resetRequests,'Invalid recovery input must not send password-reset emails').toEqual([]);
 });
+
+
+// A trade alert must not strand the collector in the separate trades modal.
+// Counteroffers remain in that modal until their full details appear in threads.
+test('trade offer and update alerts open the specific collector conversation',async({page})=>{
+ await page.goto('/',{waitUntil:'domcontentloaded'});
+ const result=await page.evaluate(async()=>{
+  const opened=[],original=showInboxPage;
+  showInboxPage=async id=>{opened.push(id)};
+  try{
+   await navigateDeckplayNotification('trade_offer','synthetic-collector','synthetic-offer');
+   await navigateDeckplayNotification('trade_update','synthetic-collector','synthetic-offer');
+   return {opened,modalOpen:document.getElementById('tradesModal').classList.contains('open')};
+  }finally{showInboxPage=original}
+ });
+ expect(result.opened).toEqual(['synthetic-collector','synthetic-collector']);
+ expect(result.modalOpen).toBe(false);
+});
