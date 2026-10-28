@@ -45,7 +45,7 @@ test('Supabase percent-encoded SVG QR data URLs display safely during enrollment
  await page.evaluate(()=>{const original=mfaFixture.auth.mfa.enroll;mfaFixture.auth.mfa.enroll=async payload=>{const result=await original(payload);result.data.totp.qr_code='data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3C%2Fsvg%3E';return result}});
  await begin(page);
  await expect(page.locator('#setupMaterial')).toBeVisible();
- await expect(page.locator('#setupQr')).toHaveAttribute('src',/^data:image\\/svg\\+xml;charset=utf-8,/);
+ await expect(page.locator('#setupQr')).toHaveAttribute('src',/^data:image\/svg\+xml;charset=utf-8,/);
  await expect(page.locator('#setupSecret')).toHaveText(secret);
 });
 test('signed-out visitors cannot start MFA enrollment',async({page})=>{
