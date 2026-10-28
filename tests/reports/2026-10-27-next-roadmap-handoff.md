@@ -181,3 +181,21 @@ This supersedes the earlier suggestion to display item+fees+estimated shipping a
 - For single low-value cards, investigate eligible economical letter/envelope shipping; never assume tracking, insurance or buyer protection on a stamped letter. Distinguish stamped untracked letters, eligible tracked letter products (if provider actually supports them), USPS Ground Advantage and expedited parcels. Verify mailpiece thickness, rigidity, dimensions, weight, machinability, card protection and current USPS/provider rates; do not advertise an unsupported service or guarantee a low rate.
 - Shipping choices depend on seller packaging, order value, quantity, carrier eligibility and protection rules. If a transaction requires tracking/protection, clearly explain why untracked envelope shipping is unavailable. Allow combined shipping for multi-card orders where appropriate.
 - No live label generation or payment integration until explicitly approved; use previews/simulation in beta.
+
+
+## Trunk 8 — Operations, Support and Marketplace Management (owner-approved priority order, 2026-10-28)
+
+**Planning decision only; not a claim that these features are implemented.** Use staging-only development, no paid services, no production modifications, no real transactions until approved.
+
+1. Admin access security: least-privilege roles, MFA for privileged accounts, secure sessions, auditable administrative actions, explicit safeguards for sensitive controls.
+2. Private mobile-friendly DeckPlay Command Center: actionable counts for reports, tickets, listings, users and health, with no fabricated data.
+3. Report intake and moderation: counterfeit/stolen-image/prohibited-item/abuse reports, evidence preservation, moderation queue, reasoned actions and appeals.
+4. Support ticket intake and self-service Help Center: user-facing issue categories, status, response history, saved replies and privacy protections.
+5. System monitoring and emergency controls: alerts, staging/production isolation, verified rollback and backups, narrowly scoped feature kill switches.
+6. Account administration and appeals: safely review account status, fraud signals and seller controls with minimal private-data access.
+7. Beta feedback and announcements: feature requests, maintenance banners, feedback triage and metrics.
+8. Pre-payment operations: shipping issues, refunds, chargebacks, disputes and transaction snapshots, first in simulation/test mode.
+9. Pre-payment seller onboarding and finance: provider-managed identity verification, payout support, fee reconciliation, transaction reporting and cost monitoring.
+10. Later: rule-based support triage and optional AI drafts; never autonomous bans, refunds or real financial actions.
+
+**Execution:** security and audit foundations first; then dashboard, moderation, support, monitoring, and account controls. Invite-only/public beta gates must pass before real users; payments/shipping branches stay disabled until explicit approval. Charles checks access controls and audit tests, Kyle mobile workflows, Tanner seller/collector support, Jayden buyer/trade support. Verify existing code and tests before marking each branch VERIFIED; don't duplicate already passing tests. 
