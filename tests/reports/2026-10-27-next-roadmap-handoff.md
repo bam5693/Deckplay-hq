@@ -170,3 +170,14 @@ Prioritize **one or two real customer-facing fixes per development batch**, with
 - For an anonymous viewer or unknown shipping destination, show a transparent estimated total/range or “Shipping/tax calculated with address,” not a falsely exact price. In the invite-only beta with checkout disabled, label any price calculator as preview/simulation, not payable.
 - No paid integrations or live payment/shipping enablement without user approval. Confirm provider rules, fees, and applicable all-in price display requirements before production.
 - Tests: Charles checks arithmetic and fee ownership across small orders/bundles; Kyle checks mobile card/details/checkout legibility; Tanner and Jayden verify collectible/trade examples, including shipping and changing destination.
+
+
+### Pricing display correction — shipping is separate (approved 2026-10-28)
+
+This supersedes the earlier suggestion to display item+fees+estimated shipping as the primary secondary price on listing cards.
+
+- Listing card/detail: **seller listed price** first; directly underneath **price including mandatory buyer fees, excluding shipping and applicable tax**, clearly labeled (e.g. "$3.50 with fees · + shipping"). No assumed flat $5 shipping.
+- Shipping is a separate line and **buyer-selectable at checkout** among eligible options; show actual shipping prices for each option and the final payable total (item + buyer fees + chosen shipping + applicable tax) before confirmation. Any mandatory fees must be disclosed up front.
+- For single low-value cards, investigate eligible economical letter/envelope shipping; never assume tracking, insurance or buyer protection on a stamped letter. Distinguish stamped untracked letters, eligible tracked letter products (if provider actually supports them), USPS Ground Advantage and expedited parcels. Verify mailpiece thickness, rigidity, dimensions, weight, machinability, card protection and current USPS/provider rates; do not advertise an unsupported service or guarantee a low rate.
+- Shipping choices depend on seller packaging, order value, quantity, carrier eligibility and protection rules. If a transaction requires tracking/protection, clearly explain why untracked envelope shipping is unavailable. Allow combined shipping for multi-card orders where appropriate.
+- No live label generation or payment integration until explicitly approved; use previews/simulation in beta.
