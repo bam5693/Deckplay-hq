@@ -1,8 +1,14 @@
 name: Private staging feature bots
 on:
   workflow_dispatch:
-  # Manual runs only while the staging deployment and MFA test are being repaired.
-  # Restore push triggers after both issues are verified fixed.
+  # Verify source changes on the isolated branch; report-only commits do not
+  # start another API/browser run. Exact staging assets must be deployed first.
+  push:
+    branches: [test/staging-reporting]
+    paths:
+      - 'index.html'
+      - 'moderator-access.js'
+      - 'supabase/staging/collection-sharing.sql' 
 permissions:
   contents: read
   id-token: write
@@ -69,7 +75,7 @@ jobs:
         run: node scripts/report-staging-results.cjs
       - name: Verify local inbox, account privacy and listing regressions on desktop and mobile
         if: ${{ !cancelled() }}
-        run: npx playwright test --config=playwright.local.config.js inbox-request-order.spec.js inbox-recovery.spec.js trade-picker.spec.js marketplace-filter-boundaries.spec.js account-boundaries.spec.js listing-description.spec.js discovery-profiles.spec.js tcg-sets.spec.js listing-publication.spec.js moderation-security.spec.js moderator-access.spec.js
+        run: npx playwright test --config=playwright.local.config.js inbox-request-order.spec.js inbox-recovery.spec.js trade-picker.spec.js inbox-trade-details.spec.js collection-sharing.spec.js marketplace-filter-boundaries.spec.js account-boundaries.spec.js listing-description.spec.js discovery-profiles.spec.js tcg-sets.spec.js listing-publication.spec.js moderation-security.spec.js moderator-access.spec.js
       - uses: actions/upload-artifact@v4
         if: always()
         with:
