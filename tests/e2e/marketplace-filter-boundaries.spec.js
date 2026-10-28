@@ -76,3 +76,43 @@ test('collectibles subcategory and price filters combine and clear without stale
  await expect(page.locator('#marketCollectibleWrap')).toBeHidden();
  await expect(page.locator('#grid h3')).toHaveCount(3);
 });
+
+test('Tanner and Jayden can narrow sports cards, One Piece singles and sports memorabilia without cross-category results',async({page})=>{
+ await installFixture(page,[
+  {id:'sports-card',n:'PSA 10 baseball rookie',c:'Trading Cards',game:'sports_cards',gameLabel:'Sports cards',p:85,s:'Tanner',sellerId:'sports-seller',cond:'Graded',e:'🃏'},
+  {id:'tcg-card',n:'Luffy playable single',c:'Trading Cards',game:'one_piece',gameLabel:'One Piece',p:12,s:'Jayden',sellerId:'tcg-seller',cond:'Near Mint',e:'🃏'},
+  {id:'sports-jersey',n:'Signed baseball jersey',c:'Collectibles',collectibleSubcategory:'sports_memorabilia',p:65,s:'Tanner',sellerId:'memorabilia-seller',cond:'Used',e:'🧢'},
+  {id:'game-item',n:'Retro game cartridge',c:'Video Games',p:30,s:'Jayden',sellerId:'game-seller',cond:'Used',e:'🎮'}
+ ]);
+ await page.locator('#marketFilterToggle').click();
+ await page.locator('#marketCategory').selectOption('Trading Cards');
+ await page.locator('#marketGame').selectOption('sports_cards');
+ await expect(page.locator('#grid h3')).toHaveText(['PSA 10 baseball rookie']);
+ await page.locator('#marketGame').selectOption('one_piece');
+ await expect(page.locator('#grid h3')).toHaveText(['Luffy playable single']);
+ await page.locator('#marketClearFilters').click();
+ await page.locator('#marketCategory').selectOption('Collectibles');
+ await page.locator('#marketCollectibleSubcategory').selectOption('sports_memorabilia');
+ await expect(page.locator('#grid h3')).toHaveText(['Signed baseball jersey']);
+ await page.locator('#marketClearFilters').click();
+ await page.locator('#marketCategory').selectOption('Video Games');
+ await expect(page.locator('#grid h3')).toHaveText(['Retro game cartridge']);
+});
+
+test('switching TCG game filters and searching never reveals a blocked collector',async({page})=>{
+ await installFixture(page,[
+  {id:'allowed-op',n:'Luffy card allowed',c:'Trading Cards',game:'one_piece',gameLabel:'One Piece',p:15,s:'collector',sellerId:'allowed-seller',cond:'Near Mint',e:'🃏'},
+  {id:'blocked-op',n:'Luffy card blocked',c:'Trading Cards',game:'one_piece',gameLabel:'One Piece',p:5,s:'collector',sellerId:'blocked-seller',cond:'Near Mint',e:'🃏'},
+  {id:'allowed-sports',n:'Baseball rookie allowed',c:'Trading Cards',game:'sports_cards',gameLabel:'Sports cards',p:40,s:'collector',sellerId:'sports-seller',cond:'Graded',e:'🃏'}
+ ],['blocked-seller']);
+ await page.locator('#marketFilterToggle').click();
+ await page.locator('#marketCategory').selectOption('Trading Cards');
+ await page.locator('#marketGame').selectOption('one_piece');
+ await page.locator('#search').fill('Luffy');
+ await expect(page.locator('#grid h3')).toHaveText(['Luffy card allowed']);
+ await page.locator('#search').fill('blocked');
+ await expect(page.locator('#grid h3')).toHaveCount(0);
+ await page.locator('#search').fill('');
+ await page.locator('#marketGame').selectOption('sports_cards');
+ await expect(page.locator('#grid h3')).toHaveText(['Baseball rookie allowed']);
+});
