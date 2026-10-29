@@ -51,3 +51,27 @@ test('posting a listing cannot overwrite an existing collector username or displ
  expect(writes[0].payload.id).toBe('fixture-owner');
  expect(writes[0].options).toEqual({onConflict:'id',ignoreDuplicates:true});
 });
+
+test('collectors can save interests across every marketplace category and card game',async({page})=>{
+ await saving(page);
+ const catalog=await page.locator('#tcgGame option').evaluateAll(nodes=>nodes.filter(x=>x.value).map(x=>x.textContent));
+ const interests=await page.locator('#profileGame option').evaluateAll(nodes=>nodes.map(x=>x.value));
+ expect(interests).toEqual(expect.arrayContaining(catalog));
+ for(const interest of ['Sports cards','Video games','Consoles & hardware','Controllers & accessories','Collectibles','Other']){
+  await page.locator('#profileGame').selectOption(interest);
+  await page.locator('#profileForm').evaluate(form=>form.requestSubmit());
+  await expect.poll(()=>page.evaluate(()=>profileWrites.at(-1)?.favorite_tcg)).toBe(interest);
+  await expect(page.locator('#profileForm button[type="submit"]')).toBeEnabled();
+  await page.evaluate(()=>openModal('profileModal'));
+ }
+});
+test('editing preserves a saved collection interest outside current options and clears it on account switch',async({page})=>{
+ await editor(page);await page.evaluate(()=>document.getElementById('profileEdit').click());
+ await expect.poll(()=>page.evaluate(()=>pendingEditors.length)).toBe(1);
+ await page.evaluate(()=>pendingEditors[0]({data:{username:'collector_name',favorite_tcg:'Vintage model trains'},error:null}));
+ await expect(page.locator('#profileModal')).toHaveClass(/open/);
+ await expect(page.locator('#profileGame')).toHaveValue('Vintage model trains');
+ await page.evaluate(()=>{currentUser={id:'another-collector'};syncInboxDraftUser()});
+ await expect(page.locator('#profileGame [data-saved-interest]')).toHaveCount(0);
+ await expect(page.locator('#profileGame')).toHaveValue('');
+});
