@@ -19,11 +19,11 @@ begin
  return mid;
 end;
 $fn$;
-revoke all on function private.send_collection_inquiry(uuid,text,text,text) from public,anon,authenticated;
+revoke all on function private.send_collection_inquiry(uuid,text,text,text) from public,anon;
 create or replace function public.send_collection_inquiry(p_recipient uuid,p_item text,p_intent text,p_body text)
 returns uuid language sql security invoker set search_path = ''
 as $fn$ select private.send_collection_inquiry(p_recipient,p_item,p_intent,p_body); $fn$;
 revoke all on function public.send_collection_inquiry(uuid,text,text,text) from public,anon;
 grant execute on function public.send_collection_inquiry(uuid,text,text,text) to authenticated;
--- Verify whether authenticated may execute private function through wrapper before applying.
+-- Authenticated EXECUTE on private function is necessary for the invoker wrapper; private schema remains unexposed through the API. The private function enforces auth.uid(), opt-in, blocks, duplication and rate limits.
 commit;
