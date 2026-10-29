@@ -223,9 +223,9 @@ test('Kyle: All marketplace stays category-neutral, newest first, with price and
 
 test('Tanner: progressive sports card filters work at every depth and reset cleanly',async({page})=>{
  await installFixture(page,[
-  {id:'panini-football',n:'Panini football rookie',c:'Trading Cards',game:'sports_cards',p:30,s:'seller',description:'Sport: Football\\nBrand: Panini\\nYear: 2024\\nPlayer: CeeDee Lamb',e:'🃏'},
-  {id:'topps-football',n:'Topps football rookie',c:'Trading Cards',game:'sports_cards',p:25,s:'seller',description:'Sport: Football\\nBrand: Topps\\nYear: 2023\\nPlayer: Other',e:'🃏'},
-  {id:'panini-basketball',n:'Panini basketball rookie',c:'Trading Cards',game:'sports_cards',p:35,s:'seller',description:'Sport: Basketball\\nBrand: Panini\\nYear: 2024\\nPlayer: Other',e:'🃏'}
+  {id:'panini-football',n:'Panini football rookie',c:'Trading Cards',game:'sports_cards',p:30,s:'seller',description:'Sport: Football\nBrand: Panini\nYear: 2024\nPlayer: CeeDee Lamb',e:'🃏'},
+  {id:'topps-football',n:'Topps football rookie',c:'Trading Cards',game:'sports_cards',p:25,s:'seller',description:'Sport: Football\nBrand: Topps\nYear: 2023\nPlayer: Other',e:'🃏'},
+  {id:'panini-basketball',n:'Panini basketball rookie',c:'Trading Cards',game:'sports_cards',p:35,s:'seller',description:'Sport: Basketball\nBrand: Panini\nYear: 2024\nPlayer: Other',e:'🃏'}
  ]);
  await page.locator('#marketFilterToggle').click();
  await page.locator('#marketCategory').selectOption('Trading Cards');
