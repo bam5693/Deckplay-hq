@@ -11,7 +11,7 @@ for(const persona of ['Charles','Kyle','Tanner','Jayden'])test(persona+' rotates
   await supabaseClient.auth.getSession();currentUser={id:'category-test-owner'};syncInboxDraftUser();
   window.categoryWrites=[];window.categoryDraft=null;window.categoryUploads=0;
   ensureProfile=async()=>{};uploadPhotos=async()=>{categoryUploads++;return ['https://example.test/test-only.jpg']};loadListings=async()=>{};
-  supabaseClient.from=table=>({insert:async row=>{categoryWrites.push(row);return {error:null}},upsert:async row=>{categoryDraft=row;return {error:null}}});
+  supabaseClient.from=table=>{let editing=false;const q={select:()=>q,eq:()=>q,is:()=>q,insert:async row=>{categoryWrites.push(row);return {error:null}},upsert:async row=>{categoryDraft=row;return {error:null}},update:changes=>{editing=true;window.categoryEditChanges=changes;return q},maybeSingle:async()=>({data:editing?{id:'category-edit-item'}:window.categoryEditRow,error:null})};return q};
  });
  const results=[];
  for(const row of catalog.rows){
@@ -46,6 +46,11 @@ for(const persona of ['Charles','Kyle','Tanner','Jayden'])test(persona+' rotates
    expect(saved.price).toBe(24.75);expect(saved.image_urls).toHaveLength(1);
    for(const f of ['category','create','draft','condition_price','publish'])outcome.checks[f]='passed';
    outcome.checks.subcategory=Object.keys(row.fields).length>2?'passed':'not-applicable';
+   const edit=await page.evaluate(async saved=>{
+    window.categoryEditRow={...saved,id:'category-edit-item',updated_at:'2026-10-28T00:00:00Z'};await listingEditor.open('category-edit-item');
+    document.getElementById('editListingPrice').value='19.75';document.getElementById('editListingForm').requestSubmit();await new Promise(r=>setTimeout(r,0));return window.categoryEditChanges;
+   },saved);
+   expect(edit.price).toBe(19.75);expect(edit.title).toBe(saved.title);expect(edit.description).toBe(saved.description);expect(edit).not.toHaveProperty('category');expect(edit).not.toHaveProperty('image_urls');outcome.checks.edit='passed';
    // Upload is deliberately mocked; image preparation/storage are not certified here.
    const discovery=await page.evaluate(saved=>{
     const row={...saved,id:'matrix-item',created_at:new Date().toISOString()};items=[marketplaceItemFromRow(row,{username:'test-only-seller'})];

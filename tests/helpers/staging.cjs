@@ -33,7 +33,7 @@ async function menu(page,id){
  await action.click({timeout:10000});
 }
 async function seedListing(page,title,details={}){
- return page.evaluate(async ({title,details})=>{const {data,error}=await supabaseClient.from('listings').insert({...details,seller_id:currentUser.id,title,price:25,category:'trading_cards',condition:'like_new',image_urls:['https://prrrzeelltmyugssqnzk.supabase.co/storage/v1/object/public/listing-images/test.jpg'],accepts_trades:true,accepts_price_offers:true,tcg_game:details.tcg_game||'one_piece'}).select('id').single();if(error)throw Error(error.message);return data.id},{title,details});
+ return page.evaluate(async ({title,details})=>{const {data,error}=await supabaseClient.from('listings').insert({price:25,category:'trading_cards',condition:'like_new',image_urls:['https://prrrzeelltmyugssqnzk.supabase.co/storage/v1/object/public/listing-images/test.jpg'],accepts_trades:true,accepts_price_offers:true,...details,seller_id:currentUser.id,title,tcg_game:(!details.category||details.category==='trading_cards')?(details.tcg_game||'one_piece'):null}).select('id').single();if(error)throw Error(error.message);return data.id},{title,details});
 }
 async function cleanup(page,title){
  if(typeof title!=='string'||!/^TEST ONLY BOT [a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/.test(title))throw Error('Exact synthetic fixture marker required');

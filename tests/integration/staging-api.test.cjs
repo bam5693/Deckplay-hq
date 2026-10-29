@@ -776,3 +776,24 @@ test('account listing draft is private, size bounded and preserves exact seller 
   if(original)ok(api('seller',path,'PATCH',{content:original.content,updated_at:original.updated_at}),204);else ok(api('seller',path,'DELETE'),204);
  }
 });
+
+test('Charles publishes, edits, favorites and marks sold every catalog combination using signed staging API',()=>{
+ const catalog=require('../fixtures/category-catalog.json');
+ const rows=catalog.rows.map((row,i)=>({seller_id:users.seller,title:run,description:'TEST ONLY category matrix '+row.key,price:15.25+i,category:row.fields.category,product_type:row.fields.listingType,tcg_game:row.fields.tcgGame||null,collectible_subcategory:row.fields.collectibleSubcategory||null,condition:'used',image_urls:[base+'/storage/v1/object/public/listing-images/test.jpg'],accepts_trades:true,accepts_price_offers:true}));
+ const inserted=ok(api('seller','/rest/v1/listings','POST',rows,{Prefer:'return=representation'}),201);assert.equal(inserted.length,rows.length);
+ const byDescription=new Map(inserted.map(row=>[row.description,row]));
+ for(const expected of rows){const actual=byDescription.get(expected.description);assert(actual,'Missing '+expected.description);for(const key of ['category','product_type','tcg_game','collectible_subcategory','condition'])assert.equal(actual[key],expected[key]);assert.equal(Number(actual.price),expected.price)}
+ const ids=inserted.map(row=>row.id),filter='?id=in.('+ids.join(',')+')';
+ const publicRows=ok(api(null,'/rest/v1/listings'+filter+'&status=eq.active'));assert.equal(publicRows.length,rows.length);
+ const foreign=ok(api('buyer','/rest/v1/listings'+filter,'PATCH',{description:'Foreign overwrite'},{Prefer:'return=representation'}));assert.equal(foreign.length,0);
+ ok(api('buyer','/rest/v1/saved_listings','POST',ids.map(id=>({user_id:users.buyer,listing_id:id}))),201);
+ assert.equal(ok(api('buyer','/rest/v1/saved_listings?listing_id=in.('+ids.join(',')+')')).length,rows.length);
+ assert.equal(ok(api('seller','/rest/v1/saved_listings?listing_id=in.('+ids.join(',')+')')).length,0);
+ const edited=ok(api('seller','/rest/v1/listings'+filter+'&seller_id=eq.'+users.seller+'&status=eq.active','PATCH',{price:12.5},{Prefer:'return=representation'}));assert.equal(edited.length,rows.length);assert(edited.every(row=>Number(row.price)===12.5));
+ for(const actual of edited)assert.equal(actual.category,byDescription.get(actual.description).category,'Edits preserve category');
+ ok(api('buyer','/rest/v1/saved_listings?user_id=eq.'+users.buyer+'&listing_id=in.('+ids.join(',')+')','DELETE'),204);
+ const sold=ok(api('seller','/rest/v1/listings'+filter+'&seller_id=eq.'+users.seller+'&status=eq.active','PATCH',{status:'sold'},{Prefer:'return=representation'}));assert.equal(sold.length,rows.length);assert(sold.every(row=>row.status==='sold'));
+ assert.equal(ok(api(null,'/rest/v1/listings'+filter+'&status=eq.active')).length,0);
+ console.log('CATEGORY API VERIFIED '+JSON.stringify({combinations:rows.length,checks:['signed_publish','category_assignment','anonymous_read','foreign_edit_denial','owner_edit','favorites_privacy','sold_hides_from_active'],unverified:['real_photo_upload','per_category_messages_offers_trades_alerts']}));
+ // Existing exact-marker after() cleanup removes these listings and their synthetic alerts.
+});
