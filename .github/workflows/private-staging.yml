@@ -28,10 +28,7 @@ jobs:
         with:
           node-version: '22'
       - run: node scripts/staging-ci-credentials.cjs
-      - name: Clear superseded staging runs
-        env:
-          GH_RUN_CONTROL_TOKEN: ${{ github.token }}
-        run: node scripts/cancel-superseded-staging.cjs
+      # Preserve older staging runs for diagnosis; transactional tests are serialized below.
   staging-accounts:
     needs: staging-identity
     concurrency:
