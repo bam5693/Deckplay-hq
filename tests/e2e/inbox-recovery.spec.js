@@ -727,3 +727,49 @@ test('Inbox activity tab shows alerts, retries failures, and refreshes empty res
  await page.locator('#refreshInbox').click();
  await expect(page.locator('#inboxNotificationList [data-retry-notifications]')).toHaveText('Refresh alerts');
 });
+
+test('Tanner can message a collector with no prior thread directly from the profile',async({page})=>{
+ await inbox(page);
+ await page.evaluate(async()=>{
+  const originalFrom=supabaseClient.from;
+  supabaseClient.from=table=>{
+   if(table!=='profiles')return originalFrom(table);
+   let directId=null;
+   const profiles=[{id:'buyer-a',username:'buyer-a'},{id:'buyer-b',username:'buyer-b'},{id:'new-collector',username:'new-collector',collection_links:[]}];
+   const q={select:()=>q,eq:(column,value)=>{if(column==='id')directId=value;return q},in:()=>q,
+    then:(resolve,reject)=>Promise.resolve({data:profiles,error:null}).then(resolve,reject),
+    maybeSingle:async()=>({data:profiles.find(p=>p.id===directId)||null,error:null})};
+   return q;
+  };
+  await showPublicProfile('new-collector');
+ });
+ await expect(page.locator('#publicProfileContent [data-message-profile]')).toBeVisible();
+ await page.locator('#publicProfileContent [data-message-profile]').click();
+ await expect(page.locator('#inboxPage')).toBeVisible();
+ await expect(page.locator('#publicProfileModal')).not.toHaveClass(/open/);
+ await expect(page.locator('#composeModal')).not.toHaveClass(/open/);
+ await expect(page.locator('.chat-composer')).toHaveAttribute('data-chat-recipient','new-collector');
+ await expect(page.locator('#conversationThread')).toContainText('No messages yet');
+ await page.locator('#chatInput').fill('Can you share photos of the sports card corners?');
+ await page.locator('#inboxThreadBack').click();
+ await expect(page.locator('[data-conversation-id="new-collector"]')).toBeVisible();
+ await page.locator('[data-conversation-id="new-collector"]').click();
+ await expect(page.locator('#chatInput')).toHaveValue('Can you share photos of the sports card corners?');
+});
+
+test('Jayden deep links reveal the right conversation despite stale search and unread filters',async({page})=>{
+ await inbox(page,true);
+ await page.locator('#conversationSearch').fill('buyer-a');
+ await page.locator('[data-conversation-unread]').check();
+ await expect(page.locator('[data-conversation-id="buyer-b"]')).toBeHidden();
+ await page.evaluate(()=>showInboxPage('buyer-b'));
+ await expect(page.locator('.chat-composer')).toHaveAttribute('data-chat-recipient','buyer-b');
+ await expect(page.locator('#conversationSearch')).toHaveValue('');
+ await expect(page.locator('[data-conversation-unread]')).not.toBeChecked();
+ await expect(page.locator('[data-conversation-id="buyer-b"]')).toBeVisible();
+ await page.locator('#chatInput').fill('Is that deck available for trade?');
+ await page.locator('#inboxThreadBack').click();
+ await expect(page.locator('[data-conversation-id="buyer-b"]')).toBeVisible();
+ await page.locator('[data-conversation-id="buyer-b"]').click();
+ await expect(page.locator('#chatInput')).toHaveValue('Is that deck available for trade?');
+});
