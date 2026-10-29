@@ -25,8 +25,10 @@ trap cleanup EXIT
 # A custom archive is restorable with pg_restore. Database extensions, Supabase
 # managed roles/secrets, storage object BYTES and external service configuration
 # require separate recovery planning.
-pg_dump --dbname="$DATABASE_URL" --format=custom --no-owner --no-acl \
-  --schema=auth --schema=public --schema=storage \
+# Include the private signup implementation referenced by auth's trigger.
+# Keep grants: omitting ACLs can restore data while leaving client roles unable to use it.
+pg_dump --dbname="$DATABASE_URL" --format=custom --no-owner \
+  --schema=auth --schema=public --schema=private --schema=storage \
   --file="$file"
 pg_restore --list "$file" > "$file.contents"
 if ! grep -Eq 'TABLE DATA.*auth users' "$file.contents"; then

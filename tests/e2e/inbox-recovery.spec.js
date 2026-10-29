@@ -3,7 +3,8 @@ test.beforeEach(async({page})=>{
  await page.route('https://challenges.cloudflare.com/**',route=>route.abort());
  await page.route('https://prrrzeelltmyugssqnzk.supabase.co/rest/v1/**',route=>route.fulfill({json:[]}));
 });
-async function ready(page){await page.goto('/');await page.waitForLoadState('networkidle')}
+// Wait for the mocked marketplace initialization, not unrelated remote fonts/images.
+async function ready(page){await page.goto('/',{waitUntil:'domcontentloaded'});await page.waitForFunction(()=>typeof listingSource!=='undefined'&&listingSource==='live')}
 async function inbox(page,unread=false){
  await ready(page);
  await page.evaluate(async unread=>{
@@ -970,7 +971,7 @@ test('an uncertain text send verifies its exact committed row after reload witho
  expect(saved[0].hash).toMatch(/^[0-9a-f]{64}$/);
  expect(JSON.stringify(saved)).not.toContain(payload.body);
  expect(await page.evaluate(()=>firstTextInsertIds)).toEqual([saved[0].id]);
- await page.reload();await page.waitForLoadState('networkidle');
+ await page.reload({waitUntil:'domcontentloaded'});await page.waitForFunction(()=>typeof listingSource!=='undefined'&&listingSource==='live');
  const second=await page.evaluate(async payload=>{
   currentUser={id:payload.sender_id};syncInboxDraftUser();
   const row=JSON.parse(sessionStorage.getItem(inboxTextRetryStorageKey(payload.sender_id))||'[]')[0];
