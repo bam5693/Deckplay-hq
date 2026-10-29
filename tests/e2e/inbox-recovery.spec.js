@@ -766,7 +766,8 @@ test('Jayden deep links reveal the right conversation despite stale search and u
  await expect(page.locator('.chat-composer')).toHaveAttribute('data-chat-recipient','buyer-b');
  await expect(page.locator('#conversationSearch')).toHaveValue('');
  await expect(page.locator('[data-conversation-unread]')).not.toBeChecked();
- await expect(page.locator('[data-conversation-id="buyer-b"]')).toBeVisible();
+ // Opening a thread intentionally hides the conversation list; inspect its filter state,
+ // then return to the list before asserting that the requested contact is visible.
  await page.locator('#chatInput').fill('Is that deck available for trade?');
  await page.locator('#inboxThreadBack').click();
  await expect(page.locator('[data-conversation-id="buyer-b"]')).toBeVisible();
