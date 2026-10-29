@@ -1,6 +1,8 @@
 # DeckPlay HQ — active staging roadmap (updated 2026-10-28)
 
-**Latest verified checkpoint:** `616cc03` / [passing run 40685434694](https://github.com/bam5693/Deckplay-hq/actions/runs/40685434694). Read the final entry in [development ledger](2026-10-28-roadmap-development.md) before choosing work. Current full local: 326; real API: 49; deployed: 48; security: 33. Subsets overlap; do not sum historical counts.
+**Current category/merge checkpoint:** Read [category coverage and owner-editor handoff](2026-10-28-category-coverage-development.md) first. Main is merged into staging; PR #2 is draft/open/mergeable. Catalog release `208ba4e` passed matching run `40804649952`; owner-editor `4792e75` passed matching run `40805535118` (55 API / 65 deployed / 320 selected local; one expected MFA duplicate skip). Permanent runtime category matrix and 124 retained synthetic listings cover every canonical category/type route. Local passes do not certify per-category live transactions. All 496 category/persona database transaction journeys passed with full rollback. Next: real images and remaining per-category browser transaction/profile/mobile gaps; no trunk is complete.
+
+**Earlier verified checkpoint:** `616cc03` / [passing run 40685434694](https://github.com/bam5693/Deckplay-hq/actions/runs/40685434694). Read the final entry in [development ledger](2026-10-28-roadmap-development.md) before choosing work. Current full local: 326; real API: 49; deployed: 48; security: 33. Subsets overlap; do not sum historical counts.
 
 **Scope:** GitHub `bam5693/Deckplay-hq`, branch `test/staging-reporting`, draft PR #2; isolated Supabase `prrrzeelltmyugssqnzk` and Cloudflare Worker `deckplay-hq-staging`. Production/main, real users, payments, shipping, billing and PR merge are out of scope.
 

@@ -6,6 +6,7 @@ for(const persona of ['Charles','Kyle','Tanner','Jayden'])test(persona+' rotates
  await page.route('https://prrrzeelltmyugssqnzk.supabase.co/**',r=>r.fulfill({json:[]}));
  await page.goto('/');await page.waitForLoadState('networkidle');
  const catalog=await page.evaluate(categoryCatalog);
+ expect(catalog).toEqual(require('../fixtures/category-catalog.json'));
  expect(catalog.controls.marketGame.filter(o=>o.value!=='All').map(o=>o.value)).toEqual(catalog.controls.tcgGame.map(o=>o.value));
  await page.evaluate(async()=>{
   await supabaseClient.auth.getSession();currentUser={id:'category-test-owner'};syncInboxDraftUser();
