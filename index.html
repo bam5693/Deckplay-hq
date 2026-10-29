@@ -2024,7 +2024,7 @@ document.getElementById("messageInbox").addEventListener("click",async e=>{
    activeCounterOffer=id;++counterComposeVersion;document.getElementById("counterForm").reset();
    document.getElementById("counterStatus").textContent="";openModal("counterModal");return;
   }
-  if(!confirm("Confirm "+action+" for this trade?"))return;
+  if(!confirm(action==="accepted"?"Accept this trade and reserve the included items? No payment will be taken.":action==="declined"?"Decline this trade offer?":"Confirm "+action+" for this trade?"))return;
   pendingInboxDealActions.add(key);
   const buttons=[...trade.closest(".price-offer-actions").querySelectorAll("[data-inbox-trade]")];
   buttons.forEach(button=>{button.disabled=true;button.setAttribute("aria-busy","true")});
