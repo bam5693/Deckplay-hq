@@ -1571,16 +1571,18 @@ async function refreshNotificationCount(){const requestId=++notificationCountLoa
 async function markNotificationRead(id){if(!currentUser)return;const ids=String(id).split(",").filter(Boolean);if(!ids.length)return;const {error}=await supabaseClient.from("collector_notifications").update({read_at:new Date().toISOString()}).in("id",ids).eq("user_id",currentUser.id);if(error){toast("Could not mark notification as read.");return}await refreshNotificationCount()}
 const deckplayInboxNotificationKinds=new Set(["message","trade_offer","counteroffer","trade_update","price_offer","price_counter","price_update"]);
 const deckplayActivityNotificationKinds=["favorite_price_drop","favorite_sold","followed_seller_listing","wanted_match"];
+function showNotificationRetry(list){list.innerHTML='<p role="alert" class="muted">Alerts could not load. <button type="button" class="ghost" data-retry-notifications>Retry alerts</button></p>'}
 async function loadNotificationCenter(){
  const list=document.getElementById("notificationList");
  if(!currentUser){list.textContent="Sign in to see notifications.";return}
  const requestId=++notificationCenterLoadVersion,userId=currentUser.id;
  list.textContent="Loading notifications…";
+ try{
  const {data,error}=await supabaseClient.from("collector_notifications").select("id,actor_id,kind,source_id,created_at,read_at").eq("user_id",currentUser.id).in("kind",deckplayActivityNotificationKinds).order("created_at",{ascending:false}).limit(100);
  if(requestId!==notificationCenterLoadVersion||currentUser?.id!==userId)return;
- if(error){list.textContent="Could not load notifications: "+error.message;return}
+ if(error){showNotificationRetry(list);return}
  const activity=(data||[]).filter(n=>!deckplayInboxNotificationKinds.has(n.kind));
- if(!activity.length){list.innerHTML='<p class="muted">No activity alerts yet. Messages, offers and trades are in your Inbox.</p>';return}
+ if(!activity.length){list.innerHTML='<p class="muted">No activity alerts yet. Messages, offers and trades are in your Inbox. <button type="button" class="ghost" data-retry-notifications>Refresh alerts</button></p>';return}
  const displayed=[],messageGroups=new Map();
  for(const n of activity){if(n.kind==="message"&&n.actor_id){const prior=messageGroups.get(n.actor_id);if(prior){prior.count++;prior.ids.push(n.id);prior.unread=prior.unread||!n.read_at;continue}const entry={...n,count:1,ids:[n.id],unread:!n.read_at};messageGroups.set(n.actor_id,entry);displayed.push(entry)}else displayed.push({...n,count:1,ids:[n.id],unread:!n.read_at})}
  const actors=[...new Set(data.map(n=>n.actor_id).filter(Boolean))],priceIds=[...new Set(data.filter(n=>n.kind.startsWith("price_")).map(n=>n.source_id).filter(Boolean))];
@@ -1603,6 +1605,7 @@ async function loadNotificationCenter(){
   if(n.kind==="message"&&n.count>1){title=`✉️ ${n.count} messages`;detail="sent you messages"}
   return `<div class="notification-entry ${n.unread?"unread":""}"><button type="button" class="notification-open" data-open-notification="${escapeHtml(n.ids.join(","))}" data-notification-actor="${escapeHtml(n.actor_id||"")}" data-notification-kind="${escapeHtml(n.kind)}" data-notification-source="${escapeHtml(n.source_id||"")}"><strong>${escapeHtml(title)}</strong><span>${escapeHtml(name)} ${escapeHtml(detail)}</span><small>${new Date(n.created_at).toLocaleString()}</small></button>${n.unread?`<button type="button" class="ghost notification-read" data-read-notification="${escapeHtml(n.ids.join(","))}">Mark read</button>`:""}</div>`
  }).join("");
+ }catch(error){if(requestId===notificationCenterLoadVersion&&currentUser?.id===userId)showNotificationRetry(list)}
 }
 
 /* Route alerts by activity type instead of sending every actor-linked alert to messages. */
@@ -1636,7 +1639,7 @@ async function navigateDeckplayNotification(kind,actorId,sourceId){
 }
 document.querySelectorAll("[data-back-alerts]").forEach(button=>button.addEventListener("click",async()=>{const modal=button.closest(".modal");if(modal)closeModal(modal.id);openModal("notificationModal");await loadNotificationCenter()}));
 document.getElementById("notificationBell").addEventListener("click",async()=>{if(!currentUser)return;closeAccountMenu();openModal("notificationModal");await loadNotificationCenter()});
-document.getElementById("notificationList").addEventListener("click",async e=>{const read=e.target.closest("[data-read-notification]");if(read){await markNotificationRead(read.dataset.readNotification);await loadNotificationCenter();return}const open=e.target.closest("[data-open-notification]");if(!open)return;const kind=open.dataset.notificationKind,actor=open.dataset.notificationActor,source=open.dataset.notificationSource;await markNotificationRead(open.dataset.openNotification);closeModal("notificationModal");setTimeout(()=>{void navigateDeckplayNotification(kind,actor,source)},180)});
+document.getElementById("notificationList").addEventListener("click",async e=>{if(e.target.closest("[data-retry-notifications]")){await loadNotificationCenter();return}const read=e.target.closest("[data-read-notification]");if(read){await markNotificationRead(read.dataset.readNotification);await loadNotificationCenter();return}const open=e.target.closest("[data-open-notification]");if(!open)return;const kind=open.dataset.notificationKind,actor=open.dataset.notificationActor,source=open.dataset.notificationSource;await markNotificationRead(open.dataset.openNotification);closeModal("notificationModal");setTimeout(()=>{void navigateDeckplayNotification(kind,actor,source)},180)});
 document.getElementById("markAllNotifications").addEventListener("click",async()=>{if(!currentUser)return;const {error}=await supabaseClient.from("collector_notifications").update({read_at:new Date().toISOString()}).eq("user_id",currentUser.id).is("read_at",null).in("kind",deckplayActivityNotificationKinds);if(error){toast("Could not mark notifications read.");return}await Promise.all([loadNotificationCenter(),refreshNotificationCount()])});
 function startNotificationUpdates(){if(notificationChannel){supabaseClient.removeChannel(notificationChannel);notificationChannel=null}if(notificationPoll){clearInterval(notificationPoll);notificationPoll=null}document.getElementById("notificationBell").hidden=!currentUser;if(!currentUser){document.getElementById("notificationBadge").hidden=true;return}refreshNotificationCount();notificationChannel=supabaseClient.channel("deckplay-notifications-"+currentUser.id).on("postgres_changes",{event:"INSERT",schema:"public",table:"collector_notifications",filter:"user_id=eq."+currentUser.id},()=>{refreshNotificationCount();if(document.getElementById("notificationModal").classList.contains("open"))loadNotificationCenter();scheduleLiveInboxRefresh()}).subscribe();notificationPoll=setInterval(()=>{if(!document.hidden){refreshNotificationCount();if(document.getElementById("notificationModal").classList.contains("open"))loadNotificationCenter()}},30000)}
 const NOTIFICATION_KEYS=["messages","trade_offers","wanted_matches","product_updates"];
