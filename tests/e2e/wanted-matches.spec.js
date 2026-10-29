@@ -64,3 +64,30 @@ test('wanted matches reject near-miss variants and sets, including legacy line b
  });
  expect(result).toEqual({matches:['exact-crlf','exact-legacy'],freeOnly:[],invalidBudget:[]});
 });
+
+test('wanted matches link to real listing details with the correct name and price',async({page})=>{
+ await page.goto('/');
+ await page.evaluate(()=>{
+  items=[{id:'wanted-fixture-1',databaseId:'wanted-fixture-1',c:'Trading Cards',game:'one_piece',sellerId:'fixture-seller',s:'Fixture seller',n:'Manga Rare Luffy',p:125,cond:'Near Mint',description:'Set: OP-05\nCard number: OP05-119\nVariant: Manga Rare',imageUrls:[]}];
+  const originalFrom=supabaseClient.from.bind(supabaseClient);
+  supabaseClient.from=table=>{
+   if(table==='wanted_posts'){
+    const q={select:()=>q,order:()=>q,limit:()=>Promise.resolve({data:[{id:'wanted-post-1',user_id:'fixture-buyer',game:'one_piece',title:'Looking for Luffy',offer_type:'buy',budget:200,details:'[DeckPlay match: {"set":"OP-05","cardNumber":"OP05-119","variant":"Manga Rare"}]'}],error:null})};
+    return q;
+   }
+   if(table==='profiles'){
+    const q={select:()=>q,in:()=>Promise.resolve({data:[{id:'fixture-buyer',username:'fixture-buyer'}],error:null})};
+    return q;
+   }
+   return originalFrom(table);
+  };
+  toggleWanted(true);
+ });
+ const match=page.locator('[data-wanted-match="wanted-fixture-1"]');
+ await expect(match).toHaveText('View Manga Rare Luffy · $125.00');
+ await match.click();
+ await expect(page.locator('#wantedSection')).not.toHaveClass(/is-open/);
+ await expect(page.locator('#detailModal')).toHaveClass(/open/);
+ await expect(page.locator('#detailTitle')).toHaveText('Manga Rare Luffy');
+ await expect(page.locator('#detailContent .detail-price')).toHaveText('125.00');
+});
