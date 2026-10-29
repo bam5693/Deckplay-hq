@@ -51,7 +51,7 @@ test('out-of-range price offers do not reach the service even through a syntheti
 test('price-offer responses recover from a connection failure and ignore duplicate clicks',async({page})=>{
  await ready(page);
  await page.evaluate(()=>{
-  closeModal('priceOfferModal');closeModal('detailModal');openModal('priceOffersModal');
+  document.querySelectorAll('.modal.open').forEach(el=>el.classList.remove('open'));openModal('priceOffersModal');
   document.getElementById('priceOffersList').innerHTML='<button data-price-action="accept" data-price-id="offer-a">Accept</button>';
   window.offerReloads=0;loadPriceOffers=async()=>{offerReloads++};loadListings=async()=>{};refreshNotificationCount=async()=>{};
  });
@@ -68,7 +68,7 @@ test('price-offer responses recover from a connection failure and ignore duplica
 test('late price-offer response errors do not refresh another account or leave controls locked',async({page})=>{
  await ready(page);
  await page.evaluate(()=>{
-  closeModal('priceOfferModal');closeModal('detailModal');openModal('priceOffersModal');
+  document.querySelectorAll('.modal.open').forEach(el=>el.classList.remove('open'));openModal('priceOffersModal');
   document.getElementById('priceOffersList').innerHTML='<button data-price-action="decline" data-price-id="offer-a">Decline</button>';
   window.offerReloads=0;window.offerToasts=[];loadPriceOffers=async()=>{offerReloads++};toast=message=>offerToasts.push(message);
  });
@@ -82,7 +82,7 @@ test('late price-offer response errors do not refresh another account or leave c
 test('Jayden TCG price counteroffers reject fractional cents and show the current amount in both surfaces',async({page})=>{
  await ready(page);
  await page.evaluate(()=>{
-  closeModal('priceOfferModal');closeModal('detailModal');openModal('priceOffersModal');
+  document.querySelectorAll('.modal.open').forEach(el=>el.classList.remove('open'));openModal('priceOffersModal');
   document.getElementById('priceOffersList').innerHTML='<button type="button" data-price-action="counter" data-price-id="offer-tcg" data-current-amount="19.00">Counteroffer</button>';
  });
  const values=['19.999','18.75','18.751','17.50'],defaults=[];
@@ -96,8 +96,8 @@ test('Jayden TCG price counteroffers reject fractional cents and show the curren
  expect(await page.evaluate(()=>offerRequests[0]?.args)).toMatchObject({p_offer_id:'offer-tcg',p_action:'counter',p_amount:18.75});
  await page.evaluate(()=>finishOffer({error:null}));
  await expect(page.locator('#priceOffersList')).toContainText('No price offers yet');
- await page.evaluate(()=>{
-  closeModal('priceOffersModal');
+ await page.evaluate(async()=>{
+  document.getElementById('priceOffersModal').classList.remove('open');await showInboxPage();
   document.getElementById('messageInbox').innerHTML='<p class="price-offer-actions"><button type="button" data-inbox-price="counter" data-offer="offer-tcg2" data-current-amount="22.00">Counter</button></p>';
  });
  await page.locator('[data-inbox-price="counter"]').click();
