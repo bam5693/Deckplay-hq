@@ -1,4 +1,4 @@
-name: Focused conversation discovery and history UI
+name: Focused marketplace collection interests UI
 on:
   workflow_dispatch:
   push:
@@ -29,9 +29,7 @@ jobs:
           key: staging-playwright-${{ hashFiles('package-lock.json') }}
       - run: npx playwright install chromium --only-shell
       - name: Desktop and mobile history, listing contents, drafts and account boundaries
-        run: |
-          npx playwright test --config=playwright.local.config.js inbox-conversations.spec.js --grep 'Tanner and Jayden' --timeout=15000 --max-failures=1
-          npx playwright test --config=playwright.local.config.js inbox-history.spec.js --project=local-desktop --grep 'Kyle retries|history arriving|timestamp boundary|outside the recent' --timeout=15000 --max-failures=1
+        run: npx playwright test --config=playwright.local.config.js profile-edit.spec.js --grep 'collectors can save interests|editing preserves a saved' --timeout=15000 --max-failures=1
       - name: Retain focused result
         if: always()
         uses: actions/upload-artifact@v4
