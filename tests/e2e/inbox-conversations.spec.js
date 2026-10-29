@@ -9,7 +9,7 @@ test.beforeEach(async({page})=>{
   window.conversationQueries=[];window.conversationPending=[];
   window.leadingMessages=Array.from({length:500},(_,i)=>({id:String(1000-i).padStart(8,'0'),sender_id:'charles',recipient_id:'fixture-seller',body:'Collectible discussion '+i,created_at:date,read_at:date}));
   window.recoveredMessage={id:'00000500',sender_id:'kyle',recipient_id:'fixture-seller',body:'Original console inquiry',created_at:date,read_at:date};
-  supabaseClient.from=table=>{let more=false;const q={then:(resolve,reject)=>(more?new Promise(done=>conversationPending.push(done)):Promise.resolve({data:table==='collector_messages'?leadingMessages:table==='profiles'?[{id:'charles',username:'Charles'},{id:'kyle',username:'Kyle'}]:[],error:null})).then(resolve,reject)};for(const key of ['select','order','limit','eq','in','is'])q[key]=()=>q;q.or=value=>{more=true;conversationQueries.push(value);return q};return q};
+  supabaseClient.from=table=>{let more=false,write=false;const q={then:(resolve,reject)=>(more&&!write?new Promise(done=>conversationPending.push(done)):Promise.resolve({data:table==='collector_messages'?leadingMessages:table==='profiles'?[{id:'charles',username:'Charles'},{id:'kyle',username:'Kyle'}]:[],error:null})).then(resolve,reject)};for(const key of ['select','order','limit','eq','in','is'])q[key]=()=>q;q.update=()=>{write=true;return q};q.or=value=>{more=true;conversationQueries.push(value);return q};return q};
   await showInboxPage();
  });
 });
@@ -63,4 +63,15 @@ test('Tanner and Jayden see local calendar days across sports, TCG and collectib
  await expect(page.locator('.conversation-bubbles .chat-text').last()).toContainText('Collectible follow-up');
  const order=await page.locator('.conversation-bubbles').evaluate(el=>[...el.children].map(x=>x.classList.contains('conversation-day')?'date':'message'));
  expect(order).toEqual(['date','message','date','message','message']);
+});
+
+test('recovered unread messages stay read after refreshing an older conversation',async({page})=>{
+ await page.locator('[data-inbox-more-conversations]').click();
+ await page.evaluate(()=>conversationPending.shift()({data:[{...recoveredMessage,read_at:null}],error:null}));
+ await expect(page.locator('[data-conversation-id="kyle"] .conversation-unread')).toHaveCount(1);
+ await page.locator('[data-conversation-id="kyle"]').click();
+ await expect(page.locator('[data-conversation-id="kyle"] .conversation-unread')).toHaveCount(0);
+ expect(await page.evaluate(()=>!!inboxOlderMessages.get('kyle')[0].read_at)).toBe(true);
+ await page.evaluate(()=>loadInbox());
+ await expect(page.locator('[data-conversation-id="kyle"] .conversation-unread')).toHaveCount(0);
 });
