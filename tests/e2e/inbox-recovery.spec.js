@@ -713,6 +713,8 @@ test('Inbox activity tab shows alerts, retries failures, and refreshes empty res
   };
   await showInboxPage();
  });
+ await expect(page.locator('#inboxPage')).toBeVisible();
+ await expect(page.locator('#inboxNotificationsTab')).toBeVisible();
  await page.locator('#inboxNotificationsTab').click();
  await expect(page.locator('#inboxNotificationList [data-notification-kind="favorite_price_drop"]')).toHaveCount(1);
  await expect(page.locator('#notificationList [data-notification-kind="favorite_price_drop"]')).toHaveCount(1);
