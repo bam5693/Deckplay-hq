@@ -30,6 +30,10 @@ test('Tanner: sports-card listing photo controls, USD price and keyboard zoom wo
  await expect(page.locator('#detailPhotoZoom')).toHaveCount(0);
  await expect(page.getByRole('button',{name:'Enlarge listing photo'})).toBeFocused();
  await expect(page.locator('#detailModal')).toHaveClass(/open/);
+ await page.getByRole('button',{name:'Enlarge listing photo'}).click();
+ await page.evaluate(()=>closeModal('detailModal'));
+ await expect(page.locator('#detailPhotoZoom')).toHaveCount(0);
+ await expect(page.locator('#detailModal')).not.toHaveClass(/open/);
 });
 test('Jayden: TCG and game listing details handle single or missing photos without navigation clutter',async({page})=>{
  await openFixture(page,{n:'Synthetic TCG deck',p:38,c:'Trading Cards',imageUrls:['https://example.test/deck.jpg']});
