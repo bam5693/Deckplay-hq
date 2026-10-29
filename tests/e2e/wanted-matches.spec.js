@@ -91,3 +91,38 @@ test('wanted matches link to real listing details with the correct name and pric
  await expect(page.locator('#detailTitle')).toHaveText('Manga Rare Luffy');
  await expect(page.locator('#detailContent .detail-price')).toHaveText('125.00');
 });
+
+async function pendingWantedPublish(page){
+ await page.goto('/');
+ await page.evaluate(()=>{
+  currentUser={id:'fixture-buyer-a'};syncInboxDraftUser();
+  window.wantedWrites=[];window.wantedToasts=[];toast=text=>wantedToasts.push(text);
+  const originalFrom=supabaseClient.from.bind(supabaseClient);
+  supabaseClient.from=table=>table==='wanted_posts'?{insert:payload=>new Promise(resolve=>{wantedWrites.push(payload);window.finishWanted=resolve})}:originalFrom(table);
+  openModal('wantedModal');
+ });
+ await page.locator('#wantedItem').fill('One Piece Manga Rare Luffy');
+}
+test('wanted publish blocks duplicate submissions and preserves a failed draft',async({page})=>{
+ await pendingWantedPublish(page);
+ await page.locator('#wantedForm button[type="submit"]').click();
+ await expect(page.locator('#wantedForm button[type="submit"]')).toBeDisabled();
+ await page.locator('#wantedForm').dispatchEvent('submit');
+ expect(await page.evaluate(()=>wantedWrites.length)).toBe(1);
+ await page.evaluate(()=>finishWanted({error:{message:'Network unavailable'}}));
+ await expect(page.locator('#wantedStatus')).toHaveText('Network unavailable');
+ await expect(page.locator('#wantedItem')).toHaveValue('One Piece Manga Rare Luffy');
+ await expect(page.locator('#wantedForm button[type="submit"]')).toBeEnabled();
+});
+test('wanted publish response from previous account cannot clear the new account form',async({page})=>{
+ await pendingWantedPublish(page);
+ await page.locator('#wantedForm button[type="submit"]').click();
+ await page.evaluate(()=>{
+  currentUser={id:'fixture-buyer-b'};syncInboxDraftUser();
+  finishWanted({error:null});
+ });
+ await expect(page.locator('#wantedModal')).not.toHaveClass(/open/);
+ await expect(page.locator('#wantedItem')).toHaveValue('');
+ await expect(page.locator('#wantedForm button[type="submit"]')).toBeEnabled();
+ expect(await page.evaluate(()=>wantedToasts)).toEqual([]);
+});
