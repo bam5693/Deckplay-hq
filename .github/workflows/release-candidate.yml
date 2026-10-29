@@ -42,8 +42,9 @@ jobs:
           node - <<'NODE'
           const fs=require('node:fs'),{execFileSync}=require('node:child_process');
           const files=execFileSync('git',['diff-tree','--root','--no-commit-id','--name-only','-r','--first-parent','HEAD'],{encoding:'utf8'}).split('\n');
-          let full=process.env.MANUAL_RUN==='true'||files.some(f=>/^(?:[^/]+\.(?:html|js)|package(?:-lock)?\.json)/.test(f));
-          let specs=files.filter(f=>/^tests\/e2e\/[a-z0-9-]+\.spec\.js$/.test(f));
+          const application=new Set(require('./release/assets.json'));
+          let full=process.env.MANUAL_RUN==='true'||files.some(f=>application.has(f)||/^package(?:-lock)?\.json$/.test(f));
+          let specs=files.filter(f=>/^tests\/e2e\/[a-z0-9-]+\.spec\.js$/.test(f)&&!f.startsWith('tests/e2e/release-preview-'));
           if(process.env.MANUAL_RUN!=='true'&&fs.existsSync('release/browser-scope.json')){
            const scope=JSON.parse(fs.readFileSync('release/browser-scope.json'));
            const rev=ref=>execFileSync('git',['rev-parse',ref],{encoding:'utf8'}).trim();
@@ -118,6 +119,7 @@ jobs:
           docker cp scripts/backup-production-private.sh "$POSTGRES_CONTAINER:/tmp/backup.sh"
           docker exec -e DATABASE_URL=postgresql://postgres:disposable-fixture-only@localhost:5432/deckplay_rehearsal "$POSTGRES_CONTAINER" bash /tmp/backup.sh /tmp/recovery
           docker exec "$POSTGRES_CONTAINER" createdb -U postgres deckplay_recovery
+          docker exec "$POSTGRES_CONTAINER" psql -U postgres -d deckplay_recovery -v ON_ERROR_STOP=1 -c 'drop schema public'
           docker exec "$POSTGRES_CONTAINER" bash -c 'pg_restore -U postgres -d deckplay_recovery --no-owner --exit-on-error /tmp/recovery/*.dump'
           DATABASE_URL=postgresql://postgres:disposable-fixture-only@127.0.0.1:5432/deckplay_recovery
           psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 -f tests/integration/production-compatibility.sql
