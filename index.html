@@ -2002,10 +2002,10 @@ document.getElementById("messageInbox").addEventListener("click",async e=>{
  const counter=e.target.closest("[data-inbox-counter]");
  if(counter){
   const userId=currentUser?.id,id=counter.dataset.offer,key=userId+":trade:"+id;
-  if(!userId||pendingInboxDealActions.has(key))return;
+  if(!userId||pendingInboxDealActions.has(key)||counter.disabled)return;
   const accept=counter.dataset.inboxCounter==="accept";
   if(!confirm(accept?"Accept these counteroffer terms? Items will be reserved; no payment is taken.":"Decline this counteroffer?"))return;
-  pendingInboxDealActions.add(key);const buttons=[...counter.closest(".price-offer-actions").querySelectorAll("button")];buttons.forEach(b=>b.disabled=true);
+  pendingInboxDealActions.add(key);const buttons=[...counter.closest(".price-offer-actions").querySelectorAll("button")];buttons.forEach(b=>{b.disabled=true;b.setAttribute("aria-busy","true")});
   try{
    const {error}=await supabaseClient.rpc("respond_trade_counter",{p_counter:counter.dataset.counter,p_accept:accept});
    if(currentUser?.id!==userId)return;
@@ -2013,13 +2013,13 @@ document.getElementById("messageInbox").addEventListener("click",async e=>{
    if(accept)await loadListings();
    await loadInbox();refreshTradeAlerts();toast(accept?"Counteroffer accepted — items reserved. No payment taken.":"Counteroffer declined");
   }catch(error){if(currentUser?.id===userId){toast(error.message||"Could not update counteroffer. Refresh and retry.","error");await loadInbox().catch(()=>{})}}
-  finally{pendingInboxDealActions.delete(key);if(currentUser?.id===userId)buttons.forEach(b=>{if(b.isConnected)b.disabled=false})}
+  finally{pendingInboxDealActions.delete(key);if(currentUser?.id===userId)buttons.forEach(b=>{if(b.isConnected){b.disabled=false;b.removeAttribute("aria-busy")}})}
   return;
  }
  const trade=e.target.closest("[data-inbox-trade]");
  if(trade){
   const action=trade.dataset.inboxTrade,id=trade.dataset.offer,userId=currentUser?.id,key=userId+":trade:"+id;
-  if(!userId||pendingInboxDealActions.has(key))return;
+  if(!userId||pendingInboxDealActions.has(key)||trade.disabled)return;
   if(action==="counter"){
    activeCounterOffer=id;++counterComposeVersion;document.getElementById("counterForm").reset();
    document.getElementById("counterStatus").textContent="";openModal("counterModal");return;
@@ -2027,7 +2027,7 @@ document.getElementById("messageInbox").addEventListener("click",async e=>{
   if(!confirm("Confirm "+action+" for this trade?"))return;
   pendingInboxDealActions.add(key);
   const buttons=[...trade.closest(".price-offer-actions").querySelectorAll("[data-inbox-trade]")];
-  buttons.forEach(button=>button.disabled=true);
+  buttons.forEach(button=>{button.disabled=true;button.setAttribute("aria-busy","true")});
   try{
    const {error}=await supabaseClient.rpc("respond_trade_offer",{p_offer:id,p_action:action});
    if(currentUser?.id!==userId)return;
@@ -2038,7 +2038,7 @@ document.getElementById("messageInbox").addEventListener("click",async e=>{
     await loadInbox();refreshTradeAlerts();
    }
   }catch(error){if(currentUser?.id===userId){toast(error.message||"Trade update failed. Please retry.","error");await loadInbox().catch(()=>{})}}
-  finally{pendingInboxDealActions.delete(key);if(currentUser?.id===userId)buttons.forEach(button=>{if(button.isConnected)button.disabled=false})}
+  finally{pendingInboxDealActions.delete(key);if(currentUser?.id===userId)buttons.forEach(button=>{if(button.isConnected){button.disabled=false;button.removeAttribute("aria-busy")}})}
   return;
  }
  const b=e.target.closest("[data-reply-to],[data-thread-reply]");if(!b)return;composeRecipient=b.dataset.replyTo||b.dataset.threadReply;composeListing=b.dataset.replyListing||null;document.getElementById("composeContext").textContent="Reply to collector";openModal("composeModal")});
