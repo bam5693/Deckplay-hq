@@ -28,15 +28,29 @@ jobs:
           cache: npm
       - name: Cheap asset, configuration and syntax checks
         run: node scripts/release-preflight.cjs
+      - name: Select acceptance scope from changed source
+        id: scope
+        env:
+          MANUAL_RUN: ${{ github.event_name == 'workflow_dispatch' }}
+        run: |
+          node - <<'NODE'
+          const fs=require('node:fs'),{execFileSync}=require('node:child_process');
+          const files=execFileSync('git',['diff-tree','--root','--no-commit-id','--name-only','-r','--first-parent','HEAD'],{encoding:'utf8'}).split('\n');
+          const browser=process.env.MANUAL_RUN==='true'||files.some(f=>/^(?:[^/]+\.(?:html|js)|tests\/e2e\/|package(?:-lock)?\.json)/.test(f));
+          fs.appendFileSync(process.env.GITHUB_OUTPUT,'browser='+browser+'\n');
+          NODE
       - run: npm ci
       - name: Security and recovery checks
         run: node --test tests/security/*.test.cjs tests/security/*.test.mjs
       - uses: actions/cache@v4
+        if: steps.scope.outputs.browser == 'true'
         with:
           path: ~/.cache/ms-playwright
           key: release-chromium-${{ hashFiles('package-lock.json') }}
       - run: npx playwright install chromium --only-shell
+        if: steps.scope.outputs.browser == 'true'
       - name: Integrated desktop and mobile UI simulations (no account credentials)
+        if: steps.scope.outputs.browser == 'true'
         run: npx playwright test --config=playwright.local.config.js
       - name: Build exact allowlisted preview assets
         env:

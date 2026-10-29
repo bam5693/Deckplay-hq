@@ -9,8 +9,9 @@ const hashes={};
 for(const name of assets){
  if(!/^(?:[a-z0-9-]+\.(?:html|js|svg|webmanifest)|vendor\/supabase-[0-9.]+\.js)$/.test(name))throw Error('Unexpected public asset '+name);
  let content=fs.readFileSync(path.join(source,name));
- // Photos remain disabled on production until the separately reviewed storage/Edge Function release.
- if(!preview&&name==='private-message-photos.js')content=Buffer.from(content.toString('utf8').replace("enabled=()=>SUPABASE_URL==='https://prrrzeelltmyugssqnzk.supabase.co'","enabled=()=>false"));
+ // Preview and production share the same exclusions. The staging-only photo endpoint
+ // accepts only the staging origin; enabling this on a second origin would be broken.
+ if(name==='private-message-photos.js')content=Buffer.from(content.toString('utf8').replace("enabled=()=>SUPABASE_URL==='https://prrrzeelltmyugssqnzk.supabase.co'","enabled=()=>false"));
  const text=content.toString('utf8');
  if(/sb_secret_[A-Za-z0-9_-]{16,}|-----BEGIN (?:RSA |EC )?PRIVATE KEY/.test(text))throw Error('Secret-like content in '+name);
  for(const [jwt] of text.matchAll(/eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/g)){
