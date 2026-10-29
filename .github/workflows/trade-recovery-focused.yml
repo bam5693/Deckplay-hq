@@ -1,4 +1,4 @@
-name: Focused history, listing contents and sports details UI
+name: Focused full-category wanted, history and listing UI
 on:
   workflow_dispatch:
   push:
