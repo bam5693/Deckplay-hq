@@ -1579,8 +1579,8 @@ const deckplayActivityNotificationKinds=["favorite_price_drop","favorite_sold","
 function showNotificationRetry(list){list.innerHTML='<p role="alert" class="muted">Alerts could not load. <button type="button" class="ghost" data-retry-notifications>Retry alerts</button></p>'}
 async function loadNotificationCenter(){
  const lists=[document.getElementById("notificationList"),document.getElementById("inboxNotificationList")];
- if(!currentUser){lists.forEach(list=>{list.textContent="Sign in to see notifications."});return}
- const requestId=++notificationCenterLoadVersion,userId=currentUser.id;
+ const requestId=++notificationCenterLoadVersion,userId=currentUser?.id;
+ if(!userId){lists.forEach(list=>{list.textContent="Sign in to see notifications."});return}
  lists.forEach(list=>{list.textContent="Loading notifications…"});
  try{
  const {data,error}=await supabaseClient.from("collector_notifications").select("id,actor_id,kind,source_id,created_at,read_at").eq("user_id",currentUser.id).in("kind",deckplayActivityNotificationKinds).order("created_at",{ascending:false}).limit(100);
