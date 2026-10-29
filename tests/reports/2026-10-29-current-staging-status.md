@@ -1,4 +1,30 @@
-# DeckPlay HQ — staging current status (2026-10-29, 10:30 Central)
+# DeckPlay HQ — current staging status (2026-10-29, 14:36 Central)
+
+**Scope:** `test/staging-reporting`, draft PR #2, isolated Supabase `prrrzeelltmyugssqnzk`, private Worker `deckplay-hq-staging`. No production/main, billing, payments, customer data or PR merge changes. Supabase staging is `ACTIVE_HEALTHY`.
+
+## Latest source changes — focused local verification PASSED; staging deployment PENDING
+
+- **Reload-safe text drafts** `7402b26e86935f93f3d967034a533edafaafce60`: up to 30 conversation drafts, maximum 2,000 characters each, survive refresh in the same browser tab. Session storage is scoped to the authenticated collector, deleted on account switch/sign-out and after successful send; photos/credentials are never persisted. A failed send preserves the draft.
+- **Uncertain text-send recovery** `fb3bc8ba6df7368f0ea35a024eba9eb69cc25778`: only SHA-256 payload fingerprints and UUID retry references survive tab refresh for up to 24h (20 entries maximum). On retry, the client checks the exact server-side sender, recipient, listing, body and attachments **before** another insert. Successful delivery clears the reference; account changes clear it. Private photo upload drafts remain in memory and are deliberately excluded from reload recovery.
+- **Verification:** [run 40941360384](https://github.com/bam5693/Deckplay-hq/actions/runs/40941360384) **8/8** desktop/mobile draft-reload cases passed; [run 40941540506](https://github.com/bam5693/Deckplay-hq/actions/runs/40941540506) **8/8** desktop/mobile text-delivery/retry cases passed. Source inline JavaScript and affected test syntax parsed. The initial [run 40941156850](https://github.com/bam5693/Deckplay-hq/actions/runs/40941156850) failed because a new test tried clicking a contact hidden by the intended single-thread layout; the test was corrected to use visible Back navigation, then passed. No broad suite or deployed acceptance was rerun. These two groups are separate focused runs, not full certification.
+- **Current branch HEAD:** `5a032503c2a4dd9d6ef8279ee865798fbde89a97`. Draft PR #2 remains open, unmerged and conflicted with main. Do not merge.
+
+## Exact deployment gap and cost boundary
+
+- **Currently deployed private staging:** Worker version `a6b99083-db9e-42c8-a674-59cfbc1ca991` (100%), annotated source `1a8166b`, deployed 2026-10-29 17:22:46 UTC. The new Inbox source commits above are **not yet deployed**; no live-browser acceptance is claimed for them.
+- Existing `deploy-staging.yml` is manual-only and uses environment deployment credentials not verified in this run. No local authenticated repository/build artifact was available outside CI for a safe exact-source 23-asset/secret-preserving upload. Do **not** upload an ad hoc Worker or change private authentication to force deployment. Next safe step: use the existing isolated staging build/deploy gate when credentials and exact source/binding parity can be verified; then run only affected synthetic signed-in desktop/mobile cases.
+- Focused workflows completed in approximately 23 and 25 seconds elapsed respectively. GitHub timing returned `UBUNTU.total_ms=0` for each, **not proof that current or future usage is free**. No billing change was made.
+
+## Next customer priorities
+
+1. Deploy the exact verified source safely to isolated staging, preserve all 23 assets and secret bindings, and verify deployed buyer/seller message draft and uncertain-delivery journeys.
+2. Complete older price/counteroffer history and full-page trade-proposal retry, preserving privacy and inventory locking; avoid redundant broad tests.
+3. Resume category-wide collection, listing and mobile usability gaps; use Charles/Kyle/Tanner/Jayden as synthetic test personas, not unverified independent agents.
+
+---
+
+## Historical 10:30 Central checkpoint (superseded by latest status above)
+
 
 Scope: `test/staging-reporting`, draft PR #2, isolated Supabase `prrrzeelltmyugssqnzk`, private Worker `deckplay-hq-staging`. Production, payments, billing and real customer data untouched.
 
