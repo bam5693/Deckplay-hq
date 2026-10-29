@@ -25,22 +25,8 @@ jobs:
           DECKPLAY_STAGING_SUPABASE_URL: https://prrrzeelltmyugssqnzk.supabase.co
           DECKPLAY_STAGING_SUPABASE_KEY: sb_publishable_0omvNnv_ZOvXrZ-LHPMyIQ_a9zxD-yh
         run: node scripts/build-staging.cjs
-      - name: Compare current deployed homepage with expected homepage
+      - name: Verify all served assets, private gate and exact staging branch
         env:
+          DECKPLAY_STAGING_URL: https://deckplay-hq-staging.cstivers56.workers.dev
           DECKPLAY_STAGING_ACCESS_PASSWORD: ${{ secrets.DECKPLAY_STAGING_ACCESS_PASSWORD }}
-        run: |
-          node - <<'NODE'
-          const fs=require('node:fs'),crypto=require('node:crypto');
-          const expected=fs.readFileSync('dist-staging/index.html');
-          const url='https://deckplay-hq-staging.cstivers56.workers.dev/';
-          const password=process.env.DECKPLAY_STAGING_ACCESS_PASSWORD;
-          const headers=password?{Authorization:'Basic '+Buffer.from('deckplay:'+password).toString('base64')}:{};
-          (async()=>{
-            const response=await fetch(url,{headers,redirect:'error'});
-            if(!response.ok)throw Error('Staging returned HTTP '+response.status+'; verify access configuration');
-            const actual=Buffer.from(await response.arrayBuffer());
-            const sha=b=>crypto.createHash('sha256').update(b).digest('hex');
-            if(sha(actual)!==sha(expected))throw Error('Deployed staging homepage differs from this branch; deploy current staging branch first');
-            console.log('PASS: Deployed staging homepage matches branch build (SHA-256).');
-          })().catch(e=>{console.error(e.message);process.exitCode=1});
-          NODE
+        run: node scripts/verify-staging-assets.cjs
