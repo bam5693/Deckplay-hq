@@ -48,3 +48,8 @@ Staging `staging_test_runs` and fixture cleanup RPCs are **not** production feat
 - Production lacks `private.collection_inquiries` and `public.message_photo_attachments`, both present in staging.
 - Confirmed `public.trade_counteroffers.offer_note` is NOT NULL in both, but staging defaults to `''::text` and production has no default. Review every insert path; use an explicit value or consider a safe additive default migration after testing.
 - The other compared columns in these three existing tables match in types/nullability/defaults.
+
+## New table access-control verification
+- Collection inquiry history belongs in a private table; staging has a deny-all authenticated client policy and requires controlled server-side inquiry logic.
+- Message photo metadata has participant-scoped read access; recipients cannot read unattached photos. Direct client writes are not allowed by the observed policies.
+- The release must preserve both protections, validate the full table constraints and indexes, and integrate private object storage before enabling these features.
