@@ -748,7 +748,7 @@ test('Jayden can retry an offline inbox without losing his TCG inquiry draft',as
   supabaseClient.from=table=>{
    if(table==='collector_messages'&&offlineOnce){
     offlineOnce=false;
-    return {select:()=>({order:()=>({limit:()=>Promise.reject(new Error('Offline'))})})};
+    const q={select:()=>q,order:()=>q,limit:()=>Promise.reject(new Error('Offline'))};return q;
    }
    return originalFrom(table);
   };
