@@ -49,6 +49,7 @@ test('older conversations arriving after account switch are discarded',async({pa
 });
 test('Tanner and Jayden see local calendar days across sports, TCG and collectible messages',async({page})=>{
  await page.evaluate(async()=>{
+  inboxOlderMessages.clear();inboxConversationCursor=null;inboxConversationExhausted=false;
   leadingMessages=[
    {id:'day3',sender_id:'charles',recipient_id:'fixture-seller',body:'Collectible follow-up',created_at:'2026-10-29T12:30:00Z',read_at:'yes'},
    {id:'day2',sender_id:'charles',recipient_id:'fixture-seller',body:'Jayden TCG deck details',created_at:'2026-10-29T12:00:00Z',read_at:'yes'},
