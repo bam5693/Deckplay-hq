@@ -813,3 +813,23 @@ test('blocked collector offer controls are disabled and cannot invoke a deal RPC
  await page.evaluate(()=>document.querySelector('#conversationThread [data-inbox-price="accept"]').dispatchEvent(new MouseEvent('click',{bubbles:true})));
  expect(await page.evaluate(()=>blockedDealRpcCalls)).toBe(0);
 });
+
+test('legacy reply composer refuses blocked recipients without losing text',async({page})=>{
+ await inbox(page);
+ await page.evaluate(()=>{
+  composeRecipient='buyer-a';composeListing=null;
+  blockedCollectorIds.add('buyer-a');
+  window.legacySendCalls=0;
+  sendCollectorMessageOnce=async()=>{legacySendCalls++;return {data:{id:'synthetic-message'},error:null}};
+  openModal('composeModal');
+ });
+ await page.locator('#composeBody').fill('Keep this reply until unblocked');
+ await page.locator('#composeForm button[type="submit"]').click();
+ await expect(page.locator('#composeStatus')).toContainText('Unblock this collector');
+ await expect(page.locator('#composeBody')).toHaveValue('Keep this reply until unblocked');
+ expect(await page.evaluate(()=>legacySendCalls)).toBe(0);
+ await page.evaluate(()=>blockedCollectorIds.delete('buyer-a'));
+ await page.locator('#composeForm button[type="submit"]').click();
+ await expect.poll(()=>page.evaluate(()=>legacySendCalls)).toBe(1);
+ await expect(page.locator('#composeBody')).toHaveValue('');
+});
