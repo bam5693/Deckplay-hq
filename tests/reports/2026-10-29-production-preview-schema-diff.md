@@ -34,3 +34,11 @@ Staging `staging_test_runs` and fixture cleanup RPCs are **not** production feat
 - Three RLS-enabled internal tables intentionally have no direct client policies; verify intended server-only access.
 - Eleven authenticated SECURITY DEFINER RPCs warrant function-level authorization review.
 - Supabase leaked-password protection remains flagged; review Auth configuration separately.
+
+## Verified RPC gap (live catalog comparison)
+- Production currently has **none** of these staging RPC entry points: `public.send_collection_inquiry`, `public.respond_trade_offer`, `public.get_my_seller_overview`; corresponding private implementations also absent.
+- Staging `private.respond_trade_offer` depends on `private.trade_inventory_ids`, trade counteroffers, price offers and trade/listing locks; do not port the wrapper alone.
+- Staging `private.send_collection_inquiry` depends on `private.collection_inquiries`, user blocks, profile collection preferences and collector messages; preserves opt-in and rate limiting.
+- Staging `private.seller_overview` reads listings, price offers, trade offers and trade counteroffers. Its wrapper alone would fail without the private implementation.
+- Staging additionally exposes private-photo validation/claim RPCs and trade counteroffer RPCs; each requires a separate dependency and authorization audit. Exclude staging-only fixture functions.
+- Do not apply these RPCs to production until their dependencies, grants and ownership checks have been verified together.
