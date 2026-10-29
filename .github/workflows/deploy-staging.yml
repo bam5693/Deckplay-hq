@@ -1,9 +1,11 @@
 name: Deploy isolated staging website
 on:
   workflow_dispatch:
-  # Manual only until the deckplay-staging environment has valid
-  # CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID credentials.
-  # Do not automatically spend Actions minutes on every staging commit.
+  # Connector-launchable deployment: updating this single request file triggers
+  # one staging-only deployment. Ordinary feature commits do not deploy.
+  push:
+    branches: [test/staging-reporting]
+    paths: ['tests/reports/staging-deploy-request.txt']
 
 permissions:
   contents: read
@@ -30,6 +32,13 @@ jobs:
             echo "::error::Configure CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID in deckplay-staging environment."
             exit 1
           fi
+      - name: Verify staging Worker target and immutable private gate
+        run: |
+          node --check scripts/build-staging.cjs
+          node --check scripts/build-staging-worker.cjs
+          node --check scripts/staging-handler.js
+          grep -q '"name": "deckplay-hq-staging"' wrangler.staging.jsonc
+          grep -q 'STAGING_ACCESS_PASSWORD' scripts/staging-handler.js
       - name: Build staging-only assets
         env:
           DECKPLAY_STAGING_SUPABASE_URL: https://prrrzeelltmyugssqnzk.supabase.co
