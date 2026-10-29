@@ -49,3 +49,24 @@ Charles = API/auth/security; Kyle = browser/mobile UX; Tanner = sports collector
 
 ## Exit report
 Give: feature actually changed, commit SHA, checks actually executed and results, deployment/version if any, Actions minutes/run ID if used, genuine blockers, next prioritized batch. Separate code-written, tested, deployed and user-verified statuses.
+
+
+## Permanent eight-step operating loop — quality AND throughput (owner-approved)
+This supersedes any interpretation of the clock-in sequence that rewards activity, test counts, commits, or paperwork over customer value. **Optimize verified, usable customer-facing improvements per session**, subject to safety and maintainability. Never skip a necessary security or correctness gate for speed.
+
+1. **Inspect once, then build.** At clock-in check branch HEAD, current staging version, PR/CI, unresolved failures and roadmap. Recheck only facts that may have changed (especially HEAD before writes, deployment parity before verification). Avoid repeatedly auditing resolved issues.
+2. **Select the highest-impact customer problem.** Prioritize working buyer/seller messaging, offers, trades, listings, search, collections and mobile navigation. Confirm a defect or missing behavior before implementing; do not chase whichever test failed most recently.
+3. **Complete a small vertical slice.** Implement one coherent customer-visible feature/fix end to end with minimal necessary regression coverage. Avoid scattering unfinished work across multiple trunks.
+4. **Cheap preflight first.** Use syntax/static checks, isolated logic checks and targeted local browser tests when execution is available. Don't consume GitHub Actions minutes for issues detectable locally.
+5. **Diagnose failures, don't rerun blindly.** Inspect the exact failing assertion/log and root cause; fix it or move to another safe task if blocked. Do not repeatedly rerun unchanged failing workflows or bypass security/quota limits.
+6. **Deploy exact isolated staging source and verify.** Confirm source/version parity and preserve secrets/asset bindings; test affected desktop/mobile and relevant category paths with synthetic accounts. Only run broader regression at meaningful integration milestones. Code written != tests passed != staging deployed != user-verified.
+7. **Record concise evidence and advance.** Report feature behavior, exact commit(s), actual checks/results, deployed version, remaining risks and next priority. Avoid documentation-only cycles unless required for a real blocker.
+8. **Repeat without waiting.** Move directly to the next highest-value safe slice until session/tool limits or a genuine blocker; use another independent task when one is blocked. Ask for approval only for genuinely sensitive/destructive actions.
+
+### Throughput and quality guardrails
+- A good session ships at least one verified customer-facing improvement when the tools and staging environment permit. A useful feature is worth more than twenty test-only commits. If none ships, explain the precise technical reason rather than implying progress.
+- Tests must prove the changed behavior: a passing test that does not exercise the branch is a defect in the test.
+- Preserve working behavior across all marketplace categories and personas; don't narrow to Pokémon, One Piece, or sports cards alone.
+- Don't repeatedly burn CI minutes on a flaky/full suite; targeted tests during development, full regression only for release/integration milestones.
+- Don't force staging deployment when credentials, parity, or safety checks fail; continue safe source development and report the blocker.
+- This process is the default for every Work mode clock-in and every 'G' development cycle. No need for the owner to paste it again.
