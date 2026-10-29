@@ -36,7 +36,7 @@ window.listingEditor=(()=>{
    if(saved.image_urls)update=update.eq('image_urls','{'+saved.image_urls.map(url=>JSON.stringify(url)).join(',')+'}');
    const {data,error}=await update.select('id').maybeSingle();
    if(!valid())return;if(error)throw error;if(!data)throw Error('This listing changed or was reserved. Your edits are kept here; copy them, then reopen the listing to review the latest details.');
-   reset();toast('Listing details updated');await loadListings();void window.sellerOverview?.refresh();
+   reset();toast('Listing details updated');await loadListings();if(!document.getElementById('collectorPage').hidden&&profileTab==='listings')await showCollectorPage('listings');else void window.sellerOverview?.refresh();
   }catch(error){if(valid())status.textContent=error.message||'Save could not be confirmed. Your edits are kept. Reopen the listing before trying again.'}
   finally{if(valid())lock(false)}
  });

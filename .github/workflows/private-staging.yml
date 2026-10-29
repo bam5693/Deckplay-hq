@@ -77,7 +77,7 @@ jobs:
         run: node scripts/report-staging-results.cjs
       - name: Verify local inbox, account privacy and listing regressions on desktop and mobile
         if: ${{ !cancelled() }}
-        run: npx playwright test --config=playwright.local.config.js inbox-history.spec.js favorites-recovery.spec.js listing-editor.spec.js category-coverage.spec.js inbox-request-order.spec.js inbox-recovery.spec.js private-message-photos.spec.js seller-overview.spec.js trade-picker.spec.js inbox-trade-details.spec.js collection-sharing.spec.js marketplace-filter-boundaries.spec.js account-boundaries.spec.js listing-description.spec.js discovery-profiles.spec.js tcg-sets.spec.js listing-publication.spec.js moderation-security.spec.js moderator-access.spec.js
+        run: npx playwright test --config=playwright.local.config.js seller-inventory.spec.js inbox-history.spec.js favorites-recovery.spec.js listing-editor.spec.js category-coverage.spec.js inbox-request-order.spec.js inbox-recovery.spec.js private-message-photos.spec.js seller-overview.spec.js trade-picker.spec.js inbox-trade-details.spec.js collection-sharing.spec.js marketplace-filter-boundaries.spec.js account-boundaries.spec.js listing-description.spec.js discovery-profiles.spec.js tcg-sets.spec.js listing-publication.spec.js moderation-security.spec.js moderator-access.spec.js
       - uses: actions/upload-artifact@v4
         if: always()
         with:

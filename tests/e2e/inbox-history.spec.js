@@ -21,6 +21,8 @@ test('Jayden can load older TCG conversation messages without losing a draft',as
   };
   await showInboxPage('buyer-jayden');
  });
+ const layout=await page.evaluate(()=>({history:document.querySelector('.conversation-bubbles').getBoundingClientRect().bottom,composer:document.querySelector('.chat-composer').getBoundingClientRect().top}));
+ expect(layout.composer).toBeGreaterThanOrEqual(layout.history);
  await page.locator('#chatInput').fill('My private draft about Zoro');
  await expect(page.locator('[data-inbox-older]')).toBeVisible();
  // Record a visible message anchor, away from the bottom of the history.

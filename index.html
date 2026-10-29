@@ -855,6 +855,13 @@ footer p,html[data-theme="dark"] footer p{color:#d6deea!important}
    entire page and made history restoration and latest-message positioning inert. */
 #inboxPage.thread-open .conversation-bubbles{flex:none;height:clamp(180px,50dvh,560px);min-height:0;max-height:560px;overflow-y:auto;overflow-x:hidden;justify-content:flex-start;overscroll-behavior-y:contain;scrollbar-gutter:stable}
 #inboxPage.thread-open .conversation-bubbles>.message-bubble{flex-shrink:0}
+
+.inventory-tools{display:flex;flex-wrap:wrap;align-items:end;gap:12px;padding:16px;margin:0 0 18px;border:1px solid #819c9650;border-radius:14px}.inventory-tools label{flex:1 1 160px;min-width:0;font-size:13px}.inventory-tools input,.inventory-tools select{width:100%;box-sizing:border-box;min-height:44px;margin-top:6px}.inventory-tools button{min-height:44px}.inventory-tools p{flex-basis:100%;margin:0;font-size:13px}#profilePageContent .profile-item[hidden]{display:none!important}
+
+/* Composer follows the bounded history instead of covering its newest rows. */
+#inboxPage.thread-open .chat-composer{position:relative;bottom:auto;margin-top:0;color:#f4f6f6}
+#inboxPage.thread-open .chat-composer textarea::placeholder{color:#bdcbd8;opacity:1}
+#inboxPage .chat-photo-tools small{color:#c9d6e3}
 </style>
 </head>
 <body>
@@ -1783,7 +1790,7 @@ function syncInboxDraftUser(){
  if(inboxDraftUser!==id){
   ++messageAccountVersion;
   ++listingAccountVersion;++cloudDraftRequestVersion;cloudDraftBusy=false;cloudDraftControls(false);document.getElementById("listingCloudDraftStatus").textContent="";document.getElementById("listingForm").reset();document.getElementById("listingType").dispatchEvent(new Event("change"));listingSelectedPhotos=[];renderListingPhotos();syncCategoryFields();syncGradedCondition();document.getElementById("deckFields").hidden=true;document.getElementById("listingStatus").textContent="";closeModal("sellModal");
-  window.listingEditor?.reset();window.sellerOverview?.reset();window.privateMessagePhotos?.reset();inboxDrafts.clear();messageSendAttempts.clear();inboxOlderMessages.clear();inboxOlderExhausted.clear();inboxConversationFilter={search:"",unread:false};inboxDraftUser=id;tradeBundleSelection=[];document.getElementById("tradeBundleItems").replaceChildren();document.getElementById("tradeBundleCount").textContent="";
+  profileInventoryFilter={search:"",status:"all",category:"all"};window.listingEditor?.reset();window.sellerOverview?.reset();window.privateMessagePhotos?.reset();inboxDrafts.clear();messageSendAttempts.clear();inboxOlderMessages.clear();inboxOlderExhausted.clear();inboxConversationFilter={search:"",unread:false};inboxDraftUser=id;tradeBundleSelection=[];document.getElementById("tradeBundleItems").replaceChildren();document.getElementById("tradeBundleCount").textContent="";
   ++blockedCollectorsLoadVersion;blockedCollectorIds.clear();document.getElementById("blockedUsersList").replaceChildren();document.getElementById("settingsBlockCount").textContent="";
   ++reportDialogVersion;reportTargetUser=null;reportTargetListing=null;reportTargetBlocked=false;document.getElementById("reportForm").reset();document.getElementById("reportStatus").textContent="";document.querySelector('#reportForm button[type="submit"]').disabled=false;closeModal("reportModal");
   ++notificationSettingsVersion;notificationSettingsOwner=null;notificationSettingsLoading=false;notificationPreferenceControls(true);document.querySelectorAll("[data-notify-pref]").forEach(input=>input.checked=false);document.getElementById("notificationSettingsStatus").textContent="";++inboxLoadVersion;++profileLoadVersion;++priceOffersLoadVersion;++tradeOffersLoadVersion;++unreadCountLoadVersion;++profileEditorLoadVersion;selectedInboxCollector=null;
@@ -2202,7 +2209,7 @@ document.getElementById("counterForm").addEventListener("submit",async e=>{
 });
 
 
-let profileTab="listings";
+let profileTab="listings",profileInventoryFilter={search:"",status:"all",category:"all"};
 function showHomePage(){showMainMarketplace();document.body.classList.remove("deckplay-market");document.body.classList.add("deckplay-home");window.scrollTo({top:0,behavior:"smooth"})}
 function showMainMarketplace(){document.body.classList.remove("deckplay-home");document.body.classList.add("deckplay-market");document.body.classList.remove("inbox-focus","profile-focus");document.getElementById("inboxPage").hidden=true;document.getElementById("collectorPage").hidden=true;document.querySelectorAll("main > section,main > aside").forEach(el=>{el.hidden=(el.id==="collectorPage"||el.id==="inboxPage")});window.scrollTo({top:0,behavior:"smooth"})}
 let profileLoadVersion=0;
@@ -2225,9 +2232,31 @@ async function showCollectorPage(tab="listings"){
  if(tab==="wanted"){content.innerHTML=wanted.length?wanted.map(w=>`<article class="profile-item"><h3>${escapeHtml(w.title)}</h3><p>${escapeHtml(w.details||"")}</p><small>${escapeHtml(w.game||"Collectibles")}${w.budget?" · Budget: $"+Number(w.budget).toFixed(2):""}</small></article>`).join(""):'<p class="muted">No wanted posts yet. Use the Wanted board to post what you are looking for.</p>';return}
  if(tab==="saved"){const {data:rows,error}=await supabaseClient.from("saved_listings").select("listing_id").eq("user_id",userId);if(!current())return;if(error){content.textContent=error.message;return}const ids=(rows||[]).map(r=>r.listing_id);if(!ids.length){content.innerHTML='<p class="muted">No saved items yet.</p>';return}const {data:matches,error:listingError}=await supabaseClient.from("listings").select("id,title,price,status,image_urls").in("id",ids).eq("status","active");if(!current())return;if(listingError){content.textContent=listingError.message;return}content.innerHTML=renderProfileCards(matches||[],false);return}
  if(listingsResult.error){content.textContent=listingsResult.error.message;return}
- content.innerHTML=listings.length?renderProfileCards(listings,true):'<p class="muted">You haven’t posted any listings yet. Tap Sell an item to get started.</p>';
+ content.innerHTML=listings.length?renderProfileInventory(listings):'<p class="muted">You haven’t posted any listings yet. Tap Sell an item to get started.</p>';
+ if(listings.length)filterProfileInventory();
 }
-function renderProfileCards(rows,own){return '<div class="profile-card-grid">'+rows.map(l=>{const image=safeImageUrl(l.image_urls?.[0]);return `<article class="profile-item">${image?`<img class="profile-listing-image" src="${escapeHtml(image)}" alt="${escapeHtml(l.title)}">`:""}<h3>${escapeHtml(l.title)}</h3><strong>${Number(l.price||0).toFixed(2)}</strong><p class="muted">${escapeHtml(l.status||"active")}</p><div class="profile-item-actions">${own&&l.status==="active"?`<button type="button" class="ghost" data-page-sold="${escapeHtml(l.id)}">Mark sold</button>`:""}${own?`<button type="button" class="ghost" data-page-delete="${escapeHtml(l.id)}">Delete</button>`:""}</div></article>`}).join("")+'</div>'}
+function renderProfileCards(rows,own){return '<div class="profile-card-grid">'+rows.map(l=>{const image=safeImageUrl(l.image_urls?.[0]);return `<article class="profile-item" data-inventory-status="${escapeHtml(l.status||"active")}" data-inventory-category="${escapeHtml(l.category||"other")}" data-inventory-search="${escapeHtml(l.title)}">${image?`<img class="profile-listing-image" src="${escapeHtml(image)}" alt="${escapeHtml(l.title)}">`:""}<h3>${escapeHtml(l.title)}</h3><strong>${Number(l.price||0).toFixed(2)}</strong><p class="muted">${escapeHtml(l.status||"active")}</p><div class="profile-item-actions">${l.status==="active"?`<button type="button" class="ghost" data-profile-view="${escapeHtml(l.id)}">View listing</button>`:""}${own&&l.status==="active"?`<button type="button" class="ghost" data-profile-edit="${escapeHtml(l.id)}">Edit listing</button><button type="button" class="ghost" data-page-sold="${escapeHtml(l.id)}">Mark sold</button>`:""}${own?`<button type="button" class="ghost" data-page-delete="${escapeHtml(l.id)}">Delete</button>`:""}</div></article>`}).join("")+'</div>'}
+
+
+function renderProfileInventory(rows){
+ const labels={trading_cards:"Trading cards",video_games:"Video games",consoles:"Consoles",controllers:"Controllers",accessories:"Accessories",collectibles:"Collectibles",other:"Other collectibles"};
+ const categories=[...new Set(rows.map(row=>row.category||"other"))].sort();
+ return `<section class="inventory-tools" aria-label="Filter your inventory"><label for="inventorySearch">Search your listings<input type="search" id="inventorySearch" maxlength="120" placeholder="Item name" value="${escapeHtml(profileInventoryFilter.search)}"></label><label for="inventoryStatus">Listing status<select id="inventoryStatus">${[["all","All statuses"],["active","Active"],["reserved","Reserved"],["sold","Sold"],["removed","Removed"]].map(([value,label])=>`<option value="${value}" ${profileInventoryFilter.status===value?"selected":""}>${label}</option>`).join("")}</select></label><label for="inventoryCategory">Category<select id="inventoryCategory"><option value="all">All categories</option>${categories.map(value=>`<option value="${escapeHtml(value)}" ${profileInventoryFilter.category===value?"selected":""}>${escapeHtml(labels[value]||value)}</option>`).join("")}</select></label><button type="button" class="ghost" data-inventory-clear>Clear filters</button><p data-inventory-summary role="status" aria-live="polite"></p></section>`+renderProfileCards(rows,true);
+}
+function filterProfileInventory(){
+ const root=document.getElementById("profilePageContent"),search=root.querySelector("#inventorySearch"),status=root.querySelector("#inventoryStatus"),category=root.querySelector("#inventoryCategory");if(!search||!status||!category)return;
+ profileInventoryFilter={search:search.value,status:status.value,category:category.value};
+ const query=search.value.trim().toLocaleLowerCase();let visible=0,total=0;
+ root.querySelectorAll("[data-inventory-search]").forEach(card=>{total++;card.hidden=!!((query&&!card.dataset.inventorySearch.toLocaleLowerCase().includes(query))||(status.value!=="all"&&card.dataset.inventoryStatus!==status.value)||(category.value!=="all"&&card.dataset.inventoryCategory!==category.value));if(!card.hidden)visible++});
+ root.querySelector("[data-inventory-summary]").textContent=visible?`${visible} of ${total} listings shown`:"No listings match. Clear filters to see your inventory.";
+}
+document.getElementById("profilePageContent").addEventListener("input",e=>{if(e.target.id==="inventorySearch")filterProfileInventory()});
+document.getElementById("profilePageContent").addEventListener("change",e=>{if(["inventoryStatus","inventoryCategory"].includes(e.target.id))filterProfileInventory()});
+document.getElementById("profilePageContent").addEventListener("click",e=>{
+ if(e.target.closest("[data-inventory-clear]")){const root=document.getElementById("profilePageContent");root.querySelector("#inventorySearch").value="";root.querySelector("#inventoryStatus").value="all";root.querySelector("#inventoryCategory").value="all";filterProfileInventory();root.querySelector("#inventorySearch").focus();return}
+ const edit=e.target.closest("[data-profile-edit]");if(edit&&currentUser){void window.listingEditor?.open(edit.dataset.profileEdit);return}
+ const view=e.target.closest("[data-profile-view]");if(view)void navigateDeckplayNotification("favorite_price_drop",null,view.dataset.profileView);
+});
 
 const profileMenuToggle=document.getElementById("profileMenuToggle"),profileActionMenu=document.getElementById("profileActionMenu");
 function closeProfileActionMenu(){profileActionMenu.hidden=true;profileMenuToggle.setAttribute("aria-expanded","false");profileMenuToggle.setAttribute("aria-label","Open profile menu")}
@@ -2238,7 +2267,7 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape")closeProfileActionMe
 document.getElementById("profileAddListing").addEventListener("click",openSell);
 document.getElementById("profileAddWanted").addEventListener("click",()=>{if(!currentUser){openModal("authModal");return}openModal("wantedModal")});
 document.querySelectorAll("[data-profile-tab]").forEach(b=>b.addEventListener("click",()=>showCollectorPage(b.dataset.profileTab)));
-document.getElementById("profilePageContent").addEventListener("click",async e=>{const sold=e.target.closest("[data-page-sold]"),del=e.target.closest("[data-page-delete]");if(!sold&&!del||!currentUser)return;const id=(sold||del).dataset.pageSold||(sold||del).dataset.pageDelete;if(!confirm(sold?"Mark this listing as sold?":"Permanently delete this listing?"))return;const action=sold?supabaseClient.from("listings").update({status:"sold"}).eq("id",id).eq("seller_id",currentUser.id):supabaseClient.from("listings").delete().eq("id",id).eq("seller_id",currentUser.id);const {error}=await action;if(error){toast(error.message);return}await loadListings();await showCollectorPage("listings");toast(sold?"Marked as sold":"Listing deleted")});
+document.getElementById("profilePageContent").addEventListener("click",async e=>{const sold=e.target.closest("[data-page-sold]"),del=e.target.closest("[data-page-delete]");if(!sold&&!del||!currentUser)return;const id=(sold||del).dataset.pageSold||(sold||del).dataset.pageDelete;if(!confirm(sold?"Mark this listing as sold?":"Permanently delete this listing?"))return;const owner=currentUser.id,epoch=listingAccountVersion,button=sold||del;if(button.disabled)return;const controls=[...button.closest(".profile-item-actions").querySelectorAll("button")];controls.forEach(b=>b.disabled=true);try{const action=sold?supabaseClient.from("listings").update({status:"sold"}).eq("id",id).eq("seller_id",owner).eq("status","active").select("id").maybeSingle():supabaseClient.from("listings").delete().eq("id",id).eq("seller_id",owner);const {data,error}=await action;if(currentUser?.id!==owner||listingAccountVersion!==epoch)return;if(error)throw error;if(sold&&!data)throw Error("This listing changed or was reserved. Refresh your inventory before trying again.");await loadListings();if(currentUser?.id!==owner||listingAccountVersion!==epoch)return;await showCollectorPage("listings");toast(sold?"Marked as sold":"Listing deleted")}catch(error){if(currentUser?.id===owner&&listingAccountVersion===epoch)toast(error.message||"Could not update this listing. Try again.","error")}finally{if(currentUser?.id===owner&&listingAccountVersion===epoch)controls.forEach(b=>{if(b.isConnected)b.disabled=false})}});
 
 
 let messageChannel=null,messagePoll=null;
