@@ -1814,6 +1814,15 @@ function syncInboxDraftUser(){
   ++reportDialogVersion;reportTargetUser=null;reportTargetListing=null;reportTargetBlocked=false;document.getElementById("reportForm").reset();document.getElementById("reportStatus").textContent="";document.querySelector('#reportForm button[type="submit"]').disabled=false;closeModal("reportModal");
   ++notificationSettingsVersion;notificationSettingsOwner=null;notificationSettingsLoading=false;notificationPreferenceControls(true);document.querySelectorAll("[data-notify-pref]").forEach(input=>input.checked=false);document.getElementById("notificationSettingsStatus").textContent="";++inboxLoadVersion;++profileLoadVersion;++priceOffersLoadVersion;++tradeOffersLoadVersion;++unreadCountLoadVersion;++profileEditorLoadVersion;selectedInboxCollector=null;
   for(const name of ["messageInbox","inboxNotificationList","notificationList","priceOffersList","tradeOffersList"])document.getElementById(name).replaceChildren();
+  // Never show the former collector's unread counts or activity sheet during an account switch.
+  ++notificationCenterLoadVersion;++notificationCountLoadVersion;
+  for(const name of ["headerUnread","menuUnread","menuTradeUnread","notificationBadge","dockNotifications"]){
+   const badge=document.getElementById(name);if(!badge)continue;
+   badge.hidden=true;badge.textContent="";badge.removeAttribute("aria-label");
+  }
+  document.getElementById("notificationBell").setAttribute("aria-label","Notifications");
+  closeModal("notificationModal");
+  if(!document.getElementById("inboxPage").hidden)selectInboxMessages();
   for(const name of ["profilePageContent","ownSellerRatings"])document.getElementById(name).replaceChildren();
   for(const name of ["pageHandle","pageBio","pageMeta","settingsAccountEmail","settingsSecurityStatus","composeStatus"])document.getElementById(name).textContent="";
   document.getElementById("collectionInquiryForm").reset();closeModal("collectionInquiryModal");collectionInquiryRecipient=null;collectionInquiryOwner=null;++publicProfileVersion;document.getElementById("publicProfileContent").replaceChildren();closeModal("publicProfileModal");document.getElementById("profileForm").reset();document.getElementById("collectorAvatar").textContent="C";document.getElementById("collectorHandle").textContent="";
