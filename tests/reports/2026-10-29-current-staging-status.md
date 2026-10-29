@@ -1,5 +1,24 @@
 # DeckPlay HQ — current staging status (2026-10-29)
 
+## Autonomous development — 2026-10-29 16:36 Central (latest verified checkpoint)
+
+**Current private staging:** Worker `6a63ae6f-221c-461c-b726-3e174f56112b`, 100% staging traffic, deployed 21:33:38 UTC. Source release request `760c3e2` contains the changes below. GitHub draft PR #2 remains open and unmerged; production/main, real users, payments, billing and production databases were untouched.
+
+**Two shipped customer-facing batches**
+- **Per-conversation negotiation history** `776b5dc`: Inbox now offers on-demand 50-row pages of price-offer events and trade counteroffers, scoped to the two participants. Each type has an independent `(created_at,id)` cursor for timestamp ties, retry/error state, duplicate elimination, preserved drafts/scroll and account-switch cache cleanup. Existing 700-event global preview remains a bounded initial view. Local desktop/mobile acceptance: **4/4** in [40957734216](https://github.com/bam5693/Deckplay-hq/actions/runs/40957734216).
+- **Trade and price-offer modal → exact Inbox conversation** `6bfff9c`, `af90358`, `d607bd6`: trade cards now expose an Open conversation action; both price and trade modal links use atomic Android/PWA history-state navigation instead of racing against `closeModal`'s asynchronous `history.back()`. Blocked collectors can view historical trades but cannot message/respond. Desktop/mobile navigation and Back tests: **6/6** in [40958614161](https://github.com/bam5693/Deckplay-hq/actions/runs/40958614161). Initial focused runs [40957948851](https://github.com/bam5693/Deckplay-hq/actions/runs/40957948851) and [40958107928](https://github.com/bam5693/Deckplay-hq/actions/runs/40958107928) failed because the modal close restored Home after Inbox navigation; navigation-stack trace in [40958280840](https://github.com/bam5693/Deckplay-hq/actions/runs/40958280840) identified `restore(home)` from `popstate`. This was an application navigation bug, not a security or credentials failure. Fixed at `af90358` and verified; no blind further retries.
+
+**Verification and deployment boundaries**
+- Gated staging release [40958724184](https://github.com/bam5693/Deckplay-hq/actions/runs/40958724184) passed **14/14** focused local desktop/mobile cases (4 negotiation + 6 navigation + 4 price-withdrawal) and **16/16** Node security/logic checks. It deployed the exact staging Worker, but immediate asset verification failed at `index.html`; therefore that run is correctly marked **FAILED**, not green.
+- After the Worker propagated, **read-only** homepage SHA-256 parity passed in [40958971503](https://github.com/bam5693/Deckplay-hq/actions/runs/40958971503); all **23/23** served assets matched and anonymous staging was denied in [40959059967](https://github.com/bam5693/Deckplay-hq/actions/runs/40959059967). This supports a transient deployment propagation mismatch, not a proven application build defect.
+- Trusted read-only deployed buyer/seller sessions passed **4/4** on desktop/mobile in [40959129290](https://github.com/bam5693/Deckplay-hq/actions/runs/40959129290). Cloudflare confirms all three existing secret bindings preserved. No new signed real-database negotiation write was executed; history pagination is verified by mocked local browser and deployed source parity, **not** signed-in history interaction against seeded staging rows. Physical Android/PWA device Back remains unverified.
+- GitHub workflow timings across the eleven relevant verification/deployment runs totaled about **305 seconds of elapsed job duration**; the timing API reported `UBUNTU.billable.total_ms=0` for each. This is not proof of account-wide free usage. No paid plan, API, schema, data, or billing change.
+
+**Next highest-value unblocked work:** targeted signed synthetic read/write acceptance for historical offer and trade events (with rollback and quota awareness), then physical-device Back and operator beta readiness. Do not rerun unchanged broad/photo suites or claim these two UI batches certify every category or a public beta. Four personas remain deterministic test roles, not independent agents.
+
+---
+
+
 ## Autonomous beta development — 2026-10-29 16:06 Central (current checkpoint)
 
 This section supersedes the earlier pending deployment/authentication labels. Application source `88fc403671509d8d59ebc500655b419a7633e1a6` is deployed to private staging. No trunk is complete and this is not permission to invite real users yet.
