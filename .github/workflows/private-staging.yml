@@ -105,7 +105,7 @@ jobs:
         run: npx playwright test --config=playwright.staging.config.js private-message-photos-live.spec.js --retries=0
       - name: Kyle, Tanner and Jayden — deployed buyer/seller/trader journeys
         if: ${{ github.event.inputs.photo_only != 'true' && success() && env.DECKPLAY_STAGING_URL != '' }}
-        run: npx playwright test --config=playwright.staging.config.js
+        run: npx playwright test --config=playwright.staging.config.js --grep-invert 'collectors share private corner photos with immutable retries and scoped cleanup'
       - name: Save durable staging feature result
         if: ${{ github.event.inputs.photo_only != 'true' && success() && env.DECKPLAY_STAGING_URL != '' }}
         env:
