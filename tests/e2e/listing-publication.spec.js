@@ -116,3 +116,21 @@ test('failed account draft save preserves the form and releases its controls',as
  await cloudDraftFixture(page);await page.locator('#item').fill('Unfinished seller draft');await page.evaluate(()=>{supabaseClient.from=()=>({upsert:async()=>{throw Error('Draft network down')}})});
  await page.locator('[data-cloud-draft="save"]').click();await expect(page.locator('#listingCloudDraftStatus')).toContainText('Draft network down');await expect(page.locator('#item')).toHaveValue('Unfinished seller draft');await expect(page.locator('[data-cloud-draft="save"]')).toBeEnabled();
 });
+
+test('mixed lot publication preserves quantities, printing and condition for buyers',async({page})=>{
+ await ready(page,'none');await page.locator('#listingType').selectOption('lot');
+ await page.locator('#listingIncludedQuantity').fill('3');await page.locator('#listingQuantityUnit').fill('cards');
+ await page.locator('#listingContentsList').fill('2x Japanese foil — near mint\n1x English promo — corner damage');
+ await submit(page);await expect.poll(()=>page.evaluate(()=>publishWrites.length)).toBe(1);
+ const row=await page.evaluate(()=>publishWrites[0]);expect(row.price).toBe(25);expect(row.description).toContain('Quantity included: 3\nUnit: cards');expect(row.description).toContain('1x English promo — corner damage');
+ await page.evaluate(()=>showDetails(marketplaceItemFromRow({...publishWrites[0],id:'published-lot'},null)));
+ await expect(page.locator('#detailContent')).toContainText('Sold together for the listing price');
+ await expect(page.locator('#detailContent')).toContainText('Japanese foil — near mint');
+});
+
+test('mismatched contents stay in the draft and cannot publish until corrected',async({page})=>{
+ await ready(page,'none');await page.locator('#listingIncludedQuantity').fill('4');await page.locator('#listingQuantityUnit').fill('games');await page.locator('#listingContentsList').fill('2x Complete game\n1x Disc-only game');
+ await submit(page);await expect(page.locator('#listingStatus')).toContainText('quantities total 3');expect(await page.evaluate(()=>publishWrites.length)).toBe(0);
+ expect(await page.evaluate(()=>collectListingDraftValues())).toMatchObject({listingIncludedQuantity:'4',listingQuantityUnit:'games',listingContentsList:'2x Complete game\n1x Disc-only game'});
+ await page.locator('#listingIncludedQuantity').fill('3');await submit(page);await expect.poll(()=>page.evaluate(()=>publishWrites.length)).toBe(1);
+});

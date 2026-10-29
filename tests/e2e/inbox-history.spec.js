@@ -74,7 +74,7 @@ test('Kyle retries failed history and a full duplicate page does not exhaust it'
  await page.evaluate(()=>historyPending.shift()({data:[],error:null}));
  await expect(page.getByText('Beginning of conversation')).toBeVisible();
  await expect(page.locator('#chatInput')).toHaveValue('Controller photo draft');
- expect(await page.evaluate(()=>historyRequests.every(r=>r.before===historyRows.at(-1).created_at))).toBe(true);
+ expect(await page.evaluate(()=>historyRequests.every(r=>r.participants.includes('created_at.lt.'+historyRows.at(-1).created_at)&&r.participants.includes('id.lt.'+historyRows.at(-1).id)))).toBe(true);
 });
 test('history arriving after switching conversations cannot reopen the old thread',async({page})=>{
  await hardwareHistory(page);
@@ -84,4 +84,40 @@ test('history arriving after switching conversations cannot reopen the old threa
  await page.evaluate(()=>historyPending.shift()({data:[{id:'late-controller',sender_id:'kyle',recipient_id:'fixture-seller',body:'Private controller history',created_at:'2026-01-01T00:00:00Z'}],error:null}));
  await expect(page.locator('.chat-person h3')).toHaveText('@Charles');
  await expect(page.locator('.conversation-bubbles')).not.toContainText('Private controller history');
+});
+
+test('timestamp boundary loads every tied message once in stable order',async({page})=>{
+ await page.goto('/');await page.waitForLoadState('networkidle');
+ await page.evaluate(async()=>{
+  await supabaseClient.auth.getSession();currentUser={id:'fixture-seller'};syncInboxDraftUser();
+  const stamp='2026-10-29T10:00:00.123456Z',row=i=>({id:String(i).padStart(8,'0'),sender_id:'tanner',recipient_id:'fixture-seller',body:'Sports lot condition '+i,created_at:stamp,read_at:stamp});
+  window.boundaryQueries=[];window.boundaryPages=0;
+  supabaseClient.from=table=>{let older=false;const q={then:(resolve,reject)=>Promise.resolve({data:table==='collector_messages'?(older?(boundaryPages++?[]:Array.from({length:50},(_,i)=>row(50-i))):Array.from({length:500},(_,i)=>row(550-i))):table==='profiles'?[{id:'tanner',username:'Tanner'}]:[],error:null}).then(resolve,reject)};for(const m of ['select','order','limit','in','eq','is'])q[m]=()=>q;q.or=f=>{older=true;boundaryQueries.push(f);return q};return q};
+  await showInboxPage('tanner');
+ });
+ await page.locator('#chatInput').fill('Keep my mixed-lot draft');
+ await page.locator('[data-inbox-older]').click();
+ await expect(page.locator('.chat-text')).toHaveCount(550);
+ await expect(page.locator('.chat-text').first()).toContainText('Sports lot condition 1');
+ await expect(page.locator('.chat-text').last()).toContainText('Sports lot condition 550');
+ expect(await page.evaluate(()=>boundaryQueries[0])).toContain('created_at.eq.2026-10-29T10:00:00.123456Z,id.lt.00000051');
+ await page.locator('[data-inbox-older]').click();
+ await expect(page.getByText('Beginning of conversation')).toBeVisible();
+ await expect(page.locator('#chatInput')).toHaveValue('Keep my mixed-lot draft');
+ await expect(page.locator('.chat-text')).toHaveCount(550);
+});
+
+test('a conversation outside the recent inbox page can recover its older history',async({page})=>{
+ await page.goto('/');await page.waitForLoadState('networkidle');
+ await page.evaluate(async()=>{
+  await supabaseClient.auth.getSession();currentUser={id:'fixture-seller'};syncInboxDraftUser();
+  const stamp='2026-10-29T10:00:00Z';
+  supabaseClient.from=table=>{let older=false;const q={then:(resolve,reject)=>Promise.resolve({data:table==='collector_messages'?(older?[{id:'old-console',sender_id:'kyle',recipient_id:'fixture-seller',body:'Original console accessories inquiry',created_at:'2026-01-01T10:00:00Z',read_at:stamp}]:Array.from({length:500},(_,i)=>({id:'recent-'+i,sender_id:'charles',recipient_id:'fixture-seller',body:'New collectible '+i,created_at:stamp,read_at:stamp}))):table==='profiles'?[{id:'kyle',username:'Kyle'},{id:'charles',username:'Charles'}]:[],error:null}).then(resolve,reject),maybeSingle:async()=>({data:{id:'kyle'},error:null})};for(const m of ['select','order','limit','in','eq','is'])q[m]=()=>q;q.or=()=>{older=true;return q};return q};
+  await showInboxPage('kyle');
+ });
+ await expect(page.locator('[data-inbox-older]')).toBeVisible();
+ await page.locator('#chatInput').fill('Console draft');
+ await page.locator('[data-inbox-older]').click();
+ await expect(page.locator('.conversation-bubbles')).toContainText('Original console accessories inquiry');
+ await expect(page.locator('#chatInput')).toHaveValue('Console draft');
 });

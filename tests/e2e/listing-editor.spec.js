@@ -71,3 +71,14 @@ test('classification requires dependent choices and preserves existing structure
  await fixture(page);await page.locator('#editListingClassification summary').click();await page.locator('#editClassificationEnabled').check();await page.locator('#editAttribute_category').selectOption('consoles');await page.locator('#saveListingEdits').click();expect(await page.evaluate(()=>editWrites)).toEqual([]);
  await page.evaluate(async()=>{editRow.description='[Listing classification]\nPlatform: Nintendo Switch\n[End classification]\n\nOriginal disclosure';await listingEditor.open('edit-item')});await page.locator('#editListingDescription').fill('Updated disclosure');await page.locator('#saveListingEdits').click();await expect.poll(()=>page.evaluate(()=>editWrites.length)).toBe(1);expect(await page.evaluate(()=>editWrites[0].description)).toBe('[Listing classification]\nPlatform: Nintendo Switch\n[End classification]\n\nUpdated disclosure');await page.evaluate(()=>finishEdit({data:{id:'edit-item'},error:null}));
 });
+
+test('editing bundle quantities replaces structured contents and keeps seller disclosures',async({page})=>{
+ await fixture(page);
+ await page.evaluate(async()=>{editRow={...editRow,category:'video_games',product_type:'game',condition:'used',description:'[Listing contents]\nQuantity included: 2\nUnit: games\nSold together for the listing price.\nContents:\n2x Complete game\n[End listing contents]\n\n[Video Game]\nPlatform: Nintendo Switch\nOriginal damage disclosure'};await listingEditor.open('edit-item')});
+ await page.locator('#editListingClassification summary').click();await page.locator('#editClassificationEnabled').check();
+ await expect(page.locator('#editAttribute_listingIncludedQuantity')).toHaveValue('2');
+ await page.locator('#editAttribute_listingIncludedQuantity').fill('3');await page.locator('#editAttribute_listingContentsList').fill('2x Complete game\n1x Disc-only game');
+ await page.locator('#saveListingEdits').click();await expect.poll(()=>page.evaluate(()=>editWrites.length)).toBe(1);
+ const description=await page.evaluate(()=>editWrites[0].description);expect(description).toContain('Quantity included: 3');expect(description).toContain('Original damage disclosure');expect(description.match(/\[Listing contents\]/g)).toHaveLength(1);
+ await page.evaluate(()=>finishEdit({data:{id:'edit-item'},error:null}));
+});
