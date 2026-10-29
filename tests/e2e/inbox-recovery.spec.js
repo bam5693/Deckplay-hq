@@ -902,3 +902,46 @@ test('legacy reply composer refuses blocked recipients without losing text',asyn
  await expect.poll(()=>page.evaluate(()=>legacySendCalls)).toBe(1);
  await expect(page.locator('#composeBody')).toHaveValue('');
 });
+
+test('text drafts for Tanner and Jayden survive a full browser reload in this tab',async({page})=>{
+ await inbox(page);
+ await page.locator('#chatInput').fill('Tanner sports-card condition questions');
+ await page.locator('[data-conversation-id="buyer-b"]').click();
+ await page.locator('#chatInput').fill('Jayden TCG deck trade details');
+ expect(await page.evaluate(()=>JSON.parse(sessionStorage.getItem(inboxDraftStorageKey('fixture-seller'))||'[]').length)).toBe(2);
+ await page.reload();
+ await inbox(page);
+ await expect(page.locator('#chatInput')).toHaveValue('Tanner sports-card condition questions');
+ await page.locator('[data-conversation-id="buyer-b"]').click();
+ await expect(page.locator('#chatInput')).toHaveValue('Jayden TCG deck trade details');
+});
+test('switching collectors clears stored private Inbox drafts, even after switching back',async({page})=>{
+ await inbox(page);
+ await page.locator('#chatInput').fill('Only the original collector should see this');
+ expect(await page.evaluate(()=>sessionStorage.getItem(inboxDraftStorageKey('fixture-seller')))).toContain('Only the original collector');
+ await page.evaluate(()=>{currentUser={id:'other-collector'};syncInboxDraftUser()});
+ expect(await page.evaluate(()=>sessionStorage.getItem(inboxDraftStorageKey('fixture-seller')))).toBeNull();
+ await page.evaluate(async()=>{currentUser={id:'fixture-seller'};syncInboxDraftUser();await showInboxPage('buyer-a')});
+ await expect(page.locator('#chatInput')).toHaveValue('');
+});
+test('successful message delivery clears its saved tab draft and refresh does not restore it',async({page})=>{
+ await inbox(page);
+ await page.locator('#chatInput').fill('Completed private message');
+ await page.locator('#chatInput').press('Enter');
+ await page.evaluate(()=>finishFixtureSend({data:{id:'sent'},error:null}));
+ await expect(page.locator('#chatInput')).toHaveValue('');
+ expect(await page.evaluate(()=>sessionStorage.getItem(inboxDraftStorageKey('fixture-seller')))).toBeNull();
+ await page.reload();
+ await inbox(page);
+ await expect(page.locator('#chatInput')).toHaveValue('');
+});
+test('failed message delivery preserves a tab draft through reload for safe manual retry',async({page})=>{
+ await inbox(page);
+ await page.locator('#chatInput').fill('Unsent message after network failure');
+ await page.locator('#chatInput').press('Enter');
+ await page.evaluate(()=>finishFixtureSend(Promise.reject(Error('Connection lost'))));
+ await expect(page.locator('.chat-send-status')).toContainText('Connection lost');
+ await page.reload();
+ await inbox(page);
+ await expect(page.locator('#chatInput')).toHaveValue('Unsent message after network failure');
+});
