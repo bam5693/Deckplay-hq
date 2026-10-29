@@ -22,6 +22,12 @@ jobs:
         run: node --check favorite-actions.js
       - name: Test Favorites save, remove and rollback behavior
         run: node --test tests/security/favorite-actions-regression.test.cjs
+      - name: Install project test dependencies
+        run: npm ci
+      - name: Install Playwright Chromium shell
+        run: npx playwright install chromium --only-shell
+      - name: Run isolated mobile and desktop homepage smoke checks
+        run: npx playwright test tests/e2e/smoke.spec.js --config=playwright.local.config.js
       - name: Verify production homepage includes controller and delegates favorite actions
         run: |
           node - <<'NODE'
