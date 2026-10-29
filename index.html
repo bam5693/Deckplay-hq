@@ -1578,16 +1578,16 @@ const deckplayInboxNotificationKinds=new Set(["message","trade_offer","counterof
 const deckplayActivityNotificationKinds=["favorite_price_drop","favorite_sold","followed_seller_listing","wanted_match"];
 function showNotificationRetry(list){list.innerHTML='<p role="alert" class="muted">Alerts could not load. <button type="button" class="ghost" data-retry-notifications>Retry alerts</button></p>'}
 async function loadNotificationCenter(){
- const list=document.getElementById("notificationList");
- if(!currentUser){list.textContent="Sign in to see notifications.";return}
+ const lists=[document.getElementById("notificationList"),document.getElementById("inboxNotificationList")];
+ if(!currentUser){lists.forEach(list=>{list.textContent="Sign in to see notifications."});return}
  const requestId=++notificationCenterLoadVersion,userId=currentUser.id;
- list.textContent="Loading notifications…";
+ lists.forEach(list=>{list.textContent="Loading notifications…"});
  try{
  const {data,error}=await supabaseClient.from("collector_notifications").select("id,actor_id,kind,source_id,created_at,read_at").eq("user_id",currentUser.id).in("kind",deckplayActivityNotificationKinds).order("created_at",{ascending:false}).limit(100);
  if(requestId!==notificationCenterLoadVersion||currentUser?.id!==userId)return;
- if(error){showNotificationRetry(list);return}
+ if(error){lists.forEach(showNotificationRetry);return}
  const activity=(data||[]).filter(n=>!deckplayInboxNotificationKinds.has(n.kind));
- if(!activity.length){list.innerHTML='<p class="muted">No activity alerts yet. Messages, offers and trades are in your Inbox. <button type="button" class="ghost" data-retry-notifications>Refresh alerts</button></p>';return}
+ if(!activity.length){lists.forEach(list=>{list.innerHTML='<p class="muted">No activity alerts yet. Messages, offers and trades are in your Inbox. <button type="button" class="ghost" data-retry-notifications>Refresh alerts</button></p>'});return}
  const displayed=[],messageGroups=new Map();
  for(const n of activity){if(n.kind==="message"&&n.actor_id){const prior=messageGroups.get(n.actor_id);if(prior){prior.count++;prior.ids.push(n.id);prior.unread=prior.unread||!n.read_at;continue}const entry={...n,count:1,ids:[n.id],unread:!n.read_at};messageGroups.set(n.actor_id,entry);displayed.push(entry)}else displayed.push({...n,count:1,ids:[n.id],unread:!n.read_at})}
  const actors=[...new Set(data.map(n=>n.actor_id).filter(Boolean))],priceIds=[...new Set(data.filter(n=>n.kind.startsWith("price_")).map(n=>n.source_id).filter(Boolean))];
@@ -1598,7 +1598,7 @@ async function loadNotificationCenter(){
  if(requestId!==notificationCenterLoadVersion||currentUser?.id!==userId)return;
  const titles=new Map((listingRows||[]).map(l=>[l.id,l.title]));
  const labels={favorite_price_drop:["🏷️ Favorite price dropped","dropped the price on an item you saved"],favorite_sold:["💛 Favorite sold","sold an item you saved"],followed_seller_listing:["✨ Followed seller listed an item","listed a new collectible"],wanted_match:["🎯 Wanted item match","listed something matching your wanted post"],message:["✉️ New message","sent you a message"],trade_offer:["⇄ New trade offer","sent you a trade offer"],counteroffer:["↩️ Trade counteroffer","sent a trade counteroffer"],trade_update:["⇄ Trade updated","updated a trade"],price_offer:["💵 New price offer","made an offer"],price_counter:["💬 New counteroffer","countered your price"],price_update:["💵 Price offer update","responded to your offer"]};
- list.innerHTML=displayed.map(n=>{
+ const markup=displayed.map(n=>{
   const p=prices.get(n.source_id),name=n.actor_id?(names.get(n.actor_id)?"@"+names.get(n.actor_id):"A collector"):"DeckPlay HQ";
   let [title,detail]=labels[n.kind]||["Activity","New activity"];
   if(p){const amount="$"+Number(p.amount).toFixed(2),item=titles.get(p.listing_id)||"a listing";
@@ -1610,7 +1610,8 @@ async function loadNotificationCenter(){
   if(n.kind==="message"&&n.count>1){title=`✉️ ${n.count} messages`;detail="sent you messages"}
   return `<div class="notification-entry ${n.unread?"unread":""}"><button type="button" class="notification-open" data-open-notification="${escapeHtml(n.ids.join(","))}" data-notification-actor="${escapeHtml(n.actor_id||"")}" data-notification-kind="${escapeHtml(n.kind)}" data-notification-source="${escapeHtml(n.source_id||"")}"><strong>${escapeHtml(title)}</strong><span>${escapeHtml(name)} ${escapeHtml(detail)}</span><small>${new Date(n.created_at).toLocaleString()}</small></button>${n.unread?`<button type="button" class="ghost notification-read" data-read-notification="${escapeHtml(n.ids.join(","))}">Mark read</button>`:""}</div>`
  }).join("");
- }catch(error){if(requestId===notificationCenterLoadVersion&&currentUser?.id===userId)showNotificationRetry(list)}
+ lists.forEach(list=>{list.innerHTML=markup});
+ }catch(error){if(requestId===notificationCenterLoadVersion&&currentUser?.id===userId)lists.forEach(showNotificationRetry)}
 }
 
 /* Route alerts by activity type instead of sending every actor-linked alert to messages. */
@@ -1651,7 +1652,8 @@ document.querySelectorAll("[data-back-alerts]").forEach(button=>button.addEventL
 document.getElementById("notificationBell").addEventListener("click",async()=>{if(!currentUser)return;closeAccountMenu();openModal("notificationModal");await loadNotificationCenter()});
 document.getElementById("notificationList").addEventListener("click",async e=>{if(e.target.closest("[data-retry-notifications]")){await loadNotificationCenter();return}const read=e.target.closest("[data-read-notification]");if(read){await markNotificationRead(read.dataset.readNotification);await loadNotificationCenter();return}const open=e.target.closest("[data-open-notification]");if(!open)return;const kind=open.dataset.notificationKind,actor=open.dataset.notificationActor,source=open.dataset.notificationSource;await markNotificationRead(open.dataset.openNotification);closeModal("notificationModal");setTimeout(()=>{void navigateDeckplayNotification(kind,actor,source)},180)});
 document.getElementById("markAllNotifications").addEventListener("click",async()=>{if(!currentUser)return;const {error}=await supabaseClient.from("collector_notifications").update({read_at:new Date().toISOString()}).eq("user_id",currentUser.id).is("read_at",null).in("kind",deckplayActivityNotificationKinds);if(error){toast("Could not mark notifications read.");return}await Promise.all([loadNotificationCenter(),refreshNotificationCount()])});
-function startNotificationUpdates(){if(notificationChannel){supabaseClient.removeChannel(notificationChannel);notificationChannel=null}if(notificationPoll){clearInterval(notificationPoll);notificationPoll=null}document.getElementById("notificationBell").hidden=!currentUser;if(!currentUser){document.getElementById("notificationBadge").hidden=true;return}refreshNotificationCount();notificationChannel=supabaseClient.channel("deckplay-notifications-"+currentUser.id).on("postgres_changes",{event:"INSERT",schema:"public",table:"collector_notifications",filter:"user_id=eq."+currentUser.id},()=>{refreshNotificationCount();if(document.getElementById("notificationModal").classList.contains("open"))loadNotificationCenter();scheduleLiveInboxRefresh()}).subscribe();notificationPoll=setInterval(()=>{if(!document.hidden){refreshNotificationCount();if(document.getElementById("notificationModal").classList.contains("open"))loadNotificationCenter()}},30000)}
+function activityNotificationsVisible(){return document.getElementById("notificationModal").classList.contains("open")||(!document.getElementById("inboxPage").hidden&&!document.getElementById("inboxNotificationPanel").hidden)}
+function startNotificationUpdates(){if(notificationChannel){supabaseClient.removeChannel(notificationChannel);notificationChannel=null}if(notificationPoll){clearInterval(notificationPoll);notificationPoll=null}document.getElementById("notificationBell").hidden=!currentUser;if(!currentUser){document.getElementById("notificationBadge").hidden=true;return}refreshNotificationCount();notificationChannel=supabaseClient.channel("deckplay-notifications-"+currentUser.id).on("postgres_changes",{event:"INSERT",schema:"public",table:"collector_notifications",filter:"user_id=eq."+currentUser.id},()=>{refreshNotificationCount();if(activityNotificationsVisible())loadNotificationCenter();scheduleLiveInboxRefresh()}).subscribe();notificationPoll=setInterval(()=>{if(!document.hidden){refreshNotificationCount();if(activityNotificationsVisible())loadNotificationCenter()}},30000)}
 const NOTIFICATION_KEYS=["messages","trade_offers","wanted_matches","product_updates"];
 let notificationSettingsLoading=false,notificationSettingsVersion=0,notificationSettingsOwner=null;
 function notificationPreferenceControls(disabled){document.querySelectorAll("[data-notify-pref]").forEach(input=>input.disabled=disabled)}
@@ -2002,7 +2004,7 @@ function selectInboxMessages(){document.getElementById("inboxMessagesTab").class
 document.getElementById("inboxMessagesTab").addEventListener("click",()=>{selectInboxMessages();loadInbox()});
 document.getElementById("inboxNotificationsTab").addEventListener("click",()=>{document.getElementById("inboxNotificationsTab").classList.add("active");document.getElementById("inboxMessagesTab").classList.remove("active");document.getElementById("inboxPage").classList.remove("thread-open");document.getElementById("messageInbox").hidden=true;document.getElementById("inboxNotificationPanel").hidden=false;document.getElementById("inboxPage").classList.add("notifications-active");loadNotificationCenter()});
 document.getElementById("inboxMarkAllRead").addEventListener("click",()=>document.getElementById("markAllNotifications").click());
-document.getElementById("inboxNotificationList").addEventListener("click",async e=>{const read=e.target.closest("[data-read-notification]");if(read){await markNotificationRead(read.dataset.readNotification);await loadNotificationCenter();return}const open=e.target.closest("[data-open-notification]");if(!open)return;await markNotificationRead(open.dataset.openNotification);await navigateDeckplayNotification(open.dataset.notificationKind,open.dataset.notificationActor,open.dataset.notificationSource)});
+document.getElementById("inboxNotificationList").addEventListener("click",async e=>{if(e.target.closest("[data-retry-notifications]")){await loadNotificationCenter();return}const read=e.target.closest("[data-read-notification]");if(read){await markNotificationRead(read.dataset.readNotification);await loadNotificationCenter();return}const open=e.target.closest("[data-open-notification]");if(!open)return;await markNotificationRead(open.dataset.openNotification);await navigateDeckplayNotification(open.dataset.notificationKind,open.dataset.notificationActor,open.dataset.notificationSource)});
 document.getElementById("inboxPage").addEventListener("click",async e=>{const offer=e.target.closest("[data-inbox-offers]");if(offer){if(offer.dataset.inboxOffers==="price"){openModal("priceOffersModal");await loadPriceOffers()}else{openModal("tradesModal");await loadTradeOffers()}return}});
 document.getElementById("refreshInbox").addEventListener("click",()=>document.getElementById("inboxNotificationPanel").hidden?loadInbox():loadNotificationCenter());
 const pendingInboxDealActions=new Set();
