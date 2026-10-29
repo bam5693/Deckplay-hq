@@ -1556,7 +1556,7 @@ function exactWantedMatches(post){
  const cardNumber=normCard(meta.cardNumber);if(!cardNumber)return [];
  const budget=post.budget==null||post.budget===""?null:Number(post.budget);
  if(budget!==null&&(!Number.isFinite(budget)||budget<0))return [];
- return items.filter(item=>item.id&&item.c==="Trading Cards"&&item.game===post.game&&item.sellerId!==post.user_id
+ return items.filter(item=>item.id&&!blockedCollectorIds.has(item.sellerId)&&item.c==="Trading Cards"&&item.game===post.game&&item.sellerId!==post.user_id
   &&(budget===null||(Number.isFinite(Number(item.p))&&Number(item.p)<=budget))
   &&normCard(wantedListingField(item.description,"Card number"))===cardNumber
   &&(!meta.variant||normText(wantedListingField(item.description,"Variant"))===normText(meta.variant))
@@ -1588,7 +1588,7 @@ document.getElementById("wantedForm").addEventListener("submit",async e=>{
  }catch(error){if(valid())status.textContent=error.message||"Could not publish. Try again."}
  finally{if(valid()){wantedPublishBusy=false;button.disabled=false;form.removeAttribute("aria-busy")}}
 });
-document.getElementById("wantedGrid").addEventListener("click",async e=>{const match=e.target.closest("[data-wanted-match]");if(match){const item=items.find(x=>String(x.id)===match.dataset.wantedMatch);if(!item){toast("This listing is no longer available. Refresh wanted posts.");return}toggleWanted(false);showDetails(item);return}const button=e.target.closest("[data-delete-wanted]");if(!button||!currentUser)return;if(!confirm("Delete this wanted post?"))return;const {error}=await supabaseClient.from("wanted_posts").delete().eq("id",button.dataset.deleteWanted).eq("user_id",currentUser.id);if(error){toast(error.message);return}await loadWanted()});
+document.getElementById("wantedGrid").addEventListener("click",async e=>{const match=e.target.closest("[data-wanted-match]");if(match){const item=items.find(x=>String(x.id)===match.dataset.wantedMatch);if(!item||blockedCollectorIds.has(item.sellerId)){toast("This listing is no longer available. Refresh wanted posts.");return}toggleWanted(false);showDetails(item);return}const button=e.target.closest("[data-delete-wanted]");if(!button||!currentUser)return;if(!confirm("Delete this wanted post?"))return;const {error}=await supabaseClient.from("wanted_posts").delete().eq("id",button.dataset.deleteWanted).eq("user_id",currentUser.id);if(error){toast(error.message);return}await loadWanted()});
 let savedListingsLoadVersion=0;
 async function loadSavedListings(){const version=++savedListingsLoadVersion,userId=currentUser?.id;saved.clear();if(!userId)return;const {data,error}=await supabaseClient.from("saved_listings").select("listing_id").eq("user_id",userId);if(version!==savedListingsLoadVersion||currentUser?.id!==userId)return;if(error){console.warn("Saved items unavailable",error);return}(data||[]).forEach(x=>saved.add(x.listing_id))}
 

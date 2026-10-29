@@ -130,3 +130,20 @@ test('wanted publish response from previous account cannot clear the new account
  await expect(page.locator('#wantedForm button[type="submit"]')).toBeEnabled();
  expect(await page.evaluate(()=>wantedToasts)).toEqual([]);
 });
+
+
+test('blocked sellers stay out of wanted matches and stale match buttons cannot open them',async({page})=>{
+ await page.goto('/');await page.waitForLoadState('networkidle');
+ await page.evaluate(()=>{
+  window.blockedWantedToasts=[];toast=message=>blockedWantedToasts.push(message);
+  items=[{id:'blocked-wanted',databaseId:'blocked-wanted',c:'Trading Cards',game:'magic',sellerId:'blocked-seller',n:'Collector card',p:10,description:'Card number: M-001',imageUrls:[]}];
+  blockedCollectorIds.add('blocked-seller');
+  window.blockedWantedMatches=exactWantedMatches({user_id:'buyer',game:'magic',details:'[DeckPlay match: {"cardNumber":"M-001"}]'}).map(x=>x.id);
+  document.getElementById('wantedGrid').innerHTML='<button type="button" data-wanted-match="blocked-wanted">View stale match</button>';
+  document.getElementById('wantedSection').classList.add('is-open');document.getElementById('wantedSection').setAttribute('aria-hidden','false');document.body.classList.add('wanted-open');
+ });
+ expect(await page.evaluate(()=>blockedWantedMatches)).toEqual([]);
+ await page.locator('[data-wanted-match="blocked-wanted"]').click();
+ await expect(page.locator('#detailModal')).not.toHaveClass(/open/);
+ expect(await page.evaluate(()=>blockedWantedToasts)).toEqual(['This listing is no longer available. Refresh wanted posts.']);
+});
