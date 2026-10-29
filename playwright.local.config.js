@@ -14,7 +14,7 @@ module.exports = defineConfig({
   ],
   webServer: {
     command: 'node scripts/build-staging.cjs && python3 -m http.server 8765 --bind 127.0.0.1 --directory dist-staging',
-    env: {DECKPLAY_STAGING_SUPABASE_URL:'https://prrrzeelltmyugssqnzk.supabase.co', DECKPLAY_STAGING_SUPABASE_KEY:'sb_publishable_0omvNnv_ZOvXrZ-LHPMyIQ_a9zxD-yh'},
+    env: {DECKPLAY_STAGING_SUPABASE_URL:'https://prrrzeelltmyugssqnzk.supabase.co', DECKPLAY_STAGING_SUPABASE_KEY:'sb_publishable_0omvNnv_ZOvXrZ-LHPMyIQ_a9zxD-yh', DECKPLAY_STAGING_SUPABASE_ANON_KEY:'sb_publishable_0omvNnv_ZOvXrZ-LHPMyIQ_a9zxD-yh'},
     url: 'http://127.0.0.1:8765/',
     reuseExistingServer: !process.env.CI,
     timeout: 30000
