@@ -1,37 +1,46 @@
 name: DeckPlay browser tests
 on:
   workflow_dispatch:
-  push:
+  pull_request:
     paths:
-      - 'index.html'
-      - 'tests/e2e/**'
-      - 'playwright.config.js'
-      - 'package.json'
+      - '**.html'
+      - '**.js'
+      - '**.cjs'
+      - '**.mjs'
+      - '**.json'
+      - '**.jsonc'
+      - '**.sql'
+      - '**.webmanifest'
+      - '.github/workflows/**'
+permissions:
+  contents: read
+concurrency:
+  group: browser-tests-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - run: npm install
+      - run: npm ci
+      - name: Verify staging authorization and fixture cleanup boundaries
+        run: node --test tests/security/*test.*
       - name: Cache Playwright browsers
         uses: actions/cache@v4
         with:
           path: ~/.cache/ms-playwright
           key: playwright-linux-${{ hashFiles('package-lock.json') }}
-      - name: Install Chromium dependencies
-        run: npx playwright install-deps chromium
-      - name: Install Chromium browser
-        run: npx playwright install chromium
+      # The staging buyer/seller workflow already runs headless Chromium on
+      # ubuntu-latest without apt install-deps. Avoid apt stalls/timeouts and
+      # install only the browser shell required by these headless UI checks.
+      - name: Install headless Chromium browser
+        run: npx playwright install chromium --only-shell
       - name: Run mobile and desktop browser tests
-        run: npm run test:e2e
-        env:
-          DECKPLAY_TEST_SELLER_EMAIL: ${{ secrets.DECKPLAY_TEST_SELLER_EMAIL }}
-          DECKPLAY_TEST_SELLER_PASSWORD: ${{ secrets.DECKPLAY_TEST_SELLER_PASSWORD }}
-          DECKPLAY_TEST_BUYER_EMAIL: ${{ secrets.DECKPLAY_TEST_BUYER_EMAIL }}
-          DECKPLAY_TEST_BUYER_PASSWORD: ${{ secrets.DECKPLAY_TEST_BUYER_PASSWORD }}
+        run: npx playwright test --config=playwright.local.config.js
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -41,3 +50,8 @@ jobs:
             test-results/
           if-no-files-found: ignore
           retention-days: 7
+      - name: Summarize verified browser result
+        if: always()
+        run: |
+          echo "## Isolated mobile and desktop UI checks" >> "$GITHUB_STEP_SUMMARY"
+          echo "Status: ${{ job.status }}. HTML/JUnit results are attached when tests execute; screenshots, videos and traces are disabled to save CI minutes. Real buyer/seller API transactions are verified separately." >> "$GITHUB_STEP_SUMMARY"
