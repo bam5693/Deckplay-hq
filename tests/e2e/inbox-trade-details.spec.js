@@ -83,3 +83,21 @@ test('counteroffer draft is retained if the recipient is blocked after composer 
  await expect(page.locator('#counterNote')).toHaveValue('Keep this exact printing in the exchange');
  expect(await page.evaluate(()=>decisionWrites)).toEqual([]);
 });
+
+test('successful counteroffer with failed refresh never tells Jayden the send failed',async({page})=>{
+ await fixture(page);
+ await page.evaluate(()=>{
+  activeCounterOffer='trade-1';activeCounterpartyId='tanner';
+  window.refreshNotices=[];
+  toast=message=>refreshNotices.push(message);
+  loadTradeOffers=async()=>{throw Error('Refresh offline')};
+  openModal('counterModal');
+ });
+ await page.locator('#counterNote').fill('Trade the exact foil printing');
+ await page.locator('#counterForm button[type="submit"]').click();
+ await expect.poll(()=>page.evaluate(()=>decisionWrites.length)).toBe(1);
+ await page.evaluate(()=>finishDecision({error:null}));
+ await expect.poll(()=>page.evaluate(()=>refreshNotices.some(s=>s.includes('Counteroffer sent, but the screen could not refresh')))).toBe(true);
+ expect(await page.evaluate(()=>decisionWrites.map(x=>x.name))).toEqual(['create_trade_counter']);
+ expect(await page.locator('#counterStatus').textContent()).not.toContain('Could not send counteroffer');
+});
