@@ -4,7 +4,7 @@ const { test, expect } = require('@playwright/test');
 // Authenticated synthetic-account tests remain pending until fixtures are provisioned.
 test('anonymous callers cannot send collection inquiries', async ({ request }) => {
   const base = process.env.DECKPLAY_STAGING_SUPABASE_URL || 'https://prrrzeelltmyugssqnzk.supabase.co';
-  const anonKey = process.env.DECKPLAY_STAGING_SUPABASE_ANON_KEY || process.env.DECKPLAY_STAGING_SUPABASE_KEY;
+  const anonKey = process.env.DECKPLAY_STAGING_SUPABASE_ANON_KEY || process.env.DECKPLAY_STAGING_SUPABASE_KEY || 'sb_publishable_0omvNnv_ZOvXrZ-LHPMyIQ_a9zxD-yh';
   test.skip(!base || !anonKey, 'Staging Supabase URL and anon key required');
   const url = new URL(base);
   expect(url.hostname).toBe('prrrzeelltmyugssqnzk.supabase.co');
