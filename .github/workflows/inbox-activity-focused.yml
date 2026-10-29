@@ -1,0 +1,47 @@
+name: Focused Inbox text delivery recovery UI
+on:
+  workflow_dispatch:
+  push:
+    branches: [test/staging-reporting]
+    paths: ['.github/workflows/inbox-activity-focused.yml']
+permissions:
+  contents: read
+concurrency:
+  group: focused-inbox-draft-recovery-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  focused-ui:
+    if: github.ref == 'refs/heads/test/staging-reporting'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Cheap source and fixture preflight
+        run: |
+          node scripts/check-inline-js.cjs
+          node --check tests/e2e/inbox-recovery.spec.js
+          node --check playwright.local.config.js
+      - name: Cache headless Chromium
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: staging-playwright-${{ hashFiles('package-lock.json') }}
+      - run: npx playwright install chromium --only-shell
+      # Recheck uncertain-delivery pre-read, full-page retry and account isolation; drafts already passed.
+      - name: Charles Kyle Tanner Jayden — text delivery retry desktop and mobile
+        run: npx playwright test --config=playwright.local.config.js inbox-recovery.spec.js --grep 'a committed message survives a lost response|delivery recovery never treats a different thread|an uncertain text send verifies its exact committed row|switching accounts purges uncertain text delivery references' --project=local-desktop --project=local-mobile --max-failures=1 --timeout=20000
+      - name: Retain focused results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: focused-inbox-delivery-${{ github.sha }}
+          path: |
+            test-results/local-junit.xml
+            playwright-report/local
+          if-no-files-found: ignore
+          retention-days: 3

@@ -1,0 +1,41 @@
+name: Verify restored discovery alert price UI
+on:
+  workflow_dispatch:
+  push:
+    branches: [test/staging-reporting]
+    paths: ['.github/workflows/trade-recovery-focused.yml']
+permissions:
+  contents: read
+jobs:
+  focused-ui:
+    if: github.ref == 'refs/heads/test/staging-reporting'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Cheap syntax and security gates
+        run: |
+          node scripts/check-inline-js.cjs
+          node --test tests/security/staging-browser-config.test.cjs
+      - name: Cache browser
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: staging-playwright-${{ hashFiles('package-lock.json') }}
+      - run: npx playwright install chromium --only-shell
+      - name: Desktop and mobile history, listing contents, drafts and account boundaries
+        run: npx playwright test --config=playwright.local.config.js notification-prices.spec.js --project=local-desktop --timeout=15000 --max-failures=1
+      - name: Retain focused result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: focused-trade-ui-${{ github.sha }}
+          path: |
+            test-results/local-junit.xml
+            playwright-report/local
+          retention-days: 3

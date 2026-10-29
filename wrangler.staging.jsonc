@@ -1,0 +1,9 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "deckplay-hq-staging",
+  "main": "dist-staging-worker.mjs",
+  "compatibility_date": "2026-10-26",
+  "workers_dev": true,
+  "preview_urls": false,
+  "triggers": { "crons": ["17 9 * * *", "27 9 * * *", "37 9 * * *"] }
+}

@@ -1,0 +1,58 @@
+name: Coordinated release candidate
+on:
+  workflow_dispatch:
+  push:
+    branches: ['release/**']
+    paths:
+      - 'index.html'
+      - '*.js'
+      - 'release/**'
+      - 'scripts/*release*'
+      - 'tests/e2e/**'
+      - 'tests/security/**'
+      - '.github/workflows/release-candidate.yml'
+permissions:
+  contents: read
+concurrency:
+  group: release-candidate-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  candidate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Cheap asset, configuration and syntax checks
+        run: node scripts/release-preflight.cjs
+      - run: npm ci
+      - name: Security and recovery checks
+        run: node --test tests/security/*.test.cjs tests/security/*.test.mjs
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: release-chromium-${{ hashFiles('package-lock.json') }}
+      - run: npx playwright install chromium --only-shell
+      - name: Integrated desktop and mobile UI simulations (no account credentials)
+        run: npx playwright test --config=playwright.local.config.js
+      - name: Build exact allowlisted preview assets
+        env:
+          DECKPLAY_STAGING_SUPABASE_URL: https://prrrzeelltmyugssqnzk.supabase.co
+          DECKPLAY_STAGING_SUPABASE_KEY: sb_publishable_0omvNnv_ZOvXrZ-LHPMyIQ_a9zxD-yh
+        run: |
+          node scripts/build-staging.cjs
+          node scripts/build-release.cjs --preview
+          node scripts/build-release-preview.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coordinated-release-${{ github.sha }}
+          path: |
+            dist-release/
+            dist-release-preview/
+            dist-release-preview-worker.mjs
+            test-results/local-junit.xml
+          retention-days: 7

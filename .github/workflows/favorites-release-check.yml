@@ -11,6 +11,7 @@ permissions:
   contents: read
 jobs:
   favorites:
+    if: startsWith(github.head_ref, 'release/') != true
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:

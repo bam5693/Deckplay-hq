@@ -1,0 +1,12 @@
+{
+  "approvedApplicationTree": null,
+  "productionSchemaVerified": false,
+  "previewAcceptanceVerified": false,
+  "rollbackVerified": false,
+  "blockers": [
+    "Production is missing drafts, follows, collection and attachment schema",
+    "Trade reservation and moderation RPC contracts differ from staging",
+    "Production-specific migration has not passed isolated compatibility acceptance",
+    "Integrated candidate signed browser acceptance and backup recovery rehearsal incomplete"
+  ]
+}

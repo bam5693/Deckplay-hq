@@ -1,0 +1,1 @@
+2026-10-29 third beta batch: pending outgoing price offers can be withdrawn from Inbox; waiting and monetary terms show USD clearly. Run four focused desktop/mobile cases for duplicate protection and network/draft recovery, then private parity and four read-only signed sessions.

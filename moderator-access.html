@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="referrer" content="no-referrer"><meta name="robots" content="noindex,nofollow">
+<title>Verify admin access | DeckPlay HQ</title>
+<style>
+:root{font-family:system-ui,sans-serif;line-height:1.55;color:#17343c;background:#f3f6f5}*{box-sizing:border-box}body{margin:0}header{background:#173b42;color:#fff;padding:24px max(5%,calc((100% - 800px)/2))}header a{color:#f0cd88}h1{font-size:clamp(26px,5vw,36px);line-height:1.2}header p{color:#d5e3df}main{max-width:850px;margin:auto;padding:20px 5% 48px}.card{background:#fff;border:1px solid #d4e1dd;border-radius:14px;padding:20px;margin:16px 0;overflow-wrap:anywhere}h2{margin-top:0;font-size:22px}label{display:block;margin:14px 0 6px}input:not([type=checkbox]),select{width:100%;font:inherit;padding:12px;border:1px solid #8ca6a6;border-radius:8px;min-height:46px}input[type=checkbox]{width:22px;height:22px;flex:none}.consent{display:flex;align-items:flex-start;gap:10px}button,.button{display:inline-block;min-height:46px;border:0;border-radius:9px;padding:11px 16px;background:#1c5357;color:white;font:inherit;font-weight:650;text-decoration:none;cursor:pointer}.secondary{background:#e9f0ec;color:#17343c}button:disabled,input:disabled,select:disabled{opacity:.55;cursor:wait}.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}:focus-visible{outline:3px solid #b87a13;outline-offset:3px}#setupQr{display:block;width:240px;max-width:100%;height:auto;background:white;border:10px solid white;margin:16px auto}#setupSecret{display:block;user-select:all;overflow-wrap:anywhere;background:#eef3f1;padding:14px;margin-top:10px}small{color:#536c71}#mfaStatus{white-space:pre-line}#accountIdentity{overflow-wrap:anywhere}[hidden]{display:none!important}@media(max-width:500px){main{padding:14px 4% 32px}.card{padding:16px}.actions>*{width:100%;text-align:center}}
+</style>
+</head>
+<body>
+<header><a href="/moderation.html">← Command Center</a><h1>Verify admin access</h1><p>Authenticator verification and moderator permission are separate requirements.</p></header>
+<main>
+ <section class="card"><p id="mfaStatus" role="status" aria-live="polite">Checking your account…</p><p id="accountIdentity"></p><p id="signedOutHelp" hidden><a href="/">Sign in on DeckPlay HQ</a>, then return here.</p><button id="reloadAccess" class="secondary" type="button">Refresh account status</button></section>
+ <div id="accessContent" hidden>
+  <section class="card" id="setupOptions" hidden><h2>Set up an authenticator</h2><p>Use an authenticator app that supports six-digit codes. Keep access to your authenticator so you can verify future admin sessions.</p><label class="consent"><input type="checkbox" id="enrollConsent"><span>I want to add an authenticator to this account. Completing setup signs out my other sessions.</span></label><button type="button" id="beginEnrollment">Start authenticator setup</button></section>
+  <section class="card" id="setupMaterial" hidden><h2>Add this account to your app</h2><p>Scan the QR code or enter the setup key manually. Keep this key private.</p><img id="setupQr" alt="Authenticator setup QR code"><details id="manualSetup"><summary>Show manual setup key</summary><code id="setupSecret"></code></details><p><small>Setup details are hidden when you leave this page or switch apps. If you have already added the account to your authenticator, return and enter its code to finish. Otherwise remove the unfinished setup and start again.</small></p></section>
+  <section class="card" id="verificationPanel" hidden><h2>Verify your authenticator</h2><form id="mfaVerifyForm"><label for="mfaFactor">Authenticator</label><select id="mfaFactor"></select><p id="unfinishedHelp" hidden>This setup is unfinished. Enter a code if you already added it to your app, or remove it and start again.</p><label for="mfaCode">Current six-digit code</label><input id="mfaCode" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" required><div class="actions"><button type="submit" id="verifyMfa">Verify code</button><button type="button" id="cancelEnrollment" class="secondary" hidden>Remove unfinished setup</button></div></form></section>
+  <section class="card" id="verifiedPanel" hidden><h2>Session verified</h2><p>Your authenticator verification is complete for this session. The server checks moderator permission separately.</p><a id="openCommandCenter" class="button" href="/moderation.html" hidden>Continue to Command Center</a></section>
+ </div>
+</main>
+<script src="/vendor/supabase-2.118.0.js"></script><script src="/moderator-access.js"></script>
+</body></html>
