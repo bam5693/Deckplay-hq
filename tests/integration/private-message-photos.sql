@@ -68,7 +68,6 @@ do $declare f jsonb:=current_setting('deckplay.photo.fixture')::jsonb;before_cou
  if before_count<>after_count then raise exception 'Retry consumed a new photo quota slot';end if;
 end $;
 reset role;
-reset role;
 insert into public.user_blocks(blocker_id,blocked_id) values((current_setting('deckplay.photo.fixture')::jsonb->>'b')::uuid,(current_setting('deckplay.photo.fixture')::jsonb->>'a')::uuid);
 set local role authenticated;
 do $$declare f jsonb:=current_setting('deckplay.photo.fixture')::jsonb;denied boolean;begin
