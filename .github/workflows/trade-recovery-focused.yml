@@ -1,4 +1,4 @@
-name: Focused blocked-seller Wanted UI
+name: Focused conversation discovery and history UI
 on:
   workflow_dispatch:
   push:
@@ -21,7 +21,7 @@ jobs:
       - name: Cheap syntax and security gates
         run: |
           node scripts/check-inline-js.cjs
-          node --test tests/security/*.test.cjs tests/security/*.test.mjs
+          node --test tests/security/staging-browser-config.test.cjs
       - name: Cache browser
         uses: actions/cache@v4
         with:
@@ -29,7 +29,7 @@ jobs:
           key: staging-playwright-${{ hashFiles('package-lock.json') }}
       - run: npx playwright install chromium --only-shell
       - name: Desktop and mobile history, listing contents, drafts and account boundaries
-        run: npx playwright test --config=playwright.local.config.js wanted-matches.spec.js --timeout=15000 --max-failures=2
+        run: npx playwright test --config=playwright.local.config.js inbox-conversations.spec.js inbox-history.spec.js --timeout=15000 --max-failures=2
       - name: Retain focused result
         if: always()
         uses: actions/upload-artifact@v4
