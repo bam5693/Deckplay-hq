@@ -32,6 +32,7 @@ jobs:
           path: ~/.cache/ms-playwright
           key: staging-playwright-${{ hashFiles('package-lock.json') }}
       - run: npx playwright install chromium --only-shell
+      # Recheck the actual cached-row render path, not only the pagination query.
       - name: Charles Kyle Tanner Jayden — older offers/trades desktop and mobile
         run: npx playwright test --config=playwright.local.config.js inbox-activity-history.spec.js --project=local-desktop --project=local-mobile --max-failures=1 --timeout=20000
       - name: Retain focused results
