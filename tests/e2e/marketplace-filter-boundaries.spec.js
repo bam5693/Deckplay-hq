@@ -197,3 +197,50 @@ test('gaming platform and hardware filters derive from seller choices and isolat
  await page.locator('#marketCategory').selectOption('Consoles & Controllers');await expect(page.locator('#marketPlatform')).toHaveValue('All');await expect(page.locator('#marketPlatformWrap')).toBeHidden();for(const type of ['consoles','controllers','accessories']){await page.locator('#marketHardwareType').selectOption(type);await expect(page.locator('#grid h3')).toHaveText([type])}
  await page.locator('#marketClearFilters').click();await expect(page.locator('#marketHardwareType')).toHaveValue('All');await expect(page.locator('#marketHardwareWrap')).toBeHidden();await expect(page.locator('#grid h3')).toHaveCount(5);await page.evaluate(()=>showHomePage());await page.locator('.elegant-tile-1').click();await expect(page.locator('#marketCategory')).toHaveValue('Collectibles');await expect(page.locator('#grid h3')).toHaveCount(0);
 });
+
+test('Kyle: All marketplace stays category-neutral, newest first, with price and sort available',async({page})=>{
+ await installFixture(page,[
+  {id:'older-tcg',n:'Older Pokemon listing',c:'Trading Cards',game:'pokemon',p:40,s:'seller',created_at:'2026-10-01T00:00:00Z',e:'🃏'},
+  {id:'newer-console',n:'Newest console listing',c:'Consoles & Controllers',p:90,s:'seller',created_at:'2026-10-03T00:00:00Z',e:'🎮'},
+  {id:'middle-figure',n:'Middle figure listing',c:'Collectibles',p:20,s:'seller',created_at:'2026-10-02T00:00:00Z',e:'🎎'}
+ ]);
+ await page.locator('#marketFilterToggle').click();
+ await expect(page.locator('#marketCategory')).toHaveValue('All');
+ await expect(page.locator('#marketSort')).toHaveValue('newest');
+ for(const id of ['marketGameWrap','marketSportsBranch','marketCollectibleWrap','marketPlatformWrap','marketHardwareWrap']){
+  await expect(page.locator('#'+id)).toBeHidden();
+ }
+ await expect(page.locator('#grid h3')).toHaveText(['Newest console listing','Middle figure listing','Older Pokemon listing']);
+ await page.locator('#marketMaxPrice').fill('50');
+ await expect(page.locator('#grid h3')).toHaveText(['Middle figure listing','Older Pokemon listing']);
+ await page.locator('#marketSort').selectOption('low');
+ await expect(page.locator('#grid h3')).toHaveText(['Middle figure listing','Older Pokemon listing']);
+ await page.locator('#marketCategory').selectOption('Trading Cards');
+ await expect(page.locator('#marketGameWrap')).toBeVisible();
+ await page.locator('#marketCategory').selectOption('All');
+ await expect(page.locator('#marketGameWrap')).toBeHidden();
+});
+
+test('Tanner: progressive sports card filters work at every depth and reset cleanly',async({page})=>{
+ await installFixture(page,[
+  {id:'panini-football',n:'Panini football rookie',c:'Trading Cards',game:'sports_cards',p:30,s:'seller',description:'Sport: Football\\nBrand: Panini\\nYear: 2024\\nPlayer: CeeDee Lamb',e:'🃏'},
+  {id:'topps-football',n:'Topps football rookie',c:'Trading Cards',game:'sports_cards',p:25,s:'seller',description:'Sport: Football\\nBrand: Topps\\nYear: 2023\\nPlayer: Other',e:'🃏'},
+  {id:'panini-basketball',n:'Panini basketball rookie',c:'Trading Cards',game:'sports_cards',p:35,s:'seller',description:'Sport: Basketball\\nBrand: Panini\\nYear: 2024\\nPlayer: Other',e:'🃏'}
+ ]);
+ await page.locator('#marketFilterToggle').click();
+ await page.locator('#marketCategory').selectOption('Trading Cards');
+ await page.locator('#marketGame').selectOption('sports_cards');
+ await expect(page.locator('#grid h3')).toHaveCount(3);
+ await page.locator('#marketSport').selectOption('Football');
+ await expect(page.locator('#grid h3')).toHaveCount(2);
+ await page.locator('#marketSportsBrand').fill('Panini');
+ await expect(page.locator('#grid h3')).toHaveText(['Panini football rookie']);
+ await page.locator('#marketSportsYear').fill('2024');
+ await page.locator('#marketSportsPlayer').fill('CeeDee');
+ await expect(page.locator('#grid h3')).toHaveText(['Panini football rookie']);
+ await page.locator('#marketClearFilters').click();
+ await expect(page.locator('#marketSportsBranch')).toBeHidden();
+ await expect(page.locator('#marketSportsYear')).toHaveValue('');
+ await expect(page.locator('#marketSportsPlayer')).toHaveValue('');
+ await expect(page.locator('#grid h3')).toHaveCount(3);
+});
