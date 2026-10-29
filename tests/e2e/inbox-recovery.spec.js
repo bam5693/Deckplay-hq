@@ -773,3 +773,43 @@ test('Jayden deep links reveal the right conversation despite stale search and u
  await page.locator('[data-conversation-id="buyer-b"]').click();
  await expect(page.locator('#chatInput')).toHaveValue('Is that deck available for trade?');
 });
+
+test('blocked existing conversation stays readable but cannot send; unblocking restores its draft',async({page})=>{
+ await inbox(page);await page.locator('#chatInput').fill('Preserved private draft');
+ await page.evaluate(async()=>{blockedCollectorIds.add('buyer-a');await loadInbox('buyer-a')});
+ await expect(page.locator('.conversation-bubbles')).toContainText('Hello buyer-a');
+ await expect(page.locator('#conversationThread')).toContainText('You blocked this collector');
+ await expect(page.locator('.chat-composer')).toBeHidden();
+ await expect(page.locator('#chatInput')).toBeDisabled();
+ await expect(page.locator('#chatInput')).toHaveValue('Preserved private draft');
+ await page.evaluate(()=>document.querySelector('.chat-composer').dispatchEvent(new Event('submit',{bubbles:true,cancelable:true})));
+ expect(await page.evaluate(()=>fixtureWrites)).toBe(0);
+ await page.evaluate(async()=>{blockedCollectorIds.delete('buyer-a');await loadInbox('buyer-a')});
+ await expect(page.locator('.chat-composer')).toBeVisible();
+ await expect(page.locator('#chatInput')).toBeEnabled();
+ await expect(page.locator('#chatInput')).toHaveValue('Preserved private draft');
+});
+
+test('blocked collector offer controls are disabled and cannot invoke a deal RPC',async({page})=>{
+ await inbox(page);
+ await page.evaluate(async()=>{
+  const originalFrom=supabaseClient.from.bind(supabaseClient);
+  supabaseClient.from=table=>{
+   if(table!=='price_offers')return originalFrom(table);
+   const data=[{id:'pending-price-offer',buyer_id:'buyer-a',seller_id:'fixture-seller',amount:15,status:'pending',last_actor_id:'buyer-a',updated_at:new Date().toISOString()}];
+   const q={then:(resolve,reject)=>Promise.resolve({data,error:null}).then(resolve,reject)};
+   for(const method of ['select','order','limit'])q[method]=()=>q;
+   return q;
+  };
+  window.blockedDealRpcCalls=0;
+  supabaseClient.rpc=async()=>{blockedDealRpcCalls++;return {error:null}};
+  blockedCollectorIds.add('buyer-a');
+  await loadInbox('buyer-a');
+ });
+ const accept=page.locator('#conversationThread [data-inbox-price="accept"]');
+ await expect(accept).toHaveCount(1);
+ await expect(accept).toBeDisabled();
+ await expect(accept).toHaveAttribute('aria-disabled','true');
+ await page.evaluate(()=>document.querySelector('#conversationThread [data-inbox-price="accept"]').dispatchEvent(new MouseEvent('click',{bubbles:true})));
+ expect(await page.evaluate(()=>blockedDealRpcCalls)).toBe(0);
+});
