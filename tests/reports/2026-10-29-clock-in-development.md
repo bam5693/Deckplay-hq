@@ -40,3 +40,28 @@ No new signed-in deployed trade transaction was executed; current evidence is mo
 **Environment read-only:** isolated Supabase project is `ACTIVE_HEALTHY`. Cloudflare staging Worker is still version `a5be0341-3c81-46d4-bf6e-00a81940b8e2`, annotated source `194b9f3`, 100% traffic. Newer Wanted Board source has NOT been deployed or authenticated-browser verified; deploy only through the existing safe staging build path with exact source readback and preserved bindings, after cheap focused preflight. Do not overwrite concurrent deployments.
 
 **Next:** Run only focused local Wanted Board and offline Inbox recovery Playwright checks in an executable environment, repair any actual failure, then deploy the exact staging build and verify the Wanted drawer/match navigation on desktop and mobile. Continue listing/inbox and signed transaction coverage afterward. No production, billing, payment or real-customer changes.
+
+## Clock back in — completed roadmap batches (latest verified checkpoint)
+
+This section supersedes the pending deployment/test labels in the Wanted follow-up above. All changes are staging only; no trunk is complete.
+
+**Implemented and deployed**
+- `194b9f3f0a65935c96623300291f5a3ccb1684c9`: older-message pagination uses deterministic `(created_at,id)` ordering and a composite cursor, preserving microseconds. Tied timestamps cannot skip messages; threads outside the latest 500 messages can recover their own history. Drafts, scroll anchors and stale-request/account protections remain covered.
+- Same commit: listing creation/editing accepts a whole-number included quantity, explicit unit and item-by-item contents with matching totals. Everything is sold together for the existing listing price; this is not separate-purchase stock. Exact variants/conditions, account drafts and trade snapshots retain the disclosures. Defaults preserve older listings. No schema migration was needed.
+- `6e47920fbda25b4ecb79c0428058b90ad950582d`: owner editor restores/edits sport, year, player and legacy Brand metadata. Concurrent Wanted matcher, navigation, duplicate-publish and account privacy commits were retained.
+- `4b4f13041ad589412e43e881df094088b804d448`: Wanted requests support all 19 canonical card games, plus video games, consoles/gear, collectibles and Other. Exact card fields apply to every card game; non-card requests remain broad. Matching listing prices have an explicit USD symbol. Fixtures wait for initial loading and isolate network data.
+- `af9ff85199cbbbb54baaf3950a30ee0060151b9e`: buyer descriptions show readable Included items / Item details headings rather than serialization markers.
+- `39faa29273ed759354dad2a15feaad5b818e15e7`: blocked sellers are excluded from Wanted matches; stale match buttons recheck the block before opening details. An executed pre-fix matcher reproduced the leak; the corrected matcher excludes it.
+
+**Executed checks**
+- [40915080268](https://github.com/bam5693/Deckplay-hq/actions/runs/40915080268), commit `22aa64fa`: **220/220 desktop/mobile local browser cases**, **69/69 security checks** passed for the combined history, listings/editor, drafts, account boundaries and Wanted features.
+- After the final two-line privacy fix, [40915598917](https://github.com/bam5693/Deckplay-hq/actions/runs/40915598917), commit `70d5dc56`: **16/16 affected Wanted desktop/mobile cases**, **69/69 security checks** passed. These overlap the earlier group; do not add them as unique coverage.
+- Real isolated database: five existing bundle/price/counter scenarios passed; new history keyset test passed three pages spanning tied timestamps/microseconds and participant RLS; new category lifecycle suite passed **28 scenarios** across trading cards, games, consoles, controllers, accessories, collectibles and Other. Cancellation, decline, acceptance, counters, repeated-acceptance rejection, whole-inventory reservation and quantity snapshot retention passed. Every fixture transaction rolled back; follow-up counts found zero bundle/history/lifecycle identities.
+- Syntax/build checks passed. Initial focused runs `40912910288` (196 pass/2 fail) and `40914037390` (207 pass/2 fail, stopped early) were diagnosed before rerunning: an old one-order query mock, then missing currency and asynchronous Wanted fixture loading. These were corrected, not bypassed.
+- Four workflow durations: 101s, 105s, 103s and 27s (336s total elapsed run duration). GitHub timing returned Ubuntu billable_ms=0 for each; this is not an account-wide billing statement. No broad transaction/photo workflow was launched this session.
+
+**Final exact private deployment**
+Application source `39faa29273ed759354dad2a15feaad5b818e15e7`; Worker `757b33fc-fac2-4688-8e9d-eb8a4566d657`, 100% private staging traffic. Complete readback equals the built source, 740,133 characters; SHA-256 `09dd4cbe6ff6317958a744fa99eac16a669b0cfd83b5a8ca24b41bcbfa82ad9d`. All 23 assets and existing handler/configuration/three secret bindings retained. Anonymous HTTP returned 401.
+
+**Verification limit / remaining work**
+The interactive staging browser returned `net::ERR_INVALID_AUTH_CREDENTIALS`. Therefore no authenticated deployed-browser acceptance is claimed; SQL role/transaction checks and local browser fixtures are distinct evidence. Work continued into category transactions and Wanted privacy after that blocker. Private Access must remain enabled. Next: authenticated deployed acceptance, broader conversation-list history beyond the latest global window, durable full-page message recovery, remaining collection/quantity UX and physical Android/PWA checks. PR #2 remains draft/open/conflicted and unmerged. Production, real customer data, live payments/shipping and billing were untouched.
