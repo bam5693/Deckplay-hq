@@ -53,3 +53,7 @@ Staging `staging_test_runs` and fixture cleanup RPCs are **not** production feat
 - Collection inquiry history belongs in a private table; staging has a deny-all authenticated client policy and requires controlled server-side inquiry logic.
 - Message photo metadata has participant-scoped read access; recipients cannot read unattached photos. Direct client writes are not allowed by the observed policies.
 - The release must preserve both protections, validate the full table constraints and indexes, and integrate private object storage before enabling these features.
+
+## Additive column migration dry run
+- Executed the candidate six-column SQL inside a transaction against production, verified all six columns appeared in the transaction, and issued ROLLBACK. No persistent production schema change was intended.
+- This validates SQL compatibility only; it is not a restore test or an authorization/integration test. Do not deploy the preview until the full release gate is met.
