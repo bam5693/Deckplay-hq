@@ -8,7 +8,19 @@ alter table public.trade_offers add column if not exists item_snapshots jsonb no
 alter table public.trade_offers add column if not exists initial_terms jsonb not null default '{}'::jsonb;
 alter table public.profiles add column if not exists collection_links jsonb not null default '[]'::jsonb;
 alter table public.profiles add column if not exists collection_inquiry_mode text not null default 'off';
-alter table public.profiles add constraint deckplay_collection_inquiry_mode_check check (collection_inquiry_mode in ('off','trades','buy_trade'));
+do $
+begin
+  if not exists (
+    select 1 from pg_constraint
+    where conrelid = 'public.profiles'::regclass
+      and conname = 'deckplay_collection_inquiry_mode_check'
+  ) then
+    alter table public.profiles
+      add constraint deckplay_collection_inquiry_mode_check
+      check (collection_inquiry_mode in ('off','trades','buy_trade'));
+  end if;
+end;
+$;
 -- Intentionally NOT adding staging's private.valid_collection_links() check until dependency is ported.
 -- Intentionally NOT creating new tables here: RLS, policies, RPCs and storage must be ported together.
 commit;
