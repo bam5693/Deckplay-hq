@@ -1966,7 +1966,7 @@ document.getElementById("messageInbox").addEventListener("click",async e=>{
  const price=e.target.closest("[data-inbox-price]");
  if(price){
   const action=price.dataset.inboxPrice,id=price.dataset.offer,userId=currentUser?.id,key=userId+":price:"+id;
-  if(!userId||pendingInboxDealActions.has(key))return;
+  if(!userId||pendingInboxDealActions.has(key)||price.disabled)return;
   let amount=null;
   if(action==="counter"){
    const value=prompt("Enter your counteroffer in USD:");if(value===null)return;
@@ -1974,7 +1974,7 @@ document.getElementById("messageInbox").addEventListener("click",async e=>{
   }else if(!confirm("Confirm "+action+"?"))return;
   pendingInboxDealActions.add(key);
   const buttons=[...price.closest(".price-offer-actions").querySelectorAll("[data-inbox-price]")];
-  buttons.forEach(button=>button.disabled=true);
+  buttons.forEach(button=>{button.disabled=true;button.setAttribute("aria-busy","true")});
   try{
    const {error}=await supabaseClient.rpc("respond_price_offer",{p_offer_id:id,p_action:action,p_amount:amount});
    if(currentUser?.id!==userId)return;
@@ -1985,7 +1985,7 @@ document.getElementById("messageInbox").addEventListener("click",async e=>{
     void sendCollectorEmailForSource(id);await loadInbox();
    }
   }catch(error){if(currentUser?.id===userId){toast(error.message||"Offer update failed. Please retry.","error");await loadInbox().catch(()=>{})}}
-  finally{pendingInboxDealActions.delete(key);if(currentUser?.id===userId)buttons.forEach(button=>{if(button.isConnected)button.disabled=false})}
+  finally{pendingInboxDealActions.delete(key);if(currentUser?.id===userId)buttons.forEach(button=>{if(button.isConnected){button.disabled=false;button.removeAttribute("aria-busy")}})}
   return;
  }
  const counter=e.target.closest("[data-inbox-counter]");
