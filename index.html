@@ -2607,6 +2607,8 @@ document.getElementById("tradeOffersList").addEventListener("click",async e=>{
  const sameCollector=()=>currentUser?.id===userId&&messageAccountVersion===accountVersion;
  const conversation=e.target.closest("[data-trade-conversation]");
  if(conversation){
+  // Prevent the modal's outer click handlers from undoing Inbox navigation.
+  e.preventDefault();e.stopPropagation();
   const recipient=conversation.dataset.tradeConversation;
   if(!recipient||recipient===userId||!sameCollector())return;
   closeModal("tradesModal");
