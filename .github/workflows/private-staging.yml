@@ -55,6 +55,23 @@ jobs:
         with:
           path: ~/.cache/ms-playwright
           key: staging-playwright-${{ hashFiles('package-lock.json') }}
+      # Cheap checks run before any stateful staging transaction.
+      - name: Preflight — syntax and staging build
+        run: |
+          node --check scripts/build-staging.cjs
+          node --check scripts/run-staging-api.cjs
+          node --check scripts/report-staging-results.cjs
+          for file in tests/e2e/*.spec.js; do node --check "$file" || exit 1; done
+          DECKPLAY_STAGING_SUPABASE_URL=https://prrrzeelltmyugssqnzk.supabase.co DECKPLAY_STAGING_SUPABASE_KEY=sb_publishable_0omvNnv_ZOvXrZ-LHPMyIQ_a9zxD-yh node scripts/build-staging.cjs
+          test -s dist-staging/index.html
+      - name: Install browser for preflight
+        run: npx playwright install chromium --only-shell
+        timeout-minutes: 8
+      - name: Preflight — verify deployed staging matches branch before transactions
+        if: ${{ env.DECKPLAY_STAGING_URL != '' }}
+        run: npx playwright test --config=playwright.staging.config.js staging-smoke.spec.js --grep "deployed homepage matches the staging branch"
+      - name: Preflight — focused local marketplace and seller checks
+        run: npx playwright test --config=playwright.local.config.js category-coverage.spec.js marketplace-filter-boundaries.spec.js selling-category-matrix.spec.js
       - name: Charles — verify staging API transactions and authorization
         run: |
           mkdir -p test-results
