@@ -8,7 +8,8 @@ window.favoriteActions=(()=>{
   const wasSaved=saved.has(id),item=items.find(x=>String(x.id)===String(id));
   pending.add(requestKey);++savedListingsLoadVersion;wasSaved?saved.delete(id):saved.add(id);render();
   try{
-   if(item?.databaseId){
+   if(!item?.databaseId)throw Error('This item cannot be saved to your account yet. Try again.');
+   {
     const operation=wasSaved?supabaseClient.from('saved_listings').delete().eq('user_id',owner).eq('listing_id',item.databaseId):supabaseClient.from('saved_listings').insert({user_id:owner,listing_id:item.databaseId});
     const {error}=await (operation.abortSignal?operation.abortSignal(AbortSignal.timeout(20000)):operation);
     if(!valid())return;if(error&&!(error.code==='23505'&&!wasSaved))throw error;
