@@ -1,5 +1,10 @@
 # DeckPlay HQ — Work mode clock-in handoff (2026-10-29)
 
+## Latest verified checkpoint — authentication repaired
+Read the final section of `2026-10-29-clock-in-development.md` for current evidence. Automated private staging authentication succeeds through the existing trusted OIDC credential exchange; direct uncredentialed browser navigation still receives the intended HTTP challenge. Missing Playwright credentials now fail before launch. Do not rotate secrets or disable protection.
+
+Deployed app `1a8166b`, Worker `a6b99083-db9e-42c8-a674-59cfbc1ca991`: older conversation discovery, date dividers, stable recovered-message read state, full-catalog profile interests, live whole-lot quantity/price feedback and active-only discovery alert prices. Exact source readback verified. The one auth smoke and synthetic buyer/seller desktop/mobile checks passed; one subsequent transport-reset lane passed when retried alone. Continue durable message recovery, older offer-only history and remaining collection/mobile work. `auth_smoke_only` is available for actual auth regressions; `account_readonly_only` avoids full-suite/deployment work for small deployed checks. Do not rerun passing suites simply to clock in.
+
 ## Immediate instructions: BUILD, not status-only
 Start implementing marketplace features and verified bug fixes on the isolated staging branch. This is an operational handoff, not an instruction to generate another handoff. Continue multiple useful batches until session limits or a genuine blocker. If one feature is blocked, work on another. Do not ask the owner to manually visit GitHub or configure routine tooling when connected tools can do the work. Be a skeptical technical lead: challenge poor ideas, optimize for customer value and zero unnecessary CI minutes. Report real commits, tests, deployment versions and limitations. No fabricated successes.
 
