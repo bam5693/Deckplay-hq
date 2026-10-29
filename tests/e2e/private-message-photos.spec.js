@@ -29,3 +29,28 @@ test('photo-only messages send with a clear caption and recover the same message
  await page.locator('[data-photo-input="library"]').setInputFiles(photo);await expect(page.locator('.chat-photo-drafts img')).toHaveCount(1);await page.locator('[aria-label="Send message"]').click();await expect(page.locator('.chat-send-status')).toContainText('Response lost');await page.locator('[aria-label="Send message"]').click();await expect(page.locator('.chat-photo-drafts img')).toHaveCount(0);
  const rows=await page.evaluate(()=>photoWrites);expect(rows).toHaveLength(2);expect(rows[0].id).toBe(rows[1].id);expect(rows[0].body).toBe('Shared photos');
 });
+
+test('preparing a private photo blocks send and never falls back to a text-only message',async({page})=>{
+ await inbox(page);
+ await page.evaluate(()=>{
+  const decode=window.createImageBitmap;
+  window.createImageBitmap=async(...args)=>{
+   await new Promise(resolve=>{window.releasePhotoDecode=resolve});
+   return decode(...args);
+  };
+ });
+ await page.locator('#chatInput').fill('Please inspect the card corners');
+ await page.locator('[data-photo-input="library"]').setInputFiles(photo);
+ const send=page.locator('[aria-label="Send message"]');
+ await expect(page.locator('.chat-send-status')).toContainText('Preparing photos');
+ await expect(send).toBeDisabled();
+ await expect(page.locator('.chat-composer')).toHaveAttribute('aria-busy','true');
+ // Even a scripted form submit must not silently drop the pending attachment.
+ await page.evaluate(()=>document.querySelector('.chat-composer').requestSubmit());
+ await expect(page.locator('.chat-send-status')).toContainText('Wait for photo preparation to finish');
+ expect(await page.evaluate(()=>photoWrites.length)).toBe(0);
+ await page.evaluate(()=>window.releasePhotoDecode());
+ await expect(page.locator('.chat-photo-drafts img')).toHaveCount(1);
+ await expect(send).toBeEnabled();
+ await expect(page.locator('.chat-composer')).toHaveAttribute('aria-busy','false');
+});
