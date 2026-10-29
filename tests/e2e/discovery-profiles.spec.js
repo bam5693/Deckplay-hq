@@ -66,6 +66,13 @@ test('a collector can close an alert listing and open the next activity alert',a
  await page.evaluate(async()=>{
   await supabaseClient.auth.getSession();currentUser={id:'fixture-buyer'};showMainMarketplace();
   items=[{id:'cached-item',databaseId:'cached-item',sellerId:'fixture-seller',n:'Alert item',p:25,c:'Trading Cards',s:'@seller',imageUrls:[],trades:true}];
+  // Alert navigation validates active listing state rather than trusting cached cards.
+  const originalFrom=supabaseClient.from;
+  supabaseClient.from=table=>{
+   if(table!=='listings'&&table!=='profiles')return originalFrom(table);
+   const q={select:()=>q,eq:()=>q,maybeSingle:async()=>({data:table==='listings'?{id:'cached-item',title:'Alert item',seller_id:'fixture-seller',price:25,category:'trading_cards',status:'active',image_urls:[],accepts_trades:true}: {username:'seller'},error:null})};
+   return q;
+  };
   markNotificationRead=async()=>{};
   loadNotificationCenter=async()=>{document.getElementById('notificationList').innerHTML=['followed_seller_listing','wanted_match'].map(kind=>'<button data-open-notification="note" data-notification-kind="'+kind+'" data-notification-source="cached-item" data-notification-actor="fixture-seller">'+kind+'</button>').join('')};
   document.getElementById('notificationBell').hidden=false;
