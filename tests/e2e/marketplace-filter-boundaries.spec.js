@@ -19,6 +19,7 @@ async function installFixture(page,listings,blocked=[]){
   document.getElementById('search').value='';
   document.getElementById('marketCategory').value='All';
   document.getElementById('marketGame').value='All';
+  document.getElementById('marketMinPrice').value='';
   document.getElementById('marketMaxPrice').value='';
   document.getElementById('marketCollectibleSubcategory').value='All';
   showMainMarketplace();syncCollectibleFilter();render();
@@ -35,6 +36,7 @@ test.afterEach(async({page})=>{
   document.getElementById('search').value=query;
   document.getElementById('marketCategory').value=cat;
   document.getElementById('marketGame').value=game;
+  document.getElementById('marketMinPrice').value='';
   document.getElementById('marketMaxPrice').value='';
   syncCollectibleFilter();render();
   delete window.__marketFilterFixture;
@@ -269,4 +271,28 @@ test('Kyle and Jayden: switching every marketplace category hides unrelated filt
  await page.locator('#marketCategory').selectOption('All');
  for(const id of ids)await expect(page.locator('#'+id)).toBeHidden();
  await expect(page.locator('#grid h3')).toHaveCount(4);
+});
+
+
+test('All marketplace keeps category-specific filters hidden and combines minimum and maximum price',async({page})=>{
+ await installFixture(page,[
+  {id:'fixture-low',n:'Budget game',c:'Video Games',p:10,s:'fixture',cond:'Used',e:'🎮'},
+  {id:'fixture-mid',n:'Midrange card',c:'Trading Cards',game:'pokemon',p:35,s:'fixture',cond:'Near Mint',e:'🃏'},
+  {id:'fixture-high',n:'Premium figure',c:'Collectibles',p:100,s:'fixture',cond:'New',e:'🧸'}
+ ]);
+ await page.locator('#marketFilterToggle').click();
+ await expect(page.locator('#marketGameWrap')).toBeHidden();
+ await expect(page.locator('#marketCollectibleWrap')).toBeHidden();
+ await expect(page.locator('#marketPlatformWrap')).toBeHidden();
+ await page.locator('#marketMinPrice').fill('20');
+ await page.locator('#marketMaxPrice').fill('50');
+ await expect(page.locator('#grid h3')).toHaveText(['Midrange card']);
+ await page.locator('#marketMinPrice').fill('60');
+ await expect(page.locator('#grid h3')).toHaveCount(0);
+ await page.locator('#marketClearFilters').click();
+ await expect(page.locator('#marketMinPrice')).toHaveValue('');
+ await expect(page.locator('#marketMaxPrice')).toHaveValue('');
+ await expect(page.locator('#grid h3')).toHaveCount(3);
+ await page.locator('#marketCategory').selectOption('Trading Cards');
+ await expect(page.locator('#marketGameWrap')).toBeVisible();
 });
