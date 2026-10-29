@@ -93,3 +93,8 @@ test('deck quantity feedback identifies uncounted notes and invalid quantities w
  await page.locator('#deckList').fill('0x Yamato');
  await expect(page.locator('#deckQuantityStatus')).toContainText('between 1 and 1,000');
 });
+
+test('updated classification reads as item details while keeping seller disclosures escaped',async({page})=>{
+ await page.route('https://**/*',r=>r.abort());await page.goto('/');await page.evaluate(()=>showDetails({id:'fixture',n:'TEST ONLY game',p:25,c:'Video Games',cond:'Used',imageUrls:[],description:'[Listing classification]\nPlatform: Nintendo Switch\n[End classification]\n\nCorner wear disclosed. <script>fixture</script>'}));
+ await expect(page.locator('.detail-description')).toHaveText('Item details\nPlatform: Nintendo Switch\n\nCorner wear disclosed. <script>fixture</script>');await expect(page.locator('.detail-description script')).toHaveCount(0);
+});
