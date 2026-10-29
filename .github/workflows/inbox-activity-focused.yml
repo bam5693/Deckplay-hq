@@ -32,7 +32,7 @@ jobs:
           path: ~/.cache/ms-playwright
           key: staging-playwright-${{ hashFiles('package-lock.json') }}
       - run: npx playwright install chromium --only-shell
-      # Run only four new full-reload draft cases; earlier activity paging is already verified.
+      # Recheck four draft cases after fixing the fixture to use visible Back navigation.
       - name: Charles Kyle Tanner Jayden — private draft reload desktop and mobile
         run: npx playwright test --config=playwright.local.config.js inbox-recovery.spec.js --grep 'text drafts for Tanner|switching collectors clears stored private Inbox drafts|successful message delivery clears its saved tab draft|failed message delivery preserves a tab draft' --project=local-desktop --project=local-mobile --max-failures=1 --timeout=20000
       - name: Retain focused results
