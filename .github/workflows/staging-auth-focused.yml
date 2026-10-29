@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
   push:
     branches: [test/staging-reporting]
-    paths: ['.github/workflows/staging-auth-focused.yml']
+    paths: ['.github/workflows/staging-auth-focused.yml', 'tests/reports/staging-readonly-request.txt']
 permissions:
   contents: read
   actions: write
@@ -20,4 +20,4 @@ jobs:
           gh api -X POST repos/${{ github.repository }}/actions/workflows/private-staging.yml/dispatches \
             -f ref=test/staging-reporting \
             -F 'inputs[account_readonly_only]=true' \
-            -f 'inputs[acceptance_scope]=seller_desktop'
+            -f 'inputs[acceptance_scope]=all'
