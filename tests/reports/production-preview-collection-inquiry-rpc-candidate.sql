@@ -20,6 +20,8 @@ begin
 end;
 $fn$;
 revoke all on function private.send_collection_inquiry(uuid,text,text,text) from public,anon;
+-- Granting schema USAGE makes private functions reachable by authenticated SQL clients;
+-- keep EXECUTE revoked on unrelated functions and verify before deployment.
 grant usage on schema private to authenticated;
 grant execute on function private.send_collection_inquiry(uuid,text,text,text) to authenticated;
 create or replace function public.send_collection_inquiry(p_recipient uuid,p_item text,p_intent text,p_body text)
