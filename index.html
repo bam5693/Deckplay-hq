@@ -1618,21 +1618,26 @@ let discoveryNavigationVersion=0;
 async function navigateDeckplayNotification(kind,actorId,sourceId){
  const requestId=++discoveryNavigationVersion,userId=currentUser?.id;
  const current=()=>requestId===discoveryNavigationVersion&&currentUser?.id===userId;
- if(["favorite_price_drop","favorite_sold","followed_seller_listing","wanted_match"].includes(kind)&&sourceId){
-  let listing=items.find(x=>String(x.databaseId||x.id)===String(sourceId));
-  if(!listing){
-   try{
-    const {data,error}=await supabaseClient.from("listings").select("id,title,description,category,tcg_game,collectible_subcategory,price,condition,accepts_trades,accepts_price_offers,image_urls,created_at,seller_id").eq("id",sourceId).eq("status","active").maybeSingle();
-    if(!current())return;if(error)throw error;
-    if(!data||blockedCollectorIds.has(data.seller_id)){toast("This listing is no longer available.");return}
-    const {data:profile}=await supabaseClient.from("profiles").select("username,display_name").eq("id",data.seller_id).maybeSingle();
-    if(!current())return;listing=marketplaceItemFromRow(data,profile);
-   }catch(error){if(current())toast("Could not open this listing. Please try again.");return}
-  }
+ if(kind==="favorite_sold"){
   if(!current())return;
-  if(blockedCollectorIds.has(listing.sellerId)){toast("This listing is no longer available.");return}
-  if(!items.some(x=>String(x.databaseId||x.id)===String(sourceId)))items.unshift(listing);
-  showDetails(listing);return;
+  if(actorId&&!blockedCollectorIds.has(actorId)){
+   toast("That saved item has sold. Showing the seller's available listings.");
+   await showPublicProfile(actorId);
+  }else toast("That saved item has sold and is no longer available.");
+  return;
+ }
+ if(["favorite_price_drop","followed_seller_listing","wanted_match"].includes(kind)&&sourceId){
+  try{
+   // Resolve the current active record: cached cards can have old prices or sold status.
+   const {data,error}=await supabaseClient.from("listings").select("id,title,description,category,tcg_game,collectible_subcategory,price,condition,accepts_trades,accepts_price_offers,image_urls,created_at,seller_id").eq("id",sourceId).eq("status","active").maybeSingle();
+   if(!current())return;if(error)throw error;
+   if(!data||blockedCollectorIds.has(data.seller_id)){toast("This listing is no longer available.");return}
+   const {data:profile}=await supabaseClient.from("profiles").select("username,display_name").eq("id",data.seller_id).maybeSingle();
+   if(!current())return;
+   const listing=marketplaceItemFromRow(data,profile),index=items.findIndex(x=>String(x.databaseId||x.id)===String(sourceId));
+   if(index<0)items.unshift(listing);else items[index]=listing;
+   showDetails(listing);return;
+  }catch(error){if(current())toast("Could not open this listing. Please try again.");return}
  }
  document.querySelectorAll("[data-back-alerts]").forEach(button=>button.hidden=true);
  if(kind==="message"&&actorId){await showInboxPage(actorId);return}
