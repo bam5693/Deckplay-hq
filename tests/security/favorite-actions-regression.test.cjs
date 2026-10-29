@@ -55,3 +55,18 @@ test('item without persisted listing ID does not falsely report account save',as
   assert.equal(h.saved.has('card-1'),false);
   assert.match(h.notices[0],/cannot be saved to your account/);
 });
+
+test('duplicate favorite insert is treated as already saved',async()=>{
+  const h=harness({code:'23505',message:'duplicate key'});
+  await h.context.window.favoriteActions.toggle('card-1');
+  assert.equal(h.saved.has('card-1'),true);
+  assert.deepEqual(h.notices,['Saved to your account']);
+});
+
+test('failed favorite removal restores the saved state',async()=>{
+  const h=harness({message:'Delete failed'});
+  h.saved.add('card-1');
+  await h.context.window.favoriteActions.toggle('card-1');
+  assert.equal(h.saved.has('card-1'),true);
+  assert.deepEqual(h.notices,['Delete failed']);
+});
