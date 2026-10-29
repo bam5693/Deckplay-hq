@@ -5,7 +5,7 @@ const { test, expect } = require('@playwright/test');
 test('anonymous callers cannot send collection inquiries', async ({ request }) => {
   const base = process.env.DECKPLAY_STAGING_SUPABASE_URL || 'https://prrrzeelltmyugssqnzk.supabase.co';
   const anonKey = process.env.DECKPLAY_STAGING_SUPABASE_ANON_KEY || process.env.DECKPLAY_STAGING_SUPABASE_KEY || 'sb_publishable_0omvNnv_ZOvXrZ-LHPMyIQ_a9zxD-yh';
-  test.skip(!base || !anonKey, 'Staging Supabase URL and anon key required');
+  expect(anonKey, 'Staging publishable key must be configured').toBeTruthy();
   const url = new URL(base);
   expect(url.hostname).toBe('prrrzeelltmyugssqnzk.supabase.co');
   const response = await request.post(`${base.replace(/\/$/, '')}/rest/v1/rpc/send_collection_inquiry`, {
