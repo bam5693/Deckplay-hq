@@ -2180,7 +2180,8 @@ document.getElementById("tradeOffersList").addEventListener("click",async e=>{
  const button=e.target.closest("[data-counter-response],[data-trade-action]");if(!button)return;
  const reply=!!button.dataset.counterResponse,accept=reply?button.dataset.counterResponse==="accept":button.dataset.tradeAction==="accepted",id=reply?button.dataset.parentOffer:button.dataset.offerId,key=userId+":trade:"+id;
  if(pendingInboxDealActions.has(key))return;
- if(!confirm(accept?"Accept these trade terms? Items will be reserved. No payment is taken.":"Confirm this trade response?"))return;
+ const responseLabel=accept?"Accept these trade terms? Items will be reserved. No payment is taken.":reply?"Decline this counteroffer?":button.dataset.tradeAction==="cancelled"?"Cancel your trade offer?":button.dataset.tradeAction==="declined"?"Decline this trade offer?":"Confirm this trade response?";
+ if(!confirm(responseLabel))return;
  pendingInboxDealActions.add(key);const buttons=[...button.closest(".trade-offer-card").querySelectorAll("button")];buttons.forEach(b=>b.disabled=true);
  try{
   const {error}=await supabaseClient.rpc(reply?"respond_trade_counter":"respond_trade_offer",reply?{p_counter:button.dataset.counterId,p_accept:accept}:{p_offer:id,p_action:button.dataset.tradeAction});
