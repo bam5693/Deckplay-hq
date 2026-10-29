@@ -91,10 +91,10 @@ jobs:
           set -o pipefail
           node scripts/run-staging-api.cjs 2>&1 | tee test-results/staging-api.tap
       - name: Kyle, Tanner and Jayden — deployed buyer/seller/trader journeys
-        if: ${{ !cancelled() && env.DECKPLAY_STAGING_URL != '' }}
+        if: ${{ success() && env.DECKPLAY_STAGING_URL != '' }}
         run: npx playwright test --config=playwright.staging.config.js
       - name: Save durable staging feature result
-        if: ${{ !cancelled() && env.DECKPLAY_STAGING_URL != '' }}
+        if: ${{ success() && env.DECKPLAY_STAGING_URL != '' }}
         env:
           STAGING_JOB_STATUS: ${{ job.status }}
         run: node scripts/report-staging-results.cjs
