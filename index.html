@@ -851,6 +851,10 @@ footer p,html[data-theme="dark"] footer p{color:#d6deea!important}
 .chat-photo-tools{display:flex;flex-wrap:wrap;gap:8px;width:100%;align-items:center}.chat-photo-tools small{flex:1;min-width:140px}.chat-photo-drafts{display:flex;gap:10px;width:100%;overflow:auto}.chat-photo-drafts:empty{display:none}.chat-photo-drafts>span{position:relative;flex-shrink:0}.chat-photo-drafts img{width:84px;height:84px;object-fit:cover;border-radius:8px}.chat-photo-drafts button{position:absolute;top:0;right:0;min-width:44px;background:#172033e6;color:white}.chat-private-photos{display:flex;flex-wrap:wrap;gap:8px;max-width:100%}.chat-private-photos img{display:block;max-width:180px;max-height:180px;object-fit:contain;border-radius:8px}.chat-private-photos span{font-size:12px;width:100%}
 
 .seller-overview{padding:14px;margin:16px 0;border:1px solid #819c9660;border-radius:12px}.seller-overview summary{cursor:pointer;font-weight:700;min-height:32px}.seller-overview summary small{font-weight:400;margin-left:8px}.seller-overview-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px}.seller-overview-stats>div{padding:10px;border:1px solid #819c9640;border-radius:8px}.seller-overview-stats dt{font-size:13px}.seller-overview-stats dd{font-size:24px;font-weight:700;margin:6px 0 0}.seller-overview button{min-height:44px}.seller-asking-total strong{font-size:24px}
+/* Keep long threads in a real scroll viewport; earlier layouts expanded the
+   entire page and made history restoration and latest-message positioning inert. */
+#inboxPage.thread-open .conversation-bubbles{flex:none;height:clamp(180px,50dvh,560px);min-height:0;max-height:560px;overflow-y:auto;overflow-x:hidden;justify-content:flex-start;overscroll-behavior-y:contain;scrollbar-gutter:stable}
+#inboxPage.thread-open .conversation-bubbles>.message-bubble{flex-shrink:0}
 </style>
 </head>
 <body>
@@ -1906,14 +1910,15 @@ if(tradeById.size){
  input.value=inboxDrafts.get(id)||"";resizeInboxComposer(input);updateInboxLengthHint(input);input.readOnly=sending;composer.querySelector("button").disabled=sending||!input.value.trim();
  window.privateMessagePhotos?.mount(composer);
  const bubbles=thread.querySelector(".conversation-bubbles");
- bubbles.scrollTop=preserveDistanceFromBottom===null?bubbles.scrollHeight:Math.max(0,bubbles.scrollHeight-preserveDistanceFromBottom);
+ // Initial positioning and history restoration must be immediate, not smooth.
+ bubbles.style.scrollBehavior="auto";
+ bubbles.scrollTop=preserveDistanceFromBottom===null?bubbles.scrollHeight:Math.max(0,bubbles.scrollHeight-bubbles.clientHeight-preserveDistanceFromBottom);
  if(preserveDistanceFromBottom!==null)bubbles.focus({preventScroll:true});
  const olderButton=thread.querySelector("[data-inbox-older]");
  olderButton?.addEventListener("click",async()=>{
   if(olderButton.disabled)return;
   olderButton.disabled=true;olderButton.setAttribute("aria-busy","true");
   const status=thread.querySelector("[data-inbox-older-status]");status.textContent="Loading earlier messages…";
-  const distance=Math.max(0,bubbles.scrollHeight-bubbles.scrollTop-bubbles.clientHeight);
   const existingMessages=entries.filter(x=>x.type==="message");
   const oldest=existingMessages.reduce((earliest,m)=>!earliest||m.date<earliest?m.date:earliest,null);
   let query=supabaseClient.from("collector_messages").select("id,sender_id,recipient_id,body,created_at,read_at,attachment_ids").or("and(sender_id.eq."+userId+",recipient_id.eq."+id+"),and(sender_id.eq."+id+",recipient_id.eq."+userId+")").order("created_at",{ascending:false}).limit(50);
@@ -1930,6 +1935,8 @@ if(tradeById.size){
    inboxOlderMessages.set(id,saved);
    entries.sort((a,b)=>new Date(a.date)-new Date(b.date));
   }
+  // The reader may have scrolled while the request was pending.
+  const distance=Math.max(0,bubbles.scrollHeight-bubbles.scrollTop-bubbles.clientHeight);
   await openThread(id,distance);
  });
  const panel=thread.querySelector('.chat-deal-panel');
