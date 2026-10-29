@@ -698,3 +698,32 @@ test('Jayden can retry an offline inbox without losing his TCG inquiry draft',as
  await expect(page.locator('#chatInput')).toHaveValue('Is your One Piece deck still available?');
  await expect(page.locator('[data-inbox-retry]')).toHaveCount(0);
 });
+
+test('Inbox activity tab shows alerts, retries failures, and refreshes empty results',async({page})=>{
+ await ready(page);
+ await page.evaluate(async()=>{
+  await supabaseClient.auth.getSession();
+  currentUser={id:'fixture-activity-owner'};syncInboxDraftUser();
+  window.fixtureActivityError=false;
+  window.fixtureActivityRows=[{id:'fixture-activity-1',actor_id:null,kind:'favorite_price_drop',source_id:null,created_at:new Date().toISOString(),read_at:null}];
+  supabaseClient.from=table=>{
+   const q={then:(resolve,reject)=>Promise.resolve(table==='collector_notifications'?(fixtureActivityError?{data:null,error:{message:'Offline'}}:{data:fixtureActivityRows,error:null}):{data:[],error:null}).then(resolve,reject)};
+   for(const key of ['select','eq','is','in','order','limit'])q[key]=()=>q;
+   return q;
+  };
+  await showInboxPage();
+ });
+ await page.locator('#inboxNotificationsTab').click();
+ await expect(page.locator('#inboxNotificationList [data-notification-kind="favorite_price_drop"]')).toHaveCount(1);
+ await expect(page.locator('#notificationList [data-notification-kind="favorite_price_drop"]')).toHaveCount(1);
+ expect(await page.evaluate(()=>activityNotificationsVisible())).toBe(true);
+ await page.evaluate(()=>{fixtureActivityError=true});
+ await page.locator('#refreshInbox').click();
+ await expect(page.locator('#inboxNotificationList [data-retry-notifications]')).toHaveText('Retry alerts');
+ await page.evaluate(()=>{fixtureActivityError=false});
+ await page.locator('#inboxNotificationList [data-retry-notifications]').click();
+ await expect(page.locator('#inboxNotificationList [data-notification-kind="favorite_price_drop"]')).toHaveCount(1);
+ await page.evaluate(()=>{fixtureActivityRows=[]});
+ await page.locator('#refreshInbox').click();
+ await expect(page.locator('#inboxNotificationList [data-retry-notifications]')).toHaveText('Refresh alerts');
+});
