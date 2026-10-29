@@ -1,1 +1,1 @@
-2026-10-29 read-only staging homepage parity check after new Worker 6a63ae6f deployment returned an immediate index.html mismatch. No deploy, no database changes; compare SHA-256 against exact staging branch build after propagation.
+2026-10-29 read-only full asset parity after homepage SHA-256 passed following propagation: verify all 23 staging assets byte-for-byte and anonymous HEAD 401. No deployment or data writes.
