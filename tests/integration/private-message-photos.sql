@@ -59,15 +59,16 @@ end $$;
 -- A validated retry of the same photo is allowed even after the daily cap.
 -- It must not create a fresh upload event, while a new photo remains blocked.
 set local role authenticated;
-do $$declare f jsonb:=current_setting('deckplay.photo.fixture')::jsonb;before_count bigint;after_count bigint;v jsonb;begin
+do $$declare f jsonb:=current_setting('deckplay.photo.fixture')::jsonb;v jsonb;begin
  perform set_config('request.jwt.claims',jsonb_build_object('sub',f->>'a','role','authenticated')::text,true);
- select count(*) into before_count from deckplay_chat.upload_events where user_id=(f->>'a')::uuid;
  v:=public.prepare_private_message_photo((f->>'p')::uuid,(f->>'b')::uuid,(f->>'m')::uuid);
  if v->>'status'<>'attached' then raise exception 'Idempotent sent-photo retry was blocked';end if;
- select count(*) into after_count from deckplay_chat.upload_events where user_id=(f->>'a')::uuid;
- if before_count<>after_count then raise exception 'Retry consumed a new photo quota slot';end if;
 end $$;
 reset role;
+do $$declare f jsonb:=current_setting('deckplay.photo.fixture')::jsonb;event_count bigint;begin
+ select count(*) into event_count from deckplay_chat.upload_events where user_id=(f->>'a')::uuid;
+ if event_count<>34 then raise exception 'Retry consumed a quota slot: %',event_count;end if;
+end $$;
 insert into public.user_blocks(blocker_id,blocked_id) values((current_setting('deckplay.photo.fixture')::jsonb->>'b')::uuid,(current_setting('deckplay.photo.fixture')::jsonb->>'a')::uuid);
 set local role authenticated;
 do $$declare f jsonb:=current_setting('deckplay.photo.fixture')::jsonb;denied boolean;begin
