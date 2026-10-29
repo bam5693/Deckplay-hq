@@ -5,6 +5,24 @@ branch `release/2026-10-29-marketplace`. Main and the public Worker were not cha
 PR #2 remains draft and unmerged. This report distinguishes source inclusion from
 production readiness; a green UI suite does not clear database or recovery gates.
 
+## Follow-up release engineering completed — 29 October 2026
+
+The reconciliation blockers described in the historical inventory below now have a
+production-specific migration tested against a reconstruction of production's application
+schema. Signed integrated preview journeys passed on desktop and mobile. Native PostgreSQL
+migration/competing transactions and backup-to-second-database recovery rehearsal passed.
+
+Current code pin: `e9b0bbd405fa64caae20478584d4d181a3aefa58`. See
+[`release/PRODUCTION-RELEASE.md`](../../release/PRODUCTION-RELEASE.md) for exact migration/hash,
+evidence, limits, deployment sequence and rollback. The only external recovery gate is
+an actual private production backup/restore covering managed Auth and Storage bytes;
+there is no privileged connection or backup download operation available here. The
+production database remains unchanged, so the live schema contract intentionally still
+reports the old gaps. Publication gates remain closed; no merge/deployment approval requested.
+
+The following inventory and earlier findings are the historical starting point, not a
+claim that migration engineering or signed preview testing is still unattempted.
+
 ## Source and conflicts
 
 - Production baseline: main `98dbde611b8f26063f0138588f49804232260ea7`.

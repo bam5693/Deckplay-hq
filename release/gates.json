@@ -1,12 +1,13 @@
 {
   "approvedApplicationTree": null,
   "productionSchemaVerified": false,
-  "previewAcceptanceVerified": false,
+  "previewAcceptanceVerified": true,
   "rollbackVerified": false,
   "blockers": [
-    "Production is missing drafts, follows, collection and attachment schema",
-    "Trade reservation and moderation RPC contracts differ from staging",
-    "Production-specific migration has not passed isolated compatibility acceptance",
-    "Integrated candidate signed browser acceptance and backup recovery rehearsal incomplete"
-  ]
+    "Actual private production backup/Auth/Storage recovery has not been verified; privileged connection or private backup unavailable",
+    "Production schema remains intentionally unchanged; apply only the approved migration and require its read-only contract before publishing"
+  ],
+  "productionMigrationRehearsalVerified": true,
+  "backupProcedureRehearsalVerified": true,
+  "candidateCodeCommit": "e9b0bbd405fa64caae20478584d4d181a3aefa58"
 }
