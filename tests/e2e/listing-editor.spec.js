@@ -24,3 +24,39 @@ test('account changes clear the private editor and reject a late successful save
 test('late editor loads cannot reveal the old owner draft in a new account',async({page})=>{
  await fixture(page);await page.evaluate(()=>{listingEditor.reset();supabaseClient.from=()=>{const q={select:()=>q,eq:()=>q,maybeSingle:()=>new Promise(r=>window.finishEditLoad=r)};return q};void listingEditor.open('edit-item');currentUser={id:'other-owner'};syncInboxDraftUser();finishEditLoad({data:editRow,error:null})});await expect(page.locator('#editListingTitle')).toHaveValue('');await expect(page.locator('#editListingModal')).not.toHaveClass(/open/);
 });
+
+const editPhoto={name:'test-only.png',mimeType:'image/png',buffer:Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aX3cAAAAASUVORK5CYII=','base64')};
+async function photoFixture(page){
+ await fixture(page);await page.evaluate(async()=>{
+  editRow.image_urls=['https://example.test/original.jpg'];await listingEditor.open('edit-item');
+  window.editUploadCalls=[];window.editUploadFailure=false;prepareListingPhoto=async file=>file;
+  supabaseClient.storage.from=bucket=>({upload:async(path,file)=>{editUploadCalls.push({bucket,path,name:file.name});if(editUploadFailure){editUploadFailure=false;return {error:{message:'Photo connection failed'}}}return {error:null}},getPublicUrl:path=>({data:{publicUrl:'https://example.test/'+path}})});
+ });
+}
+test('owner can replace, add and reorder listing photos without changing the create-listing draft',async({page})=>{
+ await photoFixture(page);await page.evaluate(()=>document.getElementById('item').value='Unrelated saved creation draft');
+ await page.locator('[data-edit-photo="replace"]').click();await page.locator('#editListingReplaceInput').setInputFiles(editPhoto);
+ await page.locator('#editListingPhotoInput').setInputFiles({...editPhoto,name:'back.png'});
+ await expect(page.locator('[data-edit-photo-previews] img')).toHaveCount(2);await page.locator('[data-edit-photo="cover"]').nth(1).click();
+ await page.locator('#saveListingEdits').click();await expect.poll(()=>page.evaluate(()=>editWrites.length)).toBe(1);
+ const changes=await page.evaluate(()=>editWrites[0]);expect(changes.image_urls).toHaveLength(2);expect(await page.evaluate(()=>editUploadCalls.map(x=>x.name))).toEqual(['back.png','test-only.png']);expect(await page.evaluate(()=>editUploadCalls.every(x=>x.bucket==='listing-images'))).toBe(true);
+ expect(await page.evaluate(()=>editFilters)).toContainEqual(['image_urls','{"https://example.test/original.jpg"}']);await page.evaluate(()=>finishEdit({data:{id:'edit-item'},error:null}));await expect(page.locator('#item')).toHaveValue('Unrelated saved creation draft');
+});
+test('failed photo uploads keep selected files and retry reuses uploads that already succeeded',async({page})=>{
+ await photoFixture(page);await page.locator('#editListingPhotoInput').setInputFiles([editPhoto,{...editPhoto,name:'second.png'}]);
+ await page.evaluate(()=>{supabaseClient.storage.from=bucket=>({upload:async(path,file)=>{editUploadCalls.push(file.name);return file.name==='second.png'&&editUploadCalls.length===2?{error:{message:'Second photo failed'}}:{error:null}},getPublicUrl:path=>({data:{publicUrl:'https://example.test/'+path}})})});
+ await page.locator('#saveListingEdits').click();await expect(page.locator('#editListingStatus')).toContainText('Second photo failed');await expect(page.locator('[data-edit-photo-previews] img')).toHaveCount(3);expect(await page.evaluate(()=>editWrites)).toEqual([]);
+ await page.locator('#saveListingEdits').click();await expect.poll(()=>page.evaluate(()=>editWrites.length)).toBe(1);expect(await page.evaluate(()=>editUploadCalls)).toEqual(['test-only.png','second.png','second.png']);await page.evaluate(()=>finishEdit({data:{id:'edit-item'},error:null}));
+});
+test('removing every listing photo fails clearly and leaves the persisted listing untouched',async({page})=>{
+ await photoFixture(page);await page.locator('[data-edit-photo="remove"]').click();await page.locator('#saveListingEdits').click();await expect(page.locator('#editListingStatus')).toContainText('at least one photo');expect(await page.evaluate(()=>editWrites)).toEqual([]);await expect(page.locator('#editListingTitle')).toHaveValue('TEST ONLY original');
+});
+test('an upload with a lost response reuses its exact unique object only after verifying bytes',async({page})=>{
+ await photoFixture(page);await page.locator('#editListingPhotoInput').setInputFiles(editPhoto);
+ await page.evaluate(()=>{window.uploadedBlob=null;supabaseClient.storage.from=()=>({upload:async(path,blob)=>{editUploadCalls.push(path);uploadedBlob=blob;return {error:editUploadCalls.length===1?{message:'Response lost'}:{statusCode:'409',message:'Already exists'}}},download:async()=>({data:uploadedBlob,error:null}),getPublicUrl:path=>({data:{publicUrl:'https://example.test/'+path}})})});
+ await page.locator('#saveListingEdits').click();await expect(page.locator('#editListingStatus')).toContainText('Response lost');await page.locator('#saveListingEdits').click();await expect.poll(()=>page.evaluate(()=>editWrites.length)).toBe(1);const paths=await page.evaluate(()=>editUploadCalls);expect(paths[0]).toBe(paths[1]);await page.evaluate(()=>finishEdit({data:{id:'edit-item'},error:null}));
+});
+test('account changes during editor photo preparation cannot start a storage upload',async({page})=>{
+ await photoFixture(page);await page.locator('#editListingPhotoInput').setInputFiles(editPhoto);await page.evaluate(()=>prepareListingPhoto=()=>new Promise(r=>window.completeEditPhoto=r));await page.locator('#saveListingEdits').click();
+ await page.evaluate(()=>{currentUser={id:'other-owner'};syncInboxDraftUser();completeEditPhoto(new File(['x'],'x.png',{type:'image/png'}))});expect(await page.evaluate(()=>editUploadCalls)).toEqual([]);expect(await page.evaluate(()=>editWrites)).toEqual([]);await expect(page.locator('#editListingModal')).not.toHaveClass(/open/);
+});
