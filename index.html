@@ -2179,18 +2179,21 @@ document.getElementById("tradeOffersList").addEventListener("click",async e=>{
  const counter=e.target.closest("[data-counter-start]");if(counter){activeCounterOffer=counter.dataset.counterStart;++counterComposeVersion;document.getElementById("counterForm").reset();document.getElementById("counterStatus").textContent="";openModal("counterModal");return}
  const button=e.target.closest("[data-counter-response],[data-trade-action]");if(!button)return;
  const reply=!!button.dataset.counterResponse,accept=reply?button.dataset.counterResponse==="accept":button.dataset.tradeAction==="accepted",id=reply?button.dataset.parentOffer:button.dataset.offerId,key=userId+":trade:"+id;
- if(pendingInboxDealActions.has(key))return;
+ if(pendingInboxDealActions.has(key)||button.disabled)return;
  const responseLabel=accept?"Accept these trade terms? Items will be reserved. No payment is taken.":reply?"Decline this counteroffer?":button.dataset.tradeAction==="cancelled"?"Cancel your trade offer?":button.dataset.tradeAction==="declined"?"Decline this trade offer?":"Confirm this trade response?";
  if(!confirm(responseLabel))return;
- pendingInboxDealActions.add(key);const buttons=[...button.closest(".trade-offer-card").querySelectorAll("button")];buttons.forEach(b=>b.disabled=true);
+ pendingInboxDealActions.add(key);const buttons=[...button.closest(".trade-offer-card").querySelectorAll("button")];buttons.forEach(b=>{b.disabled=true;b.setAttribute("aria-busy","true")});
  try{
   const {error}=await supabaseClient.rpc(reply?"respond_trade_counter":"respond_trade_offer",reply?{p_counter:button.dataset.counterId,p_accept:accept}:{p_offer:id,p_action:button.dataset.tradeAction});
   if(currentUser?.id!==userId)return;if(error)throw error;
-  if(accept)await loadListings();if(currentUser?.id!==userId)return;
-  await loadTradeOffers();if(!document.getElementById("inboxPage").hidden)await loadInbox();void refreshTradeAlerts();
   toast(accept?"Trade accepted — items reserved. Payments are not active.":"Trade updated");
- }catch(error){if(currentUser?.id===userId)toast(error.message||"Trade response failed. Refresh and retry.","error")}
- finally{pendingInboxDealActions.delete(key);if(currentUser?.id===userId)buttons.forEach(b=>{if(b.isConnected)b.disabled=false})}
+  try{
+   if(accept)await loadListings();
+   if(currentUser?.id!==userId)return;
+   await loadTradeOffers();if(!document.getElementById("inboxPage").hidden)await loadInbox();void refreshTradeAlerts();
+  }catch(refreshError){if(currentUser?.id===userId)toast("Trade updated, but the screen could not refresh. Refresh to see its latest status.","error")}
+ }catch(error){if(currentUser?.id===userId){toast(error.message||"Could not confirm trade response. Refresh to check its status before retrying.","error");await loadTradeOffers().catch(()=>{})}}
+ finally{pendingInboxDealActions.delete(key);if(currentUser?.id===userId)buttons.forEach(b=>{if(b.isConnected){b.disabled=false;b.removeAttribute("aria-busy")}})}
 });
 document.getElementById("counterForm").addEventListener("submit",async e=>{
  e.preventDefault();
