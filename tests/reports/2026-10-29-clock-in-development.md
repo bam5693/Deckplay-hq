@@ -65,3 +65,14 @@ Application source `39faa29273ed759354dad2a15feaad5b818e15e7`; Worker `757b33fc-
 
 **Verification limit / remaining work**
 The interactive staging browser returned `net::ERR_INVALID_AUTH_CREDENTIALS`. Therefore no authenticated deployed-browser acceptance is claimed; SQL role/transaction checks and local browser fixtures are distinct evidence. Work continued into Wanted privacy after that blocker; category transactions were also verified during this session. Private Access must remain enabled. Next: authenticated deployed acceptance, broader conversation-list history beyond the latest global window, durable full-page message recovery, remaining collection/quantity UX and physical Android/PWA checks. PR #2 remains draft/open/conflicted and unmerged. Production, real customer data, live payments/shipping and billing were untouched.
+
+
+## Activity-alert price clarity — 2026-10-29 focused automation batch
+
+**Customer-facing source:** `9f8829f` adds current asking-price context to favorite price-drop, followed-seller and Wanted match alerts. `c3d1e24` suppresses that price when the listing is no longer active, so stale alerts do not imply a sold item can still be bought. The price is the current listing price, **not** a fabricated historical discount. No schema, permissions, payment or production changes.
+
+**Focused regression:** `cef100d`, `23f3c19` add desktop/mobile local Playwright cases for active and sold listing alerts; `fb7b306` includes the spec in the local test manifest. All five inline homepage scripts parsed, the actual notification renderer was executed against mocked active/sold Supabase rows, and five render assertions passed (active price-drop, Wanted match, stale sold price suppression, both notification surfaces, no NaN). Seven standalone price boundary checks passed. **Playwright browser tests have not executed** because this automation environment has no checkout or local Playwright runtime; do not call them passing.
+
+**Deployment:** These new alert changes are committed on the staging branch but **not deployed**. Latest read-only private Worker observation was version `b8c34c8e-9449-4012-af27-7d2f3085ed06` at 100% traffic, based on an earlier source. Preserve all bindings and source parity before any subsequent deployment; no Worker update was attempted in this batch.
+
+**CI diagnosis:** Earlier auth smoke `40918068707` passed anonymous 401, credentialed 200 and four signed-in buyer/seller desktop/mobile checks. Later deployed run `40919645370` passed three of four sessions; the fourth failed at navigation with `net::ERR_CONNECTION_RESET`, not invalid Basic Auth. Treat as an isolated transient network failure unless reproduced; do not blindly rerun the full suite. PR #2 remains draft/unmerged. Next: execute the focused new local spec in a proper checkout, deploy exact current staging source safely, verify alert UI, and continue highest-value roadmap features.
