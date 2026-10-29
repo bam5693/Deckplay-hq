@@ -696,7 +696,8 @@ test('a committed message survives a lost response and retry without inserting a
  await page.locator('#chatInput').fill('One copy of this message');await page.locator('#chatInput').press('Enter');
  await expect(page.locator('.chat-send-status')).toContainText('Response lost');await expect(page.locator('#chatInput')).toHaveValue('One copy of this message');
  await page.locator('#chatInput').press('Enter');await expect(page.locator('#chatInput')).toHaveValue('');
- expect(await page.evaluate(()=>attemptedMessageIds.length)).toBe(2);expect(await page.evaluate(()=>new Set(attemptedMessageIds).size)).toBe(1);
+ // A recovered server row is read before retrying, so no second INSERT is needed.
+ expect(await page.evaluate(()=>attemptedMessageIds.length)).toBe(1);expect(await page.evaluate(()=>lookupCount)).toBe(2);
  expect(await page.evaluate(()=>messageSendAttempts.size)).toBe(0);
 });
 
@@ -948,4 +949,53 @@ test('failed message delivery preserves a tab draft through reload for safe manu
  await page.reload();
  await inbox(page);
  await expect(page.locator('#chatInput')).toHaveValue('Unsent message after network failure');
+});
+
+test('an uncertain text send verifies its exact committed row after reload without another INSERT',async({page})=>{
+ await ready(page);
+ const payload={sender_id:'fixture-seller',recipient_id:'buyer-a',body:'Private condition details after network loss'};
+ const first=await page.evaluate(async payload=>{
+  currentUser={id:payload.sender_id};syncInboxDraftUser();
+  window.firstTextInsertIds=[];
+  supabaseClient.from=()=>{
+   const q={select:()=>q,eq:()=>q,insert:value=>{firstTextInsertIds.push(value.id);return q},single:async()=>{throw Error('Response lost')},maybeSingle:async()=>({data:null,error:null})};
+   return q;
+  };
+  try{await sendCollectorMessageOnce(payload)}catch(error){return error.message}
+  return 'unexpected success';
+ },payload);
+ expect(first).toBe('Response lost');
+ const saved=await page.evaluate(owner=>JSON.parse(sessionStorage.getItem(inboxTextRetryStorageKey(owner))||'[]'),payload.sender_id);
+ expect(saved).toHaveLength(1);
+ expect(saved[0].hash).toMatch(/^[0-9a-f]{64}$/);
+ expect(JSON.stringify(saved)).not.toContain(payload.body);
+ expect(await page.evaluate(()=>firstTextInsertIds)).toEqual([saved[0].id]);
+ await page.reload();await page.waitForLoadState('networkidle');
+ const second=await page.evaluate(async payload=>{
+  currentUser={id:payload.sender_id};syncInboxDraftUser();
+  const row=JSON.parse(sessionStorage.getItem(inboxTextRetryStorageKey(payload.sender_id))||'[]')[0];
+  window.secondTextInserts=0;
+  supabaseClient.from=()=>{
+   const q={select:()=>q,eq:()=>q,insert:()=>{secondTextInserts++;return q},single:async()=>({data:null,error:{code:'23505',message:'Duplicate'}}),maybeSingle:async()=>({data:{...payload,id:row.id},error:null})};
+   return q;
+  };
+  const result=await sendCollectorMessageOnce(payload);
+  return {id:result.data.id,inserts:secondTextInserts,remaining:sessionStorage.getItem(inboxTextRetryStorageKey(payload.sender_id))};
+ },payload);
+ expect(second).toEqual({id:saved[0].id,inserts:0,remaining:null});
+});
+test('switching accounts purges uncertain text delivery references',async({page})=>{
+ await ready(page);
+ const result=await page.evaluate(async()=>{
+  currentUser={id:'fixture-seller'};syncInboxDraftUser();
+  supabaseClient.from=()=>{
+   const q={select:()=>q,eq:()=>q,insert:()=>q,single:async()=>{throw Error('Offline')},maybeSingle:async()=>({data:null,error:null})};
+   return q;
+  };
+  try{await sendCollectorMessageOnce({sender_id:'fixture-seller',recipient_id:'buyer-a',body:'Private unsent text'})}catch{}
+  const before=inboxTextRetryEntries('fixture-seller').length;
+  currentUser={id:'other-collector'};syncInboxDraftUser();
+  return {before,after:sessionStorage.getItem(inboxTextRetryStorageKey('fixture-seller'))};
+ });
+ expect(result).toEqual({before:1,after:null});
 });
