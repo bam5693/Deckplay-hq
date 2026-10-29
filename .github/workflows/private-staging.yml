@@ -8,7 +8,6 @@ on:
     paths:
       - 'index.html'
       - 'moderator-access.js'
-      - '.github/workflows/private-staging.yml'
       - 'supabase/staging/collection-sharing.sql' 
 permissions:
   contents: read
@@ -68,6 +67,8 @@ jobs:
       - name: Install browser for preflight
         run: npx playwright install chromium --only-shell
         timeout-minutes: 8
+      - name: Preflight — focused local marketplace and seller checks
+        run: npx playwright test --config=playwright.local.config.js category-coverage.spec.js marketplace-filter-boundaries.spec.js selling-category-matrix.spec.js
       - name: Deploy exact staging branch before deployed browser tests
         if: ${{ env.DECKPLAY_STAGING_URL != '' }}
         env:
@@ -83,8 +84,6 @@ jobs:
       - name: Preflight — verify deployed staging matches branch before transactions
         if: ${{ env.DECKPLAY_STAGING_URL != '' }}
         run: npx playwright test --config=playwright.staging.config.js staging-smoke.spec.js --grep "deployed homepage matches the staging branch"
-      - name: Preflight — focused local marketplace and seller checks
-        run: npx playwright test --config=playwright.local.config.js category-coverage.spec.js marketplace-filter-boundaries.spec.js selling-category-matrix.spec.js
       - name: Charles — verify staging API transactions and authorization
         run: |
           mkdir -p test-results
