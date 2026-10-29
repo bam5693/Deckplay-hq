@@ -2611,8 +2611,7 @@ document.getElementById("tradeOffersList").addEventListener("click",async e=>{
   e.preventDefault();e.stopPropagation();
   const recipient=conversation.dataset.tradeConversation;
   if(!recipient||recipient===userId||!sameCollector())return;
-  closeModal("tradesModal");
-  await showInboxPage(recipient);
+  await window.deckplayNavigateInboxFromModal(recipient);
   return;
  }
  const actionTarget=e.target.closest("[data-counter-start],[data-counter-response],[data-trade-action]");
@@ -2793,6 +2792,16 @@ supabaseClient.auth.getSession().then(({data})=>{currentUser=data.session?.user|
    history.replaceState({...history.state,deckplayNav:true,deckplayDepth:states.length-1},"");
   }else push(entry);
  }
+ // Atomic modal-to-Inbox navigation: do not let an asynchronous history.back()
+ // from closeModal restore the previous screen after the destination opens.
+ window.deckplayNavigateInboxFromModal=function(recipient){
+  if(!recipient||!currentUser)return Promise.resolve();
+  for(const modal of document.querySelectorAll(".modal.open"))originalClose(modal.id);
+  while(states.at(-1)?.type==="modal")states.pop();
+  history.replaceState({...history.state,deckplayNav:true,deckplayDepth:states.length-1},"");
+  pendingModalBack=false;queuedModal=null;
+  return showInboxPage(recipient);
+ };
  // Keep inbox conversations in Android's navigation stack.
  document.getElementById("messageInbox")?.addEventListener("click",function(e){
   const conversation=e.target.closest("[data-conversation-id]");
