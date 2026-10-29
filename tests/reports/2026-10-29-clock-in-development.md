@@ -24,3 +24,19 @@ Scope: isolated staging branch, Supabase prrrzeelltmyugssqnzk and Worker deckpla
 
 ## Remaining limits / next priority
 No new signed-in deployed trade transaction was executed; current evidence is mocked browser journeys, executed security/logic checks, database metadata and exact deployed-source parity. Retry references remain in memory for the current account/page session; full-page/offline delivery recovery remains unfinished. No trunk is complete. Next customer slice: reliable earlier-message history at timestamp boundaries, followed by structured listing quantities/lots and remaining per-category signed transaction coverage. Do not rerun passing photo tests or the full broad workflow merely for report changes.
+
+## Wanted Board reliability and matching — 2026-10-29 follow-up
+
+**Customer-facing improvements (staging source only):**
+- `ee2ce3e`: exact Wanted Board matches now read structured Card number / Variant / Set fields across real and legacy escaped newlines. Reject near-miss set codes, variants, self listings, invalid budgets and unrelated seller notes; prevents misleading buyer alerts.
+- `44b3fe6`: matching listings now show the actual marketplace title and USD price (previously blank title and NaN because the renderer read `title/price` rather than normalized `n/p`). A View button opens the matching listing details after closing the Wanted drawer.
+- `7bbcbd0`: Wanted post publishing now blocks duplicate submissions, preserves drafts after network failure, invalidates stale account responses, and clears private drafts on account switch.
+- Regression sources `773e53b`, `ba123c1`, `a9dc001` added exact-match, UI navigation, duplicate submission and account-switch cases.
+
+**Actual verification:** 13 classic inline scripts parsed with V8; new Playwright spec parsed; extracted real matcher executed against eight positive/negative fixtures and budget boundaries; extracted real publisher executed five isolated asynchronous checks (duplicate prevention, failed draft, retry, account reset, stale success suppression). **Playwright browser tests not executed.** No Actions run was dispatched for these changes, and none of these newer commits is deployed.
+
+**Existing unrelated CI failure diagnosed:** focused inbox-history/listing run `40912910288` at `00f58b1` failed with 196 passed / 2 failed because an older offline test double allowed one `.order()` but the new production-equivalent query chains two deterministic order calls. Source `b4e3294` corrects the test fixture chain and parses; **the failed browser case has not been rerun**, so do not call it passing. Security checks in that run passed.
+
+**Environment read-only:** isolated Supabase project is `ACTIVE_HEALTHY`. Cloudflare staging Worker is still version `a5be0341-3c81-46d4-bf6e-00a81940b8e2`, annotated source `194b9f3`, 100% traffic. Newer Wanted Board source has NOT been deployed or authenticated-browser verified; deploy only through the existing safe staging build path with exact source readback and preserved bindings, after cheap focused preflight. Do not overwrite concurrent deployments.
+
+**Next:** Run only focused local Wanted Board and offline Inbox recovery Playwright checks in an executable environment, repair any actual failure, then deploy the exact staging build and verify the Wanted drawer/match navigation on desktop and mobile. Continue listing/inbox and signed transaction coverage afterward. No production, billing, payment or real-customer changes.
