@@ -2099,12 +2099,12 @@ async function loadInbox(targetCollectorId=null){
  for(const [other,rows] of inboxOlderMessages)for(const m of rows)if(!recentMessageIds.has(m.id)){add(other,{type:"message",date:m.created_at,...m});recentMessageIds.add(m.id)}
  const offers=new Map(priceRows.map(o=>[o.id,o]));const historyOffers=new Set();
  if(!hr.error)for(const h of hr.data||[]){const offer=offers.get(h.offer_id);if(!offer)continue;historyOffers.add(h.offer_id);add(h.buyer_id===currentUser.id?h.seller_id:h.buyer_id,{type:"price",date:h.created_at,id:h.id,offer_id:h.offer_id,action:({submitted:"offered",counter:"countered",accept:"accepted",decline:"declined",withdraw:"withdrawn"})[h.action]||h.action,actor_id:h.actor_id,amount:h.amount,isLatest:false,...{currentOffer:offer}})}
- for(const o of pr.data||[])if(!historyOffers.has(o.id))add(o.buyer_id===currentUser.id?o.seller_id:o.buyer_id,{type:"price",date:o.updated_at,action:o.status,amount:o.amount,actor_id:o.last_actor_id,offer_id:o.id,currentOffer:o});
+ for(const o of priceRows)if(!historyOffers.has(o.id))add(o.buyer_id===currentUser.id?o.seller_id:o.buyer_id,{type:"price",date:o.updated_at,action:o.status,amount:o.amount,actor_id:o.last_actor_id,offer_id:o.id,currentOffer:o});
  const tradeListingIds=[...new Set(tradeRows.flatMap(o=>[o.listing_id,o.offered_listing_id,...(o.offered_listing_ids||[])]).filter(Boolean))];
  const tradeListingResult=tradeListingIds.length?await supabaseClient.from("listings").select("id,title,description,image_urls,price").in("id",tradeListingIds):{data:[]};
  if(requestId!==inboxLoadVersion||currentUser?.id!==userId)return;
  const tradeListings=new Map((tradeListingResult.data||[]).map(l=>[l.id,l]));
- for(const o of tr.data||[])add(o.sender_id===currentUser.id?o.recipient_id:o.sender_id,{type:"trade",date:o.created_at,...o});
+ for(const o of tradeRows)add(o.sender_id===currentUser.id?o.recipient_id:o.sender_id,{type:"trade",date:o.created_at,...o});
  const tradeById=new Map(tradeRows.map(o=>[o.id,o]));
 const pendingTradeCounterByOffer=new Map();
 if(tradeById.size){
