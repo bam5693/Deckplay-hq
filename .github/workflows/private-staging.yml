@@ -68,7 +68,7 @@ jobs:
         run: npx playwright install chromium --only-shell
         timeout-minutes: 8
       - name: Preflight — focused local marketplace and seller checks
-        run: npx playwright test --config=playwright.local.config.js category-coverage.spec.js marketplace-filter-boundaries.spec.js selling-category-matrix.spec.js
+        run: npx playwright test --config=playwright.local.config.js category-coverage.spec.js marketplace-filter-boundaries.spec.js selling-category-matrix.spec.js inbox-recovery.spec.js
       - name: Deploy exact staging branch before deployed browser tests
         if: ${{ env.DECKPLAY_STAGING_URL != '' }}
         env:
