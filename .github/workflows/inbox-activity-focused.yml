@@ -1,4 +1,4 @@
-name: Focused Inbox draft recovery UI
+name: Focused Inbox text delivery recovery UI
 on:
   workflow_dispatch:
   push:
@@ -32,14 +32,14 @@ jobs:
           path: ~/.cache/ms-playwright
           key: staging-playwright-${{ hashFiles('package-lock.json') }}
       - run: npx playwright install chromium --only-shell
-      # Recheck four draft cases after fixing the fixture to use visible Back navigation.
-      - name: Charles Kyle Tanner Jayden — private draft reload desktop and mobile
-        run: npx playwright test --config=playwright.local.config.js inbox-recovery.spec.js --grep 'text drafts for Tanner|switching collectors clears stored private Inbox drafts|successful message delivery clears its saved tab draft|failed message delivery preserves a tab draft' --project=local-desktop --project=local-mobile --max-failures=1 --timeout=20000
+      # Recheck uncertain-delivery pre-read, full-page retry and account isolation; drafts already passed.
+      - name: Charles Kyle Tanner Jayden — text delivery retry desktop and mobile
+        run: npx playwright test --config=playwright.local.config.js inbox-recovery.spec.js --grep 'a committed message survives a lost response|delivery recovery never treats a different thread|an uncertain text send verifies its exact committed row|switching accounts purges uncertain text delivery references' --project=local-desktop --project=local-mobile --max-failures=1 --timeout=20000
       - name: Retain focused results
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: focused-inbox-drafts-${{ github.sha }}
+          name: focused-inbox-delivery-${{ github.sha }}
           path: |
             test-results/local-junit.xml
             playwright-report/local
