@@ -1120,7 +1120,7 @@ document.getElementById("priceOffersList").addEventListener("click",async e=>{
  const action=b.dataset.priceAction,id=b.dataset.priceId,userId=currentUser.id;if(pendingPriceResponses.has(id))return;
  let amount=null;
  if(action==="counter"){amount=requestCounterofferAmount(b.dataset.currentAmount||"");if(amount===null)return}
- else if(!confirm(action==="accept"?`Accept ${b.dataset.currentAmount||"the current offer"} and reserve the listing? No payment is taken.`:"Confirm "+action+" for this price offer?"))return;
+ else if(!confirm(action==="accept"?`Accept ${b.dataset.currentAmount?"$"+b.dataset.currentAmount:"the current offer"} and reserve the listing? No payment is taken.`:"Confirm "+action+" for this price offer?"))return;
  pendingPriceResponses.add(id);b.disabled=true;
  try{
   const {error}=await supabaseClient.rpc("respond_price_offer",{p_offer_id:id,p_action:action,p_amount:amount});
@@ -1982,7 +1982,7 @@ document.getElementById("messageInbox").addEventListener("click",async e=>{
   let amount=null;
   if(action==="counter"){
    amount=requestCounterofferAmount(price.dataset.currentAmount||"");if(amount===null)return;
-  }else if(!confirm(action==="accept"?`Accept ${price.dataset.currentAmount||"the current offer"} and reserve the listing? No payment is taken.`:"Confirm "+action+"?"))return;
+  }else if(!confirm(action==="accept"?`Accept ${price.dataset.currentAmount?"$"+price.dataset.currentAmount:"the current offer"} and reserve the listing? No payment is taken.`:"Confirm "+action+"?"))return;
   pendingInboxDealActions.add(key);
   const buttons=[...price.closest(".price-offer-actions").querySelectorAll("[data-inbox-price]")];
   buttons.forEach(button=>{button.disabled=true;button.setAttribute("aria-busy","true")});
