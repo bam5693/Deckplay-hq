@@ -1,4 +1,4 @@
-name: Focused marketplace recovery UI
+name: Focused inbox history and listing contents UI
 on:
   workflow_dispatch:
   push:
@@ -28,8 +28,8 @@ jobs:
           path: ~/.cache/ms-playwright
           key: staging-playwright-${{ hashFiles('package-lock.json') }}
       - run: npx playwright install chromium --only-shell
-      - name: Desktop and mobile trade, inbox, price boundaries and profile publication
-        run: npx playwright test --config=playwright.local.config.js trade-picker.spec.js price-offer-recovery.spec.js inbox-recovery.spec.js marketplace-filter-boundaries.spec.js listing-publication.spec.js --timeout=15000 --max-failures=2
+      - name: Desktop and mobile history, listing contents, drafts and account boundaries
+        run: npx playwright test --config=playwright.local.config.js inbox-history.spec.js inbox-recovery.spec.js account-boundaries.spec.js listing-publication.spec.js listing-editor.spec.js listing-description.spec.js --timeout=15000 --max-failures=2
       - name: Retain focused result
         if: always()
         uses: actions/upload-artifact@v4
