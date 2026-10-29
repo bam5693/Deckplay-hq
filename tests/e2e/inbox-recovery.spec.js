@@ -165,12 +165,14 @@ test('delayed alert reads cannot navigate into a previous collector account',asy
  await expect(page.locator('#notificationModal')).not.toHaveClass(/open/);
  await page.evaluate(()=>{
   currentUser={id:'fixture-alert-c'};syncInboxDraftUser();
+  window.finishAlertRead=null;
   document.getElementById('inboxNotificationList').innerHTML='<button type="button" data-open-notification="fixture-alert-2" data-notification-kind="followed_seller_listing" data-notification-actor="fixture-seller" data-notification-source="fixture-listing">Old Inbox alert</button>';
   document.querySelector('#inboxNotificationList [data-open-notification]').click();
  });
  await expect.poll(()=>page.evaluate(()=>typeof finishAlertRead)).toBe('function');
  await page.evaluate(()=>{currentUser={id:'fixture-alert-d'};syncInboxDraftUser();finishAlertRead()});
- await expect.poll(()=>page.evaluate(()=>alertNavigationAttempts.length)).toBe(0);
+ await page.waitForTimeout(60);
+ expect(await page.evaluate(()=>alertNavigationAttempts)).toEqual([]);
 });
 
 test('late activity responses cannot restore private alerts after sign-out',async({page})=>{
