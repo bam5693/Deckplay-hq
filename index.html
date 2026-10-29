@@ -1019,6 +1019,7 @@ function readableListingDescription(value){return String(value||"").replace(/^\[
 function marketplaceItemFromRow(row,profile){return {rawCategory:row.category,platform:(row.description||"").match(/(?:^|\n)Platform: ([^\n]+)/)?.[1]||"",id:row.id,databaseId:row.id,n:row.title,c:databaseCategory(row.category),game:row.tcg_game||"",collectibleSubcategory:row.collectible_subcategory||"",gameLabel:tcgNames[row.tcg_game]||"",p:Number(row.price),s:profile?.username?"@"+profile.username:(profile?.display_name||"DeckPlay seller"),cond:databaseCondition(row.condition),e:databaseEmoji(row.category),description:row.description||"No description provided.",trades:row.accepts_trades,priceOffers:row.accepts_price_offers,imageUrls:row.image_urls||[],created_at:row.created_at,sellerId:row.seller_id}}
 async function loadListings(){
  const requestId=++listingsLoadVersion;
+ listingSource="loading";items=[];render();
  document.getElementById("count").textContent="Loading live listings...";
  try{
  const {data,error}=await supabaseClient.from("listings").select("id,title,description,category,tcg_game,collectible_subcategory,price,condition,accepts_trades,accepts_price_offers,image_urls,created_at,seller_id").eq("status","active").order("created_at",{ascending:false});
