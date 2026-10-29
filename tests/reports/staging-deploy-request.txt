@@ -1,0 +1,4 @@
+DeckPlay HQ private staging deployment request
+Requested after connector launcher repair, 2026-10-29.
+Target: deckplay-hq-staging only.
+Production changes prohibited.
