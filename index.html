@@ -2093,11 +2093,13 @@ document.getElementById("messageInbox").addEventListener("click",async e=>{
   finally{pendingInboxDealActions.delete(key);if(currentUser?.id===userId)buttons.forEach(button=>{if(button.isConnected){button.disabled=false;button.removeAttribute("aria-busy")}})}
   return;
  }
- const b=e.target.closest("[data-reply-to],[data-thread-reply]");if(!b)return;composeRecipient=b.dataset.replyTo||b.dataset.threadReply;composeListing=b.dataset.replyListing||null;document.getElementById("composeContext").textContent="Reply to collector";openModal("composeModal")});
+ const b=e.target.closest("[data-reply-to],[data-thread-reply]");if(!b)return;const recipient=b.dataset.replyTo||b.dataset.threadReply;if(blockedCollectorIds.has(recipient)){toast("Unblock this collector in Settings before messaging.","error");return}composeRecipient=recipient;composeListing=b.dataset.replyListing||null;document.getElementById("composeContext").textContent="Reply to collector";openModal("composeModal")});
 document.getElementById("composeForm").addEventListener("submit",async e=>{
  e.preventDefault();const form=e.currentTarget;if(!currentUser||!composeRecipient||form.dataset.pending)return;
  const status=document.getElementById("composeStatus"),input=document.getElementById("composeBody"),button=form.querySelector('button[type="submit"]'),draft=input.value,body=draft.trim(),userId=currentUser.id,recipient=composeRecipient,listing=composeListing,accountVersion=messageAccountVersion;
- if(!body)return;form.dataset.pending="true";form.setAttribute("aria-busy","true");button.disabled=true;status.textContent="Sending…";
+ if(!body)return;
+ if(blockedCollectorIds.has(recipient)){status.textContent="Unblock this collector in Settings before messaging.";return}
+ form.dataset.pending="true";form.setAttribute("aria-busy","true");button.disabled=true;status.textContent="Sending…";
  try{
   const {data:sentMessage,error}=await sendCollectorMessageOnce({sender_id:userId,recipient_id:recipient,listing_id:listing||null,body});if(error)throw error;
   if(currentUser?.id!==userId||messageAccountVersion!==accountVersion)return;
