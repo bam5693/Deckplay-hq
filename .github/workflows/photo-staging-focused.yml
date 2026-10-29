@@ -13,6 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:
+      # Keep credential exchange inside the exact OIDC-allowlisted workflow; never broaden its trust policy.
       - name: Dispatch photo-only mode in trusted staging workflow
         env:
           GH_TOKEN: ${{ github.token }}
