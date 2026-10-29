@@ -302,16 +302,14 @@ test('non-finite price inputs never hide otherwise matching listings',async({pag
   {id:'fixture-a',n:'Card A',c:'Trading Cards',game:'pokemon',p:20,s:'fixture',e:'🃏'},
   {id:'fixture-b',n:'Game B',c:'Video Games',p:60,s:'fixture',e:'🎮'}
  ]);
- await page.evaluate(()=>{
-  document.getElementById('marketMinPrice').value='Infinity';
-  document.getElementById('marketMaxPrice').value='Infinity';
-  render();
- });
- await expect(page.locator('#grid h3')).toHaveText(['Card A','Game B']);
- await page.evaluate(()=>{
-  document.getElementById('marketMinPrice').value='1e999';
-  document.getElementById('marketMaxPrice').value='1e999';
-  render();
- });
- await expect(page.locator('#grid h3')).toHaveText(['Card A','Game B']);
+ // Number inputs sanitize Infinity and overflow to an empty string in browsers.
+ // Override the getter to exercise the actual non-finite defensive branch.
+ for(const id of ['marketMinPrice','marketMaxPrice']){
+  await page.evaluate(id=>{
+   const input=document.getElementById(id);
+   Object.defineProperty(input,'value',{configurable:true,get:()=> '1e999'});
+   try{render()}finally{delete input.value}
+  },id);
+  await expect(page.locator('#grid h3')).toHaveText(['Card A','Game B']);
+ }
 });
