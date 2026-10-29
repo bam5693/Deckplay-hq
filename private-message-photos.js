@@ -20,10 +20,10 @@ window.privateMessagePhotos=(()=>{
   }finally{image.close()}
  }
  function update(form=current()){
-  if(!form)return;const d=get(form.dataset.chatRecipient),busy=inboxSending.has(currentUser?.id+':'+form.dataset.chatRecipient),frozen=!!d?.payload;
+  if(!form)return;const d=get(form.dataset.chatRecipient),busy=inboxSending.has(currentUser?.id+':'+form.dataset.chatRecipient),frozen=!!d?.payload,preparing=!!d?.preparing;
   const input=form.querySelector('textarea');input.required=!d?.files.length;input.readOnly=busy||frozen;
-  form.querySelector('[type="submit"]').disabled=busy||(!input.value.trim()&&!d?.files.length);form.querySelector('[type="submit"]').textContent=frozen?'Retry send':'Send ➤';
-  form.querySelectorAll('[data-photo-picker],input[type="file"],[data-photo-remove]').forEach(b=>b.disabled=busy||frozen);const discard=form.querySelector('[data-photo-discard]');if(discard)discard.hidden=!frozen;
+  const submit=form.querySelector('[type="submit"]');submit.disabled=busy||preparing||(!input.value.trim()&&!d?.files.length);submit.textContent=frozen?'Retry send':preparing?'Preparing photos…':'Send ➤';form.setAttribute('aria-busy',String(busy||preparing));
+  form.querySelectorAll('[data-photo-picker],input[type="file"],[data-photo-remove]').forEach(b=>b.disabled=busy||frozen||preparing);const discard=form.querySelector('[data-photo-discard]');if(discard)discard.hidden=!frozen;
   const previews=form.querySelector('.chat-photo-drafts');if(previews)previews.innerHTML=(d?.files||[]).map((f,i)=>`<span><img src="${f.url}" alt="Selected photo ${i+1}"><button type="button" data-photo-remove="${f.id}" aria-label="Remove photo ${i+1}" ${busy||frozen?'disabled':''}>×</button></span>`).join('');
  }
  function mount(form){
@@ -35,11 +35,11 @@ window.privateMessagePhotos=(()=>{
  async function select(input){
   const form=input.closest('form'),recipient=form.dataset.chatRecipient,owner=currentUser?.id,version=generation;
   let d=get(recipient);if(!d){d={files:[],preparing:0};drafts.set(recipient,d)}if(d.payload)return;
-  d.preparing++;const status=form.querySelector('.chat-send-status');
-  try{for(const file of input.files){if(d.files.length>=3)throw Error('Choose up to three photos');const blob=await convert(file);if(generation!==version||currentUser?.id!==owner||get(recipient)!==d)return;if(d.payload)throw Error('Wait for this message to finish sending');d.files.push({id:crypto.randomUUID(),blob,url:URL.createObjectURL(blob)})}status.textContent='Photos stay on this device until you send.'}catch(error){status.textContent=error.message}finally{d.preparing--;input.value='';if(version===generation)update(current())}
+  d.preparing++;const status=form.querySelector('.chat-send-status');status.textContent='Preparing photos…';update(form);
+  try{for(const file of input.files){if(d.files.length>=3)throw Error('Choose up to three photos');const blob=await convert(file);if(generation!==version||currentUser?.id!==owner||get(recipient)!==d)return;if(d.payload)throw Error('Wait for this message to finish sending');d.files.push({id:crypto.randomUUID(),blob,url:URL.createObjectURL(blob)})}status.textContent='Photos stay on this device until you send.'}catch(error){status.textContent=error.message}finally{d.preparing--;input.value='';if(version===generation&&current()?.dataset.chatRecipient===recipient)update(current())}
  }
  async function prepare(recipient,caption){
-  const d=get(recipient);if(!d?.files.length)return null;if(d.preparing)throw Error('Wait for photo preparation to finish');
+  const d=get(recipient);if(d?.preparing)throw Error('Wait for photo preparation to finish');if(!d?.files.length)return null;
   if(!d.payload){d.caption=caption;d.payload={id:crypto.randomUUID(),sender_id:currentUser.id,recipient_id:recipient,body:caption||'Shared photos',attachment_ids:d.files.map(f=>f.id)}}
   const owner=currentUser.id,version=generation;
   for(const f of d.files){if(owner!==currentUser?.id||version!==generation)throw Error('Account changed');if(!f.uploaded){await api('POST',f.id,recipient,d.payload.id,f.blob);f.uploaded=true}}
