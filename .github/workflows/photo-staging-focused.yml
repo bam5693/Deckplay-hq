@@ -1,0 +1,47 @@
+name: Focused private photo staging verification
+on:
+  workflow_dispatch:
+  push:
+    branches: [test/staging-reporting]
+    paths:
+      - '.github/workflows/photo-staging-focused.yml'
+permissions:
+  contents: read
+  id-token: write
+jobs:
+  photo-only:
+    name: Verify private photo upload on desktop and mobile
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    environment: deckplay-staging
+    concurrency:
+      group: private-staging-transactions
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Obtain isolated staging test credentials
+        run: node scripts/staging-ci-credentials.cjs
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Cheap syntax and photo-security preflight
+        run: |
+          node --check tests/e2e/private-message-photos-live.spec.js
+          node --test tests/security/private-photos.test.mjs
+      - name: Install Chromium only
+        run: npx playwright install chromium --only-shell
+      - name: Verify photo upload, private delivery and immutable retry only
+        run: npx playwright test --config=playwright.staging.config.js private-message-photos-live.spec.js --retries=0
+      - name: Save diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: focused-private-photo-report
+          path: |
+            playwright-report/staging/
+            test-results/
+          if-no-files-found: warn
+          retention-days: 3
