@@ -906,12 +906,16 @@ test('legacy reply composer refuses blocked recipients without losing text',asyn
 test('text drafts for Tanner and Jayden survive a full browser reload in this tab',async({page})=>{
  await inbox(page);
  await page.locator('#chatInput').fill('Tanner sports-card condition questions');
+ await page.locator('#inboxThreadBack').click();
+ await expect(page.locator('[data-conversation-id="buyer-b"]')).toBeVisible();
  await page.locator('[data-conversation-id="buyer-b"]').click();
  await page.locator('#chatInput').fill('Jayden TCG deck trade details');
  expect(await page.evaluate(()=>JSON.parse(sessionStorage.getItem(inboxDraftStorageKey('fixture-seller'))||'[]').length)).toBe(2);
  await page.reload();
  await inbox(page);
  await expect(page.locator('#chatInput')).toHaveValue('Tanner sports-card condition questions');
+ await page.locator('#inboxThreadBack').click();
+ await expect(page.locator('[data-conversation-id="buyer-b"]')).toBeVisible();
  await page.locator('[data-conversation-id="buyer-b"]').click();
  await expect(page.locator('#chatInput')).toHaveValue('Jayden TCG deck trade details');
 });
