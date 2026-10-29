@@ -42,3 +42,9 @@ Staging `staging_test_runs` and fixture cleanup RPCs are **not** production feat
 - Staging `private.seller_overview` reads listings, price offers, trade offers and trade counteroffers. Its wrapper alone would fail without the private implementation.
 - Staging additionally exposes private-photo validation/claim RPCs and trade counteroffer RPCs; each requires a separate dependency and authorization audit. Exclude staging-only fixture functions.
 - Do not apply these RPCs to production until their dependencies, grants and ownership checks have been verified together.
+
+## Existing dependency table reconciliation
+- Confirmed production already contains `public.price_offers`, `public.trade_counteroffers`, and `public.user_blocks` with the same column types as staging. Reuse these; do not recreate or copy staging rows.
+- Production lacks `private.collection_inquiries` and `public.message_photo_attachments`, both present in staging.
+- Confirmed `public.trade_counteroffers.offer_note` is NOT NULL in both, but staging defaults to `''::text` and production has no default. Review every insert path; use an explicit value or consider a safe additive default migration after testing.
+- The other compared columns in these three existing tables match in types/nullability/defaults.
