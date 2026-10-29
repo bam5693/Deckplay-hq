@@ -1,17 +1,21 @@
 const {test,expect}=require('@playwright/test');
-test('Wanted Board shows card matching fields only for Pokemon and One Piece',async({page})=>{
- await page.goto('/');
+test.beforeEach(async({page})=>{await page.route('https://challenges.cloudflare.com/**',r=>r.abort());await page.route('https://prrrzeelltmyugssqnzk.supabase.co/rest/v1/**',r=>r.fulfill({json:[]}))});
+test('Wanted Board shows card matching fields for every supported card game and hides them for other categories',async({page})=>{
+ await page.goto('/');await page.waitForLoadState('networkidle');
  await page.evaluate(()=>document.getElementById('wantedModal').classList.add('open'));
  await page.locator('#wantedGame').selectOption('pokemon');
  await expect(page.locator('#wantedCardFields')).toBeVisible();
  expect(await page.locator('#wantedVariant option').allTextContents()).not.toContain('Manga Rare');
  await page.locator('#wantedGame').selectOption('one_piece');
  expect(await page.locator('#wantedVariant option').allTextContents()).toContain('Manga Rare');
+ const games=await page.locator('#tcgGame option').evaluateAll(nodes=>nodes.filter(n=>n.value).map(n=>n.value));
+ for(const game of games){await page.locator('#wantedGame').selectOption(game);await expect(page.locator('#wantedCardFields')).toBeVisible()}
  await page.locator('#wantedGame').selectOption('video_games');
  await expect(page.locator('#wantedCardFields')).toBeHidden();
+ for(const category of ['consoles','collectibles','other']){await page.locator('#wantedGame').selectOption(category);await expect(page.locator('#wantedCardFields')).toBeHidden()}
 });
 test('exact wanted matches respect card number, variant, and budget',async({page})=>{
- await page.goto('/');
+ await page.goto('/');await page.waitForLoadState('networkidle');
  const results=await page.evaluate(()=>{
   const original=items;
   items=[
@@ -31,7 +35,7 @@ test('exact wanted matches respect card number, variant, and budget',async({page
 });
 
 test('wanted matching accepts new line breaks and legacy escapes without absorbing later metadata',async({page})=>{
- await page.goto('/');
+ await page.goto('/');await page.waitForLoadState('networkidle');
  const result=await page.evaluate(()=>{
   const previous=items;
   items=['\n','\r\n','\\n'].map((separator,i)=>({id:String(i),c:'Trading Cards',game:'one_piece',sellerId:'seller',p:20,description:['Card number: OP05-119','Variant: Manga Rare','Seller description: OP05-120'].join(separator)}));
@@ -42,7 +46,7 @@ test('wanted matching accepts new line breaks and legacy escapes without absorbi
 });
 
 test('wanted matches reject near-miss variants and sets, including legacy line breaks',async({page})=>{
- await page.goto('/');
+ await page.goto('/');await page.waitForLoadState('networkidle');
  const result=await page.evaluate(()=>{
   const original=items;
   const base={c:'Trading Cards',game:'one_piece',sellerId:'seller',p:30};
@@ -66,7 +70,7 @@ test('wanted matches reject near-miss variants and sets, including legacy line b
 });
 
 test('wanted matches link to real listing details with the correct name and price',async({page})=>{
- await page.goto('/');
+ await page.goto('/');await page.waitForLoadState('networkidle');
  await page.evaluate(()=>{
   items=[{id:'wanted-fixture-1',databaseId:'wanted-fixture-1',c:'Trading Cards',game:'one_piece',sellerId:'fixture-seller',s:'Fixture seller',n:'Manga Rare Luffy',p:125,cond:'Near Mint',description:'Set: OP-05\nCard number: OP05-119\nVariant: Manga Rare',imageUrls:[]}];
   const originalFrom=supabaseClient.from.bind(supabaseClient);
@@ -93,7 +97,7 @@ test('wanted matches link to real listing details with the correct name and pric
 });
 
 async function pendingWantedPublish(page){
- await page.goto('/');
+ await page.goto('/');await page.waitForLoadState('networkidle');
  await page.evaluate(()=>{
   currentUser={id:'fixture-buyer-a'};syncInboxDraftUser();
   window.wantedWrites=[];window.wantedToasts=[];toast=text=>wantedToasts.push(text);
