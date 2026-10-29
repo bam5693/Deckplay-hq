@@ -1944,6 +1944,7 @@ async function sendCollectorMessageOnce(payload){
  }catch{/* Preserve the original failure and the same retry reference. */}
  throw failure;
 }
+let inboxConversationCursor=null,inboxConversationExhausted=false;
 let inboxDraftUser=null,messageAccountVersion=0,inboxConversationFilter={search:"",unread:false};
 function syncInboxDraftUser(){
  const id=currentUser?.id||null;
@@ -1951,7 +1952,7 @@ function syncInboxDraftUser(){
   ++messageAccountVersion;
   resetWantedPublisher();closeModal("wantedModal");
   ++listingAccountVersion;++cloudDraftRequestVersion;cloudDraftBusy=false;cloudDraftControls(false);document.getElementById("listingCloudDraftStatus").textContent="";document.getElementById("listingForm").reset();document.getElementById("listingType").dispatchEvent(new Event("change"));listingSelectedPhotos=[];renderListingPhotos();syncCategoryFields();syncGradedCondition();document.getElementById("deckFields").hidden=true;document.getElementById("listingStatus").textContent="";closeModal("sellModal");
-  profileInventoryFilter={search:"",status:"all",category:"all"};window.listingEditor?.reset();window.sellerOverview?.reset();window.privateMessagePhotos?.reset();inboxDrafts.clear();messageSendAttempts.clear();tradeSendAttempts.clear();inboxOlderMessages.clear();inboxOlderExhausted.clear();inboxConversationFilter={search:"",unread:false};inboxDraftUser=id;tradeBundleSelection=[];document.getElementById("tradeBundleItems").replaceChildren();document.getElementById("tradeBundleCount").textContent="";
+  profileInventoryFilter={search:"",status:"all",category:"all"};window.listingEditor?.reset();window.sellerOverview?.reset();window.privateMessagePhotos?.reset();inboxDrafts.clear();messageSendAttempts.clear();tradeSendAttempts.clear();inboxOlderMessages.clear();inboxOlderExhausted.clear();inboxConversationCursor=null;inboxConversationExhausted=false;inboxConversationFilter={search:"",unread:false};inboxDraftUser=id;tradeBundleSelection=[];document.getElementById("tradeBundleItems").replaceChildren();document.getElementById("tradeBundleCount").textContent="";
   ++blockedCollectorsLoadVersion;blockedCollectorIds.clear();document.getElementById("blockedUsersList").replaceChildren();document.getElementById("settingsBlockCount").textContent="";
   ++reportDialogVersion;reportTargetUser=null;reportTargetListing=null;reportTargetBlocked=false;document.getElementById("reportForm").reset();document.getElementById("reportStatus").textContent="";document.querySelector('#reportForm button[type="submit"]').disabled=false;closeModal("reportModal");
   ++notificationSettingsVersion;notificationSettingsOwner=null;notificationSettingsLoading=false;notificationPreferenceControls(true);document.querySelectorAll("[data-notify-pref]").forEach(input=>input.checked=false);document.getElementById("notificationSettingsStatus").textContent="";++inboxLoadVersion;++profileLoadVersion;++priceOffersLoadVersion;++tradeOffersLoadVersion;++unreadCountLoadVersion;++profileEditorLoadVersion;selectedInboxCollector=null;
@@ -2043,6 +2044,19 @@ async function loadInbox(targetCollectorId=null){
  ]).catch(error=>Array.from({length:5},()=>({error})));
  if(requestId!==inboxLoadVersion||currentUser?.id!==userId)return;
  if(mr.error||pr.error||tr.error){el.innerHTML='<section role="alert" class="inbox-recovery"><p>Could not load conversations. Check your connection and try again.</p><button type="button" class="secondary" data-inbox-retry>Retry inbox</button></section>';return}
+ if(!inboxConversationCursor){
+  const oldest=(mr.data||[]).at(-1);
+  if(oldest)inboxConversationCursor={date:oldest.created_at,id:oldest.id};
+  inboxConversationExhausted=(mr.data||[]).length<500;
+ }
+ // Keep fetched pages while refreshing the leading window, so new messages cannot create a gap.
+ for(const m of mr.data||[]){
+  const other=m.sender_id===userId?m.recipient_id:m.sender_id;
+  if(m.sender_id!==userId&&m.recipient_id!==userId)continue;
+  const saved=inboxOlderMessages.get(other)||[],index=saved.findIndex(row=>row.id===m.id);
+  if(index<0)saved.push(m);else saved[index]=m;
+  inboxOlderMessages.set(other,saved);
+ }
  const groups=new Map();
  function add(other,item){if(!other||other===currentUser.id)return;if(!groups.has(other))groups.set(other,[]);groups.get(other).push(item)}
  for(const m of mr.data||[])add(m.sender_id===currentUser.id?m.recipient_id:m.sender_id,{type:"message",date:m.created_at,...m});
@@ -2083,11 +2097,31 @@ if(tradeById.size){
  const dealStatusByUser=new Map();const {data:dealRows}=await supabaseClient.from("deal_progress").select("buyer_id,seller_id,status,updated_at").order("updated_at",{ascending:false}).limit(300);for(const d of dealRows||[]){const other=d.buyer_id===currentUser.id?d.seller_id:d.buyer_id;if(!dealStatusByUser.has(other))dealStatusByUser.set(other,d.status)}
  if(requestId!==inboxLoadVersion||currentUser?.id!==userId)return;
  const preview=x=>!x?"Start a conversation":x.type==="message"?"✉ "+x.body:x.type==="price"?"💰 Offer · $"+Number(x.amount).toFixed(2)+" · "+x.action:x.type==="trade_counter"?"↩ Trade counteroffer · "+x.status:"⇄ Trade · "+x.status;
- el.innerHTML='<div class="conversation-layout"><div class="conversation-list"><div class="conversation-filters"><label for="conversationSearch">Find a conversation</label><input id="conversationSearch" type="search" data-conversation-search placeholder="Name or recent update" maxlength="100"><label class="conversation-unread-filter"><input type="checkbox" data-conversation-unread> Unread only</label><button type="button" class="ghost" data-conversation-clear hidden>Clear filters</button><p class="muted" data-conversation-filter-status role="status"></p></div>'+ordered.map(([id,entries])=>{const person=names.get(id),avatar=safeImageUrl(person?.avatar_url),unread=entries.filter(x=>x.type==="message"&&x.recipient_id===currentUser.id&&!x.read_at).length;return `<button type="button" class="conversation-contact" aria-pressed="false" data-conversation-id="${escapeHtml(id)}">${avatar?`<img src="${escapeHtml(avatar)}" alt="">`:`<span class="conversation-initial">${escapeHtml((person?.username||"C")[0].toUpperCase())}</span>`}<span class="conversation-summary"><strong>@${escapeHtml(person?.username||"collector")}${unread?` <em class="conversation-unread">${unread} new</em>`:""}</strong>${dealStatusByUser.has(id)?`<small class="deal-status-label">Deal: ${escapeHtml(dealStatusByUser.get(id))}</small>`:""}<small class="conversation-preview">${escapeHtml(preview(entries.at(-1)).slice(0,70))}</small>${entries.length?`<small class="conversation-date">${new Date(entries.at(-1).date).toLocaleDateString(undefined,{month:"short",day:"numeric"})}</small>`:""}</span></button>`}).join("")+'</div><div class="conversation-thread" id="conversationThread"><p class="muted">Select a collector</p></div></div>';
+ el.innerHTML='<div class="conversation-layout"><div class="conversation-list"><div class="conversation-filters"><label for="conversationSearch">Find a conversation</label><input id="conversationSearch" type="search" data-conversation-search placeholder="Name or recent update" maxlength="100"><label class="conversation-unread-filter"><input type="checkbox" data-conversation-unread> Unread only</label><button type="button" class="ghost" data-conversation-clear hidden>Clear filters</button><p class="muted" data-conversation-filter-status role="status"></p></div>'+ordered.map(([id,entries])=>{const person=names.get(id),avatar=safeImageUrl(person?.avatar_url),unread=entries.filter(x=>x.type==="message"&&x.recipient_id===currentUser.id&&!x.read_at).length;return `<button type="button" class="conversation-contact" aria-pressed="false" data-conversation-id="${escapeHtml(id)}">${avatar?`<img src="${escapeHtml(avatar)}" alt="">`:`<span class="conversation-initial">${escapeHtml((person?.username||"C")[0].toUpperCase())}</span>`}<span class="conversation-summary"><strong>@${escapeHtml(person?.username||"collector")}${unread?` <em class="conversation-unread">${unread} new</em>`:""}</strong>${dealStatusByUser.has(id)?`<small class="deal-status-label">Deal: ${escapeHtml(dealStatusByUser.get(id))}</small>`:""}<small class="conversation-preview">${escapeHtml(preview(entries.at(-1)).slice(0,70))}</small>${entries.length?`<small class="conversation-date">${new Date(entries.at(-1).date).toLocaleDateString(undefined,{month:"short",day:"numeric"})}</small>`:""}</span></button>`}).join("")+(inboxConversationExhausted?'<p class="muted" role="status">All message conversations loaded</p>':'<div class="conversation-history-tools"><button type="button" class="ghost" data-inbox-more-conversations>Find older conversations</button><span class="muted" data-inbox-more-status role="status" aria-live="polite"></span></div>')+'</div><div class="conversation-thread" id="conversationThread"><p class="muted">Select a collector</p></div></div>';
  const searchInput=el.querySelector("[data-conversation-search]"),unreadInput=el.querySelector("[data-conversation-unread]");searchInput.value=inboxConversationFilter.search;unreadInput.checked=inboxConversationFilter.unread;
  searchInput.addEventListener("input",filterInboxConversations);
  unreadInput.addEventListener("change",filterInboxConversations);
  el.querySelector("[data-conversation-clear]").addEventListener("click",()=>{searchInput.value="";unreadInput.checked=false;filterInboxConversations();searchInput.focus()});filterInboxConversations();
+ el.querySelector("[data-inbox-more-conversations]")?.addEventListener("click",async e=>{
+  const button=e.currentTarget,status=el.querySelector("[data-inbox-more-status]"),cursor=inboxConversationCursor;
+  if(button.disabled||!cursor)return;
+  button.disabled=true;button.setAttribute("aria-busy","true");status.textContent="Looking for older conversations…";
+  let result;try{result=await supabaseClient.from("collector_messages").select("id,sender_id,recipient_id,body,created_at,read_at,attachment_ids").or("created_at.lt."+cursor.date+",and(created_at.eq."+cursor.date+",id.lt."+cursor.id+")").order("created_at",{ascending:false}).order("id",{ascending:false}).limit(500)}catch(error){result={error}}
+  if(requestId!==inboxLoadVersion||currentUser?.id!==userId)return;
+  if(result.error){status.textContent="Could not load older conversations. Try again.";button.disabled=false;button.removeAttribute("aria-busy");return}
+  const rows=result.data||[],oldest=rows.at(-1);
+  if(oldest)inboxConversationCursor={date:oldest.created_at,id:oldest.id};
+  inboxConversationExhausted=rows.length<500;
+  for(const m of rows){
+   if(m.sender_id!==userId&&m.recipient_id!==userId)continue;
+   const other=m.sender_id===userId?m.recipient_id:m.sender_id,saved=inboxOlderMessages.get(other)||[];
+   if(!saved.some(row=>row.id===m.id))saved.push(m);
+   inboxOlderMessages.set(other,saved);
+  }
+  await loadInbox();
+  if(currentUser?.id!==userId||!el.isConnected)return;
+  (el.querySelector("[data-inbox-more-conversations]")||el.querySelector("[data-conversation-search]"))?.focus({preventScroll:true});
+ });
  const openThread=async (id,preserveDistanceFromBottom=null)=>{
  rememberInboxDraft();
  const sameThread=document.getElementById("inboxPage").classList.contains("thread-open")&&selectedInboxCollector===id;
