@@ -2087,16 +2087,18 @@ document.getElementById("messageInbox").addEventListener("click",async e=>{
   pendingInboxDealActions.add(key);
   const buttons=[...price.closest(".price-offer-actions").querySelectorAll("[data-inbox-price]")];
   buttons.forEach(button=>{button.disabled=true;button.setAttribute("aria-busy","true")});
+  let committed=false;
   try{
    const {error}=await supabaseClient.rpc("respond_price_offer",{p_offer_id:id,p_action:action,p_amount:amount});
    if(currentUser?.id!==userId)return;
    if(error){toast(error.message||"Offer changed. Refresh and try again.","error");await loadInbox()}
    else{
+    committed=true;
     toast(action==="accept"?"Offer accepted — item reserved. Payment and shipping are not active.":"Offer updated");
     if(action==="accept")await loadListings();
     void sendCollectorEmailForSource(id);await loadInbox();
    }
-  }catch(error){if(currentUser?.id===userId){toast(error.message||"Offer update failed. Please retry.","error");await loadInbox().catch(()=>{})}}
+  }catch(error){if(currentUser?.id===userId){toast(committed?"Offer updated, but Inbox could not refresh. Refresh before responding again.":(error.message||"Offer response could not be confirmed.")+" Refresh before retrying.","error");if(!committed)await loadInbox().catch(()=>{})}}
   finally{pendingInboxDealActions.delete(key);if(currentUser?.id===userId)buttons.forEach(button=>{if(button.isConnected){button.disabled=false;button.removeAttribute("aria-busy")}})}
   return;
  }
@@ -2107,13 +2109,16 @@ document.getElementById("messageInbox").addEventListener("click",async e=>{
   const accept=counter.dataset.inboxCounter==="accept";
   if(!confirm(accept?"Accept these counteroffer terms? Items will be reserved; no payment is taken.":"Decline this counteroffer?"))return;
   pendingInboxDealActions.add(key);const buttons=[...counter.closest(".price-offer-actions").querySelectorAll("button")];buttons.forEach(b=>{b.disabled=true;b.setAttribute("aria-busy","true")});
+  let committed=false;
   try{
    const {error}=await supabaseClient.rpc("respond_trade_counter",{p_counter:counter.dataset.counter,p_accept:accept});
    if(currentUser?.id!==userId)return;
    if(error)throw error;
+   committed=true;
+   toast(accept?"Counteroffer accepted — items reserved. No payment taken.":"Counteroffer declined");
    if(accept)await loadListings();
-   await loadInbox();refreshTradeAlerts();toast(accept?"Counteroffer accepted — items reserved. No payment taken.":"Counteroffer declined");
-  }catch(error){if(currentUser?.id===userId){toast(error.message||"Could not update counteroffer. Refresh and retry.","error");await loadInbox().catch(()=>{})}}
+   await loadInbox();refreshTradeAlerts();
+  }catch(error){if(currentUser?.id===userId){toast(committed?"Counteroffer updated, but Inbox could not refresh. Refresh before responding again.":(error.message||"Counteroffer response could not be confirmed.")+" Refresh before retrying.","error");if(!committed)await loadInbox().catch(()=>{})}}
   finally{pendingInboxDealActions.delete(key);if(currentUser?.id===userId)buttons.forEach(b=>{if(b.isConnected){b.disabled=false;b.removeAttribute("aria-busy")}})}
   return;
  }
@@ -2129,16 +2134,18 @@ document.getElementById("messageInbox").addEventListener("click",async e=>{
   pendingInboxDealActions.add(key);
   const buttons=[...trade.closest(".price-offer-actions").querySelectorAll("[data-inbox-trade]")];
   buttons.forEach(button=>{button.disabled=true;button.setAttribute("aria-busy","true")});
+  let committed=false;
   try{
    const {error}=await supabaseClient.rpc("respond_trade_offer",{p_offer:id,p_action:action});
    if(currentUser?.id!==userId)return;
    if(error){toast(error.message||"This trade has already changed. Refreshing the conversation.","error");await loadInbox()}
    else{
+    committed=true;
     toast(action==="accepted"?"Trade accepted — item reserved. No payment has been taken.":"Trade "+action);
     if(action==="accepted")await loadListings();
     await loadInbox();refreshTradeAlerts();
    }
-  }catch(error){if(currentUser?.id===userId){toast(error.message||"Trade update failed. Please retry.","error");await loadInbox().catch(()=>{})}}
+  }catch(error){if(currentUser?.id===userId){toast(committed?"Trade updated, but Inbox could not refresh. Refresh before responding again.":(error.message||"Trade response could not be confirmed.")+" Refresh before retrying.","error");if(!committed)await loadInbox().catch(()=>{})}}
   finally{pendingInboxDealActions.delete(key);if(currentUser?.id===userId)buttons.forEach(button=>{if(button.isConnected){button.disabled=false;button.removeAttribute("aria-busy")}})}
   return;
  }
