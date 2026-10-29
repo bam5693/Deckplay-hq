@@ -47,3 +47,11 @@ test('successful removal stays removed',async()=>{
   assert.equal(h.saved.has('card-1'),false);
   assert.deepEqual(h.notices,['Removed from saved items']);
 });
+
+test('item without persisted listing ID does not falsely report account save',async()=>{
+  const h=harness();
+  h.context.items[0].databaseId=null;
+  await h.context.window.favoriteActions.toggle('card-1');
+  assert.equal(h.saved.has('card-1'),false);
+  assert.match(h.notices[0],/cannot be saved to your account/);
+});
