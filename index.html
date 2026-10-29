@@ -2237,14 +2237,16 @@ document.getElementById("counterForm").addEventListener("submit",async e=>{
  const ownerId=currentUser.id,offerId=activeCounterOffer,version=counterComposeVersion,button=form.querySelector('button[type="submit"]');
  const current=()=>currentUser?.id===ownerId&&activeCounterOffer===offerId&&counterComposeVersion===version;
  form.dataset.pending="true";form.setAttribute("aria-busy","true");button.disabled=true;status.textContent="Sending counteroffer…";
+ let counterSent=false;
  try{
   const {error}=await supabaseClient.rpc("create_trade_counter",{p_offer:offerId,p_cash:amount,p_direction:direction,p_note:note});
   if(error)throw error;
+  counterSent=true;
   if(!current())return;
   if(directionInput.value===direction&&amountInput.value===rawAmount&&noteInput.value===rawNote){status.textContent="";closeModal("counterModal");toast("Counteroffer sent")}
   else status.textContent="Counteroffer sent. Your newer draft is preserved.";
   await loadTradeOffers();if(current()&&!document.getElementById("inboxPage").hidden)await loadInbox();void refreshTradeAlerts();
- }catch(error){if(current())status.textContent="Could not send counteroffer: "+(error.message||"Please try again.")}
+ }catch(error){if(current()){if(counterSent)toast("Counteroffer sent, but the screen could not refresh. Refresh your trades before responding again.","error");else status.textContent="Could not send counteroffer: "+(error.message||"Please try again.")}}
  finally{
   delete form.dataset.pending;form.removeAttribute("aria-busy");button.disabled=false;
   if(!current()&&status.textContent==="Sending counteroffer…")status.textContent="";
