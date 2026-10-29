@@ -1006,9 +1006,9 @@ function render(){
  const collectibleSub=document.getElementById("marketCollectibleSubcategory")?.value||"All";if(cat==="Collectibles"&&collectibleSub!=="All")list=list.filter(item=>item.collectibleSubcategory===collectibleSub);
  const platform=document.getElementById("marketPlatform")?.value||"All",hardware=document.getElementById("marketHardwareType")?.value||"All";if(cat==="Video Games"&&platform!=="All")list=list.filter(item=>(item.platform||(item.description||"").match(/(?:^|\n)Platform: ([^\n]+)/)?.[1])===platform);if(cat==="Consoles & Controllers"&&hardware!=="All")list=list.filter(item=>item.rawCategory===hardware);
  const minPrice=Number(document.getElementById("marketMinPrice")?.value||0);
- if(minPrice>0)list=list.filter(item=>Number(item.p)>=minPrice);
+ if(Number.isFinite(minPrice)&&minPrice>0)list=list.filter(item=>Number(item.p)>=minPrice);
  const maxPrice=Number(document.getElementById("marketMaxPrice")?.value||0);
- if(maxPrice>0)list=list.filter(item=>Number(item.p)<=maxPrice);
+ if(Number.isFinite(maxPrice)&&maxPrice>0)list=list.filter(item=>Number(item.p)<=maxPrice);
  const sort=document.getElementById("marketSort")?.value||"newest";
  list.sort((a,b)=>sort==="low"?Number(a.p)-Number(b.p):sort==="high"?Number(b.p)-Number(a.p):sort==="az"?String(a.n).localeCompare(String(b.n)):sort==="oldest"?new Date(a.created_at||a.createdAt||0)-new Date(b.created_at||b.createdAt||0):new Date(b.created_at||b.createdAt||0)-new Date(a.created_at||a.createdAt||0));
  document.getElementById("count").textContent=listingSource==="error"?"Live listings unavailable.":listingSource==="loading"?"Loading live listings...":onlyMyListings?list.length+" of your active listing(s) shown.":list.length+" live listing(s) shown.";document.querySelector("#market h2").textContent=onlyMyListings?"My listings":onlySavedListings?"Saved items":"Marketplace picks";document.getElementById("myListingsReset").hidden=!(onlyMyListings||onlySavedListings);
