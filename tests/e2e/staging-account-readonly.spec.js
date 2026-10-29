@@ -32,4 +32,13 @@ for(const role of ['BUYER','SELLER'])test('deployed synthetic '+role.toLowerCase
  await expect(page.locator('#listingContentsPreview')).toHaveText('Quantity included: 2 games. Sold together for $25.00.');
  await page.locator('#listingContentsList').fill('1x Game — tested');
  await expect(page.locator('#listingContentsPreview')).toContainText('quantities total 1; quantity included is 2');
+ await page.evaluate(()=>closeModal('sellModal'));await expect(page.locator('#sellModal')).not.toHaveClass(/open/);
+ await page.evaluate(()=>showInboxPage());
+ await expect(page.locator('#search')).toBeVisible();
+ await page.locator('#search').fill('deckplay-beta-readonly-no-match');
+ await expect(page.locator('#market')).toBeVisible();await expect(page.locator('#inboxPage')).toBeHidden();
+ await page.evaluate(()=>document.getElementById('myFavorites').click());
+ await expect(page.locator('#market h2')).toHaveText('Saved items');
+ await page.locator('#myListingsReset').click();await expect(page.locator('#market h2')).toHaveText('Marketplace picks');
 });
+

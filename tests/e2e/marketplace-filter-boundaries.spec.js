@@ -361,3 +361,44 @@ test('global marketplace search opens results from Inbox and Profile instead of 
   await expect(page.locator('#grid h3')).toHaveText([section==='inboxPage'?'Retro game cartridge':'Graded baseball rookie']);
  }
 });
+
+test('saved and owned shortcuts leave Profile, clear stale filters and return to all categories',async({page})=>{
+ const categories=['Trading Cards','Video Games','Consoles & Controllers','Collectibles'];
+ await installFixture(page,categories.map((c,i)=>({id:'shortcut-'+i,n:'Saved '+c,c,p:10+i,s:'Collector',sellerId:'shortcut-owner',cond:'Used',e:'📦'})));
+ await page.evaluate(()=>{
+  currentUser={id:'shortcut-owner'};items.forEach(item=>saved.add(item.id));
+  document.getElementById('marketMinPrice').value='500';
+  document.body.classList.add('profile-focus');document.getElementById('collectorPage').hidden=false;
+  document.getElementById('myFavorites').click();
+ });
+ await expect(page.locator('#market')).toBeVisible();await expect(page.locator('#collectorPage')).toBeHidden();
+ await expect(page.locator('#marketMinPrice')).toHaveValue('');
+ await expect(page.locator('#market h2')).toHaveText('Saved items');await expect(page.locator('#grid h3')).toHaveCount(4);
+ await page.locator('#myListingsReset').click();await expect(page.locator('#market h2')).toHaveText('Marketplace picks');
+ expect(await page.evaluate(()=>({onlySavedListings,onlyMyListings}))).toEqual({onlySavedListings:false,onlyMyListings:false});
+ await page.evaluate(()=>{document.body.classList.add('profile-focus');document.getElementById('collectorPage').hidden=false;document.getElementById('myListings').click()});
+ await expect(page.locator('#market')).toBeVisible();await expect(page.locator('#market h2')).toHaveText('My listings');
+ await expect(page.locator('#grid h3')).toHaveCount(4);
+});
+
+test('profile Saved items hides blocked sellers across every database category and shows USD prices',async({page})=>{
+ await installFixture(page,[]);
+ await page.evaluate(async()=>{
+  await supabaseClient.auth.getSession();currentUser={id:'saved-owner'};
+  const categories=['trading_cards','video_games','consoles','controllers','accessories','collectibles','other'];
+  const rows=categories.flatMap((category,i)=>[
+   {id:'allowed-'+i,title:'Allowed '+category,category,status:'active',price:12.5,seller_id:'allowed'},
+   {id:'blocked-'+i,title:'Blocked '+category,category,status:'active',price:2,seller_id:'blocked'}
+  ]);
+  blockedCollectorIds.add('blocked');window.sellerOverview.refresh=()=>{};sellerRatingHtml=async()=>'';
+  supabaseClient.from=table=>{
+   const data=table==='profiles'?{username:'fixture'}:table==='saved_listings'?rows.map(row=>({listing_id:row.id})):table==='listings'?rows:[];
+   const q={select:()=>q,eq:()=>q,in:()=>q,order:()=>q,maybeSingle:async()=>({data,error:null}),then:resolve=>Promise.resolve({data,error:null}).then(resolve)};return q;
+  };
+  await showCollectorPage('saved');
+ });
+ await expect(page.locator('#profilePageContent h3')).toHaveCount(7);
+ await expect(page.locator('#profilePageContent')).not.toContainText('Blocked');
+ await expect(page.locator('#profilePageContent strong')).toHaveText(Array(7).fill('$12.50'));
+});
+
