@@ -1,6 +1,12 @@
 name: Private staging feature bots
 on:
   workflow_dispatch:
+    inputs:
+      photo_only:
+        description: 'Run only isolated private-photo checks (no deployment or full suite)'
+        required: false
+        type: boolean
+        default: false
   # Verify source changes on the isolated branch; report-only commits do not
   # start another API/browser run. Exact staging assets must be deployed first.
   push:
@@ -68,9 +74,10 @@ jobs:
         run: npx playwright install chromium --only-shell
         timeout-minutes: 8
       - name: Preflight — focused local marketplace and seller checks
+        if: ${{ github.event.inputs.photo_only != 'true' }}
         run: npx playwright test --config=playwright.local.config.js category-coverage.spec.js marketplace-filter-boundaries.spec.js selling-category-matrix.spec.js inbox-recovery.spec.js
       - name: Deploy exact staging branch before deployed browser tests
-        if: ${{ env.DECKPLAY_STAGING_URL != '' }}
+        if: ${{ github.event.inputs.photo_only != 'true' && env.DECKPLAY_STAGING_URL != '' }}
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
@@ -85,23 +92,27 @@ jobs:
         if: ${{ env.DECKPLAY_STAGING_URL != '' }}
         run: npx playwright test --config=playwright.staging.config.js staging-smoke.spec.js --grep "deployed homepage matches the staging branch"
       - name: Charles — verify staging API transactions and authorization
+        if: ${{ github.event.inputs.photo_only != 'true' }}
         run: |
           mkdir -p test-results
           set -o pipefail
           node scripts/run-staging-api.cjs 2>&1 | tee test-results/staging-api.tap
+      - name: Preflight — local private-photo failure and retry regressions
+        if: ${{ github.event.inputs.photo_only == 'true' }}
+        run: npx playwright test --config=playwright.local.config.js private-message-photos.spec.js --retries=0
       - name: Preflight — private photo send and attachment delivery
         if: ${{ success() && env.DECKPLAY_STAGING_URL != '' }}
         run: npx playwright test --config=playwright.staging.config.js private-message-photos-live.spec.js --retries=0
       - name: Kyle, Tanner and Jayden — deployed buyer/seller/trader journeys
-        if: ${{ success() && env.DECKPLAY_STAGING_URL != '' }}
+        if: ${{ github.event.inputs.photo_only != 'true' && success() && env.DECKPLAY_STAGING_URL != '' }}
         run: npx playwright test --config=playwright.staging.config.js
       - name: Save durable staging feature result
-        if: ${{ success() && env.DECKPLAY_STAGING_URL != '' }}
+        if: ${{ github.event.inputs.photo_only != 'true' && success() && env.DECKPLAY_STAGING_URL != '' }}
         env:
           STAGING_JOB_STATUS: ${{ job.status }}
         run: node scripts/report-staging-results.cjs
       - name: Verify local inbox, account privacy and listing regressions on desktop and mobile
-        if: ${{ success() }}
+        if: ${{ github.event.inputs.photo_only != 'true' && success() }}
         run: npx playwright test --config=playwright.local.config.js seller-inventory.spec.js inbox-history.spec.js favorites-recovery.spec.js listing-editor.spec.js inbox-request-order.spec.js inbox-recovery.spec.js private-message-photos.spec.js seller-overview.spec.js trade-picker.spec.js inbox-trade-details.spec.js collection-sharing.spec.js account-boundaries.spec.js listing-description.spec.js discovery-profiles.spec.js tcg-sets.spec.js listing-publication.spec.js moderation-security.spec.js moderator-access.spec.js
       - uses: actions/upload-artifact@v4
         if: always()
