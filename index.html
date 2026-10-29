@@ -1820,7 +1820,33 @@ document.getElementById("messageInbox").addEventListener("change",async e=>{cons
 document.getElementById("messageInbox").addEventListener("click",async e=>{const button=e.target.closest("[data-submit-review]");if(!button)return;const id=button.dataset.submitReview,rating=Number(document.querySelector('[data-review-rating="'+id+'"]').value),comment=document.querySelector('[data-review-comment="'+id+'"]').value;const {data:deal}=await supabaseClient.from("deal_progress").select("seller_id").eq("id",id).single();if(!deal)return;const {error}=await supabaseClient.from("seller_reviews").insert({deal_id:id,reviewer_id:currentUser.id,seller_id:deal.seller_id,rating,comment});if(error)toast(error.message,"error");else{toast("Review posted");await loadInbox()}});
 
 // Drafts stay in memory, scoped to the signed-in collector and conversation.
-const inboxDrafts=new Map(),inboxSending=new Set(),messageSendAttempts=new Map(),inboxOlderMessages=new Map(),inboxOlderExhausted=new Set();
+const inboxDrafts=new Map(),inboxSending=new Set(),messageSendAttempts=new Map(),tradeSendAttempts=new Map(),inboxOlderMessages=new Map(),inboxOlderExhausted=new Set();
+async function sendTradeProposalOnce(payload){
+ const key=JSON.stringify(payload),previous=tradeSendAttempts.get(key),id=previous||crypto.randomUUID(),version=messageAccountVersion;
+ tradeSendAttempts.set(key,id);
+ const current=()=>currentUser?.id===payload.sender_id&&messageAccountVersion===version;
+ const confirmed=async()=>{
+  if(!current())return null;
+  try{
+   const {data:row,error}=await supabaseClient.from("trade_offers").select("id,sender_id,recipient_id,listing_id,offered_listing_id,offered_listing_ids,initial_terms,offer_note,cash_amount,cash_direction").eq("id",id).eq("sender_id",payload.sender_id).maybeSingle();
+   const terms=row?.initial_terms?.note!=null?row.initial_terms:{note:row?.offer_note,cash_amount:row?.cash_amount,cash_direction:row?.cash_direction};
+   if(!current()||error||row?.id!==id||row.sender_id!==payload.sender_id||row.recipient_id!==payload.recipient_id||row.listing_id!==payload.listing_id||(row.offered_listing_id||null)!==(payload.offered_listing_id||null)||JSON.stringify(row.offered_listing_ids||[])!==JSON.stringify(payload.offered_listing_ids||[])||terms.note!==payload.offer_note||Number(terms.cash_amount)!==payload.cash_amount||terms.cash_direction!==payload.cash_direction)return null;
+   return {data:{id},error:null};
+  }catch{return null}
+ };
+ const finish=result=>{if(current()&&tradeSendAttempts.get(key)===id)tradeSendAttempts.delete(key);return result};
+ // Read before retry: the first request may already have reserved these items.
+ if(previous){const found=await confirmed();if(found)return finish(found)}
+ if(!current())throw Error("Your account changed. Reopen the trade before sending.");
+ let failure;
+ try{
+  const result=await supabaseClient.from("trade_offers").insert({...payload,id}).select("id").single();
+  if(!result.error&&result.data?.id)return finish(result);
+  failure=result.error||Error("Trade delivery could not be confirmed. Retry to check the same proposal.");
+ }catch(error){failure=error}
+ const found=await confirmed();if(found)return finish(found);
+ throw failure;
+}
 async function sendCollectorMessageOnce(payload){
  const key=JSON.stringify([payload.sender_id,payload.recipient_id,payload.listing_id||null,payload.body,payload.attachment_ids||[]]);
  const id=payload.id||messageSendAttempts.get(key)||crypto.randomUUID();messageSendAttempts.set(key,id);
@@ -1846,7 +1872,7 @@ function syncInboxDraftUser(){
  if(inboxDraftUser!==id){
   ++messageAccountVersion;
   ++listingAccountVersion;++cloudDraftRequestVersion;cloudDraftBusy=false;cloudDraftControls(false);document.getElementById("listingCloudDraftStatus").textContent="";document.getElementById("listingForm").reset();document.getElementById("listingType").dispatchEvent(new Event("change"));listingSelectedPhotos=[];renderListingPhotos();syncCategoryFields();syncGradedCondition();document.getElementById("deckFields").hidden=true;document.getElementById("listingStatus").textContent="";closeModal("sellModal");
-  profileInventoryFilter={search:"",status:"all",category:"all"};window.listingEditor?.reset();window.sellerOverview?.reset();window.privateMessagePhotos?.reset();inboxDrafts.clear();messageSendAttempts.clear();inboxOlderMessages.clear();inboxOlderExhausted.clear();inboxConversationFilter={search:"",unread:false};inboxDraftUser=id;tradeBundleSelection=[];document.getElementById("tradeBundleItems").replaceChildren();document.getElementById("tradeBundleCount").textContent="";
+  profileInventoryFilter={search:"",status:"all",category:"all"};window.listingEditor?.reset();window.sellerOverview?.reset();window.privateMessagePhotos?.reset();inboxDrafts.clear();messageSendAttempts.clear();tradeSendAttempts.clear();inboxOlderMessages.clear();inboxOlderExhausted.clear();inboxConversationFilter={search:"",unread:false};inboxDraftUser=id;tradeBundleSelection=[];document.getElementById("tradeBundleItems").replaceChildren();document.getElementById("tradeBundleCount").textContent="";
   ++blockedCollectorsLoadVersion;blockedCollectorIds.clear();document.getElementById("blockedUsersList").replaceChildren();document.getElementById("settingsBlockCount").textContent="";
   ++reportDialogVersion;reportTargetUser=null;reportTargetListing=null;reportTargetBlocked=false;document.getElementById("reportForm").reset();document.getElementById("reportStatus").textContent="";document.querySelector('#reportForm button[type="submit"]').disabled=false;closeModal("reportModal");
   ++notificationSettingsVersion;notificationSettingsOwner=null;notificationSettingsLoading=false;notificationPreferenceControls(true);document.querySelectorAll("[data-notify-pref]").forEach(input=>input.checked=false);document.getElementById("notificationSettingsStatus").textContent="";++inboxLoadVersion;++profileLoadVersion;++priceOffersLoadVersion;++tradeOffersLoadVersion;++unreadCountLoadVersion;++profileEditorLoadVersion;selectedInboxCollector=null;
@@ -2084,6 +2110,9 @@ document.getElementById("inboxPage").addEventListener("click",async e=>{const of
 document.getElementById("refreshInbox").addEventListener("click",()=>document.getElementById("inboxNotificationPanel").hidden?loadInbox():loadNotificationCenter());
 const pendingInboxDealActions=new Set();
 document.getElementById("messageInbox").addEventListener("click",async e=>{
+ const ownerId=currentUser?.id,accountVersion=messageAccountVersion,otherId=selectedInboxCollector;
+ const sameCollector=()=>!!ownerId&&currentUser?.id===ownerId&&messageAccountVersion===accountVersion;
+ const canRespond=()=>sameCollector()&&selectedInboxCollector===otherId&&!blockedCollectorIds.has(otherId);
  const attemptedDealAction=e.target.closest("[data-inbox-price],[data-inbox-counter],[data-inbox-trade]");
  if(attemptedDealAction&&selectedInboxCollector&&blockedCollectorIds.has(selectedInboxCollector)){toast("Unblock this collector in Settings before responding to offers or trades.","error");return}
  const price=e.target.closest("[data-inbox-price]");
@@ -2094,22 +2123,24 @@ document.getElementById("messageInbox").addEventListener("click",async e=>{
   if(action==="counter"){
    amount=requestCounterofferAmount(price.dataset.currentAmount||"");if(amount===null)return;
   }else if(!confirm(action==="accept"?`Accept ${price.dataset.currentAmount?"$"+price.dataset.currentAmount:"the current offer"} and reserve the listing? No payment is taken.`:"Confirm "+action+"?"))return;
+  if(!canRespond())return;
   pendingInboxDealActions.add(key);
   const buttons=[...price.closest(".price-offer-actions").querySelectorAll("[data-inbox-price]")];
   buttons.forEach(button=>{button.disabled=true;button.setAttribute("aria-busy","true")});
   let committed=false;
   try{
    const {error}=await supabaseClient.rpc("respond_price_offer",{p_offer_id:id,p_action:action,p_amount:amount});
-   if(currentUser?.id!==userId)return;
+   if(!sameCollector())return;
    if(error){toast(error.message||"Offer changed. Refresh and try again.","error");await loadInbox()}
    else{
     committed=true;
     toast(action==="accept"?"Offer accepted — item reserved. Payment and shipping are not active.":"Offer updated");
     if(action==="accept")await loadListings();
+    if(!sameCollector())return;
     void sendCollectorEmailForSource(id);await loadInbox();
    }
-  }catch(error){if(currentUser?.id===userId){toast(committed?"Offer updated, but Inbox could not refresh. Refresh before responding again.":(error.message||"Offer response could not be confirmed.")+" Refresh before retrying.","error");if(!committed)await loadInbox().catch(()=>{})}}
-  finally{pendingInboxDealActions.delete(key);if(currentUser?.id===userId)buttons.forEach(button=>{if(button.isConnected){button.disabled=false;button.removeAttribute("aria-busy")}})}
+  }catch(error){if(sameCollector()){toast(committed?"Offer updated, but Inbox could not refresh. Refresh before responding again.":(error.message||"Offer response could not be confirmed.")+" Refresh before retrying.","error");if(!committed)await loadInbox().catch(()=>{})}}
+  finally{pendingInboxDealActions.delete(key);if(sameCollector())buttons.forEach(button=>{if(button.isConnected){button.disabled=false;button.removeAttribute("aria-busy")}})}
   return;
  }
  const counter=e.target.closest("[data-inbox-counter]");
@@ -2118,18 +2149,20 @@ document.getElementById("messageInbox").addEventListener("click",async e=>{
   if(!userId||pendingInboxDealActions.has(key)||counter.disabled)return;
   const accept=counter.dataset.inboxCounter==="accept";
   if(!confirm(accept?"Accept these counteroffer terms? Items will be reserved; no payment is taken.":"Decline this counteroffer?"))return;
+  if(!canRespond())return;
   pendingInboxDealActions.add(key);const buttons=[...counter.closest(".price-offer-actions").querySelectorAll("button")];buttons.forEach(b=>{b.disabled=true;b.setAttribute("aria-busy","true")});
   let committed=false;
   try{
    const {error}=await supabaseClient.rpc("respond_trade_counter",{p_counter:counter.dataset.counter,p_accept:accept});
-   if(currentUser?.id!==userId)return;
+   if(!sameCollector())return;
    if(error)throw error;
    committed=true;
    toast(accept?"Counteroffer accepted — items reserved. No payment taken.":"Counteroffer declined");
    if(accept)await loadListings();
+    if(!sameCollector())return;
    await loadInbox();refreshTradeAlerts();
-  }catch(error){if(currentUser?.id===userId){toast(committed?"Counteroffer updated, but Inbox could not refresh. Refresh before responding again.":(error.message||"Counteroffer response could not be confirmed.")+" Refresh before retrying.","error");if(!committed)await loadInbox().catch(()=>{})}}
-  finally{pendingInboxDealActions.delete(key);if(currentUser?.id===userId)buttons.forEach(b=>{if(b.isConnected){b.disabled=false;b.removeAttribute("aria-busy")}})}
+  }catch(error){if(sameCollector()){toast(committed?"Counteroffer updated, but Inbox could not refresh. Refresh before responding again.":(error.message||"Counteroffer response could not be confirmed.")+" Refresh before retrying.","error");if(!committed)await loadInbox().catch(()=>{})}}
+  finally{pendingInboxDealActions.delete(key);if(sameCollector())buttons.forEach(b=>{if(b.isConnected){b.disabled=false;b.removeAttribute("aria-busy")}})}
   return;
  }
  const trade=e.target.closest("[data-inbox-trade]");
@@ -2141,22 +2174,24 @@ document.getElementById("messageInbox").addEventListener("click",async e=>{
    document.getElementById("counterStatus").textContent="";openModal("counterModal");return;
   }
   if(!confirm(action==="accepted"?"Accept this trade and reserve the included items? No payment will be taken.":action==="declined"?"Decline this trade offer?":"Confirm "+action+" for this trade?"))return;
+  if(!canRespond())return;
   pendingInboxDealActions.add(key);
   const buttons=[...trade.closest(".price-offer-actions").querySelectorAll("[data-inbox-trade]")];
   buttons.forEach(button=>{button.disabled=true;button.setAttribute("aria-busy","true")});
   let committed=false;
   try{
    const {error}=await supabaseClient.rpc("respond_trade_offer",{p_offer:id,p_action:action});
-   if(currentUser?.id!==userId)return;
+   if(!sameCollector())return;
    if(error){toast(error.message||"This trade has already changed. Refreshing the conversation.","error");await loadInbox()}
    else{
     committed=true;
     toast(action==="accepted"?"Trade accepted — item reserved. No payment has been taken.":"Trade "+action);
     if(action==="accepted")await loadListings();
+    if(!sameCollector())return;
     await loadInbox();refreshTradeAlerts();
    }
-  }catch(error){if(currentUser?.id===userId){toast(committed?"Trade updated, but Inbox could not refresh. Refresh before responding again.":(error.message||"Trade response could not be confirmed.")+" Refresh before retrying.","error");if(!committed)await loadInbox().catch(()=>{})}}
-  finally{pendingInboxDealActions.delete(key);if(currentUser?.id===userId)buttons.forEach(button=>{if(button.isConnected){button.disabled=false;button.removeAttribute("aria-busy")}})}
+  }catch(error){if(sameCollector()){toast(committed?"Trade updated, but Inbox could not refresh. Refresh before responding again.":(error.message||"Trade response could not be confirmed.")+" Refresh before retrying.","error");if(!committed)await loadInbox().catch(()=>{})}}
+  finally{pendingInboxDealActions.delete(key);if(sameCollector())buttons.forEach(button=>{if(button.isConnected){button.disabled=false;button.removeAttribute("aria-busy")}})}
   return;
  }
  const b=e.target.closest("[data-reply-to],[data-thread-reply]");if(!b)return;const recipient=b.dataset.replyTo||b.dataset.threadReply;if(blockedCollectorIds.has(recipient)){toast("Unblock this collector in Settings before messaging.","error");return}composeRecipient=recipient;composeListing=b.dataset.replyListing||null;document.getElementById("composeContext").textContent="Reply to collector";openModal("composeModal")});
@@ -2223,12 +2258,13 @@ document.getElementById("tradeComposeForm").addEventListener("submit",async e=>{
  if(!note){status.textContent="Describe your offer.";return}
  const cashDirection=document.getElementById("tradeCashDirection").value,cashAmount=Number(document.getElementById("tradeCashAmount").value);
  if(!Number.isFinite(cashAmount)||cashAmount<0||cashAmount>100000||(cashDirection!=="none"&&cashAmount<=0)){status.textContent="Enter a valid cash amount.";return}
- const userId=currentUser.id,targetId=tradeTargetId,recipientId=tradeRecipientId,offeredIds=selectedTradeInventory(),offeredId=offeredIds[0]||"";
+ const userId=currentUser.id,targetId=tradeTargetId,recipientId=tradeRecipientId,offeredIds=selectedTradeInventory(),offeredId=offeredIds[0]||"",accountVersion=messageAccountVersion;
+ if(blockedCollectorIds.has(recipientId)){status.textContent="Unblock this collector in Settings before sending a trade.";return}
  if(offeredIds.length>5){status.textContent="Choose up to five listed items.";return}
  const button=form.querySelector('button[type="submit"]');form.dataset.pending="true";form.setAttribute("aria-busy","true");button.disabled=true;status.textContent="Sending offer…";
- const current=()=>currentUser?.id===userId&&tradeTargetId===targetId&&tradeRecipientId===recipientId;
+ const current=()=>currentUser?.id===userId&&messageAccountVersion===accountVersion&&tradeTargetId===targetId&&tradeRecipientId===recipientId;
  try{
-  const {data:sentTrade,error}=await supabaseClient.from("trade_offers").insert({cash_amount:cashDirection==="none"?0:cashAmount,cash_direction:cashDirection,listing_id:targetId,sender_id:userId,recipient_id:recipientId,offered_listing_id:offeredId||null,offered_listing_ids:offeredIds,offer_note:note}).select("id").single();if(error)throw error;
+  const {data:sentTrade,error}=await sendTradeProposalOnce({cash_amount:cashDirection==="none"?0:cashAmount,cash_direction:cashDirection,listing_id:targetId,sender_id:userId,recipient_id:recipientId,offered_listing_id:offeredId||null,offered_listing_ids:offeredIds,offer_note:note});if(error)throw error;
   if(!current())return;
   if(input.value===draft&&JSON.stringify(selectedTradeInventory())===JSON.stringify(offeredIds)&&document.getElementById("tradeCashDirection").value===cashDirection&&Number(document.getElementById("tradeCashAmount").value)===cashAmount){form.reset();tradeBundleSelection=[];renderTradeBundle();document.getElementById("tradeCashAmount").disabled=true;status.textContent="";closeModal("tradeComposeModal");toast("Trade offer sent!")}
   else status.textContent="Trade sent. Your new draft is ready.";
@@ -2268,7 +2304,8 @@ async function loadTradeOffers(focusOfferId=null){
  }
 }
 document.getElementById("tradeOffersList").addEventListener("click",async e=>{
- const userId=currentUser?.id;if(!userId)return;
+ const userId=currentUser?.id,accountVersion=messageAccountVersion;if(!userId)return;
+ const sameCollector=()=>currentUser?.id===userId&&messageAccountVersion===accountVersion;
  const actionTarget=e.target.closest("[data-counter-start],[data-counter-response],[data-trade-action]");
  const otherId=actionTarget?.closest(".trade-offer-card")?.dataset.tradeCounterparty;
  if(otherId&&blockedCollectorIds.has(otherId)){toast("Unblock this collector in Settings before responding to trades.","error");return}
@@ -2278,18 +2315,19 @@ document.getElementById("tradeOffersList").addEventListener("click",async e=>{
  if(pendingInboxDealActions.has(key)||button.disabled)return;
  const responseLabel=accept?"Accept these trade terms? Items will be reserved. No payment is taken.":reply?"Decline this counteroffer?":button.dataset.tradeAction==="cancelled"?"Cancel your trade offer?":button.dataset.tradeAction==="declined"?"Decline this trade offer?":"Confirm this trade response?";
  if(!confirm(responseLabel))return;
+ if(!sameCollector()||(otherId&&blockedCollectorIds.has(otherId)))return;
  pendingInboxDealActions.add(key);const buttons=[...button.closest(".trade-offer-card").querySelectorAll("button")];buttons.forEach(b=>{b.disabled=true;b.setAttribute("aria-busy","true")});
  try{
   const {error}=await supabaseClient.rpc(reply?"respond_trade_counter":"respond_trade_offer",reply?{p_counter:button.dataset.counterId,p_accept:accept}:{p_offer:id,p_action:button.dataset.tradeAction});
-  if(currentUser?.id!==userId)return;if(error)throw error;
+  if(!sameCollector())return;if(error)throw error;
   toast(accept?"Trade accepted — items reserved. Payments are not active.":"Trade updated");
   try{
    if(accept)await loadListings();
-   if(currentUser?.id!==userId)return;
+   if(!sameCollector())return;
    await loadTradeOffers();if(!document.getElementById("inboxPage").hidden)await loadInbox();void refreshTradeAlerts();
-  }catch(refreshError){if(currentUser?.id===userId)toast("Trade updated, but the screen could not refresh. Refresh to see its latest status.","error")}
- }catch(error){if(currentUser?.id===userId){toast(error.message||"Could not confirm trade response. Refresh to check its status before retrying.","error");await loadTradeOffers().catch(()=>{})}}
- finally{pendingInboxDealActions.delete(key);if(currentUser?.id===userId)buttons.forEach(b=>{if(b.isConnected){b.disabled=false;b.removeAttribute("aria-busy")}})}
+  }catch(refreshError){if(sameCollector())toast("Trade updated, but the screen could not refresh. Refresh to see its latest status.","error")}
+ }catch(error){if(sameCollector()){toast(error.message||"Could not confirm trade response. Refresh to check its status before retrying.","error");await loadTradeOffers().catch(()=>{})}}
+ finally{pendingInboxDealActions.delete(key);if(sameCollector())buttons.forEach(b=>{if(b.isConnected){b.disabled=false;b.removeAttribute("aria-busy")}})}
 });
 document.getElementById("counterForm").addEventListener("submit",async e=>{
  e.preventDefault();
