@@ -9,13 +9,13 @@
 
 ## Exact verified missing production schema
 Tables absent: `public.listing_drafts`, `public.seller_follows`, `public.message_photo_attachments`.
-Columns absent:
-- `profiles.collection_links jsonb NOT NULL`
-- `profiles.collection_inquiry_mode text NOT NULL`
-- `collector_messages.attachment_ids uuid[] NOT NULL` (verify actual array element type via pg_catalog before migration)
-- `trade_offers.offered_listing_ids uuid[] NOT NULL` (verify type)
-- `trade_offers.item_snapshots jsonb NOT NULL`
-- `trade_offers.initial_terms jsonb NOT NULL`
+Columns absent (rechecked against both databases; staging types/defaults confirmed):
+- `profiles.collection_links jsonb NOT NULL DEFAULT '[]'::jsonb`
+- `profiles.collection_inquiry_mode text NOT NULL DEFAULT 'off'`
+- `collector_messages.attachment_ids uuid[] NOT NULL DEFAULT '{}'::uuid[]` (confirmed staging `udt_name=_uuid`)
+- `trade_offers.offered_listing_ids uuid[] NOT NULL DEFAULT '{}'::uuid[]` (confirmed staging `udt_name=_uuid`)
+- `trade_offers.item_snapshots jsonb NOT NULL DEFAULT '[]'::jsonb`
+- `trade_offers.initial_terms jsonb NOT NULL DEFAULT '{}'::jsonb`
 
 Production existing `profiles.display_name` is nullable while staging is not; DO NOT change existing production nullability without backfill.
 Production `trade_offers.offer_note` and `cash_direction` are NOT NULL while staging allows NULL. Check actual frontend writes and existing CHECK constraints before release.
