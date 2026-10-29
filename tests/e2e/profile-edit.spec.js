@@ -33,3 +33,21 @@ test('profile save prevents duplicate submissions and releases controls on excep
  await page.evaluate(()=>{const form=document.getElementById('profileForm');form.requestSubmit();form.requestSubmit()});expect(await page.evaluate(()=>profileWrites.length)).toBe(1);
  await page.evaluate(()=>finishProfileSave(Promise.reject(Error('Profile connection failed'))));await expect(page.locator('#profileStatus')).toContainText('Profile connection failed');await expect(page.locator('#profileForm button[type="submit"]')).toBeEnabled();await expect(page.locator('#profileUsername')).toHaveValue('fixture_owner');
 });
+
+test('posting a listing cannot overwrite an existing collector username or display name',async({page})=>{
+ await page.evaluate(async()=>{
+  window.profileEnsureWrites=[];
+  supabaseClient.from=table=>{
+   if(table!=='profiles')throw Error('Unexpected profile test table');
+   return {upsert:async(payload,options)=>{
+    profileEnsureWrites.push({payload,options});
+    return {error:null};
+   }};
+  };
+  await ensureProfile({id:'fixture-owner',email:'owner@example.test',user_metadata:{}});
+ });
+ const writes=await page.evaluate(()=>profileEnsureWrites);
+ expect(writes).toHaveLength(1);
+ expect(writes[0].payload.id).toBe('fixture-owner');
+ expect(writes[0].options).toEqual({onConflict:'id',ignoreDuplicates:true});
+});
