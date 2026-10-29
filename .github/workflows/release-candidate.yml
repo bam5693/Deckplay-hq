@@ -7,6 +7,10 @@ on:
       - 'index.html'
       - '*.js'
       - 'release/**'
+      - 'tests/fixtures/production-*'
+      - 'tests/integration/*.sql'
+      - 'scripts/test-production-*'
+      - 'scripts/backup-production-private.sh'
       - 'scripts/*release*'
       - 'tests/e2e/**'
       - 'tests/security/**'
@@ -83,3 +87,44 @@ jobs:
             dist-release-preview-worker.mjs
             test-results/local-junit.xml
           retention-days: 7
+  production-database-rehearsal:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    services:
+      postgres:
+        image: postgres:17.11
+        env:
+          POSTGRES_PASSWORD: disposable-fixture-only
+          POSTGRES_DB: deckplay_rehearsal
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql://postgres:disposable-fixture-only@127.0.0.1:5432/deckplay_rehearsal
+    steps:
+      - uses: actions/checkout@v4
+      - name: Required extension, then exact production schema and synthetic legacy records
+        run: |
+          psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 -c 'create extension pgcrypto'
+          bash scripts/test-production-db.sh
+      - name: Independent-session price versus bundle acceptance
+        run: |
+          bash scripts/test-production-concurrency.sh
+          psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 -c 'update private.rehearsal_canary set fingerprint=private.rehearsal_fingerprint()'
+      - name: Rehearse the actual private backup script and restore into a second empty database
+        env:
+          POSTGRES_CONTAINER: ${{ job.services.postgres.id }}
+        run: |
+          docker cp scripts/backup-production-private.sh "$POSTGRES_CONTAINER:/tmp/backup.sh"
+          docker exec -e DATABASE_URL=postgresql://postgres:disposable-fixture-only@localhost:5432/deckplay_rehearsal "$POSTGRES_CONTAINER" bash /tmp/backup.sh /tmp/recovery
+          docker exec "$POSTGRES_CONTAINER" createdb -U postgres deckplay_recovery
+          docker exec "$POSTGRES_CONTAINER" bash -c 'pg_restore -U postgres -d deckplay_recovery --no-owner --exit-on-error /tmp/recovery/*.dump'
+          DATABASE_URL=postgresql://postgres:disposable-fixture-only@127.0.0.1:5432/deckplay_recovery
+          psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 -f tests/integration/production-compatibility.sql
+          test -z "$(psql "$DATABASE_URL" -X -tA -v ON_ERROR_STOP=1 -f release/schema-contract.sql)"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: production-shaped-race-logs
+          path: test-results/race-*.txt
+          retention-days: 3
