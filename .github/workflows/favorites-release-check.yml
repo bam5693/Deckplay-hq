@@ -1,0 +1,35 @@
+name: Favorites release checks
+on:
+  pull_request:
+    paths:
+      - 'favorite-actions.js'
+      - 'index.html'
+      - 'tests/security/favorite-actions-regression.test.cjs'
+      - '.github/workflows/favorites-release-check.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  favorites:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate Favorites JavaScript syntax
+        run: node --check favorite-actions.js
+      - name: Test Favorites save, remove and rollback behavior
+        run: node --test tests/security/favorite-actions-regression.test.cjs
+      - name: Verify production homepage includes controller and delegates favorite actions
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const assert = require('node:assert/strict');
+          const html = fs.readFileSync('index.html', 'utf8');
+          assert.match(html, /<script src="\.\/favorite-actions\.js"><\/script>/);
+          assert.match(html, /await window\.favoriteActions\.toggle\(heart\.dataset\.heart\)/);
+          assert.ok(!html.includes('const wasSaved=saved.has(id);wasSaved?saved.delete(id):saved.add(id);render();const item=items.find'));
+          console.log('Homepage Favorites wiring verified');
+          NODE
