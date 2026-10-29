@@ -163,3 +163,33 @@ test('selected trade inventory clears across account changes',async({page})=>{
  await page.evaluate(()=>{document.getElementById('tradeOfferedListing').innerHTML='<option value="">Choose</option><option value="private">Private card</option>';tradeBundleSelection=['private'];renderTradeBundle();inboxDraftUser=currentUser.id;currentUser={id:'new-account'};syncInboxDraftUser()});
  await expect(page.locator('#tradeBundleItems')).toBeEmpty();expect(await page.evaluate(()=>tradeBundleSelection)).toEqual([]);
 });
+
+test('mixed inventory trade confirms a committed proposal after response loss without duplicating it',async({page})=>{
+ await composeFixture(page);
+ await page.evaluate(()=>{
+  window.tradeRow=null;window.tradeReadbackOffline=true;
+  supabaseClient.from=()=>{
+   const q={insert(value){tradeWrites.push(value);tradeRow={...value,initial_terms:{note:value.offer_note,cash_amount:value.cash_amount,cash_direction:value.cash_direction}};return q},select(){return q},eq(){return q},single:async()=>{throw Error('Connection lost')},maybeSingle:async()=>tradeReadbackOffline?{error:{message:'Read offline'}}:{data:tradeRow,error:null}};
+   return q;
+  };
+  tradeBundleSelection=['sports-card','game','console','deck','figure'];renderTradeBundle();
+ });
+ await page.locator('#tradeComposeForm button[type="submit"]').click();
+ await expect(page.locator('#tradeOfferStatus')).toContainText('Connection lost');
+ await expect(page.locator('#tradeOfferNote')).toHaveValue('My original trade proposal');
+ expect(await page.evaluate(()=>tradeWrites.length)).toBe(1);
+ await page.evaluate(()=>{tradeReadbackOffline=false});
+ await page.locator('#tradeComposeForm button[type="submit"]').click();
+ await expect(page.locator('#tradeComposeModal')).not.toHaveClass(/open/);
+ expect(await page.evaluate(()=>tradeWrites.length)).toBe(1);
+ expect(await page.evaluate(()=>tradeWrites[0].offered_listing_ids)).toEqual(['sports-card','game','console','deck','figure']);
+});
+
+test('blocked collector cannot submit a prepared trade and keeps its proposal',async({page})=>{
+ await composeFixture(page);
+ await page.evaluate(()=>blockedCollectorIds.add('seller-fixture'));
+ await page.locator('#tradeComposeForm button[type="submit"]').click();
+ await expect(page.locator('#tradeOfferStatus')).toContainText('Unblock this collector');
+ await expect(page.locator('#tradeOfferNote')).toHaveValue('My original trade proposal');
+ expect(await page.evaluate(()=>tradeWrites.length)).toBe(0);
+});
