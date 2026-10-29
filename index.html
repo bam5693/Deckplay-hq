@@ -1556,7 +1556,31 @@ function exactWantedMatches(post){
   &&(!meta.set||normText(wantedListingField(item.description,"Set"))===normText(meta.set))
  ).slice(0,5);
 }
-document.getElementById("wantedForm").addEventListener("submit",async e=>{e.preventDefault();if(!currentUser)return;const status=document.getElementById("wantedStatus");status.textContent="Publishing…";const budget=document.getElementById("wantedBudget").value;const {error}=await supabaseClient.from("wanted_posts").insert({user_id:currentUser.id,title:document.getElementById("wantedItem").value.trim(),game:document.getElementById("wantedGame").value||null,offer_type:document.getElementById("wantedOffer").value,budget:budget?Number(budget):null,details:(()=>{const detail=document.getElementById("wantedDetails").value.trim();if(document.getElementById("wantedCardFields").hidden)return detail||null;const metadata={set:document.getElementById("wantedSet").value.trim(),cardNumber:document.getElementById("wantedCardNumber").value.trim(),variant:document.getElementById("wantedVariant").value};return Object.values(metadata).some(Boolean)?[detail,"[DeckPlay match: "+JSON.stringify(metadata)+"]"].filter(Boolean).join("\\n"):detail||null})()});if(error){status.textContent=error.message;return}e.target.reset();status.textContent="";closeModal("wantedModal");toast("Wanted post published!");await loadWanted()});
+let wantedPublishVersion=0,wantedPublishBusy=false;
+function resetWantedPublisher(){
+ ++wantedPublishVersion;wantedPublishBusy=false;
+ const form=document.getElementById("wantedForm");
+ form.reset();form.removeAttribute("aria-busy");form.querySelector('button[type="submit"]').disabled=false;
+ document.getElementById("wantedStatus").textContent="";syncWantedCardFields();
+}
+document.getElementById("wantedForm").addEventListener("submit",async e=>{
+ e.preventDefault();if(!currentUser||wantedPublishBusy)return;
+ const form=e.currentTarget,button=form.querySelector('button[type="submit"]'),status=document.getElementById("wantedStatus");
+ const owner=currentUser.id,epoch=messageAccountVersion,request=++wantedPublishVersion;
+ const valid=()=>request===wantedPublishVersion&&currentUser?.id===owner&&messageAccountVersion===epoch;
+ wantedPublishBusy=true;button.disabled=true;form.setAttribute("aria-busy","true");status.textContent="Publishing…";
+ const budget=document.getElementById("wantedBudget").value;
+ const details=(()=>{const detail=document.getElementById("wantedDetails").value.trim();if(document.getElementById("wantedCardFields").hidden)return detail||null;const metadata={set:document.getElementById("wantedSet").value.trim(),cardNumber:document.getElementById("wantedCardNumber").value.trim(),variant:document.getElementById("wantedVariant").value};return Object.values(metadata).some(Boolean)?[detail,"[DeckPlay match: "+JSON.stringify(metadata)+"]"].filter(Boolean).join("\\n"):detail||null})();
+ const payload={user_id:owner,title:document.getElementById("wantedItem").value.trim(),game:document.getElementById("wantedGame").value||null,offer_type:document.getElementById("wantedOffer").value,budget:budget?Number(budget):null,details};
+ try{
+  const write=supabaseClient.from("wanted_posts").insert(payload);
+  const {error}=await (write.abortSignal?write.abortSignal(AbortSignal.timeout(20000)):write);
+  if(!valid())return;
+  if(error){status.textContent=error.message||"Could not publish. Try again.";return}
+  resetWantedPublisher();closeModal("wantedModal");toast("Wanted post published!");await loadWanted();
+ }catch(error){if(valid())status.textContent=error.message||"Could not publish. Try again."}
+ finally{if(valid()){wantedPublishBusy=false;button.disabled=false;form.removeAttribute("aria-busy")}}
+});
 document.getElementById("wantedGrid").addEventListener("click",async e=>{const match=e.target.closest("[data-wanted-match]");if(match){const item=items.find(x=>String(x.id)===match.dataset.wantedMatch);if(!item){toast("This listing is no longer available. Refresh wanted posts.");return}toggleWanted(false);showDetails(item);return}const button=e.target.closest("[data-delete-wanted]");if(!button||!currentUser)return;if(!confirm("Delete this wanted post?"))return;const {error}=await supabaseClient.from("wanted_posts").delete().eq("id",button.dataset.deleteWanted).eq("user_id",currentUser.id);if(error){toast(error.message);return}await loadWanted()});
 let savedListingsLoadVersion=0;
 async function loadSavedListings(){const version=++savedListingsLoadVersion,userId=currentUser?.id;saved.clear();if(!userId)return;const {data,error}=await supabaseClient.from("saved_listings").select("listing_id").eq("user_id",userId);if(version!==savedListingsLoadVersion||currentUser?.id!==userId)return;if(error){console.warn("Saved items unavailable",error);return}(data||[]).forEach(x=>saved.add(x.listing_id))}
@@ -1918,6 +1942,7 @@ function syncInboxDraftUser(){
  const id=currentUser?.id||null;
  if(inboxDraftUser!==id){
   ++messageAccountVersion;
+  resetWantedPublisher();closeModal("wantedModal");
   ++listingAccountVersion;++cloudDraftRequestVersion;cloudDraftBusy=false;cloudDraftControls(false);document.getElementById("listingCloudDraftStatus").textContent="";document.getElementById("listingForm").reset();document.getElementById("listingType").dispatchEvent(new Event("change"));listingSelectedPhotos=[];renderListingPhotos();syncCategoryFields();syncGradedCondition();document.getElementById("deckFields").hidden=true;document.getElementById("listingStatus").textContent="";closeModal("sellModal");
   profileInventoryFilter={search:"",status:"all",category:"all"};window.listingEditor?.reset();window.sellerOverview?.reset();window.privateMessagePhotos?.reset();inboxDrafts.clear();messageSendAttempts.clear();tradeSendAttempts.clear();inboxOlderMessages.clear();inboxOlderExhausted.clear();inboxConversationFilter={search:"",unread:false};inboxDraftUser=id;tradeBundleSelection=[];document.getElementById("tradeBundleItems").replaceChildren();document.getElementById("tradeBundleCount").textContent="";
   ++blockedCollectorsLoadVersion;blockedCollectorIds.clear();document.getElementById("blockedUsersList").replaceChildren();document.getElementById("settingsBlockCount").textContent="";
