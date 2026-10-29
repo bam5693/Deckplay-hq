@@ -50,7 +50,7 @@ test('Tanner: sports card sellers must identify sport, brand, year and subject',
  await page.locator('#sportsBrand').selectOption('Panini');
  await page.locator('#sportsYear').fill('2024');
  await page.locator('#sportsPlayer').fill('CeeDee Lamb');
- for(const id of ['sportsSport','sportsBrand','sportsYear','sportsPlayer'])await expect(page.locator('#'+id)).toBeValid();
+ for(const id of ['sportsSport','sportsBrand','sportsYear','sportsPlayer'])expect(await page.locator('#'+id).evaluate(el=>el.checkValidity())).toBe(true);
  await page.locator('#tcgGame').selectOption('pokemon');
  await expect(page.locator('#sportsBrandWrap')).toBeHidden();
  for(const id of ['sportsSport','sportsBrand','sportsYear','sportsPlayer'])await expect(page.locator('#'+id)).not.toHaveAttribute('required','');
