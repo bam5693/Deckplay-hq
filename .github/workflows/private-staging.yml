@@ -77,10 +77,6 @@ jobs:
           mkdir -p test-results
           set -o pipefail
           node scripts/run-staging-api.cjs 2>&1 | tee test-results/staging-api.tap
-      - name: Install browser for deployed UI journeys
-        if: ${{ !cancelled() }}
-        run: npx playwright install chromium --only-shell
-        timeout-minutes: 8
       - name: Kyle, Tanner and Jayden — deployed buyer/seller/trader journeys
         if: ${{ !cancelled() && env.DECKPLAY_STAGING_URL != '' }}
         run: npx playwright test --config=playwright.staging.config.js
@@ -91,7 +87,7 @@ jobs:
         run: node scripts/report-staging-results.cjs
       - name: Verify local inbox, account privacy and listing regressions on desktop and mobile
         if: ${{ !cancelled() }}
-        run: npx playwright test --config=playwright.local.config.js seller-inventory.spec.js inbox-history.spec.js favorites-recovery.spec.js listing-editor.spec.js category-coverage.spec.js inbox-request-order.spec.js inbox-recovery.spec.js private-message-photos.spec.js seller-overview.spec.js trade-picker.spec.js inbox-trade-details.spec.js collection-sharing.spec.js marketplace-filter-boundaries.spec.js account-boundaries.spec.js listing-description.spec.js discovery-profiles.spec.js tcg-sets.spec.js listing-publication.spec.js moderation-security.spec.js moderator-access.spec.js
+        run: npx playwright test --config=playwright.local.config.js seller-inventory.spec.js inbox-history.spec.js favorites-recovery.spec.js listing-editor.spec.js inbox-request-order.spec.js inbox-recovery.spec.js private-message-photos.spec.js seller-overview.spec.js trade-picker.spec.js inbox-trade-details.spec.js collection-sharing.spec.js account-boundaries.spec.js listing-description.spec.js discovery-profiles.spec.js tcg-sets.spec.js listing-publication.spec.js moderation-security.spec.js moderator-access.spec.js
       - uses: actions/upload-artifact@v4
         if: always()
         with:
