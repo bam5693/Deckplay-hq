@@ -67,6 +67,18 @@ jobs:
       - name: Install browser for preflight
         run: npx playwright install chromium --only-shell
         timeout-minutes: 8
+      - name: Deploy exact staging branch before deployed browser tests
+        if: ${{ env.DECKPLAY_STAGING_URL != '' }}
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo "::error::Missing staging Cloudflare credentials; cannot certify an outdated deployment."
+            exit 1
+          fi
+          node scripts/build-staging-worker.cjs
+          npx --yes wrangler@4 deploy --config wrangler.staging.jsonc
       - name: Preflight — verify deployed staging matches branch before transactions
         if: ${{ env.DECKPLAY_STAGING_URL != '' }}
         run: npx playwright test --config=playwright.staging.config.js staging-smoke.spec.js --grep "deployed homepage matches the staging branch"
