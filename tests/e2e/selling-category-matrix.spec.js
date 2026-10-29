@@ -38,3 +38,30 @@ test('post listing and cancel buttons have matching dimensions',async({page})=>{
  expect(a).not.toBeNull();expect(b).not.toBeNull();
  expect(Math.abs(a.height-b.height)).toBeLessThan(3);
 });
+
+test('Tanner: sports card sellers must identify sport, brand, year and subject',async({page})=>{
+ await page.locator('#listingType').selectOption('single');
+ await page.locator('#tcgGame').selectOption('sports_cards');
+ for(const id of ['sportsSport','sportsBrand','sportsYear','sportsPlayer']){
+  await expect(page.locator('#'+id)).toBeVisible();
+  await expect(page.locator('#'+id)).toHaveAttribute('required','');
+ }
+ await page.locator('#sportsSport').selectOption('Football');
+ await page.locator('#sportsBrand').selectOption('Panini');
+ await page.locator('#sportsYear').fill('2024');
+ await page.locator('#sportsPlayer').fill('CeeDee Lamb');
+ for(const id of ['sportsSport','sportsBrand','sportsYear','sportsPlayer'])await expect(page.locator('#'+id)).toBeValid();
+ await page.locator('#tcgGame').selectOption('pokemon');
+ await expect(page.locator('#sportsBrandWrap')).toBeHidden();
+ for(const id of ['sportsSport','sportsBrand','sportsYear','sportsPlayer'])await expect(page.locator('#'+id)).not.toHaveAttribute('required','');
+});
+test('Jayden: every supported card game is selectable and does not reveal sports-only seller fields',async({page})=>{
+ await page.locator('#listingType').selectOption('single');
+ const games=await page.locator('#tcgGame option').evaluateAll(options=>options.map(o=>o.value).filter(Boolean));
+ expect(games.length).toBeGreaterThan(10);
+ for(const game of games){
+  await page.locator('#tcgGame').selectOption(game);
+  await expect(page.locator('#tcgGame')).toHaveValue(game);
+  await expect(page.locator('#sportsBrandWrap'))[game==='sports_cards'?'toBeVisible':'toBeHidden']();
+ }
+});
