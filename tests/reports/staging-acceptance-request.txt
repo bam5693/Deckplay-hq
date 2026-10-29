@@ -1,1 +1,1 @@
-2026-10-29 negotiation-history targeted local-only test request. Execute newly registered inbox-negotiation-history.spec.js on desktop/mobile with source syntax checks. No staging redeploy, no synthetic transactions, no production changes.
+2026-10-29 second local-only beta batch: verify trade offer card opens the correct private conversation and blocked collector remains read-only. Run trade-conversation-navigation and inbox-negotiation-history desktop/mobile, syntax and isolated build. Do not redeploy in this run.
