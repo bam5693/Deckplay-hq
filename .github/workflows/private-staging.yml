@@ -89,6 +89,9 @@ jobs:
           mkdir -p test-results
           set -o pipefail
           node scripts/run-staging-api.cjs 2>&1 | tee test-results/staging-api.tap
+      - name: Preflight — private photo send and attachment delivery
+        if: ${{ success() && env.DECKPLAY_STAGING_URL != '' }}
+        run: npx playwright test --config=playwright.staging.config.js private-message-photos-live.spec.js --retries=0
       - name: Kyle, Tanner and Jayden — deployed buyer/seller/trader journeys
         if: ${{ success() && env.DECKPLAY_STAGING_URL != '' }}
         run: npx playwright test --config=playwright.staging.config.js
