@@ -1,6 +1,9 @@
 name: Verify staging deployment only (low-cost)
 on:
   workflow_dispatch:
+  push:
+    branches: [test/staging-reporting]
+    paths: ['tests/reports/staging-parity-request.txt']
 
 permissions:
   contents: read
