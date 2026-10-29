@@ -107,3 +107,43 @@ test('Jayden TCG price counteroffers reject fractional cents and show the curren
  expect(defaults).toEqual(['19.00','19.00','22.00','22.00']);
  await page.evaluate(()=>finishOffer({error:null}));
 });
+
+test('Tanner blocked-collector price proposals stay readable without reply controls',async({page})=>{
+ await ready(page);
+ await page.evaluate(async()=>{
+  document.querySelectorAll('.modal.open').forEach(el=>el.classList.remove('open'));
+  openModal('priceOffersModal');
+  blockedCollectorIds.add('offer-seller');
+  const rows={price_offers:[{id:'price-a',listing_id:'listing-a',buyer_id:'offer-buyer',seller_id:'offer-seller',amount:19,status:'pending',last_actor_id:'offer-seller'}],listings:[{id:'listing-a',title:'Tanner sports card',price:25}],profiles:[{id:'offer-seller',username:'tanner'}]};
+  supabaseClient.from=table=>({select(){return this},order(){return this},limit(){return Promise.resolve({data:rows[table],error:null})},in(){return Promise.resolve({data:rows[table],error:null})}});
+  await loadPriceOffers();
+ });
+ await expect(page.locator('#priceOffersList')).toContainText('Unblock them in Settings before responding');
+ await expect(page.locator('#priceOffersList [data-price-action]')).toHaveCount(0);
+ await expect(page.locator('#priceOffersList [data-offer-conversation]')).toHaveCount(1);
+ await page.evaluate(()=>{
+  document.getElementById('priceOffersList').innerHTML='<article class="price-offer-card" data-price-counterparty="offer-seller"><button type="button" data-price-action="accept" data-price-id="price-a">Accept</button></article>';
+ });
+ await page.locator('[data-price-action="accept"]').click();
+ expect(await page.evaluate(()=>offerRequests.length)).toBe(0);
+});
+
+test('Charles accepted price response is not reported as failed when refresh breaks',async({page})=>{
+ await ready(page);
+ await page.evaluate(()=>{
+  document.querySelectorAll('.modal.open').forEach(el=>el.classList.remove('open'));
+  openModal('priceOffersModal');
+  document.getElementById('priceOffersList').innerHTML='<article class="price-offer-card" data-price-counterparty="offer-seller"><button type="button" data-price-action="accept" data-price-id="price-a" data-current-amount="19.00">Accept</button><button type="button" data-price-action="decline" data-price-id="price-a">Decline</button></article>';
+  window.offerToasts=[];toast=message=>offerToasts.push(message);
+  loadListings=async()=>{throw Error('Inventory refresh unavailable')};
+ });
+ page.on('dialog',dialog=>dialog.accept());
+ await page.locator('[data-price-action="accept"]').click();
+ await expect(page.locator('[data-price-action="accept"]')).toBeDisabled();
+ await expect(page.locator('[data-price-action="decline"]')).toBeDisabled();
+ await page.evaluate(()=>finishOffer({error:null}));
+ await expect.poll(()=>page.evaluate(()=>offerToasts.some(t=>t.includes('screen could not refresh')))).toBe(true);
+ expect(await page.evaluate(()=>offerToasts)).not.toContain('Inventory refresh unavailable');
+ await expect(page.locator('[data-price-action="accept"]')).toBeEnabled();
+ await expect(page.locator('[data-price-action="decline"]')).toBeEnabled();
+});
