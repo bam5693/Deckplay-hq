@@ -1687,6 +1687,7 @@ async function refreshNotificationCount(){const requestId=++notificationCountLoa
 async function markNotificationRead(id){if(!currentUser)return;const ids=String(id).split(",").filter(Boolean);if(!ids.length)return;const {error}=await supabaseClient.from("collector_notifications").update({read_at:new Date().toISOString()}).in("id",ids).eq("user_id",currentUser.id);if(error){toast("Could not mark notification as read.");return}await refreshNotificationCount()}
 const deckplayInboxNotificationKinds=new Set(["message","trade_offer","counteroffer","trade_update","price_offer","price_counter","price_update"]);
 const deckplayActivityNotificationKinds=["favorite_price_drop","favorite_sold","followed_seller_listing","wanted_match"];
+function notificationListingPrice(value){if(value===null||value===undefined||value==="")return "";const amount=Number(value);return Number.isFinite(amount)&&amount>=0?"$"+amount.toFixed(2):""}
 function showNotificationRetry(list){list.innerHTML='<p role="alert" class="muted">Alerts could not load. <button type="button" class="ghost" data-retry-notifications>Retry alerts</button></p>'}
 async function loadNotificationCenter(){
  const lists=[document.getElementById("notificationList"),document.getElementById("inboxNotificationList")];
@@ -1705,9 +1706,10 @@ async function loadNotificationCenter(){
  const [peopleResult,priceResult]=await Promise.all([actors.length?supabaseClient.from("profiles").select("id,username").in("id",actors):Promise.resolve({data:[]}),priceIds.length?supabaseClient.from("price_offers").select("id,amount,status,listing_id").in("id",priceIds):Promise.resolve({data:[]})]);
  const names=new Map((peopleResult.data||[]).map(p=>[p.id,p.username])),prices=new Map((priceResult.data||[]).map(p=>[p.id,p]));
  const listingIds=[...new Set([...(priceResult.data||[]).map(p=>p.listing_id),...activity.filter(n=>["favorite_price_drop","favorite_sold","followed_seller_listing","wanted_match"].includes(n.kind)).map(n=>n.source_id)].filter(Boolean))];
- const {data:listingRows}=listingIds.length?await supabaseClient.from("listings").select("id,title").in("id",listingIds):{data:[]};
+ const {data:listingRows}=listingIds.length?await supabaseClient.from("listings").select("id,title,price").in("id",listingIds):{data:[]};
  if(requestId!==notificationCenterLoadVersion||currentUser?.id!==userId)return;
  const titles=new Map((listingRows||[]).map(l=>[l.id,l.title]));
+  const listingPrices=new Map((listingRows||[]).map(l=>[l.id,notificationListingPrice(l.price)]));
  const labels={favorite_price_drop:["🏷️ Favorite price dropped","dropped the price on an item you saved"],favorite_sold:["💛 Favorite sold","sold an item you saved"],followed_seller_listing:["✨ Followed seller listed an item","listed a new collectible"],wanted_match:["🎯 Wanted item match","listed something matching your wanted post"],message:["✉️ New message","sent you a message"],trade_offer:["⇄ New trade offer","sent you a trade offer"],counteroffer:["↩️ Trade counteroffer","sent a trade counteroffer"],trade_update:["⇄ Trade updated","updated a trade"],price_offer:["💵 New price offer","made an offer"],price_counter:["💬 New counteroffer","countered your price"],price_update:["💵 Price offer update","responded to your offer"]};
  const markup=displayed.map(n=>{
   const p=prices.get(n.source_id),name=n.actor_id?(names.get(n.actor_id)?"@"+names.get(n.actor_id):"A collector"):"DeckPlay HQ";
@@ -1717,7 +1719,10 @@ async function loadNotificationCenter(){
    else if(n.kind==="price_counter"){title="💬 Counteroffer: "+amount;detail="countered to "+amount+" on "+item}
    else if(n.kind==="price_update"){title="💵 Price offer update";detail="updated the offer on "+item}
   }
-  if(["favorite_price_drop","favorite_sold","followed_seller_listing","wanted_match"].includes(n.kind)){const item=titles.get(n.source_id)||"a saved listing";detail=n.kind==="favorite_price_drop"?"lowered the price of "+item:n.kind==="favorite_sold"?"sold "+item:n.kind==="wanted_match"?"listed "+item+" matching your wanted post":"listed "+item}
+  if(["favorite_price_drop","favorite_sold","followed_seller_listing","wanted_match"].includes(n.kind)){
+    const item=titles.get(n.source_id)||"a saved listing",price=listingPrices.get(n.source_id);
+    detail=n.kind==="favorite_price_drop"?"lowered the price of "+item+(price?"; current asking price "+price:""):n.kind==="favorite_sold"?"sold "+item:n.kind==="wanted_match"?"listed "+item+(price?" for "+price:"")+" matching your wanted post":"listed "+item+(price?" for "+price:"");
+   }
   if(n.kind==="message"&&n.count>1){title=`✉️ ${n.count} messages`;detail="sent you messages"}
   return `<div class="notification-entry ${n.unread?"unread":""}"><button type="button" class="notification-open" data-open-notification="${escapeHtml(n.ids.join(","))}" data-notification-actor="${escapeHtml(n.actor_id||"")}" data-notification-kind="${escapeHtml(n.kind)}" data-notification-source="${escapeHtml(n.source_id||"")}"><strong>${escapeHtml(title)}</strong><span>${escapeHtml(name)} ${escapeHtml(detail)}</span><small>${new Date(n.created_at).toLocaleString()}</small></button>${n.unread?`<button type="button" class="ghost notification-read" data-read-notification="${escapeHtml(n.ids.join(","))}">Mark read</button>`:""}</div>`
  }).join("");
