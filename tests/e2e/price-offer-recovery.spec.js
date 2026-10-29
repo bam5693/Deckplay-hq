@@ -147,3 +147,37 @@ test('Charles accepted price response is not reported as failed when refresh bre
  await expect(page.locator('[data-price-action="accept"]')).toBeEnabled();
  await expect(page.locator('[data-price-action="decline"]')).toBeEnabled();
 });
+
+test('Kyle inbox price reply reports committed success even when inbox refresh fails',async({page})=>{
+ await ready(page);
+ await page.evaluate(()=>{
+  document.querySelectorAll('.modal.open').forEach(el=>el.classList.remove('open'));
+  selectedInboxCollector='offer-seller';
+  document.getElementById('messageInbox').innerHTML='<div class="price-offer-actions"><button type="button" data-inbox-price="decline" data-offer="offer-a">Decline</button></div>';
+  window.offerToasts=[];toast=message=>offerToasts.push(message);
+  loadInbox=async()=>{throw Error('Inbox refresh offline')};
+ });
+ page.on('dialog',dialog=>dialog.accept());
+ await page.locator('[data-inbox-price="decline"]').click();
+ await page.evaluate(()=>finishOffer({error:null}));
+ await expect.poll(()=>page.evaluate(()=>offerToasts.some(t=>t.includes('Inbox could not refresh')))).toBe(true);
+ expect(await page.evaluate(()=>offerToasts)).toContain('Offer updated');
+ await expect(page.locator('[data-inbox-price="decline"]')).toBeEnabled();
+});
+
+test('Jayden inbox trade reply does not suggest retry after a committed response',async({page})=>{
+ await ready(page);
+ await page.evaluate(()=>{
+  document.querySelectorAll('.modal.open').forEach(el=>el.classList.remove('open'));
+  selectedInboxCollector='offer-seller';
+  document.getElementById('messageInbox').innerHTML='<div class="price-offer-actions"><button type="button" data-inbox-trade="declined" data-offer="trade-a">Decline trade</button></div>';
+  window.offerToasts=[];toast=message=>offerToasts.push(message);
+  loadInbox=async()=>{throw Error('Inbox refresh offline')};
+ });
+ page.on('dialog',dialog=>dialog.accept());
+ await page.locator('[data-inbox-trade="declined"]').click();
+ await page.evaluate(()=>finishOffer({error:null}));
+ await expect.poll(()=>page.evaluate(()=>offerToasts.some(t=>t.includes('Inbox could not refresh')))).toBe(true);
+ expect(await page.evaluate(()=>offerToasts)).toContain('Trade declined');
+ await expect(page.locator('[data-inbox-trade="declined"]')).toBeEnabled();
+});
