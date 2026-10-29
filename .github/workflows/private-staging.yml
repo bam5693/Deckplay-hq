@@ -171,7 +171,7 @@ jobs:
         run: |
           node scripts/check-inline-js.cjs
           node --test tests/security/trade-delivery.test.cjs tests/security/staging-browser-config.test.cjs
-          npx playwright test --config=playwright.local.config.js inbox-price-withdrawal.spec.js --retries=0 --max-failures=1 --timeout=20000
+          npx playwright test --config=playwright.local.config.js inbox-negotiation-history.spec.js inbox-price-withdrawal.spec.js --retries=0 --max-failures=1 --timeout=20000
       - name: Build and deploy exact private staging source after preflight
         if: github.event_name == 'push'
         env:
