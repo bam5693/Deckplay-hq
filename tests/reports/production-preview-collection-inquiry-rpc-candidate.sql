@@ -20,6 +20,7 @@ begin
 end;
 $fn$;
 revoke all on function private.send_collection_inquiry(uuid,text,text,text) from public,anon;
+grant execute on function private.send_collection_inquiry(uuid,text,text,text) to authenticated;
 create or replace function public.send_collection_inquiry(p_recipient uuid,p_item text,p_intent text,p_body text)
 returns uuid language sql security invoker set search_path = ''
 as $fn$ select private.send_collection_inquiry(p_recipient,p_item,p_intent,p_body); $fn$;
