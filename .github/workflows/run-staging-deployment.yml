@@ -1,0 +1,17 @@
+name: Deploy isolated DeckPlay staging from main launcher
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  launch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dispatch staging-only deployment
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api -X POST repos/${{ github.repository }}/actions/workflows/deploy-staging.yml/dispatches -f ref=test/staging-reporting

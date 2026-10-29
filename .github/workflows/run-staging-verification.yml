@@ -1,4 +1,4 @@
-name: Verify isolated DeckPlay staging
+name: Verify isolated DeckPlay staging from main launcher
 on:
   workflow_dispatch:
 
@@ -9,7 +9,6 @@ jobs:
   verify:
     runs-on: ubuntu-latest
     timeout-minutes: 4
-    environment: deckplay-staging
     steps:
       - uses: actions/checkout@v4
         with:
