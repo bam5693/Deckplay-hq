@@ -1,1 +1,1 @@
-2026-10-29 targeted diagnostic: investigate why trade modal to Inbox route is reset during synthetic browser test; run trade-conversation-navigation only and collect nav trace. No staging deployment.
+2026-10-29 targeted fix verification: Android/PWA history.back from closing the trade modal restored Home after Inbox opened. New atomic modal-to-Inbox transition replaces modal history state before opening thread. Run trade-conversation-navigation desktop/mobile only, including Back and blocked read-only behavior. No deployment in this run.
