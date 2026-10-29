@@ -1,1 +1,1 @@
-2026-10-29 second local-only beta batch: verify trade offer card opens the correct private conversation and blocked collector remains read-only. Run trade-conversation-navigation and inbox-negotiation-history desktop/mobile, syntax and isolated build. Do not redeploy in this run.
+2026-10-29 focused local retry: trade modal click was bubbling after close and may override Inbox navigation. Run trade-conversation-navigation + inbox-negotiation-history desktop/mobile with no staging deployment. Stop on first failure and inspect logs; no repeated broad suites.
