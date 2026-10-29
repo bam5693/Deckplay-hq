@@ -29,6 +29,7 @@ on:
     branches: [test/staging-reporting]
     paths:
       - 'tests/reports/staging-beta-request.txt'
+      - 'tests/reports/release-preview-request.json'
 permissions:
   contents: read
   id-token: write
@@ -146,7 +147,7 @@ jobs:
           echo 'Result: ${{ job.status }}. Charles checks API transactions and authorization; Kyle checks deployed mobile/desktop browser journeys. Tanner and Jayden rotate seller/buyer roles in complete-deck and sports/TCG trade browser simulations using the same two disposable accounts. These are deterministic actions; AI inference is verified separately by the manual lead-review workflow. Reports contain persona annotations and named steps. Payment/shipping remain previews.' >> "$GITHUB_STEP_SUMMARY"
 
   staging-auth-smoke:
-    if: ${{ (github.event_name == 'push' || github.event.inputs.auth_smoke_only == 'true' || github.event.inputs.account_readonly_only == 'true') && github.ref == 'refs/heads/test/staging-reporting' }}
+    if: ${{ (github.event_name == 'push' || github.event.inputs.auth_smoke_only == 'true' || github.event.inputs.account_readonly_only == 'true') && github.ref == 'refs/heads/test/staging-reporting' && !startsWith(github.event.head_commit.message, '[release-preview]') }}
     name: Focused beta preflight and private staging acceptance
     concurrency:
       group: deckplay-staging-deploy
@@ -233,3 +234,57 @@ jobs:
             if(issue) await github.rest.issues.createComment({...context.repo,issue_number:issue.number,body});
             else await github.rest.issues.create({...context.repo,title,body});
 
+
+  release-preview-acceptance:
+    if: ${{ github.event_name == 'push' && startsWith(github.event.head_commit.message, '[release-preview]') && github.ref == 'refs/heads/test/staging-reporting' }}
+    name: Pinned private release preview signed desktop and mobile journeys
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    environment: deckplay-staging
+    concurrency:
+      group: private-staging-transactions
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Read exact release pin
+        id: pin
+        run: |
+          node - <<'NODE'
+          const fs=require('fs');
+          const {sha}=JSON.parse(fs.readFileSync('tests/reports/release-preview-request.json'));
+          if(!/^[a-f0-9]{40}$/.test(sha))throw Error('Full release SHA required');
+          fs.appendFileSync(process.env.GITHUB_OUTPUT,'sha='+sha+'\n');
+          NODE
+      - name: Existing repository and workflow scoped staging credential exchange
+        run: node scripts/staging-ci-credentials.cjs
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.pin.outputs.sha }}
+      - name: Build pinned preview and run one cheap auth and source smoke
+        env:
+          DECKPLAY_STAGING_SUPABASE_URL: https://prrrzeelltmyugssqnzk.supabase.co
+          DECKPLAY_STAGING_SUPABASE_KEY: sb_publishable_0omvNnv_ZOvXrZ-LHPMyIQ_a9zxD-yh
+        run: |
+          node scripts/build-staging.cjs
+          node scripts/build-release.cjs --preview
+          node scripts/verify-release-preview.cjs
+          echo 'DECKPLAY_STAGING_URL=https://deckplay-hq-release-preview.cstivers56.workers.dev' >> "$GITHUB_ENV"
+      - run: npm ci
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: staging-playwright-${{ hashFiles('package-lock.json') }}
+      - run: npx playwright install chromium --only-shell
+      - name: Actual signed preview listing, search, Favorites, Inbox, price and bundle trade journeys
+        run: npx playwright test --config=playwright.release-preview.config.js
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: pinned-release-preview-acceptance
+          path: test-results/release-preview-junit.xml
+          if-no-files-found: ignore
+          retention-days: 3
