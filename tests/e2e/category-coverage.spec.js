@@ -23,7 +23,7 @@ for(const persona of ['Charles','Kyle','Tanner','Jayden'])test(persona+' rotates
     document.getElementById('listingForm').reset();select('listingType',row.fields.listingType);
     for(const [id,value] of Object.entries(row.fields))if(id!=='listingType')select(id,value);
     for(const [id,value] of Object.entries({item:'TEST ONLY '+row.label,price:'24.75',description:'TEST ONLY synthetic inventory. No real item or transaction.',consoleModel:'Synthetic model',deckLeader:'Synthetic deck',deckCardCount:'2',deckList:'2x Synthetic card'}))document.getElementById(id).value=value;
-    document.getElementById('sportsBrand').value='Topps';document.getElementById('cardCondition').value='lightly_played';
+    document.getElementById('sportsBrand').value='Topps';if(row.fields.tcgGame==='sports_cards'){document.getElementById('sportsSport').value='Football';document.getElementById('sportsYear').value='2024';document.getElementById('sportsPlayer').value='Synthetic player';}document.getElementById('cardCondition').value='lightly_played';
     document.getElementById('acceptsTrades').checked=true;document.getElementById('acceptsPriceOffers').checked=true;
     document.getElementById('sellModal').classList.add('open');
     listingSelectedPhotos=[new File(['synthetic'],'test-only.jpg',{type:'image/jpeg'})];renderListingPhotos();
