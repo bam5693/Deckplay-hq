@@ -383,7 +383,7 @@ body.profile-focus #collectorPage{display:block!important}
 body.inbox-focus #inboxPage{display:block!important}
 body.inbox-focus .wanted-side-tab,body.inbox-focus .collector-strip{display:none!important}
 /* Focused inbox: no marketplace navigation or selling controls */
-body.inbox-focus header .search,body.inbox-focus header [data-sell],body.inbox-focus header nav,body.inbox-focus header .header-actions,body.inbox-focus header .notification-bell,body.inbox-focus aside,body.inbox-focus footer{display:none!important}
+body.inbox-focus header [data-sell],body.inbox-focus header nav,body.inbox-focus header .header-actions,body.inbox-focus header .notification-bell,body.inbox-focus aside,body.inbox-focus footer{display:none!important}
 body.inbox-focus header{justify-content:flex-start}
 body.inbox-focus #inboxPage{width:min(1200px,94%);margin:0 auto}
 body.inbox-focus .inbox-page-heading{margin-top:12px}
@@ -1336,7 +1336,7 @@ document.getElementById("condition").addEventListener("change",syncGradingFields
 document.getElementById("category").addEventListener("change",syncGradedCondition);
 syncGradedCondition();
 document.getElementById("listingType").addEventListener("change",()=>{const type=document.getElementById("listingType").value,category=document.getElementById("category");const map={single:"trading_cards",deck:"trading_cards",lot:"trading_cards",sealed:"trading_cards",game:"video_games",console:"consoles",figure:"collectibles",other:"other"};if(map[type])category.value=map[type];if(type==="console")document.getElementById("consoleItemType").value="Console";toggleTcgField();syncCategoryFields();syncGradedCondition();updateListingQuickSummary()});toggleTcgField();
-document.getElementById("search").addEventListener("input",event=>{query=event.target.value;if(["deckplay-home","inbox-focus","profile-focus"].some(name=>document.body.classList.contains(name)))showMainMarketplace();render()});
+document.getElementById("search").addEventListener("input",event=>{rememberInboxDraft();query=event.target.value;if(["deckplay-home","inbox-focus","profile-focus"].some(name=>document.body.classList.contains(name)))showMainMarketplace();render()});
 grid.addEventListener("click",async event=>{const retry=event.target.closest("[data-retry-marketplace]");if(retry){retry.disabled=true;await loadListings();return}const profile=event.target.closest("[data-card-profile]");if(profile){await showPublicProfile(profile.dataset.cardProfile);return}const manage=event.target.closest("[data-sold],[data-delete-listing]");if(manage){if(!currentUser)return;const item=items.find(x=>String(x.id)===String(manage.dataset.sold||manage.dataset.deleteListing));if(!item||item.sellerId!==currentUser.id||!item.databaseId)return;const deleting=manage.hasAttribute("data-delete-listing");if(!confirm(deleting?"Permanently delete this listing?":"Mark this listing as sold and remove it from the marketplace?"))return;manage.disabled=true;const request=supabaseClient.from("listings");const {error}=deleting?await request.delete().eq("id",item.databaseId).eq("seller_id",currentUser.id):await request.update({status:"sold"}).eq("id",item.databaseId).eq("seller_id",currentUser.id);if(error){toast(error.message);manage.disabled=false;return}toast(deleting?"Listing deleted":"Listing marked sold");await loadListings();return}const heart=event.target.closest("[data-heart]");if(heart){await window.favoriteActions.toggle(heart.dataset.heart);return}const view=event.target.closest("[data-view]");if(view){const item=items.find(candidate=>String(candidate.id)===view.dataset.view);if(item)showDetails(item)}});
 document.getElementById("accountMenuPortal").appendChild(document.getElementById("accountMenu"));
 document.getElementById("accountButton").addEventListener("click",()=>{if(!currentUser){setAuthMode("signin");openModal("authModal");return}const menu=document.getElementById("accountMenu");menu.hidden=!menu.hidden;document.getElementById("accountButton").setAttribute("aria-expanded",String(!menu.hidden))});
@@ -1942,8 +1942,14 @@ function restoreInboxDrafts(id){
  }catch{/* Invalid or inaccessible tab storage must not block the Inbox. */}
 }
 async function sendTradeProposalOnce(payload){
- const key=JSON.stringify(payload),previous=tradeSendAttempts.get(key),id=previous||crypto.randomUUID(),version=messageAccountVersion;
+ const key=JSON.stringify(payload),version=messageAccountVersion;
+ let fingerprint=null;
+ try{const digest=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(key));fingerprint=Array.from(new Uint8Array(digest),b=>b.toString(16).padStart(2,"0")).join("")}catch{}
+ if(currentUser?.id!==payload.sender_id||messageAccountVersion!==version)throw Error("Your account changed. Reopen the trade before sending.");
+ const storageKey="deckplay-trade-retries-v1:"+payload.sender_id;
+ const previous=tradeSendAttempts.get(key)||(fingerprint?inboxTextRetryEntries(payload.sender_id,storageKey).find(row=>row.hash===fingerprint)?.id:null),id=previous||crypto.randomUUID();
  tradeSendAttempts.set(key,id);
+ if(fingerprint)rememberInboxTextRetry(payload.sender_id,fingerprint,id,storageKey);
  const current=()=>currentUser?.id===payload.sender_id&&messageAccountVersion===version;
  const confirmed=async()=>{
   if(!current())return null;
@@ -1954,7 +1960,7 @@ async function sendTradeProposalOnce(payload){
    return {data:{id},error:null};
   }catch{return null}
  };
- const finish=result=>{if(current()&&tradeSendAttempts.get(key)===id)tradeSendAttempts.delete(key);return result};
+ const finish=result=>{if(current()){if(tradeSendAttempts.get(key)===id)tradeSendAttempts.delete(key);if(fingerprint)clearInboxTextRetry(payload.sender_id,fingerprint,storageKey)}return result};
  // Read before retry: the first request may already have reserved these items.
  if(previous){const found=await confirmed();if(found)return finish(found)}
  if(!current())throw Error("Your account changed. Reopen the trade before sending.");
@@ -1970,24 +1976,24 @@ async function sendTradeProposalOnce(payload){
 // Retry references are tab-scoped and contain only SHA-256 fingerprints and UUIDs,
 // never message text or photo blobs. A reload can verify an uncertain text send.
 const inboxTextRetryStorageKey=id=>"deckplay-text-retries-v1:"+id;
-function inboxTextRetryEntries(owner){
+function inboxTextRetryEntries(owner,storageKey=inboxTextRetryStorageKey(owner)){
  try{
-  const rows=JSON.parse(sessionStorage.getItem(inboxTextRetryStorageKey(owner))||"[]"),cutoff=Date.now()-86400000;
+  const rows=JSON.parse(sessionStorage.getItem(storageKey)||"[]"),cutoff=Date.now()-86400000;
   return Array.isArray(rows)?rows.filter(row=>row&&/^[0-9a-f]{64}$/.test(row.hash)&&/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(row.id)&&Number.isFinite(row.at)&&row.at>=cutoff&&row.at<=Date.now()).slice(-20):[];
  }catch{return []}
 }
-function rememberInboxTextRetry(owner,hash,id){
+function rememberInboxTextRetry(owner,hash,id,storageKey=inboxTextRetryStorageKey(owner)){
  try{
-  const rows=inboxTextRetryEntries(owner).filter(row=>row.hash!==hash);
+  const rows=inboxTextRetryEntries(owner,storageKey).filter(row=>row.hash!==hash);
   rows.push({hash,id,at:Date.now()});
-  sessionStorage.setItem(inboxTextRetryStorageKey(owner),JSON.stringify(rows.slice(-20)));
+  sessionStorage.setItem(storageKey,JSON.stringify(rows.slice(-20)));
  }catch{/* Continue with in-memory retry if tab storage is disabled. */}
 }
-function clearInboxTextRetry(owner,hash){
+function clearInboxTextRetry(owner,hash,storageKey=inboxTextRetryStorageKey(owner)){
  try{
-  const rows=inboxTextRetryEntries(owner).filter(row=>row.hash!==hash);
-  if(rows.length)sessionStorage.setItem(inboxTextRetryStorageKey(owner),JSON.stringify(rows));
-  else sessionStorage.removeItem(inboxTextRetryStorageKey(owner));
+  const rows=inboxTextRetryEntries(owner,storageKey).filter(row=>row.hash!==hash);
+  if(rows.length)sessionStorage.setItem(storageKey,JSON.stringify(rows));
+  else sessionStorage.removeItem(storageKey);
  }catch{}
 }
 async function sendCollectorMessageOnce(payload){
@@ -2040,7 +2046,7 @@ let inboxDraftUser=null,messageAccountVersion=0,inboxConversationFilter={search:
 function syncInboxDraftUser(){
  const id=currentUser?.id||null;
  if(inboxDraftUser!==id){
-  if(inboxDraftUser)try{sessionStorage.removeItem(inboxDraftStorageKey(inboxDraftUser));sessionStorage.removeItem(inboxTextRetryStorageKey(inboxDraftUser))}catch{}
+  if(inboxDraftUser)try{sessionStorage.removeItem(inboxDraftStorageKey(inboxDraftUser));sessionStorage.removeItem(inboxTextRetryStorageKey(inboxDraftUser));sessionStorage.removeItem("deckplay-trade-retries-v1:"+inboxDraftUser)}catch{}
   ++messageAccountVersion;
   resetWantedPublisher();closeModal("wantedModal");
   ++listingAccountVersion;++cloudDraftRequestVersion;cloudDraftBusy=false;cloudDraftControls(false);document.getElementById("listingCloudDraftStatus").textContent="";document.getElementById("listingForm").reset();document.getElementById("listingType").dispatchEvent(new Event("change"));listingSelectedPhotos=[];renderListingPhotos();syncCategoryFields();syncGradedCondition();document.getElementById("deckFields").hidden=true;document.getElementById("listingStatus").textContent="";closeModal("sellModal");
@@ -2786,3 +2792,4 @@ const ios=/iPad|iPhone|iPod/.test(navigator.userAgent);status.textContent=ios?"I
 <script src="listing-editor.js"></script>
 </body>
 </html>
+

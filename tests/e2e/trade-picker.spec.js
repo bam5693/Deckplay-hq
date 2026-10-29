@@ -1,4 +1,29 @@
 const {test,expect}=require('@playwright/test');
+test('uncertain trade retry survives a full reload without duplicating the proposal',async({page})=>{
+ await page.route('https://challenges.cloudflare.com/**',route=>route.abort());
+ await page.route('https://prrrzeelltmyugssqnzk.supabase.co/rest/v1/**',route=>route.fulfill({json:[]}));
+ await page.goto('/');await page.waitForLoadState('networkidle');
+ const first=await page.evaluate(async()=>{
+  await supabaseClient.auth.getSession();currentUser={id:'buyer-fixture'};
+  const payload={sender_id:currentUser.id,recipient_id:'seller-fixture',listing_id:'console',offered_listing_id:'sports',offered_listing_ids:['sports','deck'],offer_note:'Private mixed category proposal',cash_amount:5,cash_direction:'sender_pays'};
+  let stored;supabaseClient.from=()=>{const q={insert(row){stored=row;return q},select(){return q},eq(){return q},single:async()=>{throw Error('Lost response')},maybeSingle:async()=>{throw Error('Offline')}};return q};
+  try{await sendTradeProposalOnce(payload)}catch{}
+  return {payload,row:{...stored,initial_terms:{note:payload.offer_note,cash_amount:5,cash_direction:'sender_pays'}},retry:sessionStorage.getItem('deckplay-trade-retries-v1:buyer-fixture')};
+ });
+ expect(first.retry).not.toContain(first.payload.offer_note);expect(first.retry).not.toContain('sports');
+ await page.reload();await page.waitForLoadState('networkidle');
+ const recovered=await page.evaluate(async({payload,row})=>{
+  await supabaseClient.auth.getSession();currentUser={id:'buyer-fixture'};let writes=0;
+  supabaseClient.from=()=>{const q={insert(){writes++;return q},select(){return q},eq(){return q},maybeSingle:async()=>({data:row,error:null}),single:async()=>({data:{id:'duplicate'},error:null})};return q};
+  const result=await sendTradeProposalOnce(payload);
+  return {id:result.data.id,writes,retry:sessionStorage.getItem('deckplay-trade-retries-v1:buyer-fixture')};
+ },first);
+ expect(recovered).toEqual({id:first.row.id,writes:0,retry:null});
+ await page.evaluate(()=>{
+  sessionStorage.setItem('deckplay-trade-retries-v1:buyer-fixture','private reference');inboxDraftUser='buyer-fixture';currentUser={id:'other-fixture'};syncInboxDraftUser();
+ });
+ expect(await page.evaluate(()=>sessionStorage.getItem('deckplay-trade-retries-v1:buyer-fixture'))).toBeNull();
+});
 test('trade picker includes inventory beyond 100 items and discards a switched account response',async({page})=>{
  await page.route('https://challenges.cloudflare.com/**',route=>route.abort());
  await page.route('https://prrrzeelltmyugssqnzk.supabase.co/rest/v1/**',route=>route.fulfill({json:[]}));
@@ -193,3 +218,4 @@ test('blocked collector cannot submit a prepared trade and keeps its proposal',a
  await expect(page.locator('#tradeOfferNote')).toHaveValue('My original trade proposal');
  expect(await page.evaluate(()=>tradeWrites.length)).toBe(0);
 });
+
