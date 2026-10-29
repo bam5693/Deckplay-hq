@@ -82,3 +82,12 @@ test('editing bundle quantities replaces structured contents and keeps seller di
  const description=await page.evaluate(()=>editWrites[0].description);expect(description).toContain('Quantity included: 3');expect(description).toContain('Original damage disclosure');expect(description.match(/\[Listing contents\]/g)).toHaveLength(1);
  await page.evaluate(()=>finishEdit({data:{id:'edit-item'},error:null}));
 });
+
+test('sports listing editor restores original sport, brand, year and player and saves exact changes',async({page})=>{
+ await fixture(page);await page.evaluate(async()=>{editRow={...editRow,category:'trading_cards',product_type:'single',tcg_game:'sports_cards',condition:'used',description:'[Sports Cards]\nSport: Football\nBrand: Panini\nYear: 2024\nPlayer: Original player\nSurface scratch disclosed'};await listingEditor.open('edit-item')});
+ await page.locator('#editListingClassification summary').click();await page.locator('#editClassificationEnabled').check();
+ await expect(page.locator('#editAttribute_sportsSport')).toHaveValue('Football');await expect(page.locator('#editAttribute_sportsBrand')).toHaveValue('Panini');await expect(page.locator('#editAttribute_sportsYear')).toHaveValue('2024');await expect(page.locator('#editAttribute_sportsPlayer')).toHaveValue('Original player');
+ await page.locator('#editAttribute_sportsYear').fill('2025');await page.locator('#editAttribute_sportsPlayer').fill('Correct player');await page.locator('#saveListingEdits').click();await expect.poll(()=>page.evaluate(()=>editWrites.length)).toBe(1);
+ const description=await page.evaluate(()=>editWrites[0].description);expect(description).toContain('Year: 2025\nPlayer: Correct player');expect(description).toContain('Surface scratch disclosed');
+ await page.evaluate(()=>finishEdit({data:{id:'edit-item'},error:null}));
+});
