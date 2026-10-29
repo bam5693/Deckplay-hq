@@ -13,7 +13,7 @@ window.favoriteActions=(()=>{
     const {error}=await (operation.abortSignal?operation.abortSignal(AbortSignal.timeout(20000)):operation);
     if(!valid())return;if(error&&!(error.code==='23505'&&!wasSaved))throw error;
    }
-   if(!valid())return;++savedListingsLoadVersion;wasSaved?saved.delete(id):saved.add(id);toast(wasSaved?'Removed from saved items':'Saved to your account');
+   if(!valid())return;toast(wasSaved?'Removed from saved items':'Saved to your account');
   }catch(error){if(valid()){++savedListingsLoadVersion;wasSaved?saved.add(id):saved.delete(id);toast(error.message||'Could not update saved items. Try again.')}}
   finally{pending.delete(requestKey);if(valid())render()}
  }
