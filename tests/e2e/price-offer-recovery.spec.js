@@ -77,3 +77,33 @@ test('late price-offer response errors do not refresh another account or leave c
  await expect(page.locator('[data-price-action]')).toBeEnabled();
  expect(await page.evaluate(()=>({reloads:offerReloads,toasts:offerToasts}))).toEqual({reloads:0,toasts:[]});
 });
+
+
+test('Jayden TCG price counteroffers reject fractional cents and show the current amount in both surfaces',async({page})=>{
+ await ready(page);
+ await page.evaluate(()=>{
+  closeModal('priceOfferModal');closeModal('detailModal');openModal('priceOffersModal');
+  document.getElementById('priceOffersList').innerHTML='<button type="button" data-price-action="counter" data-price-id="offer-tcg" data-current-amount="19.00">Counteroffer</button>';
+ });
+ const values=['19.999','18.75','18.751','17.50'],defaults=[];
+ page.on('dialog',async dialog=>{
+  if(dialog.type()==='prompt'){defaults.push(dialog.defaultValue());await dialog.accept(values.shift())}
+  else await dialog.accept();
+ });
+ await page.locator('[data-price-action="counter"]').click();
+ expect(await page.evaluate(()=>offerRequests.length)).toBe(0);
+ await page.locator('[data-price-action="counter"]').click();
+ expect(await page.evaluate(()=>offerRequests[0]?.args)).toMatchObject({p_offer_id:'offer-tcg',p_action:'counter',p_amount:18.75});
+ await page.evaluate(()=>finishOffer({error:null}));
+ await expect(page.locator('#priceOffersList')).toContainText('No price offers yet');
+ await page.evaluate(()=>{
+  closeModal('priceOffersModal');
+  document.getElementById('messageInbox').innerHTML='<p class="price-offer-actions"><button type="button" data-inbox-price="counter" data-offer="offer-tcg2" data-current-amount="22.00">Counter</button></p>';
+ });
+ await page.locator('[data-inbox-price="counter"]').click();
+ expect(await page.evaluate(()=>offerRequests.length)).toBe(1);
+ await page.locator('[data-inbox-price="counter"]').click();
+ expect(await page.evaluate(()=>offerRequests[1]?.args)).toMatchObject({p_offer_id:'offer-tcg2',p_action:'counter',p_amount:17.5});
+ expect(defaults).toEqual(['19.00','19.00','22.00','22.00']);
+ await page.evaluate(()=>finishOffer({error:null}));
+});
