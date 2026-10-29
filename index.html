@@ -961,7 +961,7 @@ const escapeHtml=value=>String(value??"").replace(/[&<>'"]/g,char=>({"&":"&amp;"
 const safeImageUrl=value=>{try{const url=new URL(value);return url.protocol==="https:"?url.href:""}catch{return ""}};
 function toast(message){const element=document.getElementById("toast");element.textContent=message;element.style.display="block";clearTimeout(toast.timer);toast.timer=setTimeout(()=>element.style.display="none",3000)}
 function openModal(id){const modal=document.getElementById(id);if(!modal)return;modal.deckplayReturnFocus=document.activeElement;modal.classList.add("open");requestAnimationFrame(()=>modal.querySelector("button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),a[href]")?.focus());modal.style.zIndex=String(2000+document.querySelectorAll(".modal.open").length*10);document.body.classList.add("deckplay-modal-open")}
-function closeModal(id){const modal=document.getElementById(id);if(!modal)return;modal.classList.remove("open");modal.style.zIndex="";if(modal.deckplayReturnFocus?.isConnected)modal.deckplayReturnFocus.focus();if(!document.querySelector(".modal.open"))document.body.classList.remove("deckplay-modal-open")}
+function closeModal(id){const modal=document.getElementById(id);if(!modal)return;if(id==="detailModal")closeDetailZoom();modal.classList.remove("open");modal.style.zIndex="";if(modal.deckplayReturnFocus?.isConnected)modal.deckplayReturnFocus.focus();if(!document.querySelector(".modal.open"))document.body.classList.remove("deckplay-modal-open")}
 // Keep keyboard navigation inside the active dialog, including nested dialogs.
 document.addEventListener("keydown",event=>{
  if(event.key!=="Tab")return;
