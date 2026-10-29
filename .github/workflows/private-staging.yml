@@ -23,8 +23,8 @@ on:
         required: false
         type: boolean
         default: false
-  # Verify source changes on the isolated branch; report-only commits do not
-  # start another API/browser run. Exact staging assets must be deployed first.
+  # Batch release requests run focused local checks, then deploy and verify.
+  # Broad stateful/photo suites remain manual; ordinary commits spend no CI minutes.
   push:
     branches: [test/staging-reporting]
     paths:
@@ -171,7 +171,7 @@ jobs:
         run: |
           node scripts/check-inline-js.cjs
           node --test tests/security/trade-delivery.test.cjs tests/security/staging-browser-config.test.cjs
-          npx playwright test --config=playwright.local.config.js marketplace-filter-boundaries.spec.js --grep 'saved and owned shortcuts|profile Saved items|global marketplace search' --retries=0 --max-failures=1 --timeout=20000
+          npx playwright test --config=playwright.local.config.js inbox-price-withdrawal.spec.js --retries=0 --max-failures=1 --timeout=20000
       - name: Build and deploy exact private staging source after preflight
         if: github.event_name == 'push'
         env:
