@@ -1062,7 +1062,7 @@ async function refreshHeaderAvatar(userId){
 function generatedDeckplayUsername(){const a=["card","deck","retro","pixel","gold","trade","collector"];const b=a[Math.floor(Math.random()*a.length)];return b+"_"+Math.random().toString(36).slice(2,9)}
 async function ensureProfile(user,displayName){
  const name=(displayName||user.user_metadata?.display_name||user.email?.split("@")[0]||"DeckPlay member").trim().slice(0,40);
- const {error}=await supabaseClient.from("profiles").upsert({id:user.id,display_name:name,...(user.user_metadata?.username?{username:user.user_metadata.username}:{username:generatedDeckplayUsername()})},{onConflict:"id"});
+ const {error}=await supabaseClient.from("profiles").upsert({id:user.id,display_name:name,...(user.user_metadata?.username?{username:user.user_metadata.username}:{username:generatedDeckplayUsername()})},{onConflict:"id",ignoreDuplicates:true});
  if(error)throw error;
 }
 function showAuthStatus(message,type="info"){const el=document.getElementById("authStatus");el.textContent=message;el.style.display=message?"block":"none";el.style.padding=message?"14px":"0";el.style.borderRadius="10px";el.style.marginTop="14px";el.style.background=type==="success"?"#e7f7ee":type==="error"?"#fff0f0":"#edf3ff";el.style.color=type==="success"?"#14633c":type==="error"?"#a12121":"#244582";el.style.fontWeight="600";}
