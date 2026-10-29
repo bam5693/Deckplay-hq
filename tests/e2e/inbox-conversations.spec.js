@@ -47,3 +47,19 @@ test('older conversations arriving after account switch are discarded',async({pa
  expect(await page.evaluate(()=>inboxOlderMessages.size)).toBe(0);
  expect(await page.evaluate(()=>inboxConversationCursor)).toBe(null);
 });
+test('Tanner and Jayden see local calendar days across sports, TCG and collectible messages',async({page})=>{
+ await page.evaluate(async()=>{
+  leadingMessages=[
+   {id:'day3',sender_id:'charles',recipient_id:'fixture-seller',body:'Collectible follow-up',created_at:'2026-10-29T12:30:00Z',read_at:'yes'},
+   {id:'day2',sender_id:'charles',recipient_id:'fixture-seller',body:'Jayden TCG deck details',created_at:'2026-10-29T12:00:00Z',read_at:'yes'},
+   {id:'day1',sender_id:'charles',recipient_id:'fixture-seller',body:'Tanner sports lot details',created_at:'2026-10-28T12:00:00Z',read_at:'yes'}
+  ];
+  await showInboxPage('charles');
+ });
+ await expect(page.locator('.conversation-day')).toHaveCount(2);
+ await expect(page.locator('.conversation-day').first()).toContainText('2026');
+ await expect(page.locator('.conversation-bubbles .chat-text').first()).toContainText('Tanner sports lot');
+ await expect(page.locator('.conversation-bubbles .chat-text').last()).toContainText('Collectible follow-up');
+ const order=await page.locator('.conversation-bubbles').evaluate(el=>[...el.children].map(x=>x.classList.contains('conversation-day')?'date':'message'));
+ expect(order).toEqual(['date','message','date','message','message']);
+});
