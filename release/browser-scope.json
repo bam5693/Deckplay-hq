@@ -1,0 +1,20 @@
+{
+  "baseIndexBlob": "4885a287a6e88e902d10c39d81277c3f73b95d4f",
+  "indexBlob": "7b648b8efdcbe482e9b7a0d16d101e1a172fb475",
+  "baselineRun": 40956841483,
+  "correctedFixtureRun": 40957716016,
+  "specs": [
+    "tests/e2e/inbox-negotiation-history.spec.js",
+    "tests/e2e/trade-conversation-navigation.spec.js",
+    "tests/e2e/inbox-history.spec.js",
+    "tests/e2e/inbox-activity-history.spec.js",
+    "tests/e2e/inbox-conversations.spec.js",
+    "tests/e2e/inbox-price-withdrawal.spec.js",
+    "tests/e2e/inbox-recovery.spec.js",
+    "tests/e2e/trade-picker.spec.js",
+    "tests/e2e/inbox-trade-details.spec.js",
+    "tests/e2e/account-boundaries.spec.js",
+    "tests/e2e/notification-prices.spec.js",
+    "tests/e2e/regressions.spec.js"
+  ]
+}
