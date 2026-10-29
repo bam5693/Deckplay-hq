@@ -18,8 +18,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Validate Favorites JavaScript syntax
-        run: node --check favorite-actions.js
+      - name: Validate homepage and Favorites JavaScript syntax
+        run: |
+          node --check favorite-actions.js
+          node scripts/check-inline-js.cjs
       - name: Test Favorites save, remove and rollback behavior
         run: node --test tests/security/favorite-actions-regression.test.cjs
       - name: Install project test dependencies
@@ -37,5 +39,9 @@ jobs:
           assert.match(html, /<script src="\.\/favorite-actions\.js"><\/script>/);
           assert.match(html, /await window\.favoriteActions\.toggle\(heart\.dataset\.heart\)/);
           assert.ok(!html.includes('const wasSaved=saved.has(id);wasSaved?saved.delete(id):saved.add(id);render();const item=items.find'));
-          console.log('Homepage Favorites wiring verified');
+          const controller = fs.readFileSync('favorite-actions.js', 'utf8');
+          for (const variable of ['listingAccountVersion', 'savedListingsLoadVersion']) {
+            if (!html.includes(variable)) assert.match(controller, new RegExp('typeof ' + variable + "===?'undefined'|typeof " + variable + "!=='undefined'"), 'Missing compatibility guard for ' + variable);
+          }
+          console.log('Homepage Favorites wiring and production compatibility verified');
           NODE
