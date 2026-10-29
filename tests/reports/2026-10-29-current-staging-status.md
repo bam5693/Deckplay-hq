@@ -1,5 +1,18 @@
 # DeckPlay HQ — current staging status (2026-10-29)
 
+## 2026-10-29 18:00 Central — checkout preview trust/privacy batch (release verification pending)
+
+**Customer-facing source:** `3cfa2695` replaces the misleading “Buy now · Test checkout” CTA with “Preview checkout · No purchase”, removes all recipient/street/ZIP entry from the simulator, offers clearly illustrative envelope/tracked/priority choices without invented $5/$9 carrier rates, and separates the actual item asking price from **unavailable** shipping, platform fees, taxes and payable total. No live payment/shipping service is enabled. This deliberately sacrifices a fake end-to-end address form in favor of not soliciting real customer data or implying a final purchase price.
+
+**Regression and release changes:** `ad00a782` adds Tanner sports-single and Jayden TCG/game preview checks; `cd69217f` updates the three existing checkout-simulation cases; `b5c74137` registers the new spec for mobile/desktop; `4093047e` adds both specs to the trusted focused preflight. Source inline scripts (five) and new test source were parsed successfully in the connector JS runtime; no checked-out repository or executable Playwright browser was available locally. Gated release requested at `e293f31f` via `tests/reports/staging-beta-request.txt`; **CI result, exact deployed parity and signed browser checks are pending**, not claimed.
+
+**Current independently confirmed environment:** Cloudflare private staging Worker remains `3378391c-3998-43f7-a293-6c5e6ad7e270` (deployed 22:42:22 UTC), so the new checkout preview is **not yet confirmed live**. Three staging secrets still present in Worker configuration. Supabase `prrrzeelltmyugssqnzk` is ACTIVE_HEALTHY; read-only schema audit confirms RLS enabled on listings, messages, price offers/history, trade offers/counters/items with participant-scoped offer/history SELECT policies. This is not proof of transactional concurrency or complete authorization safety. Draft PR #2 is open/unmerged, mergeable=false; no production/billing/payment/shipping/database write was performed.
+
+**Next gate:** Check the focused `private-staging.yml` run triggered by `e293f31f` and actual Worker version. If it fails, inspect the failed step/log and fix root cause before retrying. If it passes, verify exact served assets, anonymous 401 and four signed read-only sessions. Then prioritize **targeted real synthetic offer/trade-history write acceptance with safe fixture cleanup** and physical Android/PWA review. Do not rerun the unchanged full/photo suites. Focused CI consumes Actions runtime; account-wide billing/free quota was not independently checked.
+
+---
+
+
 ## Latest verified staging checkpoint — 2026-10-29 17:43 Central
 
 **Shipped listing-detail buyer UX:** `fce21e2` adds mobile-friendly Previous/Next gallery controls, selected-thumbnail aria-pressed and photo-count announcements; `6e0cc7d` displays the listing asking price with a USD symbol; `e422cf0` closes orphaned zoom overlays when a listing closes and restores keyboard focus. Tests `eb3e30d` cover sports cards (Tanner), TCG decks and video games (Jayden) on mobile/desktop; `60fa54d` and `0766f67` register and gate them. Existing category coverage remains historical, not newly rerun.
