@@ -187,3 +187,13 @@ test('Jayden can find exact card variants and language in seller descriptions wi
  await expect(page.locator('#grid [data-view]')).toHaveCount(2);
  await expect(page.locator('#grid [data-view="op-blocked"]')).toHaveCount(0);
 });
+
+test('gaming platform and hardware filters derive from seller choices and isolate categories',async({page})=>{
+ await installFixture(page,[]);await page.evaluate(()=>{
+  items=[{id:'switch',seller_id:'seller',title:'Switch game',description:'[Video Game]\nPlatform: Nintendo Switch',price:20,category:'video_games',condition:'used'},{id:'ps',seller_id:'seller',title:'PlayStation game',description:'Platform: PlayStation 5',price:30,category:'video_games',condition:'used'},...['consoles','controllers','accessories'].map((category,i)=>({id:category,seller_id:'seller',title:category,price:40+i,category,condition:'used'}))].map(row=>marketplaceItemFromRow(row,null));render();
+ });
+ await page.locator('#marketFilterToggle').click();await page.locator('#marketCategory').selectOption('Video Games');await expect(page.locator('#marketPlatformWrap')).toBeVisible();await page.locator('#marketPlatform').selectOption('Nintendo Switch');await expect(page.locator('#grid h3')).toHaveText(['Switch game']);
+ const choices=await page.evaluate(()=>({seller:[...document.getElementById('gamePlatform').options].filter(o=>o.value).map(o=>o.value),filter:[...document.getElementById('marketPlatform').options].filter(o=>o.value!=='All').map(o=>o.value)}));expect(choices.filter).toEqual(choices.seller);
+ await page.locator('#marketCategory').selectOption('Consoles & Controllers');await expect(page.locator('#marketPlatform')).toHaveValue('All');await expect(page.locator('#marketPlatformWrap')).toBeHidden();for(const type of ['consoles','controllers','accessories']){await page.locator('#marketHardwareType').selectOption(type);await expect(page.locator('#grid h3')).toHaveText([type])}
+ await page.locator('#marketClearFilters').click();await expect(page.locator('#marketHardwareType')).toHaveValue('All');await expect(page.locator('#marketHardwareWrap')).toBeHidden();await expect(page.locator('#grid h3')).toHaveCount(5);await page.evaluate(()=>showHomePage());await page.locator('.elegant-tile-1').click();await expect(page.locator('#marketCategory')).toHaveValue('Collectibles');await expect(page.locator('#grid h3')).toHaveCount(0);
+});

@@ -49,9 +49,12 @@ for(const persona of ['Charles','Kyle','Tanner','Jayden'])test(persona+' rotates
    outcome.checks.subcategory=Object.keys(row.fields).length>2?'passed':'not-applicable';
    const edit=await page.evaluate(async saved=>{
     window.categoryEditRow={...saved,id:'category-edit-item',updated_at:'2026-10-28T00:00:00Z'};await listingEditor.open('category-edit-item');
+    document.getElementById('editClassificationEnabled').checked=true;document.getElementById('editClassificationEnabled').dispatchEvent(new Event('change'));
+    for(const [id,value]of Object.entries(saved.__fields||{})){const el=document.getElementById('editAttribute_'+id);el.value=value;el.dispatchEvent(new Event('change',{bubbles:true}))}
+    for(const [id,value]of Object.entries({consoleModel:'Synthetic model',sportsBrand:'Topps',deckLeader:'Synthetic deck',deckCardCount:'2',deckList:'2x Synthetic card'}))document.getElementById('editAttribute_'+id).value=value;
     document.getElementById('editListingPrice').value='19.75';document.getElementById('editListingForm').requestSubmit();await new Promise(r=>setTimeout(r,0));return window.categoryEditChanges;
-   },saved);
-   expect(edit.price).toBe(19.75);expect(edit.title).toBe(saved.title);expect(edit.description).toBe(saved.description);expect(edit).not.toHaveProperty('category');expect(edit).not.toHaveProperty('image_urls');outcome.checks.edit='passed';
+   },{...saved,__fields:row.fields});
+   expect(edit.price).toBe(19.75);expect(edit.title).toBe(saved.title);expect(edit.description).toContain(saved.description);expect(edit.category).toBe(saved.category);expect(edit.product_type).toBe(row.fields.listingType);expect(edit).not.toHaveProperty('image_urls');outcome.checks.edit='passed';
    // Upload is deliberately mocked; image preparation/storage are not certified here.
    const discovery=await page.evaluate(saved=>{
     const row={...saved,id:'matrix-item',created_at:new Date().toISOString()};items=[marketplaceItemFromRow(row,{username:'test-only-seller'})];

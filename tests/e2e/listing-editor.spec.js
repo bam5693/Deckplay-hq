@@ -60,3 +60,14 @@ test('account changes during editor photo preparation cannot start a storage upl
  await photoFixture(page);await page.locator('#editListingPhotoInput').setInputFiles(editPhoto);await page.evaluate(()=>prepareListingPhoto=()=>new Promise(r=>window.completeEditPhoto=r));await page.locator('#saveListingEdits').click();
  await page.evaluate(()=>{currentUser={id:'other-owner'};syncInboxDraftUser();completeEditPhoto(new File(['x'],'x.png',{type:'image/png'}))});expect(await page.evaluate(()=>editUploadCalls)).toEqual([]);expect(await page.evaluate(()=>editWrites)).toEqual([]);await expect(page.locator('#editListingModal')).not.toHaveClass(/open/);
 });
+
+test('changing categories saves dependent fields without touching a separate creation draft',async({page})=>{
+ await fixture(page);await page.evaluate(()=>document.getElementById('tcgCustomSet').value='Unrelated creation draft set');await page.locator('#editListingClassification summary').click();await page.locator('#editClassificationEnabled').check();
+ await page.locator('#editAttribute_category').selectOption('video_games');await page.locator('#editAttribute_gamePlatform').selectOption({index:1});await page.locator('#editAttribute_condition').selectOption('used');
+ const platform=await page.locator('#editAttribute_gamePlatform').inputValue();await page.locator('#saveListingEdits').click();await expect.poll(()=>page.evaluate(()=>editWrites.length)).toBe(1);
+ const data=await page.evaluate(()=>editWrites[0]);expect(data).toMatchObject({category:'video_games',product_type:'game',tcg_game:null,collectible_subcategory:null,condition:'used'});expect(data.description).toContain('Platform: '+platform);expect(data.description).toContain('Corner damage disclosed');await expect(page.locator('#tcgCustomSet')).toHaveValue('Unrelated creation draft set');await page.evaluate(()=>finishEdit({data:{id:'edit-item'},error:null}));
+});
+test('classification requires dependent choices and preserves existing structured details on later text edits',async({page})=>{
+ await fixture(page);await page.locator('#editListingClassification summary').click();await page.locator('#editClassificationEnabled').check();await page.locator('#editAttribute_category').selectOption('consoles');await page.locator('#saveListingEdits').click();expect(await page.evaluate(()=>editWrites)).toEqual([]);
+ await page.evaluate(async()=>{editRow.description='[Listing classification]\nPlatform: Nintendo Switch\n[End classification]\n\nOriginal disclosure';await listingEditor.open('edit-item')});await page.locator('#editListingDescription').fill('Updated disclosure');await page.locator('#saveListingEdits').click();await expect.poll(()=>page.evaluate(()=>editWrites.length)).toBe(1);expect(await page.evaluate(()=>editWrites[0].description)).toBe('[Listing classification]\nPlatform: Nintendo Switch\n[End classification]\n\nUpdated disclosure');await page.evaluate(()=>finishEdit({data:{id:'edit-item'},error:null}));
+});
