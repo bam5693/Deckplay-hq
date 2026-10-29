@@ -12,6 +12,12 @@ on:
         required: false
         type: boolean
         default: false
+      acceptance_scope:
+        description: 'Limit read-only acceptance after a diagnosed partial run'
+        required: false
+        type: choice
+        options: [all, seller_desktop]
+        default: all
       photo_only:
         description: 'Run only isolated private-photo checks (no deployment or full suite)'
         required: false
@@ -165,8 +171,11 @@ jobs:
         if: ${{ github.event.inputs.auth_smoke_only == 'true' }}
         run: npx playwright test --config=playwright.staging.config.js staging-auth-smoke.spec.js --project=staging-desktop --retries=0 --timeout=20000
       - name: Verify deployed buyer and seller sessions only after gate smoke passes
-        if: success()
+        if: ${{ success() && github.event.inputs.acceptance_scope != 'seller_desktop' }}
         run: npx playwright test --config=playwright.staging.config.js staging-account-readonly.spec.js --retries=0 --timeout=40000
+      - name: Retry only the seller desktop navigation affected by a transport reset
+        if: ${{ success() && github.event.inputs.acceptance_scope == 'seller_desktop' }}
+        run: npx playwright test --config=playwright.staging.config.js staging-account-readonly.spec.js --project=staging-desktop --grep 'synthetic seller' --retries=0 --timeout=40000
       - uses: actions/upload-artifact@v4
         if: always()
         with:

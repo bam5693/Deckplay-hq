@@ -27,4 +27,9 @@ for(const role of ['BUYER','SELLER'])test('deployed synthetic '+role.toLowerCase
  await expect(page.locator('#listingIncludedQuantity')).toHaveValue('1');
  await expect(page.locator('#listingQuantityUnit')).toHaveValue('items');
  await expect(page.locator('#listingContentsList')).toBeVisible();
+ await page.locator('#listingIncludedQuantity').fill('2');
+ await page.locator('#listingQuantityUnit').fill('games');await page.locator('#price').fill('25');
+ await expect(page.locator('#listingContentsPreview')).toHaveText('Quantity included: 2 games. Sold together for $25.00.');
+ await page.locator('#listingContentsList').fill('1x Game — tested');
+ await expect(page.locator('#listingContentsPreview')).toContainText('quantities total 1; quantity included is 2');
 });
