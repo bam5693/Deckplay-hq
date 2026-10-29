@@ -1,3 +1,1 @@
-Focused local marketplace regression request, 2026-10-29 15:40 Central.
-Test global search from Inbox/Profile, category filtering, and blocked-seller boundaries.
-No OIDC credentials, staging data writes, or production changes.
+2026-10-29 negotiation-history targeted local-only test request. Execute newly registered inbox-negotiation-history.spec.js on desktop/mobile with source syntax checks. No staging redeploy, no synthetic transactions, no production changes.
