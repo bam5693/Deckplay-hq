@@ -1,4 +1,15 @@
-# DeckPlay HQ — current staging status (2026-10-29, 14:36 Central)
+# DeckPlay HQ — current staging status (2026-10-29, 15:40 Central)
+
+## Latest checkpoint — 2026-10-29 15:40 Central
+- User-facing global search bug fixed: searching from Inbox or Profile now opens Marketplace results. Source 9c9c0dc, targeted test d1f67a6. CI requested at 7907b92; PASS NOT YET CONFIRMED.
+- Deployment guard 3076aa6 blocks non-staging-branch deployments and verifies anonymous Basic Auth rejection after upload.
+- Separate focused acceptance workflow was incompatible with existing strict OIDC trust (only private-staging.yml is trusted). Commit 2dcb660 converted it to local-only regression without synthetic credentials; deployed signed-in acceptance still PENDING.
+- Cloudflare readback: staging Worker f5157e2a deployed 2026-10-29 20:24:25 UTC, before latest search fix. Three secret bindings preserved. Exact current source parity and deployed browser acceptance unverified.
+- GitHub connector lacks push-run listing and workflow dispatch; no checked-out private repo executable environment available. Do not claim CI passed or repeat full suites.
+- Next: inspect focused CI and trusted private-staging results; verify exact deployment and signed-in desktop/mobile. Then address older offer history and trade retry. Production and draft PR #2 untouched.
+
+---
+
 
 **Scope:** `test/staging-reporting`, draft PR #2, isolated Supabase `prrrzeelltmyugssqnzk`, private Worker `deckplay-hq-staging`. No production/main, billing, payments, customer data or PR merge changes. Supabase staging is `ACTIVE_HEALTHY`.
 
