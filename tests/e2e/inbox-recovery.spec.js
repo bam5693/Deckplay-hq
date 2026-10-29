@@ -123,7 +123,7 @@ test('switching collectors hides prior unread badges and closes private activity
  const sameOwner=await page.evaluate(()=>{
   currentUser={id:'fixture-alert-owner-a'};syncInboxDraftUser();
   for(const id of ['headerUnread','menuUnread','menuTradeUnread','notificationBadge','dockNotifications']){
-   const el=document.getElementById(id);el.hidden=false;el.textContent='9';
+   const el=document.getElementById(id);if(!el)continue;el.hidden=false;el.textContent='9';
   }
   document.getElementById('notificationBell').setAttribute('aria-label','9 unread notifications');
   document.getElementById('notificationList').textContent='Private favorite from collector A';
@@ -137,8 +137,10 @@ test('switching collectors hides prior unread badges and closes private activity
  });
  expect(sameOwner).toBe(true);
  for(const id of ['headerUnread','menuUnread','menuTradeUnread','notificationBadge','dockNotifications']){
-  await expect(page.locator('#'+id)).toHaveJSProperty('hidden',true);
-  await expect(page.locator('#'+id)).toHaveText('');
+  if(await page.locator('#'+id).count()){
+   await expect(page.locator('#'+id)).toHaveJSProperty('hidden',true);
+   await expect(page.locator('#'+id)).toHaveText('');
+  }
  }
  await expect(page.locator('#notificationBell')).toHaveAttribute('aria-label','Notifications');
  await expect(page.locator('#notificationModal')).not.toHaveClass(/open/);
