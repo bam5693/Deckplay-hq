@@ -1536,7 +1536,26 @@ function syncWantedCardFields(){const game=document.getElementById("wantedGame")
 document.getElementById("wantedGame").addEventListener("change",syncWantedCardFields);
 syncWantedCardFields();
 function wantedMetadata(post){const details=post.details||"";const start=details.indexOf("[DeckPlay match: ");if(start<0)return null;const end=details.indexOf("]",start);if(end<0)return null;try{return JSON.parse(details.slice(start+17,end))}catch{return null}}
-function exactWantedMatches(post){const meta=wantedMetadata(post);if(!meta?.cardNumber||!post.game)return [];const norm=x=>String(x||"").toUpperCase().replace(/[^A-Z0-9]/g,"");return items.filter(item=>item.id&&item.c==="Trading Cards"&&item.game===post.game&&item.sellerId!==post.user_id&&(!post.budget||Number(item.p)<=Number(post.budget))&&norm((item.description||"").split("Card number: ")[1]?.split(/\\n|\r?\n/)[0])===norm(meta.cardNumber)&&(!meta.variant||(item.description||"").includes("Variant: "+meta.variant))&&(!meta.set||(item.description||"").toLowerCase().includes(meta.set.toLowerCase()))).slice(0,5)}
+function wantedListingField(description,field){
+ const prefix=field.toLowerCase()+":";
+ const lines=String(description||"").replace(/\\r\\n|\\n|\r\n?/g,"\n").split("\n");
+ const row=lines.find(line=>line.trimStart().toLowerCase().startsWith(prefix));
+ return row?row.trimStart().slice(prefix.length).trim():"";
+}
+function exactWantedMatches(post){
+ const meta=wantedMetadata(post);if(!meta?.cardNumber||!post.game)return [];
+ const normCard=x=>String(x||"").toUpperCase().replace(/[^A-Z0-9]/g,"");
+ const normText=x=>String(x||"").trim().replace(/\s+/g," ").toLowerCase();
+ const cardNumber=normCard(meta.cardNumber);if(!cardNumber)return [];
+ const budget=post.budget==null||post.budget===""?null:Number(post.budget);
+ if(budget!==null&&(!Number.isFinite(budget)||budget<0))return [];
+ return items.filter(item=>item.id&&item.c==="Trading Cards"&&item.game===post.game&&item.sellerId!==post.user_id
+  &&(budget===null||(Number.isFinite(Number(item.p))&&Number(item.p)<=budget))
+  &&normCard(wantedListingField(item.description,"Card number"))===cardNumber
+  &&(!meta.variant||normText(wantedListingField(item.description,"Variant"))===normText(meta.variant))
+  &&(!meta.set||normText(wantedListingField(item.description,"Set"))===normText(meta.set))
+ ).slice(0,5);
+}
 document.getElementById("wantedForm").addEventListener("submit",async e=>{e.preventDefault();if(!currentUser)return;const status=document.getElementById("wantedStatus");status.textContent="Publishing…";const budget=document.getElementById("wantedBudget").value;const {error}=await supabaseClient.from("wanted_posts").insert({user_id:currentUser.id,title:document.getElementById("wantedItem").value.trim(),game:document.getElementById("wantedGame").value||null,offer_type:document.getElementById("wantedOffer").value,budget:budget?Number(budget):null,details:(()=>{const detail=document.getElementById("wantedDetails").value.trim();if(document.getElementById("wantedCardFields").hidden)return detail||null;const metadata={set:document.getElementById("wantedSet").value.trim(),cardNumber:document.getElementById("wantedCardNumber").value.trim(),variant:document.getElementById("wantedVariant").value};return Object.values(metadata).some(Boolean)?[detail,"[DeckPlay match: "+JSON.stringify(metadata)+"]"].filter(Boolean).join("\\n"):detail||null})()});if(error){status.textContent=error.message;return}e.target.reset();status.textContent="";closeModal("wantedModal");toast("Wanted post published!");await loadWanted()});
 document.getElementById("wantedGrid").addEventListener("click",async e=>{const button=e.target.closest("[data-delete-wanted]");if(!button||!currentUser)return;if(!confirm("Delete this wanted post?"))return;const {error}=await supabaseClient.from("wanted_posts").delete().eq("id",button.dataset.deleteWanted).eq("user_id",currentUser.id);if(error){toast(error.message);return}await loadWanted()});
 let savedListingsLoadVersion=0;
