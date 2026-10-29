@@ -1106,7 +1106,7 @@ function parseCounterofferUsd(value){
  return Number.isSafeInteger(cents)&&cents>=1&&cents<=10000000?cents/100:null;
 }
 function requestCounterofferAmount(currentAmount){
- const value=prompt(`Counteroffer in USD (max two decimal places). Current offer: ${currentAmount}`,currentAmount);
+ const value=prompt("Counteroffer in USD (max two decimal places). Current offer: $"+currentAmount,currentAmount);
  if(value===null)return null;
  const amount=parseCounterofferUsd(value);
  if(amount===null)toast("Enter $0.01–$100,000.00 with no more than two decimal places.","error");
