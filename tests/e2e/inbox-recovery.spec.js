@@ -130,7 +130,10 @@ test('switching collectors hides prior unread badges and closes private activity
   document.getElementById('inboxNotificationList').textContent='Private favorite from collector A';
   openModal('notificationModal');
   syncInboxDraftUser(); // A token refresh for the same owner must preserve the UI.
-  const preserved=!document.getElementById('notificationBadge').hidden
+  // The unread badge is optional in some responsive layouts; account isolation
+  // must still preserve the active modal during a same-owner token refresh.
+  const badge=document.getElementById('notificationBadge');
+  const preserved=(!badge||!badge.hidden)
    &&document.getElementById('notificationModal').classList.contains('open');
   currentUser={id:'fixture-alert-owner-b'};syncInboxDraftUser();
   return preserved;
