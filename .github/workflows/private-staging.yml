@@ -2,6 +2,11 @@ name: Private staging feature bots
 on:
   workflow_dispatch:
     inputs:
+      auth_smoke_only:
+        description: 'One Basic Auth smoke, then read-only synthetic account checks; no deployment or full suite'
+        required: false
+        type: boolean
+        default: false
       photo_only:
         description: 'Run only isolated private-photo checks (no deployment or full suite)'
         required: false
@@ -20,6 +25,7 @@ permissions:
   id-token: write
 jobs:
   staging-identity:
+    if: ${{ github.event.inputs.auth_smoke_only != 'true' }}
     permissions:
       contents: read
       id-token: write
@@ -36,6 +42,7 @@ jobs:
       - run: node scripts/staging-ci-credentials.cjs
       # Preserve older staging runs for diagnosis; transactional tests are serialized below.
   staging-accounts:
+    if: ${{ github.event.inputs.auth_smoke_only != 'true' }}
     needs: staging-identity
     concurrency:
       group: private-staging-transactions
@@ -128,6 +135,40 @@ jobs:
         run: |
           echo '## DeckPlay test department — Charles, Kyle, Tanner and Jayden' >> "$GITHUB_STEP_SUMMARY"
           echo 'Result: ${{ job.status }}. Charles checks API transactions and authorization; Kyle checks deployed mobile/desktop browser journeys. Tanner and Jayden rotate seller/buyer roles in complete-deck and sports/TCG trade browser simulations using the same two disposable accounts. These are deterministic actions; AI inference is verified separately by the manual lead-review workflow. Reports contain persona annotations and named steps. Payment/shipping remain previews.' >> "$GITHUB_STEP_SUMMARY"
+
+  staging-auth-smoke:
+    if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.auth_smoke_only == 'true' && github.ref == 'refs/heads/test/staging-reporting' }}
+    name: Private gate smoke and read-only synthetic accounts
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    environment: deckplay-staging
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Load staging credentials through existing trusted identity
+        run: node scripts/staging-ci-credentials.cjs
+      - run: npm ci
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: staging-playwright-${{ hashFiles('package-lock.json') }}
+      - run: npx playwright install chromium --only-shell
+      - name: ONE private HTTP Basic Auth browser smoke before account tests
+        run: npx playwright test --config=playwright.staging.config.js staging-auth-smoke.spec.js --project=staging-desktop --retries=0 --timeout=20000
+      - name: Verify deployed buyer and seller sessions only after gate smoke passes
+        if: success()
+        run: npx playwright test --config=playwright.staging.config.js staging-account-readonly.spec.js --retries=0 --timeout=40000
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: staging-auth-focused
+          path: |
+            test-results/staging-junit.xml
+            playwright-report/staging
+          retention-days: 3
 
   report-failure:
     name: Report staging failures without stopping tests
