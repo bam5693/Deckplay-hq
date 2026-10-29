@@ -24,7 +24,13 @@ async function ready(page,blocked=false){
 test('Tanner trade offer links directly to the exact Inbox thread without submitting a trade',async({page})=>{
  await ready(page);
  await expect(page.locator('#tradesModal')).toHaveClass(/open/);
+ await page.evaluate(()=>{
+  window.navTrace=[];
+  const oldMarket=showMainMarketplace;
+  showMainMarketplace=function(){navTrace.push('market:'+new Error().stack);return oldMarket.apply(this,arguments)};
+ });
  await page.getByRole('button',{name:'Open conversation with @Tanner'}).click();
+ console.log('TRADE_NAV_DIAG',JSON.stringify(await page.evaluate(()=>({user:currentUser?.id,selected:selectedInboxCollector,hidden:document.getElementById('inboxPage').hidden,classes:document.getElementById('inboxPage').className,body:document.body.className,trace:window.navTrace}))));
  await expect(page.locator('#tradesModal')).not.toHaveClass(/open/);
  await expect(page.locator('.chat-person h3')).toHaveText('@Tanner');
  await expect(page.locator('#inboxPage')).toHaveClass(/thread-open/);
