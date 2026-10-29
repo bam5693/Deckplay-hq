@@ -756,7 +756,7 @@ test('Jayden can retry an offline inbox without losing his TCG inquiry draft',as
  await expect(page.locator('[data-inbox-retry]')).toHaveCount(0);
 });
 
-test('Inbox activity tab shows alerts, retries failures, and refreshes empty results',async({page})=>{
+test('Alerts sheet shows activity, retries failures, and refreshes empty results',async({page})=>{
  await ready(page);
  await page.evaluate(async()=>{
   await supabaseClient.auth.getSession();
@@ -769,22 +769,22 @@ test('Inbox activity tab shows alerts, retries failures, and refreshes empty res
    return q;
   };
   await showInboxPage();
+  openModal('notificationModal');
+  await loadNotificationCenter();
  });
  await expect(page.locator('#inboxPage')).toBeVisible();
- await expect(page.locator('#inboxNotificationsTab')).toBeVisible();
- await page.locator('#inboxNotificationsTab').click();
- await expect(page.locator('#inboxNotificationList [data-notification-kind="favorite_price_drop"]')).toHaveCount(1);
+ await expect(page.locator('#inboxNotificationsTab')).toBeHidden();
+ await expect(page.locator('#notificationModal')).toHaveClass(/open/);
  await expect(page.locator('#notificationList [data-notification-kind="favorite_price_drop"]')).toHaveCount(1);
- expect(await page.evaluate(()=>activityNotificationsVisible())).toBe(true);
- await page.evaluate(()=>{fixtureActivityError=true});
- await page.locator('#refreshInbox').click();
- await expect(page.locator('#inboxNotificationList [data-retry-notifications]')).toHaveText('Retry alerts');
- await page.evaluate(()=>{fixtureActivityError=false});
- await page.locator('#inboxNotificationList [data-retry-notifications]').click();
  await expect(page.locator('#inboxNotificationList [data-notification-kind="favorite_price_drop"]')).toHaveCount(1);
- await page.evaluate(()=>{fixtureActivityRows=[]});
- await page.locator('#refreshInbox').click();
- await expect(page.locator('#inboxNotificationList [data-retry-notifications]')).toHaveText('Refresh alerts');
+ expect(await page.evaluate(()=>activityNotificationsVisible())).toBe(true);
+ await page.evaluate(async()=>{fixtureActivityError=true;await loadNotificationCenter()});
+ await expect(page.locator('#notificationList [data-retry-notifications]')).toHaveText('Retry alerts');
+ await page.evaluate(()=>{fixtureActivityError=false});
+ await page.locator('#notificationList [data-retry-notifications]').click();
+ await expect(page.locator('#notificationList [data-notification-kind="favorite_price_drop"]')).toHaveCount(1);
+ await page.evaluate(async()=>{fixtureActivityRows=[];await loadNotificationCenter()});
+ await expect(page.locator('#notificationList [data-retry-notifications]')).toHaveText('Refresh alerts');
 });
 
 test('Tanner can message a collector with no prior thread directly from the profile',async({page})=>{
@@ -792,6 +792,10 @@ test('Tanner can message a collector with no prior thread directly from the prof
  await page.evaluate(async()=>{
   const originalFrom=supabaseClient.from;
   supabaseClient.from=table=>{
+   if(table==='user_blocks'){
+    const q={select:()=>q,eq:()=>q,maybeSingle:async()=>({data:null,error:null})};
+    return q;
+   }
    if(table!=='profiles')return originalFrom(table);
    let directId=null;
    const profiles=[{id:'buyer-a',username:'buyer-a'},{id:'buyer-b',username:'buyer-b'},{id:'new-collector',username:'new-collector',collection_links:[]}];
