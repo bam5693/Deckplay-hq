@@ -1,4 +1,6 @@
-name: Focused deployed staging acceptance
+name: Focused local marketplace regression
+# Deliberately no deployed-account credentials: the private staging OIDC gate
+# only trusts private-staging.yml. Do not widen that trust for this workflow.
 on:
   workflow_dispatch:
   push:
@@ -6,35 +8,34 @@ on:
     paths: ['tests/reports/staging-acceptance-request.txt']
 permissions:
   contents: read
-  id-token: write
 jobs:
-  acceptance:
+  local-regression:
     runs-on: ubuntu-latest
-    timeout-minutes: 7
-    environment: deckplay-staging
+    timeout-minutes: 6
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
           cache: npm
-      - name: Load existing trusted staging identity
-        run: node scripts/staging-ci-credentials.cjs
       - run: npm ci
       - uses: actions/cache@v4
         with:
           path: ~/.cache/ms-playwright
           key: staging-playwright-${{ hashFiles('package-lock.json') }}
       - run: npx playwright install chromium --only-shell
-      - name: One private staging authentication smoke
-        run: npx playwright test --config=playwright.staging.config.js staging-auth-smoke.spec.js --project=staging-desktop --retries=0 --timeout=20000
-      - name: Read-only synthetic buyer/seller deployed sessions
-        run: npx playwright test --config=playwright.staging.config.js staging-account-readonly.spec.js --retries=0 --timeout=40000
-      - name: Save focused results
-        if: always()
-        uses: actions/upload-artifact@v4
+      - name: Validate isolated staging build and global-search behavior
+        env:
+          DECKPLAY_STAGING_SUPABASE_URL: https://prrrzeelltmyugssqnzk.supabase.co
+          DECKPLAY_STAGING_SUPABASE_KEY: sb_publishable_0omvNnv_ZOvXrZ-LHPMyIQ_a9zxD-yh
+        run: |
+          node scripts/build-staging.cjs
+          node --check scripts/build-staging-worker.cjs
+          npx playwright test --config=playwright.local.config.js marketplace-filter-boundaries.spec.js --retries=0
+      - uses: actions/upload-artifact@v4
+        if: failure()
         with:
-          name: staging-focused-acceptance
+          name: focused-marketplace-regression-failure
           path: |
             test-results/
             playwright-report/
