@@ -8,6 +8,7 @@ on:
     paths:
       - 'index.html'
       - 'moderator-access.js'
+      - '.github/workflows/private-staging.yml'
       - 'supabase/staging/collection-sharing.sql' 
 permissions:
   contents: read
