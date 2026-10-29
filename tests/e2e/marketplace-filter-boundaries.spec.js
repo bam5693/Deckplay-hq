@@ -244,3 +244,29 @@ test('Tanner: progressive sports card filters work at every depth and reset clea
  await expect(page.locator('#marketSportsPlayer')).toHaveValue('');
  await expect(page.locator('#grid h3')).toHaveCount(3);
 });
+
+test('Kyle and Jayden: switching every marketplace category hides unrelated filters',async({page})=>{
+ await installFixture(page,[
+  {id:'all-tcg',n:'Pokemon card',c:'Trading Cards',game:'pokemon',p:12,s:'seller',e:'🃏'},
+  {id:'all-game',n:'Switch game',c:'Video Games',p:25,s:'seller',e:'🎮'},
+  {id:'all-console',n:'Game console',c:'Consoles & Controllers',p:80,s:'seller',e:'🎮'},
+  {id:'all-collectible',n:'Anime figure',c:'Collectibles',collectibleSubcategory:'anime_manga',p:18,s:'seller',e:'🎎'}
+ ]);
+ await page.locator('#marketFilterToggle').click();
+ const branches=[
+  {category:'Trading Cards',visible:'marketGameWrap'},
+  {category:'Video Games',visible:'marketPlatformWrap'},
+  {category:'Consoles & Controllers',visible:'marketHardwareWrap'},
+  {category:'Collectibles',visible:'marketCollectibleWrap'}
+ ];
+ const ids=branches.map(b=>b.visible);
+ for(const branch of branches){
+  await page.locator('#marketCategory').selectOption(branch.category);
+  await expect(page.locator('#'+branch.visible)).toBeVisible();
+  for(const id of ids.filter(id=>id!==branch.visible))await expect(page.locator('#'+id)).toBeHidden();
+  await expect(page.locator('#grid h3')).toHaveCount(1);
+ }
+ await page.locator('#marketCategory').selectOption('All');
+ for(const id of ids)await expect(page.locator('#'+id)).toBeHidden();
+ await expect(page.locator('#grid h3')).toHaveCount(4);
+});
