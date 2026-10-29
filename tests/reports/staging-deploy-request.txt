@@ -2,3 +2,4 @@ DeckPlay HQ private staging deployment request
 Requested after connector launcher repair, 2026-10-29.
 Target: deckplay-hq-staging only.
 Production changes prohibited.
+Launch requested 2026-10-29: deploy current branch HEAD to isolated private staging only; preserve authentication and bindings.
