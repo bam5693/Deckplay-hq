@@ -1,4 +1,4 @@
-name: Launch deployed feature acceptance
+name: Launch one affected deployed seller check
 on:
   workflow_dispatch:
   push:
@@ -19,4 +19,5 @@ jobs:
         run: |
           gh api -X POST repos/${{ github.repository }}/actions/workflows/private-staging.yml/dispatches \
             -f ref=test/staging-reporting \
-            -F 'inputs[account_readonly_only]=true'
+            -F 'inputs[account_readonly_only]=true' \
+            -f 'inputs[acceptance_scope]=seller_desktop'
