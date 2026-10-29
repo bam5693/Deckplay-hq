@@ -666,6 +666,12 @@ test('inbox search and unread filters survive refresh but reset on account chang
  await expect(search).toHaveValue('buyer-b');await expect(unread).toBeChecked();
  await expect(page.locator('[data-conversation-id="buyer-a"]')).toBeHidden();
  await expect(page.locator('[data-conversation-id="buyer-b"]')).toBeVisible();
+ const clear=page.locator('[data-conversation-clear]');
+ await expect(clear).toBeVisible();await clear.click();
+ await expect(search).toHaveValue('');await expect(unread).not.toBeChecked();
+ await expect(search).toBeFocused();await expect(clear).toBeHidden();
+ await expect(page.locator('[data-conversation-id="buyer-a"]')).toBeVisible();
+ await search.fill('buyer-b');await unread.check();
  await page.evaluate(async()=>{currentUser={id:'fixture-another-collector'};syncInboxDraftUser();await showInboxPage()});
  await expect(search).toHaveValue('');await expect(unread).not.toBeChecked();
  await expect(page.locator('[data-conversation-id="buyer-a"]')).toBeVisible();
