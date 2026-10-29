@@ -1967,23 +1967,69 @@ async function sendTradeProposalOnce(payload){
  const found=await confirmed();if(found)return finish(found);
  throw failure;
 }
+// Retry references are tab-scoped and contain only SHA-256 fingerprints and UUIDs,
+// never message text or photo blobs. A reload can verify an uncertain text send.
+const inboxTextRetryStorageKey=id=>"deckplay-text-retries-v1:"+id;
+function inboxTextRetryEntries(owner){
+ try{
+  const rows=JSON.parse(sessionStorage.getItem(inboxTextRetryStorageKey(owner))||"[]"),cutoff=Date.now()-86400000;
+  return Array.isArray(rows)?rows.filter(row=>row&&/^[0-9a-f]{64}$/.test(row.hash)&&/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(row.id)&&Number.isFinite(row.at)&&row.at>=cutoff&&row.at<=Date.now()).slice(-20):[];
+ }catch{return []}
+}
+function rememberInboxTextRetry(owner,hash,id){
+ try{
+  const rows=inboxTextRetryEntries(owner).filter(row=>row.hash!==hash);
+  rows.push({hash,id,at:Date.now()});
+  sessionStorage.setItem(inboxTextRetryStorageKey(owner),JSON.stringify(rows.slice(-20)));
+ }catch{/* Continue with in-memory retry if tab storage is disabled. */}
+}
+function clearInboxTextRetry(owner,hash){
+ try{
+  const rows=inboxTextRetryEntries(owner).filter(row=>row.hash!==hash);
+  if(rows.length)sessionStorage.setItem(inboxTextRetryStorageKey(owner),JSON.stringify(rows));
+  else sessionStorage.removeItem(inboxTextRetryStorageKey(owner));
+ }catch{}
+}
 async function sendCollectorMessageOnce(payload){
  const key=JSON.stringify([payload.sender_id,payload.recipient_id,payload.listing_id||null,payload.body,payload.attachment_ids||[]]);
- const id=payload.id||messageSendAttempts.get(key)||crypto.randomUUID();messageSendAttempts.set(key,id);
+ const owner=payload.sender_id,version=messageAccountVersion,active=()=>currentUser?.id===owner&&messageAccountVersion===version;
+ let fingerprint=null;
+ // Photo drafts have their own in-memory upload/retry identity; never restore
+ // a photo message after reload when its private file blobs are unavailable.
+ if(!payload.id&&!(payload.attachment_ids||[]).length){
+  try{
+   const digest=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(key));
+   fingerprint=Array.from(new Uint8Array(digest),b=>b.toString(16).padStart(2,"0")).join("");
+  }catch{/* Unsupported crypto means the existing in-memory retry still works. */}
+ }
+ if(!active())throw Error("Your account changed. Reopen the conversation before sending.");
+ const previous=messageSendAttempts.get(key)||(fingerprint?inboxTextRetryEntries(owner).find(row=>row.hash===fingerprint)?.id:null);
+ const id=payload.id||previous||crypto.randomUUID();
+ messageSendAttempts.set(key,id);
+ if(fingerprint)rememberInboxTextRetry(owner,fingerprint,id);
+ const finish=result=>{
+  if(active()&&messageSendAttempts.get(key)===id)messageSendAttempts.delete(key);
+  if(active()&&fingerprint)clearInboxTextRetry(owner,fingerprint);
+  return result;
+ };
+ const confirmed=async()=>{
+  if(!active())return null;
+  try{
+   const {data:row,error}=await supabaseClient.from("collector_messages").select("id,sender_id,recipient_id,listing_id,body,attachment_ids").eq("id",id).eq("sender_id",owner).maybeSingle();
+   if(!active()||error||row?.id!==id||row.sender_id!==owner||row.recipient_id!==payload.recipient_id||(row.listing_id||null)!==(payload.listing_id||null)||row.body!==payload.body||JSON.stringify(row.attachment_ids||[])!==JSON.stringify(payload.attachment_ids||[]))return null;
+   return {data:{id},error:null};
+  }catch{return null}
+ };
+ // A previous request might already have committed; check before a duplicate write.
+ if(previous){const found=await confirmed();if(found)return finish(found)}
+ if(!active())throw Error("Your account changed. Reopen the conversation before sending.");
  let failure;
  try{
   const result=await supabaseClient.from("collector_messages").insert({...payload,id}).select("id").single();
-  if(!result.error&&result.data?.id){if(messageSendAttempts.get(key)===id)messageSendAttempts.delete(key);return result}
+  if(!result.error&&result.data?.id)return finish(result);
   failure=result.error||new Error("Message delivery could not be confirmed. Retry to check the same message.");
  }catch(error){failure=error}
- if(failure?.code&&failure.code!=="23505")throw failure;
- // The server may have committed before the network response was lost.
- // A retry reuses the primary key; confirm the exact sender, thread and body.
- try{
-  const found=await supabaseClient.from("collector_messages").select("id,sender_id,recipient_id,listing_id,body,attachment_ids").eq("id",id).eq("sender_id",payload.sender_id).maybeSingle();
-  const row=found.data;
-  if(!found.error&&row?.id===id&&row.sender_id===payload.sender_id&&row.recipient_id===payload.recipient_id&&(row.listing_id||null)===(payload.listing_id||null)&&row.body===payload.body&&JSON.stringify(row.attachment_ids||[])===JSON.stringify(payload.attachment_ids||[])){if(messageSendAttempts.get(key)===id)messageSendAttempts.delete(key);return {data:{id},error:null}}
- }catch{/* Preserve the original failure and the same retry reference. */}
+ const found=await confirmed();if(found)return finish(found);
  throw failure;
 }
 let inboxConversationCursor=null,inboxConversationExhausted=false;
@@ -1994,7 +2040,7 @@ let inboxDraftUser=null,messageAccountVersion=0,inboxConversationFilter={search:
 function syncInboxDraftUser(){
  const id=currentUser?.id||null;
  if(inboxDraftUser!==id){
-  if(inboxDraftUser)try{sessionStorage.removeItem(inboxDraftStorageKey(inboxDraftUser))}catch{}
+  if(inboxDraftUser)try{sessionStorage.removeItem(inboxDraftStorageKey(inboxDraftUser));sessionStorage.removeItem(inboxTextRetryStorageKey(inboxDraftUser))}catch{}
   ++messageAccountVersion;
   resetWantedPublisher();closeModal("wantedModal");
   ++listingAccountVersion;++cloudDraftRequestVersion;cloudDraftBusy=false;cloudDraftControls(false);document.getElementById("listingCloudDraftStatus").textContent="";document.getElementById("listingForm").reset();document.getElementById("listingType").dispatchEvent(new Event("change"));listingSelectedPhotos=[];renderListingPhotos();syncCategoryFields();syncGradedCondition();document.getElementById("deckFields").hidden=true;document.getElementById("listingStatus").textContent="";closeModal("sellModal");
