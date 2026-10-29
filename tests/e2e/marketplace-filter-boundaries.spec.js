@@ -296,3 +296,22 @@ test('All marketplace keeps category-specific filters hidden and combines minimu
  await page.locator('#marketCategory').selectOption('Trading Cards');
  await expect(page.locator('#marketGameWrap')).toBeVisible();
 });
+
+test('non-finite price inputs never hide otherwise matching listings',async({page})=>{
+ await installFixture(page,[
+  {id:'fixture-a',n:'Card A',c:'Trading Cards',game:'pokemon',p:20,s:'fixture',e:'🃏'},
+  {id:'fixture-b',n:'Game B',c:'Video Games',p:60,s:'fixture',e:'🎮'}
+ ]);
+ await page.evaluate(()=>{
+  document.getElementById('marketMinPrice').value='Infinity';
+  document.getElementById('marketMaxPrice').value='Infinity';
+  render();
+ });
+ await expect(page.locator('#grid h3')).toHaveText(['Card A','Game B']);
+ await page.evaluate(()=>{
+  document.getElementById('marketMinPrice').value='1e999';
+  document.getElementById('marketMaxPrice').value='1e999';
+  render();
+ });
+ await expect(page.locator('#grid h3')).toHaveText(['Card A','Game B']);
+});
