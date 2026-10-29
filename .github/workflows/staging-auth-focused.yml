@@ -1,4 +1,4 @@
-name: Launch cheap staging authentication verification
+name: Launch deployed feature acceptance
 on:
   workflow_dispatch:
   push:
@@ -19,4 +19,4 @@ jobs:
         run: |
           gh api -X POST repos/${{ github.repository }}/actions/workflows/private-staging.yml/dispatches \
             -f ref=test/staging-reporting \
-            -F 'inputs[auth_smoke_only]=true'
+            -F 'inputs[account_readonly_only]=true'
