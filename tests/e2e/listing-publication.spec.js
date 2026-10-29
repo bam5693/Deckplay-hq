@@ -126,6 +126,9 @@ test('mixed lot publication preserves quantities, printing and condition for buy
  await page.evaluate(()=>showDetails(marketplaceItemFromRow({...publishWrites[0],id:'published-lot'},null)));
  await expect(page.locator('#detailContent')).toContainText('Sold together for the listing price');
  await expect(page.locator('#detailContent')).toContainText('Japanese foil — near mint');
+ await expect(page.locator('#detailContent')).toContainText('Included items');
+ await expect(page.locator('#detailContent')).not.toContainText('[Listing contents]');
+ await expect(page.locator('#detailContent')).not.toContainText('[End listing contents]');
 });
 
 test('mismatched contents stay in the draft and cannot publish until corrected',async({page})=>{
