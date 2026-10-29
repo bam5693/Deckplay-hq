@@ -102,3 +102,51 @@ This supersedes earlier authentication/deployment gaps above. Scope remains priv
 **Exact release boundary:** As inspected after these tests, branch HEAD `bb150c9ee5bd0ac77767c2584edb7fabffec645c`; Cloudflare's deployed private Worker remains **`a6b99083-db9e-42c8-a674-59cfbc1ca991`**, source `1a8166b`. This new feature is **not deployed or verified against signed-in deployed staging**. No safe bundle/source-parity deployment was executed in this connector-only run; do not claim it is live. PR #2 remains draft/unmerged, production untouched.
 
 **Next:** Safely build/deploy the exact new staging source preserving existing secret bindings/assets and verify one synthetic older offer/trade conversation per desktop/mobile before release. Then prioritize durable full-page message retry and historical offer/counter completeness (the current older activity fallback shows current status, not guaranteed full older counter history). Do not repeat the already passing 6 local cases without relevant changes.
+
+
+## Autonomous beta development — 2026-10-29 16:06 Central (current checkpoint)
+
+This section supersedes the earlier pending deployment/authentication labels. Application source `88fc403671509d8d59ebc500655b419a7633e1a6` is deployed to private staging. No trunk is complete and this is not permission to invite real users yet.
+
+### Implemented
+- `c93aa2d`: Inbox marketplace search is actually visible (the previous handler-only fix could not be reached because CSS hid it), opens Marketplace results and preserves the active message draft. Trade-proposal delivery references survive a same-tab full reload for up to 24h, bounded to 20 SHA-256 fingerprints/UUIDs; no trade notes, item IDs, credentials or photos are stored in those references. Exact original terms are checked before any repeat insert; changed terms get a different identity. Account switch/sign-out removes the references.
+- `9afbfae`: My listings and Saved items leave Profile correctly, clear stale category/price filters, and Back to all listings clears both scopes. Profile Saved items excludes blocked sellers across all seven database categories and labels prices in USD.
+- `88fc403`: Pending outgoing price offers can be withdrawn from their Inbox conversation using the existing respond_price_offer RPC, shared decision lock and account/block protections. Duplicate taps submit once; failure restores the action and preserves the message draft. Price-offer and Inbox offer amounts display the USD symbol.
+
+### Executed evidence (separate groups; overlapping suites are not additive)
+| Source / run | Local simulated browser | Node security/logic | Signed deployed browser |
+|---|---:|---:|---:|
+| c93aa2d / [40953830524](https://github.com/bam5693/Deckplay-hq/actions/runs/40953830524) | 164 desktop/mobile passed: marketplace boundaries, trade picker/reload and Inbox recovery | 16 passed (13 trade delivery + 3 browser config) | 4 buyer/seller desktop/mobile passed |
+| 9afbfae / [40954209995](https://github.com/bam5693/Deckplay-hq/actions/runs/40954209995) | 6 focused desktop/mobile passed: search, scope shortcuts, seven-category blocked Saved profile | 16 same checks passed | 4 passed; includes visible Inbox search, Saved navigation and reset |
+| 88fc403 / [40954521662](https://github.com/bam5693/Deckplay-hq/actions/runs/40954521662) | 4 focused withdrawal desktop/mobile passed | 16 same checks passed | 4 read-only buyer/seller desktop/mobile passed |
+
+All three new runs passed on their first attempt. Earlier run 40951357444 failed 2/32 cases on the hidden Inbox search input; that defect was corrected, not bypassed. Inline syntax, changed spec parsing, staging builds and whitespace checks passed locally in the Work container. Browser cases above executed on GitHub runners; no local-container browser execution is claimed. Existing historical 28-category transaction/496 journey evidence was not rerun. No new real database trade/withdrawal transaction was performed; the new write/reload/failure journeys are mocked browser and extracted actual-function tests. No private photo uploads or quota events were consumed.
+
+### Deployment and safety
+- Final Worker: `ddcc7377-98c1-4483-806f-32ddee686dd9`, 100% staging traffic; deployed 2026-10-29 21:04:25 UTC.
+- Each release verified byte-for-byte equality of all 23 **served assets** with its built staging directory. This is asset parity, not a claim that Wrangler's transformed Worker module equals the unbundled source text.
+- Anonymous HEAD returned 401 with a Basic challenge. Existing three secret bindings and compatibility date 2026-10-26 retained. No credential values were printed.
+- Supabase prrrzeelltmyugssqnzk read-only status: ACTIVE_HEALTHY. No SQL, schema, real customer data, production, payment, billing or PR merge changes.
+- Focused release runs now use tests/reports/staging-beta-request.txt in the already trusted private-staging.yml. Each request performs cheap checks before private deploy, asset parity, then read-only signed acceptance. Ordinary feature commits no longer start the broad transaction/photo suite. Full suites remain available through manual workflow_dispatch. Keep existing OIDC workflow trust unchanged. Before requesting the next release, select only the relevant specs in the focused preflight command.
+- Run durations: 130s, 56s, 56s. GitHub timing reported UBUNTU billable.total_ms=0 for each; this is not an account-wide free-usage guarantee. No paid infrastructure, plan changes or additional dependencies.
+
+### Eight trunks and beta boundary
+| Trunk | This session / remaining |
+|---|---|
+| 1 Listings | Seller inventory shortcuts and USD display improved. Existing CRUD/drafts/quantities retained. |
+| 2 Inbox | Search access and in-thread withdrawal improved; existing text/photo/history work retained. Older negotiation event history still bounded globally. |
+| 3 Transactions | Reload-safe trade retry and outgoing-offer withdrawal; new real signed write acceptance remains additional coverage. |
+| 4 Discovery | Saved scope reset and blocked-seller privacy fixed across all seven categories. |
+| 5 Mobile | Every new local case runs mobile and desktop; deployed accounts both passed. Physical Android/PWA keyboard/Back still unverified. |
+| 6 Security | Account-switch retry cleanup and blocked Saved visibility covered; private gate and credentials preserved. Recovery/export/backup/legal launch gates remain. |
+| 7 Growth | No new growth features; preserve roadmap for later. |
+| 8 Operations | Focused staged release/parity checks added; operator onboarding, support/disputes and rollback rehearsal still require work. |
+
+Core staging listing/discovery, Inbox and negotiation journeys are beta candidates with the evidence above. A controlled real-user beta is still gated by operational/security readiness and a real-device rehearsal; a successful deployment is not full marketplace certification. No honest trunk-completion percentage can be inferred from test counts.
+
+Planning estimate: several more focused development/QA sessions plus operator and physical-device rehearsal for a small beta; low confidence until those gates are exercised. The complete eight-trunk roadmap is substantially larger.
+
+**Exact next development task:** Add on-demand, per-conversation price-offer event and trade-counteroffer history with deterministic (created_at,id) paging, retry, account isolation and clear loading/error states. The current global 700-event windows can omit old negotiation events even when the conversation itself is recovered. Do not rebuild completed message pagination or repeat unchanged photo/full transaction suites. Then run targeted real synthetic trade/withdrawal acceptance and physical Android/PWA checks before beta invitations.
+
+---
+
