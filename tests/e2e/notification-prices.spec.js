@@ -10,7 +10,7 @@ for(const [device,viewport] of [['desktop',{width:1280,height:800}],['mobile',{w
    await page.route('https://*.supabase.co/**',route=>route.fulfill({status:200,contentType:'application/json',body:'[]'}));
    await page.goto('/');
    await page.evaluate(async()=>{
-    currentUser={id:'price-fixture-buyer'};
+    await supabaseClient.auth.getSession();currentUser={id:'price-fixture-buyer'};syncInboxDraftUser();
     const notifications=[
      {id:'price-fixture-1',actor_id:'price-fixture-seller',kind:'favorite_price_drop',source_id:'price-fixture-listing',created_at:'2026-10-29T12:00:00Z',read_at:null},
      {id:'price-fixture-2',actor_id:'price-fixture-seller',kind:'wanted_match',source_id:'price-fixture-listing',created_at:'2026-10-29T11:00:00Z',read_at:null},
@@ -24,7 +24,7 @@ for(const [device,viewport] of [['desktop',{width:1280,height:800}],['mobile',{w
     await loadNotificationCenter();
    });
    const alerts=page.locator('#notificationList');
-   await expect(alerts.locator('[data-notification-kind="favorite_price_drop"]')).toContainText('current asking price $18.75');
+   await expect(alerts.locator('[data-notification-kind="favorite_price_drop"][data-notification-source="price-fixture-listing"]')).toContainText('current asking price $18.75');
    await expect(alerts.locator('[data-notification-kind="wanted_match"]')).toContainText('Mixed card lot for $18.75');
    await expect(page.locator('#inboxNotificationList')).toContainText('current asking price $18.75');
    const stale=alerts.locator('[data-notification-kind="favorite_price_drop"][data-notification-source="price-fixture-sold"]');
