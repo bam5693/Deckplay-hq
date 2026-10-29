@@ -26,13 +26,13 @@ async function setup(page){
      if(table==='trade_offers')data=[{id:'trade-1',listing_id:'listing-1',offered_listing_id:null,offered_listing_ids:[],item_snapshots:[],initial_terms:{},sender_id:'buyer-tanner',recipient_id:'fixture-seller',status:'pending',offer_note:'Sports lot',cash_amount:0,cash_direction:'sender_pays',created_at:stamp}];
      if(table==='profiles')data=[{id:'buyer-tanner',username:'Tanner'}];
      if(table==='listings')data=[{id:'listing-1',title:'Graded sports card',description:'Sports lot',price:24,image_urls:[]}];
+     if(scoped)negotiationRequests.push({table,filter,limit});
      if(scoped&&table==='price_offer_history'){
       const page=negotiationRequests.filter(r=>r.table===table).length;
       data=page===1?priceHistory.slice(0,50):page===2?priceHistory.slice(50):[];
       if(failHistoryOnce){failHistoryOnce=false;return Promise.resolve({data:null,error:{message:'Offline'}}).then(resolve,reject)}
      }
      if(scoped&&table==='trade_counteroffers')data=tradeHistory;
-     if(scoped)negotiationRequests.push({table,filter,limit});
      return Promise.resolve({data,error:null}).then(resolve,reject);
     }
    };
