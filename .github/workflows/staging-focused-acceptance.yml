@@ -1,0 +1,42 @@
+name: Focused deployed staging acceptance
+on:
+  workflow_dispatch:
+  push:
+    branches: [test/staging-reporting]
+    paths: ['tests/reports/staging-acceptance-request.txt']
+permissions:
+  contents: read
+  id-token: write
+jobs:
+  acceptance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    environment: deckplay-staging
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Load existing trusted staging identity
+        run: node scripts/staging-ci-credentials.cjs
+      - run: npm ci
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: staging-playwright-${{ hashFiles('package-lock.json') }}
+      - run: npx playwright install chromium --only-shell
+      - name: One private staging authentication smoke
+        run: npx playwright test --config=playwright.staging.config.js staging-auth-smoke.spec.js --project=staging-desktop --retries=0 --timeout=20000
+      - name: Read-only synthetic buyer/seller deployed sessions
+        run: npx playwright test --config=playwright.staging.config.js staging-account-readonly.spec.js --retries=0 --timeout=40000
+      - name: Save focused results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: staging-focused-acceptance
+          path: |
+            test-results/
+            playwright-report/
+          if-no-files-found: ignore
+          retention-days: 3
