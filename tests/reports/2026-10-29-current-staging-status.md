@@ -1,5 +1,18 @@
 # DeckPlay HQ — current staging status (2026-10-29)
 
+## Latest verified staging checkpoint — 2026-10-29 17:43 Central
+
+**Shipped listing-detail buyer UX:** `fce21e2` adds mobile-friendly Previous/Next gallery controls, selected-thumbnail aria-pressed and photo-count announcements; `6e0cc7d` displays the listing asking price with a USD symbol; `e422cf0` closes orphaned zoom overlays when a listing closes and restores keyboard focus. Tests `eb3e30d` cover sports cards (Tanner), TCG decks and video games (Jayden) on mobile/desktop; `60fa54d` and `0766f67` register and gate them. Existing category coverage remains historical, not newly rerun.
+
+**Exact release:** `5e220bf921ad96f98a38c729221692829018a6b2` / [passing focused run 40967795638](https://github.com/bam5693/Deckplay-hq/actions/runs/40967795638). Local simulated browser **18/18** passed (4 new gallery cases plus 14 existing negotiation/navigation/withdrawal cases); Node security/logic **16/16** passed. The isolated staging build produced 22 tracked assets plus robots.txt; deployed served-asset parity **23/23** passed, anonymous Basic Auth returned 401, and signed read-only synthetic buyer/seller desktop/mobile acceptance **4/4** passed. Cloudflare Worker `3378391c-3998-43f7-a293-6c5e6ad7e270` is deployed to private staging; the three preexisting secret bindings were retained. This is NOT signed database-write acceptance for older negotiation history or trade concurrency, nor a physical Android/PWA test.
+
+**Cost/safety:** One gated workflow run lasted 74 seconds. GitHub reported `UBUNTU.billable.total_ms=0`, not an account-wide free-usage guarantee. No new paid service, production deployment/database, billing, live payment, customer-data change or PR merge. PR #2 remains open/draft; GitHub currently reports `mergeable=false` (not addressed during staging-only development).
+
+**Next unverified gates:** (1) targeted real signed synthetic offer/trade-history write and pagination with strict fixture cleanup, (2) physical Android/PWA Back, keyboard and photo browsing, (3) operator moderation/disputes/rollback rehearsal before a controlled beta. Avoid repeating the passing gallery/photo/full suite without a change.
+
+---
+
+
 ## Autonomous development — 2026-10-29 16:36 Central (latest verified checkpoint)
 
 **Current private staging:** Worker `6a63ae6f-221c-461c-b726-3e174f56112b`, 100% staging traffic, deployed 21:33:38 UTC. Source release request `760c3e2` contains the changes below. GitHub draft PR #2 remains open and unmerged; production/main, real users, payments, billing and production databases were untouched.
