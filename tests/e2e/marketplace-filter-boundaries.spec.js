@@ -342,3 +342,22 @@ test('empty-state recovery clears price filters while preserving Saved items sco
  await expect(page.locator('#market h2')).toHaveText('Saved items');
  await expect(page.locator('#grid h3')).toHaveText(['Saved retro game']);
 });
+
+test('global marketplace search opens results from Inbox and Profile instead of silently doing nothing',async({page})=>{
+ await installFixture(page,[
+  {id:'fixture-game',n:'Retro game cartridge',c:'Video Games',p:30,s:'Jayden',cond:'Used',e:'🎮'},
+  {id:'fixture-card',n:'Graded baseball rookie',c:'Trading Cards',game:'sports_cards',p:80,s:'Tanner',cond:'Graded',e:'🃏'}
+ ]);
+ for(const section of ['inboxPage','collectorPage']){
+  await page.evaluate(section=>{
+   document.body.classList.remove('deckplay-home','deckplay-market','inbox-focus','profile-focus');
+   document.body.classList.add(section==='inboxPage'?'inbox-focus':'profile-focus');
+   document.querySelectorAll('main > section,main > aside').forEach(el=>el.hidden=true);
+   document.getElementById(section).hidden=false;
+  },section);
+  await page.locator('#search').fill(section==='inboxPage'?'retro':'baseball');
+  await expect(page.locator('#market')).toBeVisible();
+  await expect(page.locator('#'+section)).toBeHidden();
+  await expect(page.locator('#grid h3')).toHaveText([section==='inboxPage'?'Retro game cartridge':'Graded baseball rookie']);
+ }
+});
