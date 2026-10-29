@@ -13,6 +13,7 @@ if psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 -f test-results/forced-migration-f
  echo 'Forced migration failure unexpectedly succeeded' >&2; exit 1
 fi
 [[ "$(psql "$DATABASE_URL" -X -tA -c "select count(*) from information_schema.columns where table_schema='public' and table_name='trade_offers' and column_name='item_snapshots'")" = 0 ]] || { echo 'Partial migration escaped rollback' >&2; exit 1; }
+grep -q 'division by zero' test-results/forced-migration-failure.log
 echo 'PASS forced migration failure leaves legacy schema unchanged'
 run release/migrations/20261029214603_coordinated_production_compatibility.sql
 failures="$(psql "$DATABASE_URL" -X -tA -v ON_ERROR_STOP=1 -f release/schema-contract.sql)"

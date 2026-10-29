@@ -11,6 +11,7 @@ on:
       - 'tests/integration/*.sql'
       - 'scripts/test-production-*'
       - 'scripts/backup-production-private.sh'
+      - 'scripts/restore-production-private-local.sh'
       - 'scripts/*release*'
       - 'tests/e2e/**'
       - 'tests/security/**'
@@ -119,8 +120,8 @@ jobs:
           docker cp scripts/backup-production-private.sh "$POSTGRES_CONTAINER:/tmp/backup.sh"
           docker exec -e DATABASE_URL=postgresql://postgres:disposable-fixture-only@localhost:5432/deckplay_rehearsal "$POSTGRES_CONTAINER" bash /tmp/backup.sh /tmp/recovery
           docker exec "$POSTGRES_CONTAINER" createdb -U postgres deckplay_recovery
-          docker exec "$POSTGRES_CONTAINER" psql -U postgres -d deckplay_recovery -v ON_ERROR_STOP=1 -c 'drop schema public'
-          docker exec "$POSTGRES_CONTAINER" bash -c 'pg_restore -U postgres -d deckplay_recovery --no-owner --exit-on-error /tmp/recovery/*.dump'
+          docker cp scripts/restore-production-private-local.sh "$POSTGRES_CONTAINER:/tmp/restore.sh"
+          docker exec -e RECOVERY_DATABASE_URL=postgresql://postgres:disposable-fixture-only@localhost:5432/deckplay_recovery "$POSTGRES_CONTAINER" bash -c 'bash /tmp/restore.sh /tmp/recovery/*.dump'
           DATABASE_URL=postgresql://postgres:disposable-fixture-only@127.0.0.1:5432/deckplay_recovery
           psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 -f tests/integration/production-compatibility.sql
           test -z "$(psql "$DATABASE_URL" -X -tA -v ON_ERROR_STOP=1 -f release/schema-contract.sql)"
