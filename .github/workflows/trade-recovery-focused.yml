@@ -1,4 +1,4 @@
-name: Focused discovery alert price acceptance
+name: Verify restored discovery alert price UI
 on:
   workflow_dispatch:
   push:
