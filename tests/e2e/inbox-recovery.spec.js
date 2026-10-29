@@ -118,6 +118,34 @@ test('inbox exposes price and trade offers without activity alerts',async({page}
  await expect(page.locator('#tradesModal')).toHaveClass(/open/);
  expect(await page.evaluate(()=>document.documentElement.scrollWidth-innerWidth)).toBeLessThanOrEqual(2);
 });
+test('switching collectors hides prior unread badges and closes private activity immediately',async({page})=>{
+ await ready(page);
+ const sameOwner=await page.evaluate(()=>{
+  currentUser={id:'fixture-alert-owner-a'};syncInboxDraftUser();
+  for(const id of ['headerUnread','menuUnread','menuTradeUnread','notificationBadge','dockNotifications']){
+   const el=document.getElementById(id);el.hidden=false;el.textContent='9';
+  }
+  document.getElementById('notificationBell').setAttribute('aria-label','9 unread notifications');
+  document.getElementById('notificationList').textContent='Private favorite from collector A';
+  document.getElementById('inboxNotificationList').textContent='Private favorite from collector A';
+  openModal('notificationModal');
+  syncInboxDraftUser(); // A token refresh for the same owner must preserve the UI.
+  const preserved=!document.getElementById('notificationBadge').hidden
+   &&document.getElementById('notificationModal').classList.contains('open');
+  currentUser={id:'fixture-alert-owner-b'};syncInboxDraftUser();
+  return preserved;
+ });
+ expect(sameOwner).toBe(true);
+ for(const id of ['headerUnread','menuUnread','menuTradeUnread','notificationBadge','dockNotifications']){
+  await expect(page.locator('#'+id)).toHaveJSProperty('hidden',true);
+  await expect(page.locator('#'+id)).toHaveText('');
+ }
+ await expect(page.locator('#notificationBell')).toHaveAttribute('aria-label','Notifications');
+ await expect(page.locator('#notificationModal')).not.toHaveClass(/open/);
+ await expect(page.locator('#notificationList')).not.toContainText('Private favorite from collector A');
+ await expect(page.locator('#inboxNotificationList')).not.toContainText('Private favorite from collector A');
+});
+
 test('late activity responses cannot restore private alerts after sign-out',async({page})=>{
  await ready(page);await page.evaluate(()=>{
   currentUser={id:'fixture-old'};syncInboxDraftUser();
