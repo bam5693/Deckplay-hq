@@ -89,12 +89,18 @@ test('notification bell counts discovery alerts without counting inbox negotiati
 test('discovery notification opens an available listing rather than redirecting to inbox',async({page})=>{
  await page.goto('/');
  const result=await page.evaluate(async()=>{
-  const previous=items;
-  items=[{id:'fixture-listing',databaseId:'fixture-listing',n:'Fixture collectible',p:12,c:'Trading Cards',imageUrls:[],trades:false}];
+  await supabaseClient.auth.getSession();
+  const previous=items,original=supabaseClient.from;
+  // Navigation intentionally reloads current listing data; cached titles/prices are stale.
+  items=[{id:'fixture-listing',databaseId:'fixture-listing',n:'Stale cached title',p:99,c:'Trading Cards',imageUrls:[],trades:false}];
+  supabaseClient.from=table=>{
+   const q={};for(const method of ['select','eq'])q[method]=()=>q;
+   q.maybeSingle=async()=>({data:table==='listings'?{id:'fixture-listing',seller_id:'fixture-seller',title:'Fixture collectible',price:12,category:'trading_cards',condition:'used',image_urls:[],status:'active'}:{username:'fixture-seller'},error:null});return q;
+  };
   try{
    await navigateDeckplayNotification('wanted_match','fixture-seller','fixture-listing');
    return {title:document.getElementById('detailTitle')?.textContent,modal:document.getElementById('detailModal')?.classList.contains('open'),inbox:document.getElementById('inboxPage')?.classList.contains('active')};
-  }finally{items=previous}
+  }finally{items=previous;supabaseClient.from=original}
  });
  expect(result.title).toBe('Fixture collectible');
  expect(result.modal).toBe(true);

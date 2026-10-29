@@ -22,6 +22,8 @@ jobs:
     timeout-minutes: 12
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -36,8 +38,11 @@ jobs:
           node - <<'NODE'
           const fs=require('node:fs'),{execFileSync}=require('node:child_process');
           const files=execFileSync('git',['diff-tree','--root','--no-commit-id','--name-only','-r','--first-parent','HEAD'],{encoding:'utf8'}).split('\n');
-          const browser=process.env.MANUAL_RUN==='true'||files.some(f=>/^(?:[^/]+\.(?:html|js)|tests\/e2e\/|package(?:-lock)?\.json)/.test(f));
+          const full=process.env.MANUAL_RUN==='true'||files.some(f=>/^(?:[^/]+\.(?:html|js)|package(?:-lock)?\.json)/.test(f));
+          const specs=files.filter(f=>/^tests\/e2e\/[a-z0-9-]+\.spec\.js$/.test(f));
+          const browser=full||specs.length>0;
           fs.appendFileSync(process.env.GITHUB_OUTPUT,'browser='+browser+'\n');
+          fs.appendFileSync(process.env.GITHUB_OUTPUT,'specs='+(full?'':specs.join(' '))+'\n');
           NODE
       - run: npm ci
       - name: Security and recovery checks
@@ -51,7 +56,9 @@ jobs:
         if: steps.scope.outputs.browser == 'true'
       - name: Integrated desktop and mobile UI simulations (no account credentials)
         if: steps.scope.outputs.browser == 'true'
-        run: npx playwright test --config=playwright.local.config.js
+        env:
+          RELEASE_SPECS: ${{ steps.scope.outputs.specs }}
+        run: npx playwright test --config=playwright.local.config.js $RELEASE_SPECS
       - name: Build exact allowlisted preview assets
         env:
           DECKPLAY_STAGING_SUPABASE_URL: https://prrrzeelltmyugssqnzk.supabase.co
