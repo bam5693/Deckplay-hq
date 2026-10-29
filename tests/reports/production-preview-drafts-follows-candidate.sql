@@ -1,6 +1,7 @@
 -- DeckPlay HQ candidate: private drafts and seller follows.
 -- NOT FOR PRODUCTION EXECUTION until backup/rollback and release integration tests.
 -- No existing accounts, profiles or listings are modified.
+-- Policy creation is safe to rerun; existing policy definitions must be reviewed before release.
 begin;
 create table if not exists public.listing_drafts (
   user_id uuid primary key references auth.users(id) on delete cascade,
@@ -13,10 +14,26 @@ create table if not exists public.listing_drafts (
   updated_at timestamptz not null default now()
 );
 alter table public.listing_drafts enable row level security;
-create policy owner_reads_draft on public.listing_drafts for select to authenticated using ((select auth.uid()) = user_id);
-create policy owner_inserts_draft on public.listing_drafts for insert to authenticated with check ((select auth.uid()) = user_id);
-create policy owner_updates_draft on public.listing_drafts for update to authenticated using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
-create policy owner_deletes_draft on public.listing_drafts for delete to authenticated using ((select auth.uid()) = user_id);
+do $$ begin
+  if not exists (select 1 from pg_policies where schemaname='public' and tablename='listing_drafts' and policyname='owner_reads_draft') then
+    create policy owner_reads_draft on public.listing_drafts for select to authenticated using ((select auth.uid()) = user_id);
+  end if;
+end $$;
+do $$ begin
+  if not exists (select 1 from pg_policies where schemaname='public' and tablename='listing_drafts' and policyname='owner_inserts_draft') then
+    create policy owner_inserts_draft on public.listing_drafts for insert to authenticated with check ((select auth.uid()) = user_id);
+  end if;
+end $$;
+do $$ begin
+  if not exists (select 1 from pg_policies where schemaname='public' and tablename='listing_drafts' and policyname='owner_updates_draft') then
+    create policy owner_updates_draft on public.listing_drafts for update to authenticated using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
+  end if;
+end $$;
+do $$ begin
+  if not exists (select 1 from pg_policies where schemaname='public' and tablename='listing_drafts' and policyname='owner_deletes_draft') then
+    create policy owner_deletes_draft on public.listing_drafts for delete to authenticated using ((select auth.uid()) = user_id);
+  end if;
+end $$;
 grant select,insert,update,delete on public.listing_drafts to authenticated;
 
 create table if not exists public.seller_follows (
@@ -27,8 +44,20 @@ create table if not exists public.seller_follows (
  constraint seller_follows_no_self_follow check (follower_id <> seller_id)
 );
 alter table public.seller_follows enable row level security;
-create policy "Members follow sellers" on public.seller_follows for insert to authenticated with check (follower_id=(select auth.uid()));
-create policy "Members read their follows" on public.seller_follows for select to authenticated using (follower_id=(select auth.uid()));
-create policy "Members unfollow sellers" on public.seller_follows for delete to authenticated using (follower_id=(select auth.uid()));
+do $$ begin
+  if not exists (select 1 from pg_policies where schemaname='public' and tablename='seller_follows' and policyname='Members follow sellers') then
+    create policy "Members follow sellers" on public.seller_follows for insert to authenticated with check (follower_id=(select auth.uid()));
+  end if;
+end $$;
+do $$ begin
+  if not exists (select 1 from pg_policies where schemaname='public' and tablename='seller_follows' and policyname='Members read their follows') then
+    create policy "Members read their follows" on public.seller_follows for select to authenticated using (follower_id=(select auth.uid()));
+  end if;
+end $$;
+do $$ begin
+  if not exists (select 1 from pg_policies where schemaname='public' and tablename='seller_follows' and policyname='Members unfollow sellers') then
+    create policy "Members unfollow sellers" on public.seller_follows for delete to authenticated using (follower_id=(select auth.uid()));
+  end if;
+end $$;
 grant select,insert,delete on public.seller_follows to authenticated;
 commit;
