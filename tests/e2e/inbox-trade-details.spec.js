@@ -54,3 +54,32 @@ test('saved multi-item details remain visible when live listings are missing or 
  });
  await expect(page.locator('#conversationThread')).toContainText('Japanese stamped foil');await expect(page.locator('#conversationThread')).toContainText('Complete game');await expect(page.locator('#conversationThread')).toContainText('PSA 9 original');await expect(page.locator('#conversationThread')).not.toContainText('Edited live title');await expect(page.locator('#conversationThread')).toContainText('Original bundle');await expect(page.locator('#conversationThread')).toContainText('saved when this proposal was sent');
 });
+
+test('Tanner blocked by Jayden cannot receive trade decisions in the trade dialog',async({page})=>{
+ await fixture(page);
+ await page.evaluate(async()=>{blockedCollectorIds.add('tanner');await loadTradeOffers()});
+ const card=page.locator('#tradeOffersList [data-trade-offer-id="trade-1"]');
+ await expect(card).toContainText('You blocked this collector');
+ await expect(card).toHaveAttribute('data-trade-counterparty','tanner');
+ await expect(card.locator('[data-counter-response],[data-trade-action],[data-counter-start]')).toHaveCount(0);
+});
+
+test('blocking Tanner after trade dialog renders prevents stale counter acceptance',async({page})=>{
+ await fixture(page);
+ await page.evaluate(async()=>{openModal('tradesModal');await loadTradeOffers()});
+ const accept=page.locator('#tradeOffersList [data-counter-response="accept"]');
+ await expect(accept).toBeVisible();
+ await page.evaluate(()=>blockedCollectorIds.add('tanner'));
+ await accept.click();
+ expect(await page.evaluate(()=>decisionWrites)).toEqual([]);
+});
+
+test('counteroffer draft is retained if the recipient is blocked after composer opens',async({page})=>{
+ await fixture(page);
+ await page.evaluate(()=>{activeCounterOffer='trade-1';activeCounterpartyId='tanner';openModal('counterModal');blockedCollectorIds.add('tanner')});
+ await page.locator('#counterNote').fill('Keep this exact printing in the exchange');
+ await page.locator('#counterForm button[type="submit"]').click();
+ await expect(page.locator('#counterStatus')).toContainText('Unblock this collector');
+ await expect(page.locator('#counterNote')).toHaveValue('Keep this exact printing in the exchange');
+ expect(await page.evaluate(()=>decisionWrites)).toEqual([]);
+});
