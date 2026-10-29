@@ -150,8 +150,9 @@ test('Charles accepted price response is not reported as failed when refresh bre
 
 test('Kyle inbox price reply reports committed success even when inbox refresh fails',async({page})=>{
  await ready(page);
- await page.evaluate(()=>{
+ await page.evaluate(async()=>{
   document.querySelectorAll('.modal.open').forEach(el=>el.classList.remove('open'));
+  await showInboxPage();
   selectedInboxCollector='offer-seller';
   document.getElementById('messageInbox').innerHTML='<div class="price-offer-actions"><button type="button" data-inbox-price="decline" data-offer="offer-a">Decline</button></div>';
   window.offerToasts=[];toast=message=>offerToasts.push(message);
@@ -167,8 +168,9 @@ test('Kyle inbox price reply reports committed success even when inbox refresh f
 
 test('Jayden inbox trade reply does not suggest retry after a committed response',async({page})=>{
  await ready(page);
- await page.evaluate(()=>{
+ await page.evaluate(async()=>{
   document.querySelectorAll('.modal.open').forEach(el=>el.classList.remove('open'));
+  await showInboxPage();
   selectedInboxCollector='offer-seller';
   document.getElementById('messageInbox').innerHTML='<div class="price-offer-actions"><button type="button" data-inbox-trade="declined" data-offer="trade-a">Decline trade</button></div>';
   window.offerToasts=[];toast=message=>offerToasts.push(message);

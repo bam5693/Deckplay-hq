@@ -1,4 +1,4 @@
-name: Focused trade delivery and marketplace UI
+name: Focused marketplace recovery UI
 on:
   workflow_dispatch:
   push:
@@ -29,7 +29,7 @@ jobs:
           key: staging-playwright-${{ hashFiles('package-lock.json') }}
       - run: npx playwright install chromium --only-shell
       - name: Desktop and mobile trade, inbox, price boundaries and profile publication
-        run: npx playwright test --config=playwright.local.config.js trade-picker.spec.js price-offer-recovery.spec.js inbox-recovery.spec.js marketplace-filter-boundaries.spec.js listing-publication.spec.js
+        run: npx playwright test --config=playwright.local.config.js trade-picker.spec.js price-offer-recovery.spec.js inbox-recovery.spec.js marketplace-filter-boundaries.spec.js listing-publication.spec.js --timeout=15000 --max-failures=2
       - name: Retain focused result
         if: always()
         uses: actions/upload-artifact@v4

@@ -313,3 +313,32 @@ test('non-finite price inputs never hide otherwise matching listings',async({pag
   await expect(page.locator('#grid h3')).toHaveText(['Card A','Game B']);
  }
 });
+
+test('empty search recovery restores cards, games, hardware and collectibles and focuses search',async({page})=>{
+ await installFixture(page,[
+  {id:'card',n:'Sports card',c:'Trading Cards',game:'sports_cards',p:10,s:'fixture',e:'🃏'},
+  {id:'game',n:'Retro game',c:'Video Games',p:20,s:'fixture',e:'🎮'},
+  {id:'console',n:'Console',c:'Consoles & Controllers',p:30,s:'fixture',e:'🎮'},
+  {id:'figure',n:'Figure',c:'Collectibles',p:40,s:'fixture',e:'⭐'}
+ ]);
+ await page.locator('#search').fill('No matching item');
+ await expect(page.locator('#grid h3')).toHaveCount(0);
+ await page.locator('[data-reset-market-search]').click();
+ await expect(page.locator('#search')).toHaveValue('');
+ await expect(page.locator('#search')).toBeFocused();
+ await expect(page.locator('#grid h3')).toHaveText(['Sports card','Retro game','Console','Figure']);
+});
+
+test('empty-state recovery clears price filters while preserving Saved items scope',async({page})=>{
+ await installFixture(page,[
+  {id:'saved-game',n:'Saved retro game',c:'Video Games',p:20,s:'fixture',e:'🎮'},
+  {id:'other-card',n:'Unsaved card',c:'Trading Cards',p:10,s:'fixture',e:'🃏'}
+ ]);
+ await page.evaluate(()=>{saved.add('saved-game');onlySavedListings=true;render()});
+ await page.locator('#marketFilterToggle').click();
+ await page.locator('#marketMinPrice').fill('500');
+ await page.locator('[data-reset-market-search]').click();
+ await expect(page.locator('#marketMinPrice')).toHaveValue('');
+ await expect(page.locator('#market h2')).toHaveText('Saved items');
+ await expect(page.locator('#grid h3')).toHaveText(['Saved retro game']);
+});
