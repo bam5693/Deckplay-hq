@@ -1919,6 +1919,28 @@ document.getElementById("messageInbox").addEventListener("click",async e=>{const
 
 // Drafts stay in memory, scoped to the signed-in collector and conversation.
 const inboxDrafts=new Map(),inboxSending=new Set(),messageSendAttempts=new Map(),tradeSendAttempts=new Map(),inboxOlderMessages=new Map(),inboxOlderExhausted=new Set();
+// Text-only Inbox drafts survive a reload in this tab, but are deleted on account change.
+// Never persist private photos, credentials or message delivery state with these drafts.
+const inboxDraftStorageKey=id=>"deckplay-inbox-drafts-v1:"+id;
+function persistInboxDrafts(){
+ if(!currentUser?.id||inboxDraftUser!==currentUser.id)return;
+ try{
+  const drafts=[...inboxDrafts].filter(([recipient,body])=>typeof recipient==="string"&&recipient.length<=100&&typeof body==="string"&&body.length<=2000&&body.trim()).slice(-30);
+  if(drafts.length)sessionStorage.setItem(inboxDraftStorageKey(currentUser.id),JSON.stringify(drafts));
+  else sessionStorage.removeItem(inboxDraftStorageKey(currentUser.id));
+ }catch{/* Storage may be unavailable; in-memory drafts still work. */}
+}
+function restoreInboxDrafts(id){
+ try{
+  const drafts=JSON.parse(sessionStorage.getItem(inboxDraftStorageKey(id))||"null");
+  if(!Array.isArray(drafts))return;
+  for(const entry of drafts.slice(-30)){
+   if(!Array.isArray(entry)||entry.length!==2)continue;
+   const [recipient,body]=entry;
+   if(typeof recipient==="string"&&recipient.length>0&&recipient.length<=100&&typeof body==="string"&&body.length<=2000&&body.trim())inboxDrafts.set(recipient,body);
+  }
+ }catch{/* Invalid or inaccessible tab storage must not block the Inbox. */}
+}
 async function sendTradeProposalOnce(payload){
  const key=JSON.stringify(payload),previous=tradeSendAttempts.get(key),id=previous||crypto.randomUUID(),version=messageAccountVersion;
  tradeSendAttempts.set(key,id);
@@ -1972,10 +1994,11 @@ let inboxDraftUser=null,messageAccountVersion=0,inboxConversationFilter={search:
 function syncInboxDraftUser(){
  const id=currentUser?.id||null;
  if(inboxDraftUser!==id){
+  if(inboxDraftUser)try{sessionStorage.removeItem(inboxDraftStorageKey(inboxDraftUser))}catch{}
   ++messageAccountVersion;
   resetWantedPublisher();closeModal("wantedModal");
   ++listingAccountVersion;++cloudDraftRequestVersion;cloudDraftBusy=false;cloudDraftControls(false);document.getElementById("listingCloudDraftStatus").textContent="";document.getElementById("listingForm").reset();document.getElementById("listingType").dispatchEvent(new Event("change"));listingSelectedPhotos=[];renderListingPhotos();syncCategoryFields();syncGradedCondition();document.getElementById("deckFields").hidden=true;document.getElementById("listingStatus").textContent="";closeModal("sellModal");
-  profileInventoryFilter={search:"",status:"all",category:"all"};window.listingEditor?.reset();window.sellerOverview?.reset();window.privateMessagePhotos?.reset();inboxDrafts.clear();messageSendAttempts.clear();tradeSendAttempts.clear();inboxOlderMessages.clear();inboxOlderExhausted.clear();inboxConversationCursor=null;inboxConversationExhausted=false;inboxOlderPriceOffers.clear();inboxOlderTradeOffers.clear();inboxPriceCursor=null;inboxTradeCursor=null;inboxPriceExhausted=false;inboxTradeExhausted=false;inboxConversationFilter={search:"",unread:false};inboxDraftUser=id;tradeBundleSelection=[];document.getElementById("tradeBundleItems").replaceChildren();document.getElementById("tradeBundleCount").textContent="";
+  profileInventoryFilter={search:"",status:"all",category:"all"};window.listingEditor?.reset();window.sellerOverview?.reset();window.privateMessagePhotos?.reset();inboxDrafts.clear();messageSendAttempts.clear();tradeSendAttempts.clear();inboxOlderMessages.clear();inboxOlderExhausted.clear();inboxConversationCursor=null;inboxConversationExhausted=false;inboxOlderPriceOffers.clear();inboxOlderTradeOffers.clear();inboxPriceCursor=null;inboxTradeCursor=null;inboxPriceExhausted=false;inboxTradeExhausted=false;inboxConversationFilter={search:"",unread:false};inboxDraftUser=id;if(id)restoreInboxDrafts(id);tradeBundleSelection=[];document.getElementById("tradeBundleItems").replaceChildren();document.getElementById("tradeBundleCount").textContent="";
   ++blockedCollectorsLoadVersion;blockedCollectorIds.clear();document.getElementById("blockedUsersList").replaceChildren();document.getElementById("settingsBlockCount").textContent="";
   ++reportDialogVersion;reportTargetUser=null;reportTargetListing=null;reportTargetBlocked=false;document.getElementById("reportForm").reset();document.getElementById("reportStatus").textContent="";document.querySelector('#reportForm button[type="submit"]').disabled=false;closeModal("reportModal");
   ++notificationSettingsVersion;notificationSettingsOwner=null;notificationSettingsLoading=false;notificationPreferenceControls(true);document.querySelectorAll("[data-notify-pref]").forEach(input=>input.checked=false);document.getElementById("notificationSettingsStatus").textContent="";++inboxLoadVersion;++profileLoadVersion;++priceOffersLoadVersion;++tradeOffersLoadVersion;++unreadCountLoadVersion;++profileEditorLoadVersion;selectedInboxCollector=null;
@@ -2000,7 +2023,7 @@ function syncInboxDraftUser(){
 function rememberInboxDraft(){
  syncInboxDraftUser();
  const form=document.querySelector("#messageInbox .chat-composer");
- if(form&&currentUser){const value=form.querySelector("textarea").value;value?inboxDrafts.set(form.dataset.chatRecipient,value):inboxDrafts.delete(form.dataset.chatRecipient)}
+ if(form&&currentUser){const value=form.querySelector("textarea").value;value?inboxDrafts.set(form.dataset.chatRecipient,value):inboxDrafts.delete(form.dataset.chatRecipient);persistInboxDrafts()}
 }
 function resizeInboxComposer(input){if(!input)return;input.style.height="auto";const full=input.scrollHeight;input.style.height=Math.min(full,130)+"px";input.style.overflowY=full>130?"auto":"hidden"}
 function updateInboxLengthHint(input){const hint=input?.closest(".chat-composer")?.querySelector(".chat-length-hint");if(!hint)return;const remaining=input.maxLength-input.value.length;hint.hidden=remaining>200;hint.textContent=remaining===0?"Message limit reached":remaining+" "+(remaining===1?"character":"characters")+" remaining"}
@@ -2247,7 +2270,7 @@ document.getElementById("messageInbox").addEventListener("submit",async e=>{
   const {data,error}=await sendCollectorMessageOnce(photoPayload||{sender_id:userId,recipient_id:recipient,body});
   if(error)throw error;
   if(currentUser?.id!==userId||messageAccountVersion!==accountVersion)return;
-  window.privateMessagePhotos?.clear(recipient);inboxDrafts.delete(recipient);input.value="";resizeInboxComposer(input);status.textContent="";
+  window.privateMessagePhotos?.clear(recipient);inboxDrafts.delete(recipient);persistInboxDrafts();input.value="";resizeInboxComposer(input);status.textContent="";
   const active=document.querySelector("#messageInbox .chat-composer");
   if(active?.dataset.chatRecipient===recipient){const visible=active.querySelector("textarea");visible.value="";resizeInboxComposer(visible)};
   if(selectedInboxCollector===recipient&&!document.getElementById("inboxPage").hidden){try{await loadInbox(recipient)}catch{toast("Message sent. Refresh the inbox to see it.")}}
