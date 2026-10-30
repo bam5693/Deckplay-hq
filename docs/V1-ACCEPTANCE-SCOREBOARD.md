@@ -23,6 +23,32 @@
 - [ ] **T1.2** Buyers can browse and filter all supported categories, card games, sports, memorabilia, video games and other collectibles with a correct empty-results recovery path.
 - [ ] **T1.3** Seller-provided exact set/number/variant/printing/grading/condition and free-text descriptions survive publishing and appear accurately on buyer details.
 - [ ] **T1.4** Single-copy, identical multiples, mixed lots and deck quantities/contents are distinguishable; no misleading inventory or unit prices.
+  - **2026-10-30 buyer total-lot pricing — candidate, not accepted:** Listing detail displays verified `Quantity included` and unit from existing published contents disclosures, explicitly identifies the price as for the complete listing rather than per unit, and refuses to guess quantities for older or malformed listings. HTML escaping guards unusual seller-provided unit text. [UI a71c421](https://github.com/bam5693/Deckplay-hq/commit/a71c4218c061b59cce271c7499bab0d0b33d3f54), [USD display repair 0816608](https://github.com/bam5693/Deckplay-hq/commit/0816608c8743003c713cd3aec390d0d5f9c7adb7), [focused buyer regressions 43b1062](https://github.com/bam5693/Deckplay-hq/commit/43b1062895503b691ef741144a1e77d217969ff9). [Protected run 41069472397](https://github.com/bam5693/Deckplay-hq/actions/runs/41069472397) **PASSED** 122 local mobile/desktop browser tests, exact 26 served assets, anonymous Basic Auth denial, 4 read-only deployed buyer/seller checks. Private Worker `2568f766-c2be-453a-acbc-884a15e57c2f` 100%; production unchanged. Earlier [run 41069236365](https://github.com/bam5693/Deckplay-hq/actions/runs/41069236365) blocked deployment on a missing literal `# DeckPlay HQ — eight-trunk V1 acceptance scoreboard
+
+> Single source of truth for **finite, testable V1 scope** on isolated staging. Created 2026-10-29. The full, larger product roadmap remains in [the eight-trunk master plan](../tests/reports/2026-10-27-next-roadmap-handoff.md); this scoreboard does **not** delete those long-term commitments.
+
+## Rules that make 100% meaningful
+
+- **V1 means a safe, usable invite-only beta with no live checkout, purchased shipping, payouts, or real-money customer transactions.** Pricing/shipping previews must be explicitly simulations. Production publication of separately verified completed features is a different release workstream.
+- Every acceptance item has a stable ID and an observable outcome. Do **not** add new V1 items without an explicit scope decision; put new ideas into the original long-term roadmap or a future V2 backlog instead.
+- Unchecked = **not yet accepted at the current staging baseline**, *not* necessarily unimplemented. The project already has much historical passing evidence. Start by reconciling that evidence; never rebuild working code merely because a checkbox is empty.
+- Mark `[x]` **only** after confirming the relevant code exists at the current staging branch source, cheap/focused checks pass, required staging security/API/buyer-seller mobile+desktop evidence matches the affected source, and attach a commit/test/deployment link **beside that item**. For purely operational or physical-device items, attach the actual recovery/operator/device evidence instead. A previous passing run on a different commit is a candidate, not current acceptance.
+- **V1 trunk progress = checked items / 6; total V1 progress = checked items / 48.** Until initial current-head reconciliation is finished, percentages are *unassessed*, not evidence that nothing has been built. No subjective percentages, no inflated tests and no rounding a trunk to 100% while anything is unchecked.
+- Use only `ACCEPTED`, `CANDIDATE (historically proven)`, `OPEN`, `BLOCKED` as narrative labels. Commit != deployed != tested != accepted. Work-in-progress limit: **one complete vertical slice, at most two tightly related behaviors**. Keep a short line under the completed item instead of writing another lengthy report.
+- Rotate effort to neglected Trunks 7–8; after two consecutive sessions without an accepted buyer/seller feature, choose a different unblocked feature. Do not create duplicate tests, modules, dashboards, launch reports or investigation work merely to appear busy.
+- Owner must explicitly authorize production migration, PR merge, public deployment, new spending, irreversible actions or live financial flows. Private staging can continue while the real production backup is blocked.
+
+### Current acceptance state
+
+**Baseline reconciliation pending.** There are 48 fixed V1 acceptance items below, but current-HEAD proof and checked-item counts have not yet been reconciled. Historical successful runs are useful starting points, *not* a claim that 0 features exist or that all requirements already passed today.
+
+## Trunk 1 — Listings and marketplace (6)
+
+- [ ] **T1.1** A seller can create, edit, pause and remove a listing with valid photo, price and honest failure/retry behavior across all supported categories.
+- [ ] **T1.2** Buyers can browse and filter all supported categories, card games, sports, memorabilia, video games and other collectibles with a correct empty-results recovery path.
+- [ ] **T1.3** Seller-provided exact set/number/variant/printing/grading/condition and free-text descriptions survive publishing and appear accurately on buyer details.
+ in markup, fixed before release. **T1.4 still unchecked:** real transaction inventory semantics and all bundle/deck workflows require broader acceptance.
+
 - [ ] **T1.5** Photos, galleries, seller info and Saved/My listings work safely on mobile and desktop; blocked seller inventory remains private as required.
 - [ ] **T1.6** Item asking price and any known buyer charges are clearly separated; unknown shipping/tax/fees and simulated checkout are **not** presented as payable totals or real purchases.
 
