@@ -1,0 +1,87 @@
+const {test,expect}=require('@playwright/test');
+const LISTING='11111111-1111-4111-8111-111111111111';
+const SELLER='22222222-2222-4222-8222-222222222222';
+const BUYER='33333333-3333-4333-8333-333333333333';
+async function ready(page){
+ await page.route('https://challenges.cloudflare.com/**',route=>route.abort());
+ await page.route('https://prrrzeelltmyugssqnzk.supabase.co/**',route=>route.fulfill({json:[]}));
+ await page.goto('/');
+ await page.waitForLoadState('networkidle');
+}
+test('Tanner and Jayden: copy/share links work for every supported listing category on mobile and desktop',async({page})=>{
+ await ready(page);
+ const result=await page.evaluate(async({listing,seller})=>{
+  window.copiedLinks=[];window.nativeShares=[];
+  Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async url=>window.copiedLinks.push(url)}});
+  Object.defineProperty(navigator,'share',{configurable:true,value:async value=>window.nativeShares.push(value)});
+  const categories=['trading_cards','video_games','consoles','controllers','accessories','collectibles','other'];
+  for(const [i,category] of categories.entries()){
+   showDetails({databaseId:listing,n:'Synthetic '+category,p:15+i,c:databaseCategory(category),imageUrls:[],sellerId:seller,s:'@seller'});
+   document.querySelector('#detailContent [data-copy-kind="listing"]').click();
+   document.querySelector('#detailContent [data-share-kind="listing"]').click();
+  }
+  return {categories,links:window.copiedLinks,shares:window.nativeShares};
+ },{listing:LISTING,seller:SELLER});
+ expect(result.categories).toHaveLength(7);
+ expect(result.links).toHaveLength(7);
+ expect(result.links.every(url=>new URL(url).searchParams.get('listing')===LISTING)).toBe(true);
+ expect(result.shares).toHaveLength(7);
+ expect(result.shares.every(value=>new URL(value.url).searchParams.get('listing')===LISTING)).toBe(true);
+ await page.evaluate(async seller=>{
+  supabaseClient.from=table=>{
+   const q={then:resolve=>Promise.resolve({data:[],error:null}).then(resolve)};
+   for(const key of ['select','eq','order','limit'])q[key]=()=>q;
+   q.maybeSingle=async()=>({data:table==='profiles'?{username:'all-category-collector'}:null,error:null});
+   return q;
+  };
+  await showPublicProfile(seller);
+ },SELLER);
+ await expect(page.locator('[data-copy-kind="collector"]')).toBeVisible();
+ await page.locator('[data-copy-kind="collector"]').click();
+ await expect.poll(()=>page.evaluate(()=>window.copiedLinks.at(-1))).toContain('collector='+SELLER);
+});
+test('Kyle: shared listing opens only a current active listing with seller identity',async({page})=>{
+ await ready(page);
+ await page.evaluate(async({listing,seller})=>{
+  history.replaceState({},'','/?listing='+listing);
+  supabaseClient.from=table=>{
+   const q={};for(const key of ['select','eq'])q[key]=()=>q;
+   q.maybeSingle=async()=>({data:table==='listings'?{id:listing,title:'Shared synthetic sports collectible',description:'Grade: NM',category:'collectibles',price:45,condition:'used',seller_id:seller,image_urls:[],status:'active'}:{username:'verified-collector'},error:null});
+   return q;
+  };
+  await window.deckplayOpenSharedLinkOnce();
+ },{listing:LISTING,seller:SELLER});
+ await expect(page.locator('#detailModal')).toHaveClass(/open/);
+ await expect(page.locator('#detailTitle')).toHaveText('Shared synthetic sports collectible');
+ await expect(page.locator('.detail-seller')).toContainText('@verified-collector');
+ await expect(page.locator('[data-copy-kind="listing"]')).toHaveAttribute('data-copy-id',LISTING);
+});
+test('Charles: stale or invalid shared listing fails closed, without a demo listing',async({page})=>{
+ await ready(page);
+ await page.evaluate(async listing=>{
+  history.replaceState({},'','/?listing='+listing);
+  supabaseClient.from=()=>{
+   const q={};for(const key of ['select','eq'])q[key]=()=>q;
+   q.maybeSingle=async()=>({data:null,error:null});return q;
+  };
+  await window.deckplayOpenSharedLinkOnce();
+ },LISTING);
+ await expect(page.locator('#detailModal')).not.toHaveClass(/open/);
+ await expect(page.locator('#toast')).toContainText('no longer available');
+});
+test('Charles: blocked collector link cannot open private or blocked listing details',async({page})=>{
+ await ready(page);
+ await page.evaluate(async({listing,seller,buyer})=>{
+  currentUser={id:buyer};
+  blockedCollectorIds.add(seller);
+  history.replaceState({},'','/?listing='+listing);
+  supabaseClient.from=table=>{
+   const q={};for(const key of ['select','eq'])q[key]=()=>q;
+   q.maybeSingle=async()=>({data:table==='listings'?{id:listing,title:'Blocked listing',seller_id:seller,price:99,status:'active'}:null,error:null});
+   return q;
+  };
+  await window.deckplayOpenSharedLinkOnce();
+ },{listing:LISTING,seller:SELLER,buyer:BUYER});
+ await expect(page.locator('#detailModal')).not.toHaveClass(/open/);
+ await expect(page.locator('#toast')).toContainText('blocked');
+});
