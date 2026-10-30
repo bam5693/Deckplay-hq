@@ -802,3 +802,57 @@ test('T7.5: zero-inventory feedback distinguishes no stock from filtered misses 
  expect(ticket.category).toBe('other');
  expect(ticket.body).not.toContain('PRIVATE');
 });
+
+
+test('T8.3: ticket topic filters match older private tickets before pagination on mobile and desktop',async({page})=>{
+ await boot(page);await signIn(page,'buyer');
+ await page.evaluate(()=>{
+  window.__db.tickets=Array.from({length:45},(_,i)=>({
+   id:'topic-'+i,owner_id:'buyer',category:i===44?'listing':'account',
+   subject:i===44?'Older video-game listing photo issue':'Account request '+i,
+   body:'Synthetic private support details',status:'open',
+   created_at:new Date(Date.now()-i*1000).toISOString(),
+   updated_at:new Date(Date.now()-i*1000).toISOString()
+  }));
+ });
+ await page.getByRole('button',{name:'Help & support'}).last().click();
+ await expect(page.locator('#supportTicketList button')).toHaveCount(40);
+ await expect(page.locator('#supportTicketList')).not.toContainText('Older video-game listing photo issue');
+ await page.locator('#supportTicketCategory').selectOption('listing');
+ await expect(page.locator('#supportTicketList button')).toHaveCount(1);
+ await expect(page.locator('#supportTicketList')).toContainText('Older video-game listing photo issue');
+ await page.locator('#supportTicketList button').first().click();
+ await expect(page.locator('#supportTicketTitle')).toHaveText('Older video-game listing photo issue');
+ await page.locator('[data-support-filter="resolved"]').click();
+ await expect(page.locator('#supportListStatus')).toHaveText('No listings and photos tickets in this view.');
+ await page.evaluate(()=>{window.currentUser={id:'other'};window.__authCallback('SIGNED_IN',{user:{id:'other'}})});
+ await page.getByRole('button',{name:'Help & support'}).last().click();
+ await expect(page.locator('#supportTicketCategory')).toHaveValue('all');
+ await page.locator('#supportTicketCategory').selectOption('listing');
+ await expect(page.locator('#supportTicketList')).not.toContainText('Older video-game listing photo issue');
+});
+test('T8.3: staff safety queue locks topic scope and restores normal filters on exit',async({page})=>{
+ await boot(page);
+ await page.evaluate(()=>{
+  window.__db.tickets=[
+   {id:'safety-1',owner_id:'buyer',category:'safety',subject:'Synthetic unsafe trade report',body:'Synthetic safety report',status:'open',created_at:new Date().toISOString(),updated_at:new Date().toISOString()},
+   {id:'account-1',owner_id:'buyer',category:'account',subject:'Synthetic account recovery',body:'Synthetic account help',status:'open',created_at:new Date().toISOString(),updated_at:new Date().toISOString()}
+  ];
+ });
+ await signIn(page,'staff');
+ await page.getByRole('button',{name:'Help & support'}).last().click();
+ await page.locator('#supportStaffSafety').click();
+ await expect(page.locator('#supportTicketCategory')).toHaveValue('safety');
+ await expect(page.locator('#supportTicketCategory')).toBeDisabled();
+ await expect(page.locator('#supportTicketList')).toContainText('Synthetic unsafe trade report');
+ await expect(page.locator('#supportTicketList')).not.toContainText('Synthetic account recovery');
+ await page.locator('#supportStaff').click();
+ await expect(page.locator('#supportTicketCategory')).toBeEnabled();
+ await expect(page.locator('#supportTicketCategory')).toHaveValue('all');
+ await page.locator('#supportTicketCategory').selectOption('account');
+ await expect(page.locator('#supportTicketList')).toContainText('Synthetic account recovery');
+ await expect(page.locator('#supportTicketList')).not.toContainText('Synthetic unsafe trade report');
+ await page.locator('#supportMine').click();
+ await expect(page.locator('#supportTicketCategory')).toHaveValue('all');
+ await expect(page.locator('#supportTicketList')).not.toContainText('Synthetic account recovery');
+});
