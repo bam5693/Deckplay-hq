@@ -3,3 +3,5 @@
 Focused verification request: validate staging startup and notification polling changes, deploy only after cheap preflight, and run read-only buyer/seller acceptance. No production changes.
 
 2026-10-29 21:40 Central — T8.3 private Help Center and support tickets. Source migration 46ff9dc (applied only to isolated staging), UI b442697 and index 404eadf, focused UI tests 6332fbd/7f2a5a6, preflight gate c65ae9b. Run focused support-center.spec.js mobile/desktop before deployment; preserve existing staging secret bindings, private Basic gate, noindex, exact asset parity and read-only buyer/seller checks. If focused test fails, DO NOT deploy. No production, no billing, no payment/shipping, no PR merge.
+
+2026-10-29 21:45 Central — T8.3 follow-up privacy fix at 98ad107: erase ticket text, replies and unsent support drafts on account switch. Previous release Worker 78c62ea6 had support UI but not this fix. Run focused support-center.spec.js including account-switch DOM privacy, deploy exact staging branch only if checks pass, preserve secrets and anonymous 401; no other environment.
