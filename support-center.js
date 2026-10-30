@@ -74,6 +74,8 @@
   const date = value => new Date(value).toLocaleString();
   const labels = {open:"Open",waiting_on_staff:"Waiting on support",waiting_on_user:"Waiting on collector",resolved:"Resolved"};
   let userId = null, generation = 0, isStaff = false, staffView = false, ticketFilter = "all", selected = null, tickets = [], ticketOffset = 0, ticketListRequest = 0, loadingTickets = false, moreTickets = false, replyOffset = 0, moreReplies = false, loadingReplies = false, replyRequest = 0, returnToFeedback = false, returnTopic = "feedback", feedbackMode = false, viewGeneration = 0;
+  // Drafts are tab-memory only, keyed by ticket and purged on account/view reset.
+  const replyDrafts = new Map();
   const feedbackKinds = {
     bug: {prefix:"[Bug] ", hint:"What went wrong?"},
     idea: {prefix:"[Idea] ", hint:"What could DeckPlay improve?"},
@@ -105,7 +107,7 @@
   function clearPrivate() {
     ++ticketListRequest; loadingTickets = false; moreTickets = false; ticketOffset = 0;
     el("supportLoadMore").hidden = true; el("supportLoadMore").disabled = false;
-    selected = null; tickets = []; isStaff = false; staffView = false; ticketFilter = "all";
+    selected = null; tickets = []; replyDrafts.clear(); isStaff = false; staffView = false; ticketFilter = "all";
     modal.querySelectorAll("[data-support-filter]").forEach(button => button.setAttribute("aria-pressed", String(button.dataset.supportFilter === ticketFilter)));
     el("supportTicketList").replaceChildren();
     el("supportTicketDetail").hidden = true;
@@ -266,6 +268,7 @@
     const ticket=tickets.find(t=>t.id===id);
     if(!ticket)return;
     selected=id;
+    el("supportReplyBody").value=replyDrafts.get(id)||"";
     const v=++generation,u=userId;
     el("supportTicketDetail").hidden=false;
     el("supportTicketTitle").textContent=ticket.subject;
@@ -382,6 +385,9 @@
     }catch(error){if(validWrite(v,u))status("supportCreateStatus",error.message||"Could not create ticket. Try again.")}
     finally{button.disabled=false}
   });
+  el("supportReplyBody").addEventListener("input",event=>{
+    if(selected && userId) replyDrafts.set(selected,event.target.value);
+  });
   el("supportReplyForm").addEventListener("submit",async e=>{
     e.preventDefault();
     if(!selected||!userId)return;
@@ -392,7 +398,9 @@
     try{
       const {error}=await supabaseClient.rpc("reply_support_ticket",{p_ticket_id:id,p_body:el("supportReplyBody").value.trim()});
       if(error)throw error;
-      if(!validWrite(v,u)||selected!==id)return;
+      if(!validWrite(v,u))return;
+      replyDrafts.delete(id); // The server accepted this ticket reply, even if another ticket is now open.
+      if(selected!==id)return; // Never erase or overwrite the other ticket's draft.
       el("supportReplyBody").value="";
       status("supportReplyStatus","Reply sent.");
       await loadTickets();
