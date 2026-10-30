@@ -664,3 +664,51 @@ test('T7.5: signed-out search feedback and account changes never retain private 
  await expect(page.locator('#supportDescription')).toBeEmpty();
  expect(await page.evaluate(()=>window.__db.tickets)).toHaveLength(0);
 });
+
+test('T7.5: listing-detail contact friction is opt-in, private and category-only',async({page})=>{
+ const html=require('node:fs').readFileSync(path.resolve(__dirname,'../../index.html'),'utf8');
+ expect(html).toContain('data-listing-discovery-feedback="${escapeHtml(item.c||"All")}"');
+ await boot(page);await signIn(page,'buyer');
+ await page.evaluate(()=>{
+  const detail=document.createElement('div');
+  detail.id='detailModal';detail.className='modal open';
+  detail.innerHTML='<div id="detailContent"><button type="button" data-listing-discovery-feedback="Video Games">What would help you contact this seller?</button></div>';
+  document.body.append(detail);
+ });
+ await page.locator('[data-listing-discovery-feedback]').click();
+ await expect(page.locator('#detailModal')).not.toHaveClass(/open/);
+ await expect(page.locator('#supportCenterModal')).toHaveClass(/open/);
+ await expect(page.locator('#supportSubject')).toHaveValue('Improve listing contact experience');
+ const body=await page.locator('#supportDescription').inputValue();
+ expect(body).toContain('Category: Video Games');
+ expect(body).toContain('What stopped me from contacting the seller:');
+ expect(body).not.toMatch(/Listing ID|Seller ID|Account ID/);
+ expect(await page.evaluate(()=>window.__db.calls.filter(x=>x.name==='create_support_ticket'))).toHaveLength(0);
+ await page.locator('#supportDescription').fill(body+'I need clearer condition photos and an explanation of trade terms.');
+ await page.getByRole('button',{name:'Send private feedback'}).click();
+ await expect(page.locator('#supportCreateStatus')).toContainText('Ticket created');
+ const ticket=await page.evaluate(()=>window.__db.tickets[0]);
+ expect(ticket.category).toBe('other');
+ expect(ticket.subject).toBe('[Idea] Improve listing contact experience');
+ expect(ticket.body).not.toContain('Listing ID:');
+ await page.evaluate(()=>{window.currentUser={id:'other'};window.__authCallback('SIGNED_IN',{user:{id:'other'}})});
+ await expect(page.locator('#supportDescription')).toBeEmpty();
+});
+test('T7.5: signed-out detail feedback never carries listing metadata into a later account',async({page})=>{
+ await boot(page);
+ await page.evaluate(()=>{
+  const detail=document.createElement('div');
+  detail.id='detailModal';detail.className='modal open';
+  detail.innerHTML='<div id="detailContent"><button type="button" data-listing-discovery-feedback="SECRET PRIVATE CATEGORY">Tell us more</button></div>';
+  document.body.append(detail);
+ });
+ await page.locator('[data-listing-discovery-feedback]').click();
+ await expect(page.locator('#supportSignIn')).toBeVisible();
+ await expect(page.locator('#supportDescription')).toBeEmpty();
+ await page.locator('#supportSignInButton').click();
+ await signIn(page,'buyer');
+ await page.evaluate(()=>closeModal('authModal'));
+ await expect(page.locator('#supportCenterModal')).toHaveClass(/open/);
+ await expect(page.locator('#supportDescription')).toBeEmpty();
+ expect(await page.evaluate(()=>window.__db.tickets)).toHaveLength(0);
+});
