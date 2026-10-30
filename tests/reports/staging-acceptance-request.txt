@@ -1,1 +1,1 @@
-2026-10-30 focused current-HEAD T7.4 first-time buyer/seller onboarding plus T8.3 support regression, local-only Pixel 7 and desktop Chromium. Private deployed asset parity already passed run 41026459064; no Supabase writes, no redeployment.
+2026-10-30 T7.4 focused retry after diagnosing Playwright strict locator collision: seller guide action now scoped to #guideSeller in b87d840. Run only local support-center and getting-started mobile/desktop. Previous run 41026606548 failed on ambiguous test selector, not product behavior. No staging deployment or DB writes.
