@@ -14,6 +14,7 @@
     <details><summary><strong>How do messages and offers work?</strong></summary><p>Use Inbox to contact collectors, review offers and negotiate trades. A trade proposal is not a payment or shipping agreement. Block or report unwanted contact.</p></details>
     <details><summary><strong>Can I pay or print a shipping label?</strong></summary><p>No. Checkout and shipping are demonstrations only. No payment, payout, shipping label or purchase can be completed in this beta.</p></details>
     <details><summary><strong>How do I report a suspicious listing?</strong></summary><p>Use the Report action on the listing or collector. For account access, bugs or other help, open a private support ticket below.</p></details>
+    <details><summary><strong>What if my listing or account was restricted?</strong></summary><p>You can ask support to review a moderation decision. Explain which listing or action you want reviewed and why, without including passwords, payment information or private addresses. Sending a request does not automatically reverse a restriction.</p><button type="button" class="ghost" id="supportModerationReview">Request a moderation review</button></details>
     <details><summary><strong>What if a trade or shipping arrangement goes wrong?</strong></summary><p>DeckPlay beta does not process payments, purchases or shipping. If a collector pressures you to pay off-platform, report the listing or collector. For a proposed trade, delivery concern or confusing shipping preview, send a private support ticket. Do not include addresses, tracking numbers or payment details.</p><button type="button" class="ghost" id="supportTradeConcern">Get help with a trade or shipping concern</button></details>
     <div id="supportSignIn"><p class="muted">Sign in to send feedback or open and follow private support tickets.</p><button type="button" class="primary" id="supportSignInButton">Sign in to send feedback</button></div>
     <section id="supportPrivate" hidden>
@@ -165,6 +166,17 @@
     status("supportCreateStatus", "Describe the proposed trade or shipping issue. Do not include addresses or payment details.");
   }
   el("supportTradeConcern").addEventListener("click", openTradeConcern);
+  // A moderation appeal is a private safety ticket, not an automatic reversal or
+  // privileged action. Sign-in navigation stores only the intent, not draft data.
+  function openModerationReview() {
+    if (!currentUser?.id) { beginSupportSignIn("moderation"); return; }
+    void show();
+    el("supportCategory").value = "safety";
+    el("supportSubject").value = "Request a moderation review";
+    el("supportDescription").focus();
+    status("supportCreateStatus", "Describe the restricted listing or decision and why it should be reviewed. Do not include sensitive account information.");
+  }
+  el("supportModerationReview").addEventListener("click", openModerationReview);
   el("supportSignInButton").addEventListener("click", () => beginSupportSignIn("feedback"));
   // Cancelled sign-in must not unexpectedly reopen support after a later login.
   const authDialog = el("authModal");
@@ -433,6 +445,7 @@
       setTimeout(()=>{
         if(currentUser?.id===next) {
           if(topic==="trade")openTradeConcern();
+          else if(topic==="moderation")openModerationReview();
           else openFeedback();
         }
       },0);
