@@ -1,5 +1,5 @@
 {
-  "approvedApplicationTree": "73cd277b2fd005d17de3a0fdb386bcef05ea765f",
+  "approvedApplicationTree": "7ab96ae955c754218e3c5fe004a1e4bbaf12b6e0",
   "productionSchemaVerified": true,
   "previewAcceptanceVerified": true,
   "rollbackVerified": true,
@@ -27,11 +27,9 @@
     "noDestructiveDataResetAuthorized": true
   },
   "hotfixApproval": {
-    "scope": "Only merged PR #7 password recovery visibility and PR #8 mobile sign out / signed-in password change, atop the previously deployed production marketplace",
-    "ownerAuthorization": "Owner explicitly requested direct hotfix publication without Work mode",
-    "approvedHead": "daa9ed8907b4438152457207af3c7786d6b59dba",
-    "approvedApplicationTree": "73cd277b2fd005d17de3a0fdb386bcef05ea765f",
-    "deployMethod": "One-time owner-approved GitHub Actions push gate; restore manual dispatch immediately after verification",
-    "noStagingChanges": true
+    "scope": "Only login/signup password visibility eye control; no auth or database behavior changes",
+    "ownerAuthorization": "Owner explicitly approved publishing this specific small hotfix to deckplayhq.com in chat on 2026-10-30",
+    "approvedApplicationTree": "7ab96ae955c754218e3c5fe004a1e4bbaf12b6e0",
+    "deployMethod": "Existing manual production workflow with exact approved merged SHA; no staging bundle"
   }
 }
