@@ -574,7 +574,7 @@ test('T3.4: multi-item trade draft survives modal close, different listing and p
  await expect(page.locator('#tradeCashDirection')).toHaveValue('none');
  await page.locator('#tradeComposeModal [data-close]').click();
  await openSyntheticTradeComposer(page);
- await expect(page.locator('#tradeOfferNote')).toContainText('My Pokémon card plus cash');
+ await expect(page.locator('#tradeOfferNote')).toHaveValue(/My Pokémon card plus cash/);
  await expect(page.locator('#tradeBundleItems li')).toHaveCount(1);
  await expect(page.locator('#tradeCashDirection')).toHaveValue('sender_pays');
  await expect(page.locator('#tradeCashAmount')).toHaveValue('24.5');
