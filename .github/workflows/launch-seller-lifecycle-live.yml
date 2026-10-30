@@ -1,4 +1,5 @@
 name: Request one real seller lifecycle journey
+# One bounded rerun after the staging Playwright allowlist correction.
 on:
   push:
     branches: [test/staging-reporting]
