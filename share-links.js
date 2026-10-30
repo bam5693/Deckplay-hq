@@ -135,9 +135,14 @@ async function checkBlocked(sellerId,account,same){
 async function openSharedLinkOnce(){
  if(attempted||opening)return;
  const params=new URLSearchParams(window.location.search);
- const listing=params.get('listing'),collector=params.get('collector');
- if(!listing&&!collector)return;
- if((listing&&collector)||!uuid.test(listing||collector)){attempted=true;toast('This shared link is invalid.');return}
+ const listings=params.getAll('listing'),collectors=params.getAll('collector');
+ // Reject duplicate or mixed parameters, including empty values. Never
+ // silently open the first of multiple conflicting public destinations.
+ if(!listings.length&&!collectors.length)return;
+ if(listings.length+collectors.length!==1||!uuid.test((listings[0]||collectors[0])||'')){
+  attempted=true;clearRetry();toast('This shared link is invalid.');return;
+ }
+ const listing=listings[0]||null,collector=collectors[0]||null;
  if(!supabaseClient){showRetry('Marketplace is still loading. Retry opening this shared link.');return}
  opening=true;
  const account=currentUser?.id||null;
