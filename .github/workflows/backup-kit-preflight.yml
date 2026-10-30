@@ -1,0 +1,25 @@
+name: Backup-kit public-code preflight (NO production access)
+on:
+  push:
+    branches: [ops/private-backup-automation]
+    paths:
+      - '.github/workflows/backup-kit-preflight.yml'
+      - 'scripts/private-backup/**'
+permissions:
+  contents: read
+jobs:
+  verify-source-only:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: No credentials, no database connection, no upload
+        run: |
+          set -Eeuo pipefail
+          node --check scripts/private-backup/export-storage.mjs
+          bash -n scripts/private-backup/backup-production.sh
+          bash -n scripts/private-backup/verify-encrypted.sh
+          node --test scripts/private-backup/tests/export-storage.test.mjs
