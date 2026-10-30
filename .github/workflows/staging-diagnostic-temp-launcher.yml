@@ -23,3 +23,5 @@ jobs:
 # Retry after improving buyer-auth cleanup guard to expose the primary trade failure.
 
 # One final focused diagnostic preserves the first failure and logs only anonymous account-check booleans.
+
+# Verify deployed UI hydration on browser reload after private staging parity gate passed.
