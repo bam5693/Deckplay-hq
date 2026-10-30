@@ -239,18 +239,23 @@
     updateFeedbackKind();
     el("supportSubject").value=detail.outcome==="empty"?"Improve marketplace search results":detail.outcome==="detail"?"Improve listing contact experience":"Improve listing discovery";
     const yes=value=>value===true?"yes":"no";
-    el("supportDescription").value=[
-      "Marketplace search feedback (optional, private)",
-      "Outcome: "+(detail.outcome==="empty"?"No matching listings":detail.outcome==="detail"?"Viewed a listing, but did not contact the seller":"Listings shown, but not the right item"),
-      "Category: "+category,
-      "Used text search: "+yes(detail.hasText),
-      "Used game filter: "+yes(detail.hasGame),
-      "Used price filter: "+yes(detail.hasPrice),
-      "Used other category filters: "+yes(detail.hasExtra),
-      "",
-      detail.outcome==="detail"?"What stopped me from contacting the seller: ":"What I hoped to find: "
-    ].join("\n");
-    status("supportCreateStatus","Review and add what you expected before sending. No search words, item IDs or personal information were copied automatically.");
+    const lines=detail.outcome==="detail"
+      ? ["Listing contact feedback (optional, private)",
+         "Outcome: Needed more information before contacting a seller",
+         "Category: "+category,
+         "",
+         "What would help me contact the seller: "]
+      : ["Marketplace search feedback (optional, private)",
+         "Outcome: "+(detail.outcome==="empty"?"No matching listings":"Listings shown, but not the right item"),
+         "Category: "+category,
+         "Used text search: "+(detail.hasText===true?"yes":"no"),
+         "Used game filter: "+(detail.hasGame===true?"yes":"no"),
+         "Used price filter: "+(detail.hasPrice===true?"yes":"no"),
+         "Used other category filters: "+(detail.hasExtra===true?"yes":"no"),
+         "",
+         "What I hoped to find: "];
+    el("supportDescription").value=lines.join("\n");
+    status("supportCreateStatus","Review and add your experience before sending. No search words, listing IDs or personal information were copied automatically.");
     el("supportDescription").focus();
   }
   document.addEventListener("deckplay:search-feedback", openSearchFeedback);
