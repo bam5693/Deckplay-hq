@@ -15,16 +15,22 @@ async function main(){
    const relative=prefix+entry.name,local=path.join(dir,entry.name);
    if(entry.isDirectory()){await verify(local,relative+'/');continue}
    const expected=fs.readFileSync(local);
-   // Cloudflare may briefly serve an earlier Worker isolate right after deployment.
-   // Retry ONLY mismatched assets with a short fixed cap; never accept non-identical bytes.
-   let match=false;
-   for(let attempt=0;attempt<4;attempt++){
+   // Cloudflare's new version can propagate to different isolates asynchronously.
+   // Retry ONLY mismatches, with a fixed 7-read cap (~32s maximum settling);
+   // every byte must STILL match the tested source before acceptance.
+   let match=false,lastRead=null;
+   for(let attempt=0;attempt<7;attempt++){
     if(attempt)await new Promise(resolve=>setTimeout(resolve,1500*attempt));
     const response=await fetch(origin+'/'+relative,{headers:{...headers,'Cache-Control':'no-cache'},redirect:'manual',signal:AbortSignal.timeout(15000)});
     assert.equal(response.status,200,'Asset unavailable: '+relative);
-    if(Buffer.from(await response.arrayBuffer()).equals(expected)){match=true;break;}
+    lastRead=Buffer.from(await response.arrayBuffer());
+    if(lastRead.equals(expected)){match=true;break;}
    }
-   assert.ok(match,'Deployed asset differs after bounded retries: '+relative);
+   if(!match){
+    const hash=value=>require('node:crypto').createHash('sha256').update(value).digest('hex').slice(0,20);
+    throw Error('Deployed asset differs after bounded retries: '+relative+
+      ' expected='+expected.length+'B/'+hash(expected)+' observed='+lastRead.length+'B/'+hash(lastRead));
+   }
    count++;
   }
  }
