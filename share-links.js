@@ -41,24 +41,44 @@ document.addEventListener('click',event=>{
  const id=own?currentUser?.id:(button.dataset.copyId||button.dataset.shareId);
  void shareLink(kind,id,!!button.dataset.shareKind);
 });
-let attempted=false;
+let attempted=false, opening=false;
+function showRetry(message){
+ let notice=document.getElementById('deckplaySharedLinkRetry');
+ if(!notice){
+  notice=document.createElement('aside');
+  notice.id='deckplaySharedLinkRetry';
+  notice.setAttribute('role','alert');
+  notice.style.cssText='padding:16px;margin:16px 0;border:1px solid #aabbd0;border-radius:12px;background:#fff;color:#172033';
+  const text=document.createElement('p'),button=document.createElement('button');
+  button.type='button';button.className='primary';button.textContent='Retry shared link';
+  button.addEventListener('click',()=>{void openSharedLinkOnce()});
+  notice.append(text,button);
+  (document.querySelector('main')||document.body).prepend(notice);
+ }
+ notice.querySelector('p').textContent=message;
+ notice.hidden=false;
+}
+function clearRetry(){
+ const notice=document.getElementById('deckplaySharedLinkRetry');
+ if(notice)notice.remove();
+}
 async function checkBlocked(sellerId,account,same){
  if(blockedCollectorIds.has(sellerId)){toast('This collector is blocked.');return false}
  if(!account)return true;
  const {data,error}=await supabaseClient.from('user_blocks').select('blocked_id').eq('blocker_id',account).eq('blocked_id',sellerId).maybeSingle();
  if(!same())return false;
- if(error){toast('Could not verify blocked collectors. Please retry later.');return false}
+ if(error){showRetry('Could not verify blocked collectors. Retry opening this shared link.');return false}
  if(data){toast('This collector is blocked.');return false}
  return true;
 }
 async function openSharedLinkOnce(){
- if(attempted)return;
+ if(attempted||opening)return;
  const params=new URLSearchParams(window.location.search);
  const listing=params.get('listing'),collector=params.get('collector');
  if(!listing&&!collector)return;
- attempted=true;
- if((listing&&collector)||!uuid.test(listing||collector)){toast('This shared link is invalid.');return}
- if(!supabaseClient){toast('Marketplace unavailable. Reload to try this link again.');return}
+ if((listing&&collector)||!uuid.test(listing||collector)){attempted=true;toast('This shared link is invalid.');return}
+ if(!supabaseClient){showRetry('Marketplace is still loading. Retry opening this shared link.');return}
+ opening=true;
  const account=currentUser?.id||null;
  const same=()=>((currentUser?.id||null)===account);
  const id=listing||collector;
@@ -66,18 +86,24 @@ async function openSharedLinkOnce(){
   if(collector){
    if(!await checkBlocked(id,account,same)||!same())return;
    await showPublicProfile(id);
+   if(same()){attempted=true;clearRetry()}
    return;
   }
   const {data,error}=await supabaseClient.from('listings').select('id,title,description,category,tcg_game,collectible_subcategory,price,condition,accepts_trades,accepts_price_offers,image_urls,created_at,seller_id').eq('id',id).eq('status','active').maybeSingle();
   if(!same())return;
   if(error)throw error;
-  if(!data||!data.seller_id){toast('This listing is no longer available.');return}
+  if(!data||!data.seller_id){attempted=true;clearRetry();toast('This listing is no longer available.');return}
   if(!await checkBlocked(data.seller_id,account,same)||!same())return;
   const {data:profile}=await supabaseClient.from('profiles').select('username,display_name').eq('id',data.seller_id).maybeSingle();
   if(!same())return;
   showMainMarketplace();
   showDetails(marketplaceItemFromRow(data,profile));
- }catch(error){if(same())toast('Shared link could not be opened. Please try again.')}
+  attempted=true;clearRetry();
+ }catch(error){if(same())showRetry('Shared link could not be opened. Check your connection and retry.')}
+ finally{
+  opening=false;
+  if(!same()&&!attempted)showRetry('Your account changed. Retry opening this shared link.');
+ }
 }
 window.deckplayOpenSharedLinkOnce=openSharedLinkOnce;
 // The auth INITIAL_SESSION callback also invokes this after blocked collectors load.
@@ -85,7 +111,7 @@ window.deckplayOpenSharedLinkOnce=openSharedLinkOnce;
 async function afterSession(){
  const params=new URLSearchParams(window.location.search);
  if(!params.has('listing')&&!params.has('collector'))return;
- if(!supabaseClient)return;
+ if(!supabaseClient){showRetry('Marketplace is still loading. Retry opening this shared link.');return}
  try{
   const {data}=await supabaseClient.auth.getSession();
   if((currentUser?.id||null)!==(data?.session?.user?.id||null))return;
