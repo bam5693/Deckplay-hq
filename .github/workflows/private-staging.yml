@@ -27,7 +27,7 @@ on:
         description: 'One deployed signed-in journey for diagnosis; no deployment, no API sweep'
         required: false
         type: choice
-        options: [none, trading, listing-drafts-live, community, seller-overview-live, discovery-alerts, staging-permissions]
+        options: [none, trading, listing-drafts-live, seller-pause-live, community, seller-overview-live, discovery-alerts, staging-permissions]
         default: none
   # Batch release requests run focused local checks, then deploy and verify.
   # Broad stateful/photo suites remain manual; ordinary commits spend no CI minutes.
@@ -264,7 +264,7 @@ jobs:
           SELECTED_TEST: ${{ github.event.inputs.focused_live_test }}
         run: |
           case "$SELECTED_TEST" in
-            trading|listing-drafts-live|community|seller-overview-live|discovery-alerts|staging-permissions) ;;
+            trading|listing-drafts-live|seller-pause-live|community|seller-overview-live|discovery-alerts|staging-permissions) ;;
             *) echo "Unsupported diagnostic selection"; exit 1;;
           esac
           if [ "$SELECTED_TEST" = "staging-permissions" ]; then
