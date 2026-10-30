@@ -3,7 +3,10 @@ on:
   workflow_dispatch:
   push:
     branches: [test/staging-reporting]
-    paths: ['.github/workflows/search-feedback-focused.yml']
+    paths:
+      - '.github/workflows/search-feedback-focused.yml'
+      - 'support-center.js'
+      - 'tests/e2e/support-center.spec.js'
 permissions:
   contents: read
 concurrency:
