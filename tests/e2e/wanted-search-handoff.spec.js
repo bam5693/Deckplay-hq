@@ -6,6 +6,7 @@ test.beforeEach(async({page})=>{
  await page.route('https://prrrzeelltmyugssqnzk.supabase.co/rest/v1/**',route=>route.fulfill({json:[]}));
  await page.goto('/');
  await page.waitForLoadState('networkidle');
+ await page.evaluate(()=>showMainMarketplace());
 });
 
 test('empty marketplace search offers Wanted handoff, but unsigned buyers must sign in',async({page})=>{
