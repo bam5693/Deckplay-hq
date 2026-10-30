@@ -5,3 +5,5 @@ Focused local GitHub Actions run 41026254348: SUCCESS.
 Target Worker: deckplay-hq-staging only; Supabase: prrrzeelltmyugssqnzk only.
 Preserve Basic Auth, OIDC, secrets, RLS and all customer/production isolation.
 No production deploy, PR merge, payments, shipping, or spend.
+
+2026-10-30 isolated staging request: Android/PWA Back must preserve seller listing edits/photos unless discard confirmed. Exact source ba639627e81e1539a47211048526c1393671c850. Focused six emulated mobile/desktop tests passed run 41134639804. Deploy deckplay-hq-staging ONLY, preserve Basic Auth and staging Supabase, no production changes or cost upgrades.
