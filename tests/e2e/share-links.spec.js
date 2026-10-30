@@ -292,3 +292,79 @@ test('T1.6: buyer detail explains unknown fees and demo-only checkout next to as
  await expect(page.locator('.detail-fee-disclosure')).toContainText('Shipping, taxes and platform fees are not calculated.');
  await expect(page.locator('.detail-fee-disclosure')).toContainText('no purchase or payment is processed');
 });
+
+test('T1.2: sports card filters stay visible as removable chips on collapsed mobile and desktop filters',async({page})=>{
+ await ready(page);
+ await page.evaluate(()=>{
+  items=[
+   {id:'sports-a',n:'Topps Baseball Rookie',c:'Trading Cards',game:'sports_cards',rawCategory:'trading_cards',
+    description:'Sport: Baseball\nBrand: Topps\nYear: 2024\nPlayer: Rookie',p:30,s:'@tanner',cond:'Near Mint',e:'⚾',sellerId:'seller-a',imageUrls:[]},
+   {id:'sports-b',n:'Panini Football Rookie',c:'Trading Cards',game:'sports_cards',rawCategory:'trading_cards',
+    description:'Sport: Football\nBrand: Panini\nYear: 2025\nPlayer: Rookie',p:35,s:'@tanner',cond:'Near Mint',e:'🏈',sellerId:'seller-b',imageUrls:[]},
+   {id:'game-a',n:'Retro game',c:'Video Games',rawCategory:'video_games',p:20,s:'@jayden',cond:'Used',e:'🎮',sellerId:'seller-c',imageUrls:[]}
+  ];
+  query='';cat='All';filter='All';game='All';onlySavedListings=false;onlyMyListings=false;listingSource='live';
+  document.getElementById('search').value='';
+  showMainMarketplace();render();
+ });
+ await page.locator('#marketFilterToggle').click();
+ await page.locator('#marketCategory').selectOption('Trading Cards');
+ await page.locator('#marketGame').selectOption('sports_cards');
+ await page.locator('#marketSport').selectOption('Baseball');
+ await page.locator('#marketSportsBrand').fill('Topps');
+ await page.locator('#marketSportsYear').fill('2024');
+ await expect(page.locator('#grid h3')).toHaveText(['Topps Baseball Rookie']);
+ await page.locator('#marketFilterToggle').click();
+ const chips=page.locator('#marketActiveFilters');
+ await expect(chips).toBeVisible();
+ for(const text of ['Category: Trading Cards','Game: Sports cards','Sport: Baseball','Brand: Topps','Year: 2024'])
+  await expect(chips).toContainText(text);
+ await chips.locator('[data-remove-market-filter="year"]').click();
+ await expect(page.locator('#marketSportsYear')).toHaveValue('');
+ await expect(chips.locator('[data-remove-market-filter="year"]')).toHaveCount(0);
+ await expect(chips.locator('[data-remove-market-filter="sport"]')).toHaveCount(1);
+ await chips.locator('[data-remove-market-filter="category"]').click();
+ await expect(page.locator('#marketCategory')).toHaveValue('All');
+ await expect(chips.locator('[data-remove-market-filter="category"]')).toHaveCount(0);
+ await expect(page.locator('#grid h3')).toHaveCount(3);
+});
+test('T1.2: removing a single price or search chip preserves Saved items and remaining criteria',async({page})=>{
+ await ready(page);
+ await page.evaluate(()=>{
+  items=[
+   {id:'favorite-game',n:'Favorite racing game',c:'Video Games',rawCategory:'video_games',
+    p:45,s:'@jayden',cond:'Used',e:'🎮',sellerId:'seller-one',imageUrls:[]},
+   {id:'favorite-card',n:'Favorite rare card',c:'Trading Cards',rawCategory:'trading_cards',
+    p:25,s:'@tanner',cond:'Near Mint',e:'🃏',sellerId:'seller-two',imageUrls:[]},
+   {id:'unsaved',n:'Favorite unsaved figure',c:'Collectibles',rawCategory:'collectibles',
+    p:10,s:'@tanner',cond:'Used',e:'⭐',sellerId:'seller-three',imageUrls:[]}
+  ];
+  saved.clear();saved.add('favorite-game');saved.add('favorite-card');
+  query='';cat='All';filter='All';game='All';onlyMyListings=false;onlySavedListings=true;
+  listingSource='live';document.getElementById('search').value='';
+  showMainMarketplace();render();
+ });
+ await page.locator('#search').fill('Favorite');
+ await page.locator('#marketFilterToggle').click();
+ await page.locator('#marketMinPrice').fill('40');
+ await expect(page.locator('#grid h3')).toHaveText(['Favorite racing game']);
+ await expect(page.locator('#marketActiveFilters [data-remove-market-filter="search"]')).toBeVisible();
+ await page.locator('#marketActiveFilters [data-remove-market-filter="minPrice"]').click();
+ await expect(page.locator('#marketMinPrice')).toHaveValue('');
+ await expect(page.locator('#grid h3')).toHaveText(['Favorite racing game','Favorite rare card']);
+ await expect(page.locator('#market h2')).toHaveText('Saved items');
+ await page.locator('#marketActiveFilters [data-remove-market-filter="search"]').click();
+ await expect(page.locator('#search')).toHaveValue('');
+ await expect(page.locator('#market h2')).toHaveText('Saved items');
+ await expect(page.locator('#grid h3')).toHaveCount(2);
+ await expect(page.locator('#marketActiveFilters')).toBeHidden();
+});
+test('T1.2: user-entered HTML remains plain text inside search chips',async({page})=>{
+ await ready(page);
+ await page.evaluate(()=>{query='';cat='All';filter='All';game='All';showMainMarketplace();render()});
+ await page.locator('#search').fill('<img src=x onerror=alert(1)>');
+ await expect(page.locator('#marketActiveFilters')).toContainText('<img src=x onerror=alert(1)>');
+ await expect(page.locator('#marketActiveFilters img')).toHaveCount(0);
+ await page.locator('#marketActiveFilters [data-remove-market-filter="search"]').click();
+ await expect(page.locator('#search')).toHaveValue('');
+});
