@@ -1,0 +1,21 @@
+# One-shot staging-only launch. Existing private-staging.yml owns the OIDC allowlist.
+# No credentials are exported, no production access, no direct deployment here.
+name: Launch existing full private beta acceptance
+on:
+  push:
+    branches: [test/staging-reporting]
+    paths: ['.github/workflows/staging-full-journey-launcher.yml']
+permissions:
+  contents: read
+  actions: write
+jobs:
+  launch:
+    if: github.ref == 'refs/heads/test/staging-reporting'
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Invoke existing protected signed-in buyer seller staging journeys
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api -X POST repos/${{ github.repository }}/actions/workflows/private-staging.yml/dispatches -f ref=test/staging-reporting
