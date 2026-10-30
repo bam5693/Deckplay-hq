@@ -3,7 +3,7 @@ test('Tanner and Jayden rotate hands-on sports/TCG trading and cash counteroffer
  const sellerLead=testInfo.project.name.endsWith('mobile')?'Jayden':'Tanner',buyerLead=sellerLead==='Tanner'?'Jayden':'Tanner';
  testInfo.annotations.push({type:'persona',description:sellerLead+' sells and counters; '+buyerLead+' buys, proposes a trade and accepts. Disposable SELLER/BUYER accounts rotate by viewport.'});
  test.setTimeout(180000);const stage=async(name,fn)=>test.step(name,fn);const title=marker();await stage(sellerLead+' signs in as seller',()=>signIn(page,'SELLER'));
- const context=await browser.newContext({baseURL:process.env.DECKPLAY_STAGING_URL,viewport:page.viewportSize(),httpCredentials:{username:'deckplay',password:process.env.DECKPLAY_STAGING_ACCESS_PASSWORD},ignoreHTTPSErrors:!!process.env.CODEX_NETWORK_PROXY_ACTIVE});const buyer=await context.newPage();let buyerSignedIn=false;
+ const context=await browser.newContext({baseURL:process.env.DECKPLAY_STAGING_URL,viewport:page.viewportSize(),httpCredentials:{username:'deckplay',password:process.env.DECKPLAY_STAGING_ACCESS_PASSWORD},ignoreHTTPSErrors:!!process.env.CODEX_NETWORK_PROXY_ACTIVE});const buyer=await context.newPage();let buyerSignedIn=false,originalFailure=null;
  try{
   const details=lead=>({description:lead==='Tanner'?'Synthetic sports-card collector fixture: graded baseball card, condition and photos for exchange.':'Synthetic One Piece playable deck component for a TCG player and video-game collector.',tcg_game:lead==='Tanner'?'sports_cards':'one_piece'});
   const target=await stage(sellerLead+' lists an item for trade',()=>seedListing(page,title,details(sellerLead)));await stage(buyerLead+' signs in as buyer',()=>signIn(buyer,'BUYER'));buyerSignedIn=true;const offered=await stage(buyerLead+' lists trade collateral',()=>seedListing(buyer,title,details(buyerLead)));const extra=await seedListing(buyer,title,{...details(buyerLead),description:'Second distinct printing or collectible in the bundle'});
@@ -13,5 +13,23 @@ test('Tanner and Jayden rotate hands-on sports/TCG trading and cash counteroffer
   await stage(sellerLead+' opens trade inbox',()=>menu(page,'myTrades'));const card=page.locator('.trade-offer-card').filter({hasText:title});await expect(card).toHaveCount(1,{timeout:15000});await card.locator('[data-counter-start]').click();await page.locator('#counterDirection').selectOption('sender_pays');await page.locator('#counterAmount').fill('5');await page.locator('#counterNote').fill(title+' counter');await page.locator('#counterForm button[type="submit"]').click();await expect(page.locator('#counterModal')).not.toHaveClass(/open/,{timeout:15000});
   if(await buyer.locator('#detailModal').evaluate(el=>el.classList.contains('open'))) await buyer.locator('[data-close="detailModal"]').click({force:true,timeout:5000});await stage(buyerLead+' opens trade inbox',()=>menu(buyer,'myTrades'));const incoming=buyer.locator('.trade-offer-card').filter({hasText:title});await expect(incoming.locator('[data-counter-response="accept"]')).toBeVisible({timeout:15000});buyer.once('dialog',d=>d.accept());await stage(buyerLead+' accepts counteroffer',()=>incoming.locator('[data-counter-response="accept"]').click());await expect(incoming).toContainText('Original offer: accepted',{timeout:15000});
   for(const [p,id] of [[page,target],[buyer,offered],[buyer,extra]])expect(await p.evaluate(async id=>{const {data,error}=await supabaseClient.from('listings').select('status').eq('id',id).single();if(error)throw Error(error.message);return data.status},id)).toBe('reserved');
- }finally{try{if(buyerSignedIn&&!buyer.isClosed())await cleanup(buyer,title)}finally{try{if(!page.isClosed())await cleanup(page,title)}finally{await context.close()}}}
+ }catch(error){originalFailure=error;throw error}
+ finally{
+  const cleanupFailures=[];
+  async function finishFixture(which,tab){
+   if(tab.isClosed())return;
+   try{await cleanup(tab,title)}catch(error){
+    cleanupFailures.push(error);
+    const scope=await tab.evaluate(()=>({loggedIn:!!currentUser,uuid:/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(currentUser?.id||''),
+     dedicated:['deckplay-seller@deckplay.test','deckplay-buyer@deckplay.test'].includes(currentUser?.email||'')})).catch(()=>({unavailable:true}));
+    console.error('Protected '+which+' fixture cleanup could not complete: '+error.message+'; account state '+JSON.stringify(scope));
+   }
+  }
+  try{
+   if(buyerSignedIn)await finishFixture('buyer',buyer);
+   await finishFixture('seller',page);
+  }finally{await context.close()}
+  if(!originalFailure&&cleanupFailures.length)throw cleanupFailures[0];
+ }
+
 });
