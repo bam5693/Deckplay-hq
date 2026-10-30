@@ -1,1 +1,1 @@
-2026-10-29 read-only full asset parity after homepage SHA-256 passed following propagation: verify all 23 staging assets byte-for-byte and anonymous HEAD 401. No deployment or data writes.
+2026-10-30 T8.3 read-only post-deployment exact private staging asset parity. Verify all served files, anonymous 401 Basic Auth, staging Supabase only, source HEAD and no production writes. Deploy run 41026343950 succeeded. No extra deployment.
