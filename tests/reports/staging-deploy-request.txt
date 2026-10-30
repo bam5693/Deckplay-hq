@@ -1,5 +1,7 @@
-DeckPlay HQ private staging deployment request
-Requested after connector launcher repair, 2026-10-29.
-Target: deckplay-hq-staging only.
-Production changes prohibited.
-Launch requested 2026-10-29: deploy current branch HEAD to isolated private staging only; preserve authentication and bindings.
+DeckPlay HQ isolated private staging deployment request — 2026-10-30.
+Source HEAD: b961bfeaa0deb8c9e19a064c23be62ac20f6dd52
+T8.3 support ticket open/resolved filters, private collector/staff queue, mobile/desktop focused regression.
+Focused local GitHub Actions run 41026254348: SUCCESS.
+Target Worker: deckplay-hq-staging only; Supabase: prrrzeelltmyugssqnzk only.
+Preserve Basic Auth, OIDC, secrets, RLS and all customer/production isolation.
+No production deploy, PR merge, payments, shipping, or spend.
