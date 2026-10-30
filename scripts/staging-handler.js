@@ -17,6 +17,12 @@ export default {
   if(!['GET','HEAD'].includes(request.method))return new Response('Method not allowed',{status:405,headers:{...headers,Allow:'GET, HEAD'}});
   const file=assets[url.pathname==='/'?'/index.html':url.pathname];
   if(!file)return new Response('Page not found',{status:404,headers});
-  return new Response(request.method==='HEAD'?null:file.body,{headers:{...headers,'Content-Type':file.type}});
+  // Read-only, anonymous active-listing preview. Auth gate above always runs
+  // before the optional Supabase lookup. HEAD and all other assets stay static.
+  let body=file.body;
+  if(url.pathname==='/'&&request.method==='GET'&&url.searchParams.has('listing')){
+   body=await renderStagingListingPreview(file.body,url.searchParams,fetch,STAGING_PREVIEW_PUBLIC_KEY);
+  }
+  return new Response(request.method==='HEAD'?null:body,{headers:{...headers,'Content-Type':file.type}});
  }
 };
