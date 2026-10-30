@@ -227,6 +227,7 @@
     const next=session?.user?.id||null;
     if(next===userId)return;
     userId=next;++generation;clearPrivate();
+    el("supportNewForm").reset(); // Never carry a private draft into another account.
     if(modal.classList.contains("open"))closeModal(modal.id);
   });
 })();
