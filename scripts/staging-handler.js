@@ -20,8 +20,12 @@ export default {
   // Read-only, anonymous active-listing preview. Auth gate above always runs
   // before the optional Supabase lookup. HEAD and all other assets stay static.
   let body=file.body;
-  if(url.pathname==='/'&&request.method==='GET'&&url.searchParams.has('listing')){
-   body=await renderStagingListingPreview(file.body,url.searchParams,fetch,STAGING_PREVIEW_PUBLIC_KEY);
+  if(url.pathname==='/'&&request.method==='GET'){
+   if(url.searchParams.has('listing')){
+    body=await renderStagingListingPreview(file.body,url.searchParams,fetch,STAGING_PREVIEW_PUBLIC_KEY);
+   }else if(url.searchParams.has('collector')){
+    body=await renderStagingCollectorPreview(file.body,url.searchParams,fetch,STAGING_PREVIEW_PUBLIC_KEY);
+   }
   }
   return new Response(request.method==='HEAD'?null:body,{headers:{...headers,'Content-Type':file.type}});
  }
