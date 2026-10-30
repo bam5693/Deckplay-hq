@@ -538,3 +538,73 @@ test('T8.4: account switch clears report draft and invalid listing IDs cannot st
  await expect(page.locator('#supportCenterModal')).not.toHaveClass(/open/);
  expect(await page.evaluate(()=>window.__db.tickets)).toHaveLength(0);
 });
+
+test('T8.4: staff safety queue filters reports before pagination and does not expose them to ordinary buyers',async({page})=>{
+ await boot(page);
+ await page.evaluate(()=>{
+  for(let i=0;i<90;i++){
+   const safety=i<65;
+   const date=new Date(Date.now()-i*1000).toISOString();
+   window.__db.tickets.push({
+    id:'queued-'+String(i).padStart(3,'0'),
+    owner_id:'other',
+    category:safety?'safety':'account',
+    subject:safety?'Synthetic counterfeit report '+i:'Unrelated account issue '+i,
+    body:'Synthetic test data only',
+    status:i%9===0?'resolved':'open',
+    created_at:date,updated_at:date
+   });
+  }
+ });
+ await signIn(page,'staff');
+ await page.getByRole('button',{name:'Help & support'}).last().click();
+ await expect(page.locator('#supportStaffSafety')).toBeVisible();
+ await page.locator('#supportStaffSafety').click();
+ await expect(page.locator('#supportStaffSafety')).toHaveAttribute('aria-pressed','true');
+ await expect(page.locator('#supportTicketList button')).toHaveCount(40);
+ await expect(page.locator('#supportLoadMore')).toBeVisible();
+ await page.locator('#supportLoadMore').click();
+ await expect(page.locator('#supportTicketList button')).toHaveCount(65);
+ await expect(page.locator('#supportTicketList')).toContainText('Synthetic counterfeit report');
+ await expect(page.locator('#supportTicketList')).not.toContainText('Unrelated account issue');
+ await page.locator('#supportStaff').click();
+ await expect(page.locator('#supportTicketList button')).toHaveCount(40);
+ await expect(page.locator('#supportStaffSafety')).toHaveAttribute('aria-pressed','false');
+ await expect(page.locator('#supportTicketList')).toContainText('Unrelated account issue');
+ await page.evaluate(()=>{window.currentUser={id:'buyer'};window.__authCallback('SIGNED_IN',{user:{id:'buyer'}})});
+ await expect(page.locator('#supportCenterModal')).not.toHaveClass(/open/);
+ await page.getByRole('button',{name:'Help & support'}).last().click();
+ await expect(page.locator('#supportStaffSafety')).toBeHidden();
+ await expect(page.locator('#supportStaff')).toBeHidden();
+ await expect(page.locator('#supportTicketList')).not.toContainText('Synthetic counterfeit report');
+});
+test('T8.4: private staff safety queue combines status filters before selecting the first 40 rows',async({page})=>{
+ await boot(page);
+ await page.evaluate(()=>{
+  for(let i=0;i<86;i++){
+   const timestamp=new Date(Date.now()-i*1000).toISOString();
+   window.__db.tickets.push({
+    id:'safety-'+i,owner_id:'other',category:'safety',
+    subject:'Safety item '+i,body:'Synthetic evidence marker',
+    status:i%2===0?'resolved':'open',
+    created_at:timestamp,updated_at:timestamp
+   });
+  }
+ });
+ await signIn(page,'staff');
+ await page.getByRole('button',{name:'Help & support'}).last().click();
+ await page.locator('#supportStaffSafety').click();
+ await page.locator('[data-support-filter="resolved"]').click();
+ await expect(page.locator('#supportTicketList button')).toHaveCount(40);
+ await expect(page.locator('#supportLoadMore')).toBeVisible();
+ await page.locator('#supportLoadMore').click();
+ await expect(page.locator('#supportTicketList button')).toHaveCount(43);
+ await expect(page.locator('#supportLoadMore')).toBeHidden();
+ await expect(page.locator('#supportTicketList')).not.toContainText('Safety item 1 —');
+ await page.locator('[data-support-filter="active"]').click();
+ await expect(page.locator('#supportTicketList button')).toHaveCount(40);
+ await expect(page.locator('#supportLoadMore')).toBeVisible();
+ await page.locator('#supportMine').click();
+ await expect(page.locator('#supportTicketList')).not.toContainText('Safety item');
+ await expect(page.locator('#supportStaffSafety')).toHaveAttribute('aria-pressed','false');
+});
