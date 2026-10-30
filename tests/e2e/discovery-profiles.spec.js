@@ -136,7 +136,7 @@ test('public seller inventory searches, filters and sorts all seven marketplace 
  });
  await expect(page.locator('#publicProfileTitle')).toHaveText('@store-seller');
  await expect(page.locator('#publicProfileResults .profile-item')).toHaveCount(7);
- await expect(page.locator('#publicStorefrontSummary')).toHaveText('7 of 7 displayed');
+ await expect(page.locator('#publicStorefrontSummary')).toHaveText('7 of 7 loaded listings');
  await expect(page.locator('#publicStorefrontCategory option')).toHaveCount(8);
  await page.locator('#publicStorefrontCategory').selectOption('collectibles');
  await expect(page.locator('#publicProfileResults .profile-item')).toHaveCount(1);
