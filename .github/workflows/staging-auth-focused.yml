@@ -1,0 +1,23 @@
+name: Launch one affected deployed seller check
+on:
+  workflow_dispatch:
+  push:
+    branches: [test/staging-reporting]
+    paths: ['.github/workflows/staging-auth-focused.yml']
+permissions:
+  contents: read
+  actions: write
+jobs:
+  launch:
+    if: github.ref == 'refs/heads/test/staging-reporting'
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Use the existing allowlisted private staging workflow
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api -X POST repos/${{ github.repository }}/actions/workflows/private-staging.yml/dispatches \
+            -f ref=test/staging-reporting \
+            -F 'inputs[account_readonly_only]=true' \
+            -f 'inputs[acceptance_scope]=seller_desktop'

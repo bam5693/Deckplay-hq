@@ -1,0 +1,19 @@
+DECKPLAY HQ — ONE-TIME OWNER-APPROVED PRODUCTION RELEASE REQUEST
+Owner approval date (America/Chicago): 2026-10-29
+Release PR: https://github.com/bam5693/Deckplay-hq/pull/5
+Approved candidate source commit: bec838936f1963617fd1124a85989bbeb4dae938
+Approved application index.html blob: e0c08d925729d78962f40e8ac0bd41482fda6132
+Approved production SQL path: release/migrations/20261029214603_coordinated_production_compatibility.sql
+Approved migration SHA-256: 680bf22505a9387204cf4f31a1468c1af1799eb3ec56aaea099dce532232609b
+
+Owner stated current live accounts/listings/photos are disposable test data and expressly approved
+applying the pinned production migration, merging PR #5 only, and publishing the existing
+Cloudflare Worker despite the documented incomplete managed Auth/Storage and independent backup
+recovery tests. This is not an assertion that those recovery checks passed. Existing full
+production archive has been restored and verified; source data was not intentionally cleared.
+Live production read-only release/schema-contract.sql returned zero mismatches after the
+approved SQL migration. Existing Worker rollback version is d5ab84b6-baaa-4fc3-b8e5-8af8eb10d969.
+
+Only deploy after GitHub Actions production preflight and desktop/mobile suites succeed.
+Keep PR #2 and isolated staging Supabase unchanged. Do not enable live payments/shipping.
+This authorization is for the single coordinated PR #5 merge and website publication only.

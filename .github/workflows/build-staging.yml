@@ -1,0 +1,28 @@
+name: Prepare staging assets
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'scripts/build-staging.cjs'
+      - 'index.html'
+      - '.github/workflows/build-staging.yml'
+permissions:
+  contents: read
+jobs:
+  build:
+    if: startsWith(github.head_ref, 'release/') != true
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Build isolated staging site
+        env:
+          DECKPLAY_STAGING_SUPABASE_URL: https://prrrzeelltmyugssqnzk.supabase.co
+          DECKPLAY_STAGING_SUPABASE_KEY: sb_publishable_0omvNnv_ZOvXrZ-LHPMyIQ_a9zxD-yh
+        run: node scripts/build-staging.cjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: deckplay-staging-assets
+          path: dist-staging/

@@ -2,6 +2,7 @@ name: DeckPlay browser tests
 on:
   workflow_dispatch:
   push:
+    branches: [test/staging-reporting]
     paths:
       - 'index.html'
       - 'tests/e2e/**'
@@ -9,6 +10,7 @@ on:
       - 'package.json'
 jobs:
   test:
+    if: github.ref == 'refs/heads/test/staging-reporting'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

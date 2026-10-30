@@ -1,0 +1,20 @@
+node_modules/
+dist-staging/
+playwright-report/
+test-results/
+.env*
+.staging-credentials.json
+
+dist-staging-worker.mjs
+
+# Never commit production database archives or backup metadata
+private-backups/
+*.dump
+*.dump.contents
+*.backup
+*.backup.contents
+
+dist-release/
+dist-release-preview/
+dist-release-preview-worker.mjs
+node_modules

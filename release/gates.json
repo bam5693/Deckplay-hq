@@ -1,0 +1,29 @@
+{
+  "approvedApplicationTree": "e0c08d925729d78962f40e8ac0bd41482fda6132",
+  "productionSchemaVerified": true,
+  "previewAcceptanceVerified": true,
+  "rollbackVerified": true,
+  "blockers": [],
+  "productionMigrationRehearsalVerified": true,
+  "backupProcedureRehearsalVerified": true,
+  "candidateCodeCommit": "bec838936f1963617fd1124a85989bbeb4dae938",
+  "actualDatabaseRestoreVerified": true,
+  "actualRecoveredMigrationVerified": true,
+  "storageObjectBytesVerified": true,
+  "managedServiceRecoveryVerified": false,
+  "ownerRiskWaiver": {
+    "approvedDateCentral": "2026-10-29",
+    "approvalScope": "Exactly release PR #5, production compatibility migration sha256 680bf22505a9387204cf4f31a1468c1af1799eb3ec56aaea099dce532232609b, and existing Cloudflare Worker public deployment",
+    "basis": "Owner stated current public accounts/listings/files are disposable test data and explicitly approved applying migration, merging release PR #5, and deploying with incomplete managed-service recovery",
+    "incompleteSafeguards": [
+      "fresh independent production dump",
+      "second verified encrypted backup copy",
+      "live managed Auth/MFA recovery rehearsal",
+      "isolated Storage service reupload/recovery"
+    ],
+    "originalFullArchiveRestoredAndValidated": true,
+    "managedServiceRecoveryVerified": false,
+    "physicalAndroidPwaVerified": false,
+    "noDestructiveDataResetAuthorized": true
+  }
+}

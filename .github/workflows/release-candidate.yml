@@ -1,0 +1,133 @@
+name: Coordinated release candidate
+on:
+  workflow_dispatch:
+  push:
+    branches: ['release/**']
+    paths:
+      - 'index.html'
+      - '*.js'
+      - 'release/**'
+      - 'tests/fixtures/production-*'
+      - 'tests/integration/*.sql'
+      - 'scripts/test-production-*'
+      - 'scripts/backup-production-private.sh'
+      - 'scripts/restore-production-private-local.sh'
+      - 'scripts/*release*'
+      - 'tests/e2e/**'
+      - 'tests/security/**'
+      - '.github/workflows/release-candidate.yml'
+permissions:
+  contents: read
+concurrency:
+  group: release-candidate-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  candidate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Cheap asset, configuration and syntax checks
+        run: node scripts/release-preflight.cjs
+      - name: Select acceptance scope from changed source
+        id: scope
+        env:
+          MANUAL_RUN: ${{ github.event_name == 'workflow_dispatch' }}
+        run: |
+          node - <<'NODE'
+          const fs=require('node:fs'),{execFileSync}=require('node:child_process');
+          const files=execFileSync('git',['diff-tree','--root','--no-commit-id','--name-only','-r','--first-parent','HEAD'],{encoding:'utf8'}).split('\n');
+          const application=new Set(require('./release/assets.json'));
+          let full=process.env.MANUAL_RUN==='true'||files.some(f=>application.has(f)||/^package(?:-lock)?\.json$/.test(f));
+          let specs=files.filter(f=>/^tests\/e2e\/[a-z0-9-]+\.spec\.js$/.test(f)&&!f.startsWith('tests/e2e/release-preview-'));
+          if(process.env.MANUAL_RUN!=='true'&&fs.existsSync('release/browser-scope.json')){
+           const scope=JSON.parse(fs.readFileSync('release/browser-scope.json'));
+           const rev=ref=>execFileSync('git',['rev-parse',ref],{encoding:'utf8'}).trim();
+           const changedApplication=files.filter(f=>/^(?:[^/]+\.(?:html|js)|package(?:-lock)?\.json)/.test(f));
+           if(scope.indexBlob===rev('HEAD:index.html')&&scope.baseIndexBlob===rev('HEAD^:index.html')&&changedApplication.every(f=>['index.html','playwright.local.config.js'].includes(f))&&scope.specs.every(f=>/^tests\/e2e\/[a-z0-9-]+\.spec\.js$/.test(f)&&fs.existsSync(f))){full=false;specs=scope.specs;}
+          }
+          const browser=full||specs.length>0;
+          fs.appendFileSync(process.env.GITHUB_OUTPUT,'browser='+browser+'\n');
+          fs.appendFileSync(process.env.GITHUB_OUTPUT,'specs='+(full?'':specs.join(' '))+'\n');
+          NODE
+      - run: npm ci
+      - name: Security and recovery checks
+        run: node --test tests/security/*.test.cjs tests/security/*.test.mjs
+      - uses: actions/cache@v4
+        if: steps.scope.outputs.browser == 'true'
+        with:
+          path: ~/.cache/ms-playwright
+          key: release-chromium-${{ hashFiles('package-lock.json') }}
+      - run: npx playwright install chromium --only-shell
+        if: steps.scope.outputs.browser == 'true'
+      - name: Integrated desktop and mobile UI simulations (no account credentials)
+        if: steps.scope.outputs.browser == 'true'
+        env:
+          RELEASE_SPECS: ${{ steps.scope.outputs.specs }}
+        run: npx playwright test --config=playwright.local.config.js $RELEASE_SPECS
+      - name: Build exact allowlisted preview assets
+        env:
+          DECKPLAY_STAGING_SUPABASE_URL: https://prrrzeelltmyugssqnzk.supabase.co
+          DECKPLAY_STAGING_SUPABASE_KEY: sb_publishable_0omvNnv_ZOvXrZ-LHPMyIQ_a9zxD-yh
+        run: |
+          node scripts/build-staging.cjs
+          node scripts/build-release.cjs --preview
+          node scripts/build-release-preview.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coordinated-release-${{ github.sha }}
+          path: |
+            dist-release/
+            dist-release-preview/
+            dist-release-preview-worker.mjs
+            test-results/local-junit.xml
+          retention-days: 7
+  production-database-rehearsal:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    services:
+      postgres:
+        image: postgres:17.11
+        env:
+          POSTGRES_PASSWORD: disposable-fixture-only
+          POSTGRES_DB: deckplay_rehearsal
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql://postgres:disposable-fixture-only@127.0.0.1:5432/deckplay_rehearsal
+    steps:
+      - uses: actions/checkout@v4
+      - name: Required extension, then exact production schema and synthetic legacy records
+        run: |
+          psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 -c 'create extension pgcrypto'
+          bash scripts/test-production-db.sh
+      - name: Independent-session price versus bundle acceptance
+        run: |
+          bash scripts/test-production-concurrency.sh
+          psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 -c 'update private.rehearsal_canary set fingerprint=private.rehearsal_fingerprint()'
+      - name: Rehearse the actual private backup script and restore into a second empty database
+        env:
+          POSTGRES_CONTAINER: ${{ job.services.postgres.id }}
+        run: |
+          docker cp scripts/backup-production-private.sh "$POSTGRES_CONTAINER:/tmp/backup.sh"
+          docker exec -e DATABASE_URL=postgresql://postgres:disposable-fixture-only@localhost:5432/deckplay_rehearsal "$POSTGRES_CONTAINER" bash /tmp/backup.sh /tmp/recovery
+          docker exec "$POSTGRES_CONTAINER" createdb -U postgres deckplay_recovery
+          docker cp scripts/restore-production-private-local.sh "$POSTGRES_CONTAINER:/tmp/restore.sh"
+          docker exec -e RECOVERY_DATABASE_URL=postgresql://postgres:disposable-fixture-only@localhost:5432/deckplay_recovery "$POSTGRES_CONTAINER" bash -c 'bash /tmp/restore.sh /tmp/recovery/*.dump'
+          DATABASE_URL=postgresql://postgres:disposable-fixture-only@127.0.0.1:5432/deckplay_recovery
+          psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 -f tests/integration/production-compatibility.sql
+          test -z "$(psql "$DATABASE_URL" -X -tA -v ON_ERROR_STOP=1 -f release/schema-contract.sql)"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: production-shaped-race-logs
+          path: test-results/race-*.txt
+          retention-days: 3

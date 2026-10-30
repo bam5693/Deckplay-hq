@@ -1,0 +1,235 @@
+name: Private staging feature bots
+on:
+  workflow_dispatch:
+    inputs:
+      auth_smoke_only:
+        description: 'One Basic Auth smoke, then read-only synthetic account checks; no deployment or full suite'
+        required: false
+        type: boolean
+        default: false
+      account_readonly_only:
+        description: 'Only read-only deployed synthetic sessions; auth gate already verified'
+        required: false
+        type: boolean
+        default: false
+      acceptance_scope:
+        description: 'Limit read-only acceptance after a diagnosed partial run'
+        required: false
+        type: choice
+        options: [all, seller_desktop]
+        default: all
+      photo_only:
+        description: 'Run only isolated private-photo checks (no deployment or full suite)'
+        required: false
+        type: boolean
+        default: false
+  # Batch release requests run focused local checks, then deploy and verify.
+  # Broad stateful/photo suites remain manual; ordinary commits spend no CI minutes.
+  push:
+    branches: [test/staging-reporting]
+    paths:
+      - 'tests/reports/staging-beta-request.txt'
+permissions:
+  contents: read
+  id-token: write
+jobs:
+  staging-identity:
+    if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.auth_smoke_only != 'true' && github.event.inputs.account_readonly_only != 'true' }}
+    permissions:
+      contents: read
+      id-token: write
+      actions: write
+    name: Verify trusted staging runner identity
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    environment: deckplay-staging
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node scripts/staging-ci-credentials.cjs
+      # Preserve older staging runs for diagnosis; transactional tests are serialized below.
+  staging-accounts:
+    if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.auth_smoke_only != 'true' && github.event.inputs.account_readonly_only != 'true' }}
+    needs: staging-identity
+    concurrency:
+      group: private-staging-transactions
+      cancel-in-progress: false
+    name: Real staging API and mobile/desktop buyer-seller journeys
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: deckplay-staging
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Authenticate using repository-scoped GitHub identity
+        run: node scripts/staging-ci-credentials.cjs
+      - run: npm ci
+      - name: Verify fixture cleanup safety before real staging transactions
+        run: node --test tests/security/fixture-cleanup.test.cjs
+      - name: Validate private photo image and endpoint boundaries
+        run: node --test tests/security/private-photos.test.mjs
+      - name: Cache Playwright browser
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: staging-playwright-${{ hashFiles('package-lock.json') }}
+      # Cheap checks run before any stateful staging transaction.
+      - name: Preflight — syntax and staging build
+        run: |
+          node --check scripts/build-staging.cjs
+          node --check scripts/run-staging-api.cjs
+          node --check scripts/report-staging-results.cjs
+          for file in tests/e2e/*.spec.js; do node --check "$file" || exit 1; done
+          DECKPLAY_STAGING_SUPABASE_URL=https://prrrzeelltmyugssqnzk.supabase.co DECKPLAY_STAGING_SUPABASE_KEY=sb_publishable_0omvNnv_ZOvXrZ-LHPMyIQ_a9zxD-yh node scripts/build-staging.cjs
+          test -s dist-staging/index.html
+      - name: Install browser for preflight
+        run: npx playwright install chromium --only-shell
+        timeout-minutes: 8
+      - name: Preflight — focused local marketplace and seller checks
+        if: ${{ github.event.inputs.photo_only != 'true' }}
+        run: npx playwright test --config=playwright.local.config.js category-coverage.spec.js marketplace-filter-boundaries.spec.js selling-category-matrix.spec.js inbox-recovery.spec.js
+      - name: Deploy exact staging branch before deployed browser tests
+        if: ${{ github.event.inputs.photo_only != 'true' && env.DECKPLAY_STAGING_URL != '' }}
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo "::error::Missing staging Cloudflare credentials; cannot certify an outdated deployment."
+            exit 1
+          fi
+          node scripts/build-staging-worker.cjs
+          npx --yes wrangler@4 deploy --config wrangler.staging.jsonc
+      - name: Preflight — verify deployed staging matches branch before transactions
+        if: ${{ env.DECKPLAY_STAGING_URL != '' }}
+        run: npx playwright test --config=playwright.staging.config.js staging-smoke.spec.js --grep "deployed homepage matches the staging branch"
+      - name: Charles — verify staging API transactions and authorization
+        if: ${{ github.event.inputs.photo_only != 'true' }}
+        run: |
+          mkdir -p test-results
+          set -o pipefail
+          node scripts/run-staging-api.cjs 2>&1 | tee test-results/staging-api.tap
+      - name: Preflight — local private-photo failure and retry regressions
+        if: ${{ github.event.inputs.photo_only == 'true' }}
+        run: npx playwright test --config=playwright.local.config.js private-message-photos.spec.js --retries=0
+      - name: Preflight — private photo send and attachment delivery
+        if: ${{ success() && env.DECKPLAY_STAGING_URL != '' }}
+        run: npx playwright test --config=playwright.staging.config.js private-message-photos-live.spec.js --retries=0
+      - name: Kyle, Tanner and Jayden — deployed buyer/seller/trader journeys
+        if: ${{ github.event.inputs.photo_only != 'true' && success() && env.DECKPLAY_STAGING_URL != '' }}
+        run: npx playwright test --config=playwright.staging.config.js --grep-invert 'collectors share private corner photos with immutable retries and scoped cleanup'
+      - name: Save durable staging feature result
+        if: ${{ github.event.inputs.photo_only != 'true' && success() && env.DECKPLAY_STAGING_URL != '' }}
+        env:
+          STAGING_JOB_STATUS: ${{ job.status }}
+        run: node scripts/report-staging-results.cjs
+      - name: Verify local inbox, account privacy and listing regressions on desktop and mobile
+        if: ${{ github.event.inputs.photo_only != 'true' && success() }}
+        run: npx playwright test --config=playwright.local.config.js seller-inventory.spec.js inbox-history.spec.js favorites-recovery.spec.js listing-editor.spec.js inbox-request-order.spec.js inbox-recovery.spec.js private-message-photos.spec.js seller-overview.spec.js trade-picker.spec.js inbox-trade-details.spec.js collection-sharing.spec.js account-boundaries.spec.js listing-description.spec.js discovery-profiles.spec.js tcg-sets.spec.js listing-publication.spec.js moderation-security.spec.js moderator-access.spec.js
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: private-staging-feature-report
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: warn
+          retention-days: 3
+      - name: Summarize feature bot result
+        if: always()
+        run: |
+          echo '## DeckPlay test department — Charles, Kyle, Tanner and Jayden' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Result: ${{ job.status }}. Charles checks API transactions and authorization; Kyle checks deployed mobile/desktop browser journeys. Tanner and Jayden rotate seller/buyer roles in complete-deck and sports/TCG trade browser simulations using the same two disposable accounts. These are deterministic actions; AI inference is verified separately by the manual lead-review workflow. Reports contain persona annotations and named steps. Payment/shipping remain previews.' >> "$GITHUB_STEP_SUMMARY"
+
+  staging-auth-smoke:
+    if: ${{ (github.event_name == 'push' || github.event.inputs.auth_smoke_only == 'true' || github.event.inputs.account_readonly_only == 'true') && github.ref == 'refs/heads/test/staging-reporting' }}
+    name: Focused beta preflight and private staging acceptance
+    concurrency:
+      group: deckplay-staging-deploy
+      cancel-in-progress: false
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    environment: deckplay-staging
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: staging-playwright-${{ hashFiles('package-lock.json') }}
+      - run: npx playwright install chromium --only-shell
+      - name: Cheap local preflight before deployment or signed sessions
+        if: github.event_name == 'push'
+        run: |
+          node scripts/check-inline-js.cjs
+          node --test tests/security/trade-delivery.test.cjs tests/security/staging-browser-config.test.cjs
+          npx playwright test --config=playwright.local.config.js inbox-price-withdrawal.spec.js --retries=0 --max-failures=1 --timeout=20000
+      - name: Build and deploy exact private staging source after preflight
+        if: github.event_name == 'push'
+        env:
+          DECKPLAY_STAGING_SUPABASE_URL: https://prrrzeelltmyugssqnzk.supabase.co
+          DECKPLAY_STAGING_SUPABASE_KEY: sb_publishable_0omvNnv_ZOvXrZ-LHPMyIQ_a9zxD-yh
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          node scripts/build-staging.cjs
+          node scripts/build-staging-worker.cjs
+          npx --yes wrangler@4 deploy --config wrangler.staging.jsonc --keep-vars
+      - name: Load credentials using existing trusted identity
+        run: node scripts/staging-ci-credentials.cjs
+      - name: Verify exact served assets and anonymous denial
+        if: github.event_name == 'push'
+        run: node scripts/verify-staging-assets.cjs
+      - name: ONE authentication smoke only when requested
+        if: github.event.inputs.auth_smoke_only == 'true'
+        run: npx playwright test --config=playwright.staging.config.js staging-auth-smoke.spec.js --project=staging-desktop --retries=0 --timeout=20000
+      - name: Read-only deployed buyer and seller desktop and mobile acceptance
+        if: success() && github.event.inputs.acceptance_scope != 'seller_desktop'
+        run: npx playwright test --config=playwright.staging.config.js staging-account-readonly.spec.js --retries=0 --timeout=40000
+      - name: Seller desktop only after diagnosed transport reset
+        if: success() && github.event.inputs.acceptance_scope == 'seller_desktop'
+        run: npx playwright test --config=playwright.staging.config.js staging-account-readonly.spec.js --project=staging-desktop --grep 'synthetic seller' --retries=0 --timeout=40000
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: staging-beta-focused
+          path: |
+            test-results/
+            playwright-report/
+          retention-days: 3
+
+  report-failure:
+    name: Report staging failures without stopping tests
+    needs: [staging-identity, staging-accounts]
+    if: ${{ always() && contains(needs.*.result, 'failure') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    permissions:
+      contents: read
+      issues: write
+      actions: read
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const title='[Staging] Private feature bots failed';
+            const link=process.env.GITHUB_SERVER_URL+'/'+process.env.GITHUB_REPOSITORY+'/actions/runs/'+process.env.GITHUB_RUN_ID;
+            const {data:items}=await github.rest.issues.listForRepo({...context.repo,state:'open',per_page:100});
+            const issue=items.find(i=>!i.pull_request&&i.title===title);
+            const {data:jobsPage}=await github.rest.actions.listJobsForWorkflowRun({...context.repo,run_id:context.runId,per_page:100});
+            const failures=jobsPage.jobs.filter(j=>j.conclusion==='failure').map(j=>{
+              const steps=(j.steps||[]).filter(s=>s.conclusion==='failure').map(s=>'- '+s.name).slice(0,8);
+              return '**'+j.name+'**\\n'+(steps.length?steps.join('\\n'):'- Check job logs')+'\\n'+j.html_url;
+            });
+            const body=['**Failed staging run:** '+link,'**Commit:** '+context.sha,'**Failed jobs and steps:**',...(failures.length?failures:['Job details unavailable; inspect run logs.']),'Artifacts: private-staging-feature-report (retained 3 days).','Staging only; do not modify production.'].join('\\n\\n');
+            if(issue) await github.rest.issues.createComment({...context.repo,issue_number:issue.number,body});
+            else await github.rest.issues.create({...context.repo,title,body});
+

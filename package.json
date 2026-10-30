@@ -6,6 +6,7 @@
     "test:e2e:ui": "playwright test --ui"
   },
   "devDependencies": {
-    "@playwright/test": "^1.56.1"
+    "@playwright/test": "1.56.1",
+    "jpeg-js": "0.4.4"
   }
 }

@@ -1,0 +1,23 @@
+name: Launch focused private photo verification
+on:
+  workflow_dispatch:
+  push:
+    branches: [test/staging-reporting]
+    paths:
+      - '.github/workflows/photo-staging-focused.yml'
+permissions:
+  contents: read
+  actions: write
+jobs:
+  launch-trusted-photo-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      # Keep credential exchange inside the exact OIDC-allowlisted workflow; never broaden its trust policy.
+      - name: Dispatch photo-only mode in trusted staging workflow
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api -X POST repos/${{ github.repository }}/actions/workflows/private-staging.yml/dispatches \
+            -f ref=test/staging-reporting \
+            -F 'inputs[photo_only]=true'

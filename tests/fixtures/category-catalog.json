@@ -1,0 +1,3100 @@
+{
+  "version": 1,
+  "controls": {
+    "listingType": [
+      {
+        "value": "single",
+        "label": "Single item / card"
+      },
+      {
+        "value": "deck",
+        "label": "Complete playable deck"
+      },
+      {
+        "value": "lot",
+        "label": "Card lot / collection"
+      },
+      {
+        "value": "sealed",
+        "label": "Sealed box / packs / product"
+      },
+      {
+        "value": "game",
+        "label": "Video game"
+      },
+      {
+        "value": "console",
+        "label": "Console / controller / accessory"
+      },
+      {
+        "value": "figure",
+        "label": "Figure / statue / collectible"
+      },
+      {
+        "value": "other",
+        "label": "Other item"
+      }
+    ],
+    "category": [
+      {
+        "value": "trading_cards",
+        "label": "Trading cards"
+      },
+      {
+        "value": "video_games",
+        "label": "Video games"
+      },
+      {
+        "value": "consoles",
+        "label": "Consoles"
+      },
+      {
+        "value": "controllers",
+        "label": "Controllers"
+      },
+      {
+        "value": "accessories",
+        "label": "Accessories"
+      },
+      {
+        "value": "collectibles",
+        "label": "Collectibles"
+      },
+      {
+        "value": "other",
+        "label": "Other"
+      }
+    ],
+    "tcgGame": [
+      {
+        "value": "pokemon",
+        "label": "Pokémon"
+      },
+      {
+        "value": "one_piece",
+        "label": "One Piece"
+      },
+      {
+        "value": "naruto_kayou",
+        "label": "Naruto Kayou"
+      },
+      {
+        "value": "magic",
+        "label": "Magic: The Gathering"
+      },
+      {
+        "value": "yugioh",
+        "label": "Yu-Gi-Oh!"
+      },
+      {
+        "value": "dragon_ball",
+        "label": "Dragon Ball Super"
+      },
+      {
+        "value": "lorcana",
+        "label": "Disney Lorcana"
+      },
+      {
+        "value": "digimon",
+        "label": "Digimon"
+      },
+      {
+        "value": "gundam",
+        "label": "Gundam"
+      },
+      {
+        "value": "union_arena",
+        "label": "Union Arena"
+      },
+      {
+        "value": "riftbound",
+        "label": "Riftbound"
+      },
+      {
+        "value": "flesh_blood",
+        "label": "Flesh and Blood"
+      },
+      {
+        "value": "star_wars",
+        "label": "Star Wars Unlimited"
+      },
+      {
+        "value": "weiss_schwarz",
+        "label": "Weiss Schwarz"
+      },
+      {
+        "value": "cardfight_vanguard",
+        "label": "Cardfight!! Vanguard"
+      },
+      {
+        "value": "altered",
+        "label": "Altered"
+      },
+      {
+        "value": "shadowverse",
+        "label": "Shadowverse Evolve"
+      },
+      {
+        "value": "sports_cards",
+        "label": "Sports cards"
+      },
+      {
+        "value": "other_tcg",
+        "label": "Other TCG / cards"
+      }
+    ],
+    "collectibleSubcategory": [
+      {
+        "value": "anime_manga",
+        "label": "Anime & Manga"
+      },
+      {
+        "value": "sports_memorabilia",
+        "label": "Sports Memorabilia"
+      },
+      {
+        "value": "figures_statues",
+        "label": "Action Figures & Statues"
+      },
+      {
+        "value": "funko_vinyl",
+        "label": "Funko Pops & Vinyl Figures"
+      },
+      {
+        "value": "comics_books",
+        "label": "Comics & Books"
+      },
+      {
+        "value": "toys_retro",
+        "label": "Toys & Retro Collectibles"
+      },
+      {
+        "value": "other_collectibles",
+        "label": "Other Collectibles"
+      }
+    ],
+    "gamePlatform": [
+      {
+        "value": "PlayStation 5",
+        "label": "PlayStation 5"
+      },
+      {
+        "value": "PlayStation 4",
+        "label": "PlayStation 4"
+      },
+      {
+        "value": "PlayStation 3",
+        "label": "PlayStation 3"
+      },
+      {
+        "value": "PlayStation 2",
+        "label": "PlayStation 2"
+      },
+      {
+        "value": "PlayStation 1",
+        "label": "PlayStation 1"
+      },
+      {
+        "value": "Xbox Series X / S",
+        "label": "Xbox Series X / S"
+      },
+      {
+        "value": "Xbox One",
+        "label": "Xbox One"
+      },
+      {
+        "value": "Xbox 360",
+        "label": "Xbox 360"
+      },
+      {
+        "value": "Original Xbox",
+        "label": "Original Xbox"
+      },
+      {
+        "value": "Nintendo Switch 2",
+        "label": "Nintendo Switch 2"
+      },
+      {
+        "value": "Nintendo Switch",
+        "label": "Nintendo Switch"
+      },
+      {
+        "value": "Nintendo Wii U",
+        "label": "Nintendo Wii U"
+      },
+      {
+        "value": "Nintendo Wii",
+        "label": "Nintendo Wii"
+      },
+      {
+        "value": "Nintendo GameCube",
+        "label": "Nintendo GameCube"
+      },
+      {
+        "value": "Nintendo 64",
+        "label": "Nintendo 64"
+      },
+      {
+        "value": "Super Nintendo",
+        "label": "Super Nintendo"
+      },
+      {
+        "value": "NES",
+        "label": "NES"
+      },
+      {
+        "value": "Nintendo DS / 3DS",
+        "label": "Nintendo DS / 3DS"
+      },
+      {
+        "value": "PC",
+        "label": "PC"
+      },
+      {
+        "value": "Sega",
+        "label": "Sega"
+      },
+      {
+        "value": "Atari",
+        "label": "Atari"
+      },
+      {
+        "value": "Other",
+        "label": "Other"
+      }
+    ],
+    "consoleItemType": [
+      {
+        "value": "Console",
+        "label": "Console"
+      },
+      {
+        "value": "Controller",
+        "label": "Controller"
+      },
+      {
+        "value": "Accessory",
+        "label": "Accessory"
+      }
+    ],
+    "consoleBrand": [
+      {
+        "value": "Nintendo",
+        "label": "Nintendo"
+      },
+      {
+        "value": "Sony PlayStation",
+        "label": "Sony PlayStation"
+      },
+      {
+        "value": "Microsoft Xbox",
+        "label": "Microsoft Xbox"
+      },
+      {
+        "value": "Sega",
+        "label": "Sega"
+      },
+      {
+        "value": "Atari",
+        "label": "Atari"
+      },
+      {
+        "value": "Other",
+        "label": "Other"
+      }
+    ],
+    "sportsBrand": [
+      {
+        "value": "Topps",
+        "label": "Topps"
+      },
+      {
+        "value": "Panini",
+        "label": "Panini"
+      },
+      {
+        "value": "Upper Deck",
+        "label": "Upper Deck"
+      },
+      {
+        "value": "Fleer",
+        "label": "Fleer"
+      },
+      {
+        "value": "Donruss",
+        "label": "Donruss"
+      },
+      {
+        "value": "Bowman",
+        "label": "Bowman"
+      },
+      {
+        "value": "Score",
+        "label": "Score"
+      },
+      {
+        "value": "Other / Unknown",
+        "label": "Other / Unknown"
+      }
+    ],
+    "condition": [
+      {
+        "value": "new",
+        "label": "New / sealed"
+      },
+      {
+        "value": "like_new",
+        "label": "Like new"
+      },
+      {
+        "value": "used",
+        "label": "Used"
+      },
+      {
+        "value": "damaged",
+        "label": "Damaged"
+      }
+    ],
+    "cardCondition": [
+      {
+        "value": "near_mint",
+        "label": "Near Mint (NM)"
+      },
+      {
+        "value": "lightly_played",
+        "label": "Lightly Played (LP)"
+      },
+      {
+        "value": "moderately_played",
+        "label": "Moderately Played (MP)"
+      },
+      {
+        "value": "heavily_played",
+        "label": "Heavily Played (HP)"
+      },
+      {
+        "value": "damaged",
+        "label": "Damaged (DMG)"
+      },
+      {
+        "value": "sealed",
+        "label": "Sealed / Unopened"
+      },
+      {
+        "value": "graded",
+        "label": "Professionally Graded"
+      }
+    ],
+    "gradingCompany": [
+      {
+        "value": "PSA",
+        "label": "PSA"
+      },
+      {
+        "value": "CGC",
+        "label": "CGC"
+      },
+      {
+        "value": "BGS",
+        "label": "BGS"
+      },
+      {
+        "value": "SGC",
+        "label": "SGC"
+      },
+      {
+        "value": "TAG",
+        "label": "TAG"
+      },
+      {
+        "value": "Other",
+        "label": "Other"
+      }
+    ],
+    "gradingScore": [
+      {
+        "value": "10",
+        "label": "10"
+      },
+      {
+        "value": "9.5",
+        "label": "9.5"
+      },
+      {
+        "value": "9",
+        "label": "9"
+      },
+      {
+        "value": "8.5",
+        "label": "8.5"
+      },
+      {
+        "value": "8",
+        "label": "8"
+      },
+      {
+        "value": "7.5",
+        "label": "7.5"
+      },
+      {
+        "value": "7",
+        "label": "7"
+      },
+      {
+        "value": "6.5",
+        "label": "6.5"
+      },
+      {
+        "value": "6",
+        "label": "6"
+      },
+      {
+        "value": "5.5",
+        "label": "5.5"
+      },
+      {
+        "value": "5",
+        "label": "5"
+      },
+      {
+        "value": "4.5",
+        "label": "4.5"
+      },
+      {
+        "value": "4",
+        "label": "4"
+      },
+      {
+        "value": "3.5",
+        "label": "3.5"
+      },
+      {
+        "value": "3",
+        "label": "3"
+      },
+      {
+        "value": "2.5",
+        "label": "2.5"
+      },
+      {
+        "value": "2",
+        "label": "2"
+      },
+      {
+        "value": "1.5",
+        "label": "1.5"
+      },
+      {
+        "value": "1",
+        "label": "1"
+      }
+    ],
+    "marketCategory": [
+      {
+        "value": "All",
+        "label": "All marketplace"
+      },
+      {
+        "value": "Trading Cards",
+        "label": "Trading cards"
+      },
+      {
+        "value": "Video Games",
+        "label": "Video games"
+      },
+      {
+        "value": "Consoles & Controllers",
+        "label": "Consoles & gear"
+      },
+      {
+        "value": "Collectibles",
+        "label": "Collectibles"
+      }
+    ],
+    "marketGame": [
+      {
+        "value": "All",
+        "label": "All TCGs"
+      },
+      {
+        "value": "pokemon",
+        "label": "Pokémon"
+      },
+      {
+        "value": "one_piece",
+        "label": "One Piece"
+      },
+      {
+        "value": "naruto_kayou",
+        "label": "Naruto Kayou"
+      },
+      {
+        "value": "magic",
+        "label": "Magic: The Gathering"
+      },
+      {
+        "value": "yugioh",
+        "label": "Yu-Gi-Oh!"
+      },
+      {
+        "value": "dragon_ball",
+        "label": "Dragon Ball Super"
+      },
+      {
+        "value": "lorcana",
+        "label": "Disney Lorcana"
+      },
+      {
+        "value": "digimon",
+        "label": "Digimon"
+      },
+      {
+        "value": "gundam",
+        "label": "Gundam"
+      },
+      {
+        "value": "union_arena",
+        "label": "Union Arena"
+      },
+      {
+        "value": "riftbound",
+        "label": "Riftbound"
+      },
+      {
+        "value": "flesh_blood",
+        "label": "Flesh and Blood"
+      },
+      {
+        "value": "star_wars",
+        "label": "Star Wars Unlimited"
+      },
+      {
+        "value": "weiss_schwarz",
+        "label": "Weiss Schwarz"
+      },
+      {
+        "value": "cardfight_vanguard",
+        "label": "Cardfight!! Vanguard"
+      },
+      {
+        "value": "altered",
+        "label": "Altered"
+      },
+      {
+        "value": "shadowverse",
+        "label": "Shadowverse Evolve"
+      },
+      {
+        "value": "sports_cards",
+        "label": "Sports cards"
+      },
+      {
+        "value": "other_tcg",
+        "label": "Other TCG / cards"
+      }
+    ],
+    "marketSort": [
+      {
+        "value": "newest",
+        "label": "Newest first"
+      },
+      {
+        "value": "oldest",
+        "label": "Oldest first"
+      },
+      {
+        "value": "low",
+        "label": "Price: low to high"
+      },
+      {
+        "value": "high",
+        "label": "Price: high to low"
+      },
+      {
+        "value": "az",
+        "label": "Name: A–Z"
+      }
+    ]
+  },
+  "dependent": [
+    {
+      "game": "pokemon",
+      "eras": [
+        {
+          "value": "Base / Classic",
+          "label": "Base / Classic"
+        },
+        {
+          "value": "EX",
+          "label": "EX"
+        },
+        {
+          "value": "Diamond & Pearl / Platinum",
+          "label": "Diamond & Pearl / Platinum"
+        },
+        {
+          "value": "HeartGold & SoulSilver",
+          "label": "HeartGold & SoulSilver"
+        },
+        {
+          "value": "Black & White",
+          "label": "Black & White"
+        },
+        {
+          "value": "XY",
+          "label": "XY"
+        },
+        {
+          "value": "Sun & Moon",
+          "label": "Sun & Moon"
+        },
+        {
+          "value": "Sword & Shield",
+          "label": "Sword & Shield"
+        },
+        {
+          "value": "Scarlet & Violet",
+          "label": "Scarlet & Violet"
+        },
+        {
+          "value": "Mega Evolution",
+          "label": "Mega Evolution"
+        }
+      ],
+      "sets": [
+        {
+          "era": "Base / Classic",
+          "options": [
+            {
+              "value": "Base Set",
+              "label": "Base Set"
+            },
+            {
+              "value": "Jungle",
+              "label": "Jungle"
+            },
+            {
+              "value": "Fossil",
+              "label": "Fossil"
+            },
+            {
+              "value": "Base Set 2",
+              "label": "Base Set 2"
+            },
+            {
+              "value": "Team Rocket",
+              "label": "Team Rocket"
+            },
+            {
+              "value": "Gym Heroes",
+              "label": "Gym Heroes"
+            },
+            {
+              "value": "Gym Challenge",
+              "label": "Gym Challenge"
+            },
+            {
+              "value": "Neo Genesis",
+              "label": "Neo Genesis"
+            },
+            {
+              "value": "Neo Discovery",
+              "label": "Neo Discovery"
+            },
+            {
+              "value": "Neo Revelation",
+              "label": "Neo Revelation"
+            },
+            {
+              "value": "Neo Destiny",
+              "label": "Neo Destiny"
+            },
+            {
+              "value": "Other / unknown",
+              "label": "Other / unknown"
+            }
+          ]
+        },
+        {
+          "era": "EX",
+          "options": [
+            {
+              "value": "EX Ruby & Sapphire",
+              "label": "EX Ruby & Sapphire"
+            },
+            {
+              "value": "EX Sandstorm",
+              "label": "EX Sandstorm"
+            },
+            {
+              "value": "EX Dragon",
+              "label": "EX Dragon"
+            },
+            {
+              "value": "EX FireRed & LeafGreen",
+              "label": "EX FireRed & LeafGreen"
+            },
+            {
+              "value": "EX Deoxys",
+              "label": "EX Deoxys"
+            },
+            {
+              "value": "EX Crystal Guardians",
+              "label": "EX Crystal Guardians"
+            },
+            {
+              "value": "Other / unknown",
+              "label": "Other / unknown"
+            }
+          ]
+        },
+        {
+          "era": "Diamond & Pearl / Platinum",
+          "options": [
+            {
+              "value": "Diamond & Pearl",
+              "label": "Diamond & Pearl"
+            },
+            {
+              "value": "Secret Wonders",
+              "label": "Secret Wonders"
+            },
+            {
+              "value": "Great Encounters",
+              "label": "Great Encounters"
+            },
+            {
+              "value": "Majestic Dawn",
+              "label": "Majestic Dawn"
+            },
+            {
+              "value": "Stormfront",
+              "label": "Stormfront"
+            },
+            {
+              "value": "Platinum",
+              "label": "Platinum"
+            },
+            {
+              "value": "Supreme Victors",
+              "label": "Supreme Victors"
+            },
+            {
+              "value": "Arceus",
+              "label": "Arceus"
+            },
+            {
+              "value": "Other / unknown",
+              "label": "Other / unknown"
+            }
+          ]
+        },
+        {
+          "era": "HeartGold & SoulSilver",
+          "options": [
+            {
+              "value": "HeartGold & SoulSilver",
+              "label": "HeartGold & SoulSilver"
+            },
+            {
+              "value": "Unleashed",
+              "label": "Unleashed"
+            },
+            {
+              "value": "Undaunted",
+              "label": "Undaunted"
+            },
+            {
+              "value": "Triumphant",
+              "label": "Triumphant"
+            },
+            {
+              "value": "Other / unknown",
+              "label": "Other / unknown"
+            }
+          ]
+        },
+        {
+          "era": "Black & White",
+          "options": [
+            {
+              "value": "Black & White",
+              "label": "Black & White"
+            },
+            {
+              "value": "Emerging Powers",
+              "label": "Emerging Powers"
+            },
+            {
+              "value": "Noble Victories",
+              "label": "Noble Victories"
+            },
+            {
+              "value": "Next Destinies",
+              "label": "Next Destinies"
+            },
+            {
+              "value": "Dark Explorers",
+              "label": "Dark Explorers"
+            },
+            {
+              "value": "Dragons Exalted",
+              "label": "Dragons Exalted"
+            },
+            {
+              "value": "Plasma Storm",
+              "label": "Plasma Storm"
+            },
+            {
+              "value": "Plasma Freeze",
+              "label": "Plasma Freeze"
+            },
+            {
+              "value": "Plasma Blast",
+              "label": "Plasma Blast"
+            },
+            {
+              "value": "Legendary Treasures",
+              "label": "Legendary Treasures"
+            },
+            {
+              "value": "Other / unknown",
+              "label": "Other / unknown"
+            }
+          ]
+        },
+        {
+          "era": "XY",
+          "options": [
+            {
+              "value": "XY",
+              "label": "XY"
+            },
+            {
+              "value": "Flashfire",
+              "label": "Flashfire"
+            },
+            {
+              "value": "Furious Fists",
+              "label": "Furious Fists"
+            },
+            {
+              "value": "Phantom Forces",
+              "label": "Phantom Forces"
+            },
+            {
+              "value": "Primal Clash",
+              "label": "Primal Clash"
+            },
+            {
+              "value": "Roaring Skies",
+              "label": "Roaring Skies"
+            },
+            {
+              "value": "Ancient Origins",
+              "label": "Ancient Origins"
+            },
+            {
+              "value": "BREAKthrough",
+              "label": "BREAKthrough"
+            },
+            {
+              "value": "BREAKpoint",
+              "label": "BREAKpoint"
+            },
+            {
+              "value": "Generations",
+              "label": "Generations"
+            },
+            {
+              "value": "Evolutions",
+              "label": "Evolutions"
+            },
+            {
+              "value": "Other / unknown",
+              "label": "Other / unknown"
+            }
+          ]
+        },
+        {
+          "era": "Sun & Moon",
+          "options": [
+            {
+              "value": "Sun & Moon",
+              "label": "Sun & Moon"
+            },
+            {
+              "value": "Guardians Rising",
+              "label": "Guardians Rising"
+            },
+            {
+              "value": "Burning Shadows",
+              "label": "Burning Shadows"
+            },
+            {
+              "value": "Shining Legends",
+              "label": "Shining Legends"
+            },
+            {
+              "value": "Crimson Invasion",
+              "label": "Crimson Invasion"
+            },
+            {
+              "value": "Ultra Prism",
+              "label": "Ultra Prism"
+            },
+            {
+              "value": "Forbidden Light",
+              "label": "Forbidden Light"
+            },
+            {
+              "value": "Celestial Storm",
+              "label": "Celestial Storm"
+            },
+            {
+              "value": "Dragon Majesty",
+              "label": "Dragon Majesty"
+            },
+            {
+              "value": "Lost Thunder",
+              "label": "Lost Thunder"
+            },
+            {
+              "value": "Team Up",
+              "label": "Team Up"
+            },
+            {
+              "value": "Unbroken Bonds",
+              "label": "Unbroken Bonds"
+            },
+            {
+              "value": "Unified Minds",
+              "label": "Unified Minds"
+            },
+            {
+              "value": "Hidden Fates",
+              "label": "Hidden Fates"
+            },
+            {
+              "value": "Cosmic Eclipse",
+              "label": "Cosmic Eclipse"
+            },
+            {
+              "value": "Other / unknown",
+              "label": "Other / unknown"
+            }
+          ]
+        },
+        {
+          "era": "Sword & Shield",
+          "options": [
+            {
+              "value": "Sword & Shield",
+              "label": "Sword & Shield"
+            },
+            {
+              "value": "Rebel Clash",
+              "label": "Rebel Clash"
+            },
+            {
+              "value": "Darkness Ablaze",
+              "label": "Darkness Ablaze"
+            },
+            {
+              "value": "Champion's Path",
+              "label": "Champion's Path"
+            },
+            {
+              "value": "Vivid Voltage",
+              "label": "Vivid Voltage"
+            },
+            {
+              "value": "Shining Fates",
+              "label": "Shining Fates"
+            },
+            {
+              "value": "Battle Styles",
+              "label": "Battle Styles"
+            },
+            {
+              "value": "Chilling Reign",
+              "label": "Chilling Reign"
+            },
+            {
+              "value": "Evolving Skies",
+              "label": "Evolving Skies"
+            },
+            {
+              "value": "Celebrations",
+              "label": "Celebrations"
+            },
+            {
+              "value": "Fusion Strike",
+              "label": "Fusion Strike"
+            },
+            {
+              "value": "Brilliant Stars",
+              "label": "Brilliant Stars"
+            },
+            {
+              "value": "Astral Radiance",
+              "label": "Astral Radiance"
+            },
+            {
+              "value": "Pokémon GO",
+              "label": "Pokémon GO"
+            },
+            {
+              "value": "Lost Origin",
+              "label": "Lost Origin"
+            },
+            {
+              "value": "Silver Tempest",
+              "label": "Silver Tempest"
+            },
+            {
+              "value": "Crown Zenith",
+              "label": "Crown Zenith"
+            },
+            {
+              "value": "Other / unknown",
+              "label": "Other / unknown"
+            }
+          ]
+        },
+        {
+          "era": "Scarlet & Violet",
+          "options": [
+            {
+              "value": "Scarlet & Violet",
+              "label": "Scarlet & Violet"
+            },
+            {
+              "value": "Paldea Evolved",
+              "label": "Paldea Evolved"
+            },
+            {
+              "value": "Obsidian Flames",
+              "label": "Obsidian Flames"
+            },
+            {
+              "value": "151",
+              "label": "151"
+            },
+            {
+              "value": "Paradox Rift",
+              "label": "Paradox Rift"
+            },
+            {
+              "value": "Paldean Fates",
+              "label": "Paldean Fates"
+            },
+            {
+              "value": "Temporal Forces",
+              "label": "Temporal Forces"
+            },
+            {
+              "value": "Twilight Masquerade",
+              "label": "Twilight Masquerade"
+            },
+            {
+              "value": "Shrouded Fable",
+              "label": "Shrouded Fable"
+            },
+            {
+              "value": "Stellar Crown",
+              "label": "Stellar Crown"
+            },
+            {
+              "value": "Surging Sparks",
+              "label": "Surging Sparks"
+            },
+            {
+              "value": "Prismatic Evolutions",
+              "label": "Prismatic Evolutions"
+            },
+            {
+              "value": "Journey Together",
+              "label": "Journey Together"
+            },
+            {
+              "value": "Destined Rivals",
+              "label": "Destined Rivals"
+            },
+            {
+              "value": "Black Bolt",
+              "label": "Black Bolt"
+            },
+            {
+              "value": "White Flare",
+              "label": "White Flare"
+            },
+            {
+              "value": "Other / unknown",
+              "label": "Other / unknown"
+            }
+          ]
+        },
+        {
+          "era": "Mega Evolution",
+          "options": [
+            {
+              "value": "Mega Evolution",
+              "label": "Mega Evolution"
+            },
+            {
+              "value": "Phantasmal Flames",
+              "label": "Phantasmal Flames"
+            },
+            {
+              "value": "Other / unknown",
+              "label": "Other / unknown"
+            }
+          ]
+        }
+      ],
+      "variants": [
+        {
+          "value": "Regular",
+          "label": "Regular"
+        },
+        {
+          "value": "Reverse Holo",
+          "label": "Reverse Holo"
+        },
+        {
+          "value": "Holo",
+          "label": "Holo"
+        },
+        {
+          "value": "Ultra Rare",
+          "label": "Ultra Rare"
+        },
+        {
+          "value": "Illustration Rare",
+          "label": "Illustration Rare"
+        },
+        {
+          "value": "Special Illustration Rare",
+          "label": "Special Illustration Rare"
+        },
+        {
+          "value": "Hyper Rare",
+          "label": "Hyper Rare"
+        },
+        {
+          "value": "Full Art",
+          "label": "Full Art"
+        },
+        {
+          "value": "Secret Rare",
+          "label": "Secret Rare"
+        },
+        {
+          "value": "Shiny Rare",
+          "label": "Shiny Rare"
+        },
+        {
+          "value": "Gold",
+          "label": "Gold"
+        },
+        {
+          "value": "Promo",
+          "label": "Promo"
+        },
+        {
+          "value": "Other",
+          "label": "Other"
+        }
+      ]
+    },
+    {
+      "game": "one_piece",
+      "eras": [
+        {
+          "value": "Main booster sets",
+          "label": "Main booster sets"
+        },
+        {
+          "value": "Extra boosters",
+          "label": "Extra boosters"
+        },
+        {
+          "value": "Premium boosters",
+          "label": "Premium boosters"
+        },
+        {
+          "value": "Starter decks",
+          "label": "Starter decks"
+        },
+        {
+          "value": "Promos / tournament",
+          "label": "Promos / tournament"
+        }
+      ],
+      "sets": [
+        {
+          "era": "Main booster sets",
+          "options": [
+            {
+              "value": "OP-01 Romance Dawn",
+              "label": "OP-01 Romance Dawn"
+            },
+            {
+              "value": "OP-02 Paramount War",
+              "label": "OP-02 Paramount War"
+            },
+            {
+              "value": "OP-03 Pillars of Strength",
+              "label": "OP-03 Pillars of Strength"
+            },
+            {
+              "value": "OP-04 Kingdoms of Intrigue",
+              "label": "OP-04 Kingdoms of Intrigue"
+            },
+            {
+              "value": "OP-05 Awakening of the New Era",
+              "label": "OP-05 Awakening of the New Era"
+            },
+            {
+              "value": "OP-06 Wings of the Captain",
+              "label": "OP-06 Wings of the Captain"
+            },
+            {
+              "value": "OP-07 500 Years in the Future",
+              "label": "OP-07 500 Years in the Future"
+            },
+            {
+              "value": "OP-08 Two Legends",
+              "label": "OP-08 Two Legends"
+            },
+            {
+              "value": "OP-09 Emperors in the New World",
+              "label": "OP-09 Emperors in the New World"
+            },
+            {
+              "value": "OP-10 Royal Blood",
+              "label": "OP-10 Royal Blood"
+            },
+            {
+              "value": "OP-11 A Fist of Divine Speed",
+              "label": "OP-11 A Fist of Divine Speed"
+            },
+            {
+              "value": "OP-12 Legacy of the Master",
+              "label": "OP-12 Legacy of the Master"
+            },
+            {
+              "value": "OP-13 Carrying On His Will",
+              "label": "OP-13 Carrying On His Will"
+            },
+            {
+              "value": "OP-14 The Azure Sea's Seven",
+              "label": "OP-14 The Azure Sea's Seven"
+            },
+            {
+              "value": "OP-15 Adventure on Kami's Island",
+              "label": "OP-15 Adventure on Kami's Island"
+            },
+            {
+              "value": "OP-16",
+              "label": "OP-16"
+            },
+            {
+              "value": "OP-17",
+              "label": "OP-17"
+            },
+            {
+              "value": "Other / unknown",
+              "label": "Other / unknown"
+            }
+          ]
+        },
+        {
+          "era": "Extra boosters",
+          "options": [
+            {
+              "value": "EB-01 Memorial Collection",
+              "label": "EB-01 Memorial Collection"
+            },
+            {
+              "value": "EB-02 Anime 25th Collection",
+              "label": "EB-02 Anime 25th Collection"
+            },
+            {
+              "value": "EB-03",
+              "label": "EB-03"
+            },
+            {
+              "value": "EB-04",
+              "label": "EB-04"
+            },
+            {
+              "value": "EB-05",
+              "label": "EB-05"
+            },
+            {
+              "value": "Other / unknown",
+              "label": "Other / unknown"
+            }
+          ]
+        },
+        {
+          "era": "Premium boosters",
+          "options": [
+            {
+              "value": "PRB-01 The Best",
+              "label": "PRB-01 The Best"
+            },
+            {
+              "value": "PRB-02 The Best Vol. 2",
+              "label": "PRB-02 The Best Vol. 2"
+            },
+            {
+              "value": "Other / unknown",
+              "label": "Other / unknown"
+            }
+          ]
+        },
+        {
+          "era": "Starter decks",
+          "options": [
+            {
+              "value": "ST-01 through ST-10",
+              "label": "ST-01 through ST-10"
+            },
+            {
+              "value": "ST-11 through ST-20",
+              "label": "ST-11 through ST-20"
+            },
+            {
+              "value": "ST-21 through ST-30",
+              "label": "ST-21 through ST-30"
+            },
+            {
+              "value": "ST-31 and later",
+              "label": "ST-31 and later"
+            },
+            {
+              "value": "Other / unknown",
+              "label": "Other / unknown"
+            }
+          ]
+        },
+        {
+          "era": "Promos / tournament",
+          "options": [
+            {
+              "value": "P Promo",
+              "label": "P Promo"
+            },
+            {
+              "value": "Tournament / Event",
+              "label": "Tournament / Event"
+            },
+            {
+              "value": "Other / unknown",
+              "label": "Other / unknown"
+            }
+          ]
+        }
+      ],
+      "variants": [
+        {
+          "value": "Regular",
+          "label": "Regular"
+        },
+        {
+          "value": "Parallel / Alternate Art",
+          "label": "Parallel / Alternate Art"
+        },
+        {
+          "value": "Special Rare (SP)",
+          "label": "Special Rare (SP)"
+        },
+        {
+          "value": "Manga Rare",
+          "label": "Manga Rare"
+        },
+        {
+          "value": "Treasure Rare",
+          "label": "Treasure Rare"
+        },
+        {
+          "value": "Leader Parallel",
+          "label": "Leader Parallel"
+        },
+        {
+          "value": "Promo",
+          "label": "Promo"
+        },
+        {
+          "value": "Other",
+          "label": "Other"
+        }
+      ]
+    },
+    {
+      "game": "naruto_kayou",
+      "eras": [],
+      "sets": [],
+      "variants": [
+        {
+          "value": "Regular",
+          "label": "Regular"
+        },
+        {
+          "value": "Holo",
+          "label": "Holo"
+        },
+        {
+          "value": "Foil",
+          "label": "Foil"
+        },
+        {
+          "value": "Alternate Art",
+          "label": "Alternate Art"
+        },
+        {
+          "value": "Promo",
+          "label": "Promo"
+        },
+        {
+          "value": "Other",
+          "label": "Other"
+        }
+      ]
+    },
+    {
+      "game": "magic",
+      "eras": [],
+      "sets": [],
+      "variants": [
+        {
+          "value": "Regular",
+          "label": "Regular"
+        },
+        {
+          "value": "Holo",
+          "label": "Holo"
+        },
+        {
+          "value": "Foil",
+          "label": "Foil"
+        },
+        {
+          "value": "Alternate Art",
+          "label": "Alternate Art"
+        },
+        {
+          "value": "Promo",
+          "label": "Promo"
+        },
+        {
+          "value": "Other",
+          "label": "Other"
+        }
+      ]
+    },
+    {
+      "game": "yugioh",
+      "eras": [],
+      "sets": [],
+      "variants": [
+        {
+          "value": "Regular",
+          "label": "Regular"
+        },
+        {
+          "value": "Holo",
+          "label": "Holo"
+        },
+        {
+          "value": "Foil",
+          "label": "Foil"
+        },
+        {
+          "value": "Alternate Art",
+          "label": "Alternate Art"
+        },
+        {
+          "value": "Promo",
+          "label": "Promo"
+        },
+        {
+          "value": "Other",
+          "label": "Other"
+        }
+      ]
+    },
+    {
+      "game": "dragon_ball",
+      "eras": [],
+      "sets": [],
+      "variants": [
+        {
+          "value": "Regular",
+          "label": "Regular"
+        },
+        {
+          "value": "Holo",
+          "label": "Holo"
+        },
+        {
+          "value": "Foil",
+          "label": "Foil"
+        },
+        {
+          "value": "Alternate Art",
+          "label": "Alternate Art"
+        },
+        {
+          "value": "Promo",
+          "label": "Promo"
+        },
+        {
+          "value": "Other",
+          "label": "Other"
+        }
+      ]
+    },
+    {
+      "game": "lorcana",
+      "eras": [],
+      "sets": [],
+      "variants": [
+        {
+          "value": "Regular",
+          "label": "Regular"
+        },
+        {
+          "value": "Holo",
+          "label": "Holo"
+        },
+        {
+          "value": "Foil",
+          "label": "Foil"
+        },
+        {
+          "value": "Alternate Art",
+          "label": "Alternate Art"
+        },
+        {
+          "value": "Promo",
+          "label": "Promo"
+        },
+        {
+          "value": "Other",
+          "label": "Other"
+        }
+      ]
+    },
+    {
+      "game": "digimon",
+      "eras": [],
+      "sets": [],
+      "variants": [
+        {
+          "value": "Regular",
+          "label": "Regular"
+        },
+        {
+          "value": "Holo",
+          "label": "Holo"
+        },
+        {
+          "value": "Foil",
+          "label": "Foil"
+        },
+        {
+          "value": "Alternate Art",
+          "label": "Alternate Art"
+        },
+        {
+          "value": "Promo",
+          "label": "Promo"
+        },
+        {
+          "value": "Other",
+          "label": "Other"
+        }
+      ]
+    },
+    {
+      "game": "gundam",
+      "eras": [],
+      "sets": [],
+      "variants": [
+        {
+          "value": "Regular",
+          "label": "Regular"
+        },
+        {
+          "value": "Holo",
+          "label": "Holo"
+        },
+        {
+          "value": "Foil",
+          "label": "Foil"
+        },
+        {
+          "value": "Alternate Art",
+          "label": "Alternate Art"
+        },
+        {
+          "value": "Promo",
+          "label": "Promo"
+        },
+        {
+          "value": "Other",
+          "label": "Other"
+        }
+      ]
+    },
+    {
+      "game": "union_arena",
+      "eras": [],
+      "sets": [],
+      "variants": [
+        {
+          "value": "Regular",
+          "label": "Regular"
+        },
+        {
+          "value": "Holo",
+          "label": "Holo"
+        },
+        {
+          "value": "Foil",
+          "label": "Foil"
+        },
+        {
+          "value": "Alternate Art",
+          "label": "Alternate Art"
+        },
+        {
+          "value": "Promo",
+          "label": "Promo"
+        },
+        {
+          "value": "Other",
+          "label": "Other"
+        }
+      ]
+    },
+    {
+      "game": "riftbound",
+      "eras": [],
+      "sets": [],
+      "variants": [
+        {
+          "value": "Regular",
+          "label": "Regular"
+        },
+        {
+          "value": "Holo",
+          "label": "Holo"
+        },
+        {
+          "value": "Foil",
+          "label": "Foil"
+        },
+        {
+          "value": "Alternate Art",
+          "label": "Alternate Art"
+        },
+        {
+          "value": "Promo",
+          "label": "Promo"
+        },
+        {
+          "value": "Other",
+          "label": "Other"
+        }
+      ]
+    },
+    {
+      "game": "flesh_blood",
+      "eras": [],
+      "sets": [],
+      "variants": [
+        {
+          "value": "Regular",
+          "label": "Regular"
+        },
+        {
+          "value": "Holo",
+          "label": "Holo"
+        },
+        {
+          "value": "Foil",
+          "label": "Foil"
+        },
+        {
+          "value": "Alternate Art",
+          "label": "Alternate Art"
+        },
+        {
+          "value": "Promo",
+          "label": "Promo"
+        },
+        {
+          "value": "Other",
+          "label": "Other"
+        }
+      ]
+    },
+    {
+      "game": "star_wars",
+      "eras": [],
+      "sets": [],
+      "variants": [
+        {
+          "value": "Regular",
+          "label": "Regular"
+        },
+        {
+          "value": "Holo",
+          "label": "Holo"
+        },
+        {
+          "value": "Foil",
+          "label": "Foil"
+        },
+        {
+          "value": "Alternate Art",
+          "label": "Alternate Art"
+        },
+        {
+          "value": "Promo",
+          "label": "Promo"
+        },
+        {
+          "value": "Other",
+          "label": "Other"
+        }
+      ]
+    },
+    {
+      "game": "weiss_schwarz",
+      "eras": [],
+      "sets": [],
+      "variants": [
+        {
+          "value": "Regular",
+          "label": "Regular"
+        },
+        {
+          "value": "Holo",
+          "label": "Holo"
+        },
+        {
+          "value": "Foil",
+          "label": "Foil"
+        },
+        {
+          "value": "Alternate Art",
+          "label": "Alternate Art"
+        },
+        {
+          "value": "Promo",
+          "label": "Promo"
+        },
+        {
+          "value": "Other",
+          "label": "Other"
+        }
+      ]
+    },
+    {
+      "game": "cardfight_vanguard",
+      "eras": [],
+      "sets": [],
+      "variants": [
+        {
+          "value": "Regular",
+          "label": "Regular"
+        },
+        {
+          "value": "Holo",
+          "label": "Holo"
+        },
+        {
+          "value": "Foil",
+          "label": "Foil"
+        },
+        {
+          "value": "Alternate Art",
+          "label": "Alternate Art"
+        },
+        {
+          "value": "Promo",
+          "label": "Promo"
+        },
+        {
+          "value": "Other",
+          "label": "Other"
+        }
+      ]
+    },
+    {
+      "game": "altered",
+      "eras": [],
+      "sets": [],
+      "variants": [
+        {
+          "value": "Regular",
+          "label": "Regular"
+        },
+        {
+          "value": "Holo",
+          "label": "Holo"
+        },
+        {
+          "value": "Foil",
+          "label": "Foil"
+        },
+        {
+          "value": "Alternate Art",
+          "label": "Alternate Art"
+        },
+        {
+          "value": "Promo",
+          "label": "Promo"
+        },
+        {
+          "value": "Other",
+          "label": "Other"
+        }
+      ]
+    },
+    {
+      "game": "shadowverse",
+      "eras": [],
+      "sets": [],
+      "variants": [
+        {
+          "value": "Regular",
+          "label": "Regular"
+        },
+        {
+          "value": "Holo",
+          "label": "Holo"
+        },
+        {
+          "value": "Foil",
+          "label": "Foil"
+        },
+        {
+          "value": "Alternate Art",
+          "label": "Alternate Art"
+        },
+        {
+          "value": "Promo",
+          "label": "Promo"
+        },
+        {
+          "value": "Other",
+          "label": "Other"
+        }
+      ]
+    },
+    {
+      "game": "sports_cards",
+      "eras": [],
+      "sets": [],
+      "variants": [
+        {
+          "value": "Regular",
+          "label": "Regular"
+        },
+        {
+          "value": "Holo",
+          "label": "Holo"
+        },
+        {
+          "value": "Foil",
+          "label": "Foil"
+        },
+        {
+          "value": "Alternate Art",
+          "label": "Alternate Art"
+        },
+        {
+          "value": "Promo",
+          "label": "Promo"
+        },
+        {
+          "value": "Other",
+          "label": "Other"
+        }
+      ]
+    },
+    {
+      "game": "other_tcg",
+      "eras": [],
+      "sets": [],
+      "variants": [
+        {
+          "value": "Regular",
+          "label": "Regular"
+        },
+        {
+          "value": "Holo",
+          "label": "Holo"
+        },
+        {
+          "value": "Foil",
+          "label": "Foil"
+        },
+        {
+          "value": "Alternate Art",
+          "label": "Alternate Art"
+        },
+        {
+          "value": "Promo",
+          "label": "Promo"
+        },
+        {
+          "value": "Other",
+          "label": "Other"
+        }
+      ]
+    }
+  ],
+  "rows": [
+    {
+      "key": "single/trading_cards/pokemon",
+      "fields": {
+        "listingType": "single",
+        "category": "trading_cards",
+        "tcgGame": "pokemon"
+      },
+      "label": "Pokémon — Single item / card"
+    },
+    {
+      "key": "single/trading_cards/one_piece",
+      "fields": {
+        "listingType": "single",
+        "category": "trading_cards",
+        "tcgGame": "one_piece"
+      },
+      "label": "One Piece — Single item / card"
+    },
+    {
+      "key": "single/trading_cards/naruto_kayou",
+      "fields": {
+        "listingType": "single",
+        "category": "trading_cards",
+        "tcgGame": "naruto_kayou"
+      },
+      "label": "Naruto Kayou — Single item / card"
+    },
+    {
+      "key": "single/trading_cards/magic",
+      "fields": {
+        "listingType": "single",
+        "category": "trading_cards",
+        "tcgGame": "magic"
+      },
+      "label": "Magic: The Gathering — Single item / card"
+    },
+    {
+      "key": "single/trading_cards/yugioh",
+      "fields": {
+        "listingType": "single",
+        "category": "trading_cards",
+        "tcgGame": "yugioh"
+      },
+      "label": "Yu-Gi-Oh! — Single item / card"
+    },
+    {
+      "key": "single/trading_cards/dragon_ball",
+      "fields": {
+        "listingType": "single",
+        "category": "trading_cards",
+        "tcgGame": "dragon_ball"
+      },
+      "label": "Dragon Ball Super — Single item / card"
+    },
+    {
+      "key": "single/trading_cards/lorcana",
+      "fields": {
+        "listingType": "single",
+        "category": "trading_cards",
+        "tcgGame": "lorcana"
+      },
+      "label": "Disney Lorcana — Single item / card"
+    },
+    {
+      "key": "single/trading_cards/digimon",
+      "fields": {
+        "listingType": "single",
+        "category": "trading_cards",
+        "tcgGame": "digimon"
+      },
+      "label": "Digimon — Single item / card"
+    },
+    {
+      "key": "single/trading_cards/gundam",
+      "fields": {
+        "listingType": "single",
+        "category": "trading_cards",
+        "tcgGame": "gundam"
+      },
+      "label": "Gundam — Single item / card"
+    },
+    {
+      "key": "single/trading_cards/union_arena",
+      "fields": {
+        "listingType": "single",
+        "category": "trading_cards",
+        "tcgGame": "union_arena"
+      },
+      "label": "Union Arena — Single item / card"
+    },
+    {
+      "key": "single/trading_cards/riftbound",
+      "fields": {
+        "listingType": "single",
+        "category": "trading_cards",
+        "tcgGame": "riftbound"
+      },
+      "label": "Riftbound — Single item / card"
+    },
+    {
+      "key": "single/trading_cards/flesh_blood",
+      "fields": {
+        "listingType": "single",
+        "category": "trading_cards",
+        "tcgGame": "flesh_blood"
+      },
+      "label": "Flesh and Blood — Single item / card"
+    },
+    {
+      "key": "single/trading_cards/star_wars",
+      "fields": {
+        "listingType": "single",
+        "category": "trading_cards",
+        "tcgGame": "star_wars"
+      },
+      "label": "Star Wars Unlimited — Single item / card"
+    },
+    {
+      "key": "single/trading_cards/weiss_schwarz",
+      "fields": {
+        "listingType": "single",
+        "category": "trading_cards",
+        "tcgGame": "weiss_schwarz"
+      },
+      "label": "Weiss Schwarz — Single item / card"
+    },
+    {
+      "key": "single/trading_cards/cardfight_vanguard",
+      "fields": {
+        "listingType": "single",
+        "category": "trading_cards",
+        "tcgGame": "cardfight_vanguard"
+      },
+      "label": "Cardfight!! Vanguard — Single item / card"
+    },
+    {
+      "key": "single/trading_cards/altered",
+      "fields": {
+        "listingType": "single",
+        "category": "trading_cards",
+        "tcgGame": "altered"
+      },
+      "label": "Altered — Single item / card"
+    },
+    {
+      "key": "single/trading_cards/shadowverse",
+      "fields": {
+        "listingType": "single",
+        "category": "trading_cards",
+        "tcgGame": "shadowverse"
+      },
+      "label": "Shadowverse Evolve — Single item / card"
+    },
+    {
+      "key": "single/trading_cards/sports_cards",
+      "fields": {
+        "listingType": "single",
+        "category": "trading_cards",
+        "tcgGame": "sports_cards"
+      },
+      "label": "Sports cards — Single item / card"
+    },
+    {
+      "key": "single/trading_cards/other_tcg",
+      "fields": {
+        "listingType": "single",
+        "category": "trading_cards",
+        "tcgGame": "other_tcg"
+      },
+      "label": "Other TCG / cards — Single item / card"
+    },
+    {
+      "key": "deck/trading_cards/pokemon",
+      "fields": {
+        "listingType": "deck",
+        "category": "trading_cards",
+        "tcgGame": "pokemon"
+      },
+      "label": "Pokémon — Complete playable deck"
+    },
+    {
+      "key": "deck/trading_cards/one_piece",
+      "fields": {
+        "listingType": "deck",
+        "category": "trading_cards",
+        "tcgGame": "one_piece"
+      },
+      "label": "One Piece — Complete playable deck"
+    },
+    {
+      "key": "deck/trading_cards/naruto_kayou",
+      "fields": {
+        "listingType": "deck",
+        "category": "trading_cards",
+        "tcgGame": "naruto_kayou"
+      },
+      "label": "Naruto Kayou — Complete playable deck"
+    },
+    {
+      "key": "deck/trading_cards/magic",
+      "fields": {
+        "listingType": "deck",
+        "category": "trading_cards",
+        "tcgGame": "magic"
+      },
+      "label": "Magic: The Gathering — Complete playable deck"
+    },
+    {
+      "key": "deck/trading_cards/yugioh",
+      "fields": {
+        "listingType": "deck",
+        "category": "trading_cards",
+        "tcgGame": "yugioh"
+      },
+      "label": "Yu-Gi-Oh! — Complete playable deck"
+    },
+    {
+      "key": "deck/trading_cards/dragon_ball",
+      "fields": {
+        "listingType": "deck",
+        "category": "trading_cards",
+        "tcgGame": "dragon_ball"
+      },
+      "label": "Dragon Ball Super — Complete playable deck"
+    },
+    {
+      "key": "deck/trading_cards/lorcana",
+      "fields": {
+        "listingType": "deck",
+        "category": "trading_cards",
+        "tcgGame": "lorcana"
+      },
+      "label": "Disney Lorcana — Complete playable deck"
+    },
+    {
+      "key": "deck/trading_cards/digimon",
+      "fields": {
+        "listingType": "deck",
+        "category": "trading_cards",
+        "tcgGame": "digimon"
+      },
+      "label": "Digimon — Complete playable deck"
+    },
+    {
+      "key": "deck/trading_cards/gundam",
+      "fields": {
+        "listingType": "deck",
+        "category": "trading_cards",
+        "tcgGame": "gundam"
+      },
+      "label": "Gundam — Complete playable deck"
+    },
+    {
+      "key": "deck/trading_cards/union_arena",
+      "fields": {
+        "listingType": "deck",
+        "category": "trading_cards",
+        "tcgGame": "union_arena"
+      },
+      "label": "Union Arena — Complete playable deck"
+    },
+    {
+      "key": "deck/trading_cards/riftbound",
+      "fields": {
+        "listingType": "deck",
+        "category": "trading_cards",
+        "tcgGame": "riftbound"
+      },
+      "label": "Riftbound — Complete playable deck"
+    },
+    {
+      "key": "deck/trading_cards/flesh_blood",
+      "fields": {
+        "listingType": "deck",
+        "category": "trading_cards",
+        "tcgGame": "flesh_blood"
+      },
+      "label": "Flesh and Blood — Complete playable deck"
+    },
+    {
+      "key": "deck/trading_cards/star_wars",
+      "fields": {
+        "listingType": "deck",
+        "category": "trading_cards",
+        "tcgGame": "star_wars"
+      },
+      "label": "Star Wars Unlimited — Complete playable deck"
+    },
+    {
+      "key": "deck/trading_cards/weiss_schwarz",
+      "fields": {
+        "listingType": "deck",
+        "category": "trading_cards",
+        "tcgGame": "weiss_schwarz"
+      },
+      "label": "Weiss Schwarz — Complete playable deck"
+    },
+    {
+      "key": "deck/trading_cards/cardfight_vanguard",
+      "fields": {
+        "listingType": "deck",
+        "category": "trading_cards",
+        "tcgGame": "cardfight_vanguard"
+      },
+      "label": "Cardfight!! Vanguard — Complete playable deck"
+    },
+    {
+      "key": "deck/trading_cards/altered",
+      "fields": {
+        "listingType": "deck",
+        "category": "trading_cards",
+        "tcgGame": "altered"
+      },
+      "label": "Altered — Complete playable deck"
+    },
+    {
+      "key": "deck/trading_cards/shadowverse",
+      "fields": {
+        "listingType": "deck",
+        "category": "trading_cards",
+        "tcgGame": "shadowverse"
+      },
+      "label": "Shadowverse Evolve — Complete playable deck"
+    },
+    {
+      "key": "deck/trading_cards/sports_cards",
+      "fields": {
+        "listingType": "deck",
+        "category": "trading_cards",
+        "tcgGame": "sports_cards"
+      },
+      "label": "Sports cards — Complete playable deck"
+    },
+    {
+      "key": "deck/trading_cards/other_tcg",
+      "fields": {
+        "listingType": "deck",
+        "category": "trading_cards",
+        "tcgGame": "other_tcg"
+      },
+      "label": "Other TCG / cards — Complete playable deck"
+    },
+    {
+      "key": "lot/trading_cards/pokemon",
+      "fields": {
+        "listingType": "lot",
+        "category": "trading_cards",
+        "tcgGame": "pokemon"
+      },
+      "label": "Pokémon — Card lot / collection"
+    },
+    {
+      "key": "lot/trading_cards/one_piece",
+      "fields": {
+        "listingType": "lot",
+        "category": "trading_cards",
+        "tcgGame": "one_piece"
+      },
+      "label": "One Piece — Card lot / collection"
+    },
+    {
+      "key": "lot/trading_cards/naruto_kayou",
+      "fields": {
+        "listingType": "lot",
+        "category": "trading_cards",
+        "tcgGame": "naruto_kayou"
+      },
+      "label": "Naruto Kayou — Card lot / collection"
+    },
+    {
+      "key": "lot/trading_cards/magic",
+      "fields": {
+        "listingType": "lot",
+        "category": "trading_cards",
+        "tcgGame": "magic"
+      },
+      "label": "Magic: The Gathering — Card lot / collection"
+    },
+    {
+      "key": "lot/trading_cards/yugioh",
+      "fields": {
+        "listingType": "lot",
+        "category": "trading_cards",
+        "tcgGame": "yugioh"
+      },
+      "label": "Yu-Gi-Oh! — Card lot / collection"
+    },
+    {
+      "key": "lot/trading_cards/dragon_ball",
+      "fields": {
+        "listingType": "lot",
+        "category": "trading_cards",
+        "tcgGame": "dragon_ball"
+      },
+      "label": "Dragon Ball Super — Card lot / collection"
+    },
+    {
+      "key": "lot/trading_cards/lorcana",
+      "fields": {
+        "listingType": "lot",
+        "category": "trading_cards",
+        "tcgGame": "lorcana"
+      },
+      "label": "Disney Lorcana — Card lot / collection"
+    },
+    {
+      "key": "lot/trading_cards/digimon",
+      "fields": {
+        "listingType": "lot",
+        "category": "trading_cards",
+        "tcgGame": "digimon"
+      },
+      "label": "Digimon — Card lot / collection"
+    },
+    {
+      "key": "lot/trading_cards/gundam",
+      "fields": {
+        "listingType": "lot",
+        "category": "trading_cards",
+        "tcgGame": "gundam"
+      },
+      "label": "Gundam — Card lot / collection"
+    },
+    {
+      "key": "lot/trading_cards/union_arena",
+      "fields": {
+        "listingType": "lot",
+        "category": "trading_cards",
+        "tcgGame": "union_arena"
+      },
+      "label": "Union Arena — Card lot / collection"
+    },
+    {
+      "key": "lot/trading_cards/riftbound",
+      "fields": {
+        "listingType": "lot",
+        "category": "trading_cards",
+        "tcgGame": "riftbound"
+      },
+      "label": "Riftbound — Card lot / collection"
+    },
+    {
+      "key": "lot/trading_cards/flesh_blood",
+      "fields": {
+        "listingType": "lot",
+        "category": "trading_cards",
+        "tcgGame": "flesh_blood"
+      },
+      "label": "Flesh and Blood — Card lot / collection"
+    },
+    {
+      "key": "lot/trading_cards/star_wars",
+      "fields": {
+        "listingType": "lot",
+        "category": "trading_cards",
+        "tcgGame": "star_wars"
+      },
+      "label": "Star Wars Unlimited — Card lot / collection"
+    },
+    {
+      "key": "lot/trading_cards/weiss_schwarz",
+      "fields": {
+        "listingType": "lot",
+        "category": "trading_cards",
+        "tcgGame": "weiss_schwarz"
+      },
+      "label": "Weiss Schwarz — Card lot / collection"
+    },
+    {
+      "key": "lot/trading_cards/cardfight_vanguard",
+      "fields": {
+        "listingType": "lot",
+        "category": "trading_cards",
+        "tcgGame": "cardfight_vanguard"
+      },
+      "label": "Cardfight!! Vanguard — Card lot / collection"
+    },
+    {
+      "key": "lot/trading_cards/altered",
+      "fields": {
+        "listingType": "lot",
+        "category": "trading_cards",
+        "tcgGame": "altered"
+      },
+      "label": "Altered — Card lot / collection"
+    },
+    {
+      "key": "lot/trading_cards/shadowverse",
+      "fields": {
+        "listingType": "lot",
+        "category": "trading_cards",
+        "tcgGame": "shadowverse"
+      },
+      "label": "Shadowverse Evolve — Card lot / collection"
+    },
+    {
+      "key": "lot/trading_cards/sports_cards",
+      "fields": {
+        "listingType": "lot",
+        "category": "trading_cards",
+        "tcgGame": "sports_cards"
+      },
+      "label": "Sports cards — Card lot / collection"
+    },
+    {
+      "key": "lot/trading_cards/other_tcg",
+      "fields": {
+        "listingType": "lot",
+        "category": "trading_cards",
+        "tcgGame": "other_tcg"
+      },
+      "label": "Other TCG / cards — Card lot / collection"
+    },
+    {
+      "key": "sealed/trading_cards/pokemon",
+      "fields": {
+        "listingType": "sealed",
+        "category": "trading_cards",
+        "tcgGame": "pokemon"
+      },
+      "label": "Pokémon — Sealed box / packs / product"
+    },
+    {
+      "key": "sealed/trading_cards/one_piece",
+      "fields": {
+        "listingType": "sealed",
+        "category": "trading_cards",
+        "tcgGame": "one_piece"
+      },
+      "label": "One Piece — Sealed box / packs / product"
+    },
+    {
+      "key": "sealed/trading_cards/naruto_kayou",
+      "fields": {
+        "listingType": "sealed",
+        "category": "trading_cards",
+        "tcgGame": "naruto_kayou"
+      },
+      "label": "Naruto Kayou — Sealed box / packs / product"
+    },
+    {
+      "key": "sealed/trading_cards/magic",
+      "fields": {
+        "listingType": "sealed",
+        "category": "trading_cards",
+        "tcgGame": "magic"
+      },
+      "label": "Magic: The Gathering — Sealed box / packs / product"
+    },
+    {
+      "key": "sealed/trading_cards/yugioh",
+      "fields": {
+        "listingType": "sealed",
+        "category": "trading_cards",
+        "tcgGame": "yugioh"
+      },
+      "label": "Yu-Gi-Oh! — Sealed box / packs / product"
+    },
+    {
+      "key": "sealed/trading_cards/dragon_ball",
+      "fields": {
+        "listingType": "sealed",
+        "category": "trading_cards",
+        "tcgGame": "dragon_ball"
+      },
+      "label": "Dragon Ball Super — Sealed box / packs / product"
+    },
+    {
+      "key": "sealed/trading_cards/lorcana",
+      "fields": {
+        "listingType": "sealed",
+        "category": "trading_cards",
+        "tcgGame": "lorcana"
+      },
+      "label": "Disney Lorcana — Sealed box / packs / product"
+    },
+    {
+      "key": "sealed/trading_cards/digimon",
+      "fields": {
+        "listingType": "sealed",
+        "category": "trading_cards",
+        "tcgGame": "digimon"
+      },
+      "label": "Digimon — Sealed box / packs / product"
+    },
+    {
+      "key": "sealed/trading_cards/gundam",
+      "fields": {
+        "listingType": "sealed",
+        "category": "trading_cards",
+        "tcgGame": "gundam"
+      },
+      "label": "Gundam — Sealed box / packs / product"
+    },
+    {
+      "key": "sealed/trading_cards/union_arena",
+      "fields": {
+        "listingType": "sealed",
+        "category": "trading_cards",
+        "tcgGame": "union_arena"
+      },
+      "label": "Union Arena — Sealed box / packs / product"
+    },
+    {
+      "key": "sealed/trading_cards/riftbound",
+      "fields": {
+        "listingType": "sealed",
+        "category": "trading_cards",
+        "tcgGame": "riftbound"
+      },
+      "label": "Riftbound — Sealed box / packs / product"
+    },
+    {
+      "key": "sealed/trading_cards/flesh_blood",
+      "fields": {
+        "listingType": "sealed",
+        "category": "trading_cards",
+        "tcgGame": "flesh_blood"
+      },
+      "label": "Flesh and Blood — Sealed box / packs / product"
+    },
+    {
+      "key": "sealed/trading_cards/star_wars",
+      "fields": {
+        "listingType": "sealed",
+        "category": "trading_cards",
+        "tcgGame": "star_wars"
+      },
+      "label": "Star Wars Unlimited — Sealed box / packs / product"
+    },
+    {
+      "key": "sealed/trading_cards/weiss_schwarz",
+      "fields": {
+        "listingType": "sealed",
+        "category": "trading_cards",
+        "tcgGame": "weiss_schwarz"
+      },
+      "label": "Weiss Schwarz — Sealed box / packs / product"
+    },
+    {
+      "key": "sealed/trading_cards/cardfight_vanguard",
+      "fields": {
+        "listingType": "sealed",
+        "category": "trading_cards",
+        "tcgGame": "cardfight_vanguard"
+      },
+      "label": "Cardfight!! Vanguard — Sealed box / packs / product"
+    },
+    {
+      "key": "sealed/trading_cards/altered",
+      "fields": {
+        "listingType": "sealed",
+        "category": "trading_cards",
+        "tcgGame": "altered"
+      },
+      "label": "Altered — Sealed box / packs / product"
+    },
+    {
+      "key": "sealed/trading_cards/shadowverse",
+      "fields": {
+        "listingType": "sealed",
+        "category": "trading_cards",
+        "tcgGame": "shadowverse"
+      },
+      "label": "Shadowverse Evolve — Sealed box / packs / product"
+    },
+    {
+      "key": "sealed/trading_cards/sports_cards",
+      "fields": {
+        "listingType": "sealed",
+        "category": "trading_cards",
+        "tcgGame": "sports_cards"
+      },
+      "label": "Sports cards — Sealed box / packs / product"
+    },
+    {
+      "key": "sealed/trading_cards/other_tcg",
+      "fields": {
+        "listingType": "sealed",
+        "category": "trading_cards",
+        "tcgGame": "other_tcg"
+      },
+      "label": "Other TCG / cards — Sealed box / packs / product"
+    },
+    {
+      "key": "game/video_games/PlayStation 5",
+      "fields": {
+        "listingType": "game",
+        "category": "video_games",
+        "gamePlatform": "PlayStation 5"
+      },
+      "label": "PlayStation 5 — test game"
+    },
+    {
+      "key": "game/video_games/PlayStation 4",
+      "fields": {
+        "listingType": "game",
+        "category": "video_games",
+        "gamePlatform": "PlayStation 4"
+      },
+      "label": "PlayStation 4 — test game"
+    },
+    {
+      "key": "game/video_games/PlayStation 3",
+      "fields": {
+        "listingType": "game",
+        "category": "video_games",
+        "gamePlatform": "PlayStation 3"
+      },
+      "label": "PlayStation 3 — test game"
+    },
+    {
+      "key": "game/video_games/PlayStation 2",
+      "fields": {
+        "listingType": "game",
+        "category": "video_games",
+        "gamePlatform": "PlayStation 2"
+      },
+      "label": "PlayStation 2 — test game"
+    },
+    {
+      "key": "game/video_games/PlayStation 1",
+      "fields": {
+        "listingType": "game",
+        "category": "video_games",
+        "gamePlatform": "PlayStation 1"
+      },
+      "label": "PlayStation 1 — test game"
+    },
+    {
+      "key": "game/video_games/Xbox Series X / S",
+      "fields": {
+        "listingType": "game",
+        "category": "video_games",
+        "gamePlatform": "Xbox Series X / S"
+      },
+      "label": "Xbox Series X / S — test game"
+    },
+    {
+      "key": "game/video_games/Xbox One",
+      "fields": {
+        "listingType": "game",
+        "category": "video_games",
+        "gamePlatform": "Xbox One"
+      },
+      "label": "Xbox One — test game"
+    },
+    {
+      "key": "game/video_games/Xbox 360",
+      "fields": {
+        "listingType": "game",
+        "category": "video_games",
+        "gamePlatform": "Xbox 360"
+      },
+      "label": "Xbox 360 — test game"
+    },
+    {
+      "key": "game/video_games/Original Xbox",
+      "fields": {
+        "listingType": "game",
+        "category": "video_games",
+        "gamePlatform": "Original Xbox"
+      },
+      "label": "Original Xbox — test game"
+    },
+    {
+      "key": "game/video_games/Nintendo Switch 2",
+      "fields": {
+        "listingType": "game",
+        "category": "video_games",
+        "gamePlatform": "Nintendo Switch 2"
+      },
+      "label": "Nintendo Switch 2 — test game"
+    },
+    {
+      "key": "game/video_games/Nintendo Switch",
+      "fields": {
+        "listingType": "game",
+        "category": "video_games",
+        "gamePlatform": "Nintendo Switch"
+      },
+      "label": "Nintendo Switch — test game"
+    },
+    {
+      "key": "game/video_games/Nintendo Wii U",
+      "fields": {
+        "listingType": "game",
+        "category": "video_games",
+        "gamePlatform": "Nintendo Wii U"
+      },
+      "label": "Nintendo Wii U — test game"
+    },
+    {
+      "key": "game/video_games/Nintendo Wii",
+      "fields": {
+        "listingType": "game",
+        "category": "video_games",
+        "gamePlatform": "Nintendo Wii"
+      },
+      "label": "Nintendo Wii — test game"
+    },
+    {
+      "key": "game/video_games/Nintendo GameCube",
+      "fields": {
+        "listingType": "game",
+        "category": "video_games",
+        "gamePlatform": "Nintendo GameCube"
+      },
+      "label": "Nintendo GameCube — test game"
+    },
+    {
+      "key": "game/video_games/Nintendo 64",
+      "fields": {
+        "listingType": "game",
+        "category": "video_games",
+        "gamePlatform": "Nintendo 64"
+      },
+      "label": "Nintendo 64 — test game"
+    },
+    {
+      "key": "game/video_games/Super Nintendo",
+      "fields": {
+        "listingType": "game",
+        "category": "video_games",
+        "gamePlatform": "Super Nintendo"
+      },
+      "label": "Super Nintendo — test game"
+    },
+    {
+      "key": "game/video_games/NES",
+      "fields": {
+        "listingType": "game",
+        "category": "video_games",
+        "gamePlatform": "NES"
+      },
+      "label": "NES — test game"
+    },
+    {
+      "key": "game/video_games/Nintendo DS / 3DS",
+      "fields": {
+        "listingType": "game",
+        "category": "video_games",
+        "gamePlatform": "Nintendo DS / 3DS"
+      },
+      "label": "Nintendo DS / 3DS — test game"
+    },
+    {
+      "key": "game/video_games/PC",
+      "fields": {
+        "listingType": "game",
+        "category": "video_games",
+        "gamePlatform": "PC"
+      },
+      "label": "PC — test game"
+    },
+    {
+      "key": "game/video_games/Sega",
+      "fields": {
+        "listingType": "game",
+        "category": "video_games",
+        "gamePlatform": "Sega"
+      },
+      "label": "Sega — test game"
+    },
+    {
+      "key": "game/video_games/Atari",
+      "fields": {
+        "listingType": "game",
+        "category": "video_games",
+        "gamePlatform": "Atari"
+      },
+      "label": "Atari — test game"
+    },
+    {
+      "key": "game/video_games/Other",
+      "fields": {
+        "listingType": "game",
+        "category": "video_games",
+        "gamePlatform": "Other"
+      },
+      "label": "Other — test game"
+    },
+    {
+      "key": "console/consoles/Console/Nintendo",
+      "fields": {
+        "listingType": "console",
+        "category": "consoles",
+        "consoleItemType": "Console",
+        "consoleBrand": "Nintendo"
+      },
+      "label": "Nintendo — Consoles"
+    },
+    {
+      "key": "console/consoles/Console/Sony PlayStation",
+      "fields": {
+        "listingType": "console",
+        "category": "consoles",
+        "consoleItemType": "Console",
+        "consoleBrand": "Sony PlayStation"
+      },
+      "label": "Sony PlayStation — Consoles"
+    },
+    {
+      "key": "console/consoles/Console/Microsoft Xbox",
+      "fields": {
+        "listingType": "console",
+        "category": "consoles",
+        "consoleItemType": "Console",
+        "consoleBrand": "Microsoft Xbox"
+      },
+      "label": "Microsoft Xbox — Consoles"
+    },
+    {
+      "key": "console/consoles/Console/Sega",
+      "fields": {
+        "listingType": "console",
+        "category": "consoles",
+        "consoleItemType": "Console",
+        "consoleBrand": "Sega"
+      },
+      "label": "Sega — Consoles"
+    },
+    {
+      "key": "console/consoles/Console/Atari",
+      "fields": {
+        "listingType": "console",
+        "category": "consoles",
+        "consoleItemType": "Console",
+        "consoleBrand": "Atari"
+      },
+      "label": "Atari — Consoles"
+    },
+    {
+      "key": "console/consoles/Console/Other",
+      "fields": {
+        "listingType": "console",
+        "category": "consoles",
+        "consoleItemType": "Console",
+        "consoleBrand": "Other"
+      },
+      "label": "Other — Consoles"
+    },
+    {
+      "key": "console/controllers/Controller/Nintendo",
+      "fields": {
+        "listingType": "console",
+        "category": "controllers",
+        "consoleItemType": "Controller",
+        "consoleBrand": "Nintendo"
+      },
+      "label": "Nintendo — Controllers"
+    },
+    {
+      "key": "console/controllers/Controller/Sony PlayStation",
+      "fields": {
+        "listingType": "console",
+        "category": "controllers",
+        "consoleItemType": "Controller",
+        "consoleBrand": "Sony PlayStation"
+      },
+      "label": "Sony PlayStation — Controllers"
+    },
+    {
+      "key": "console/controllers/Controller/Microsoft Xbox",
+      "fields": {
+        "listingType": "console",
+        "category": "controllers",
+        "consoleItemType": "Controller",
+        "consoleBrand": "Microsoft Xbox"
+      },
+      "label": "Microsoft Xbox — Controllers"
+    },
+    {
+      "key": "console/controllers/Controller/Sega",
+      "fields": {
+        "listingType": "console",
+        "category": "controllers",
+        "consoleItemType": "Controller",
+        "consoleBrand": "Sega"
+      },
+      "label": "Sega — Controllers"
+    },
+    {
+      "key": "console/controllers/Controller/Atari",
+      "fields": {
+        "listingType": "console",
+        "category": "controllers",
+        "consoleItemType": "Controller",
+        "consoleBrand": "Atari"
+      },
+      "label": "Atari — Controllers"
+    },
+    {
+      "key": "console/controllers/Controller/Other",
+      "fields": {
+        "listingType": "console",
+        "category": "controllers",
+        "consoleItemType": "Controller",
+        "consoleBrand": "Other"
+      },
+      "label": "Other — Controllers"
+    },
+    {
+      "key": "console/accessories/Accessory/Nintendo",
+      "fields": {
+        "listingType": "console",
+        "category": "accessories",
+        "consoleItemType": "Accessory",
+        "consoleBrand": "Nintendo"
+      },
+      "label": "Nintendo — Accessories"
+    },
+    {
+      "key": "console/accessories/Accessory/Sony PlayStation",
+      "fields": {
+        "listingType": "console",
+        "category": "accessories",
+        "consoleItemType": "Accessory",
+        "consoleBrand": "Sony PlayStation"
+      },
+      "label": "Sony PlayStation — Accessories"
+    },
+    {
+      "key": "console/accessories/Accessory/Microsoft Xbox",
+      "fields": {
+        "listingType": "console",
+        "category": "accessories",
+        "consoleItemType": "Accessory",
+        "consoleBrand": "Microsoft Xbox"
+      },
+      "label": "Microsoft Xbox — Accessories"
+    },
+    {
+      "key": "console/accessories/Accessory/Sega",
+      "fields": {
+        "listingType": "console",
+        "category": "accessories",
+        "consoleItemType": "Accessory",
+        "consoleBrand": "Sega"
+      },
+      "label": "Sega — Accessories"
+    },
+    {
+      "key": "console/accessories/Accessory/Atari",
+      "fields": {
+        "listingType": "console",
+        "category": "accessories",
+        "consoleItemType": "Accessory",
+        "consoleBrand": "Atari"
+      },
+      "label": "Atari — Accessories"
+    },
+    {
+      "key": "console/accessories/Accessory/Other",
+      "fields": {
+        "listingType": "console",
+        "category": "accessories",
+        "consoleItemType": "Accessory",
+        "consoleBrand": "Other"
+      },
+      "label": "Other — Accessories"
+    },
+    {
+      "key": "figure/collectibles/anime_manga",
+      "fields": {
+        "listingType": "figure",
+        "category": "collectibles",
+        "collectibleSubcategory": "anime_manga"
+      },
+      "label": "Anime & Manga — test collectible"
+    },
+    {
+      "key": "figure/collectibles/sports_memorabilia",
+      "fields": {
+        "listingType": "figure",
+        "category": "collectibles",
+        "collectibleSubcategory": "sports_memorabilia"
+      },
+      "label": "Sports Memorabilia — test collectible"
+    },
+    {
+      "key": "figure/collectibles/figures_statues",
+      "fields": {
+        "listingType": "figure",
+        "category": "collectibles",
+        "collectibleSubcategory": "figures_statues"
+      },
+      "label": "Action Figures & Statues — test collectible"
+    },
+    {
+      "key": "figure/collectibles/funko_vinyl",
+      "fields": {
+        "listingType": "figure",
+        "category": "collectibles",
+        "collectibleSubcategory": "funko_vinyl"
+      },
+      "label": "Funko Pops & Vinyl Figures — test collectible"
+    },
+    {
+      "key": "figure/collectibles/comics_books",
+      "fields": {
+        "listingType": "figure",
+        "category": "collectibles",
+        "collectibleSubcategory": "comics_books"
+      },
+      "label": "Comics & Books — test collectible"
+    },
+    {
+      "key": "figure/collectibles/toys_retro",
+      "fields": {
+        "listingType": "figure",
+        "category": "collectibles",
+        "collectibleSubcategory": "toys_retro"
+      },
+      "label": "Toys & Retro Collectibles — test collectible"
+    },
+    {
+      "key": "figure/collectibles/other_collectibles",
+      "fields": {
+        "listingType": "figure",
+        "category": "collectibles",
+        "collectibleSubcategory": "other_collectibles"
+      },
+      "label": "Other Collectibles — test collectible"
+    },
+    {
+      "key": "other/other",
+      "fields": {
+        "listingType": "other",
+        "category": "other"
+      },
+      "label": "Other item"
+    }
+  ]
+}
