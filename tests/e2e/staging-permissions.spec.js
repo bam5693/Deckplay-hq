@@ -24,8 +24,19 @@ test('buyer cannot modify another collector listing',async({page,browser})=>{
 test('collector session survives page refresh',async({page})=>{
  await signIn(page,'BUYER');
  const id=await page.evaluate(()=>currentUser.id);
+ const before=await page.evaluate(()=>({hasPersistentAuthKey:Object.keys(localStorage).some(k=>k.startsWith('sb-')&&k.endsWith('-auth-token'))}));
  await page.reload({waitUntil:'domcontentloaded'});
- await expect.poll(()=>page.evaluate(()=>currentUser?.id),{timeout:20000}).toBe(id);
+ try{await expect.poll(()=>page.evaluate(()=>currentUser?.id),{timeout:12000}).toBe(id)}
+ catch(error){
+  const scope=await page.evaluate(async()=>{
+   const hasPersistentAuthKey=Object.keys(localStorage).some(k=>k.startsWith('sb-')&&k.endsWith('-auth-token'));
+   const visible=!!currentUser?.id;
+   let sdkSession=false,sdkError=false;
+   try{const {data,error}=await supabaseClient.auth.getSession();sdkSession=!!data?.session?.user?.id;sdkError=!!error}catch{sdkError=true}
+   return {hasPersistentAuthKey,visible,sdkSession,sdkError,visibleAfterSessionCheck:!!currentUser?.id};
+  });
+  throw Error('Staging authentication reload failed; account-safe diagnostics: '+JSON.stringify({before,...scope})+'; '+error.message.split('\n')[0]);
+ }
 });
 
 test('staging search recovers after offline interruption',async({page,context})=>{
