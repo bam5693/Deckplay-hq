@@ -110,3 +110,75 @@ test('seller storefront listing preserves exact disclosures, category and offer 
  expect(await page.evaluate(()=>storefrontSelection.split(','))).toContain('description');
  expect(await page.evaluate(()=>storefrontSelection.split(','))).toContain('accepts_price_offers');
 });
+
+
+test('public seller inventory searches, filters and sorts all seven marketplace categories',async({page})=>{
+ await page.route('https://challenges.cloudflare.com/**',route=>route.abort());
+ await page.route('https://prrrzeelltmyugssqnzk.supabase.co/**',route=>route.fulfill({json:[]}));
+ await page.goto('/');await page.waitForLoadState('networkidle');
+ await page.evaluate(async()=>{
+  await supabaseClient.auth.getSession();currentUser=null;
+  const categories=['trading_cards','video_games','consoles','controllers','accessories','collectibles','other'];
+  const titles=['One Piece Manga Rare','Nintendo Mario Kart','Game console','Retro controller','Pokemon accessory','Sports memorabilia','Vintage collectible'];
+  window.storefrontFixture=categories.map((category,i)=>({
+   id:'store-item-'+i,seller_id:'store-seller',title:titles[i],description:'Fixture listing',price:12+i*10,
+   category,tcg_game:i===0?'one_piece':null,image_urls:[],created_at:new Date(Date.UTC(2026,9,29-i)).toISOString(),
+   status:'active',condition:'like_new'
+  }));
+  supabaseClient.from=table=>{
+   const q={};
+   for(const method of ['select','eq','order','limit'])q[method]=()=>q;
+   q.then=resolve=>Promise.resolve({data:table==='listings'?storefrontFixture:[],error:null}).then(resolve);
+   q.maybeSingle=async()=>({data:table==='profiles'?{username:'store-seller',bio:'Sports, TCG and games'}:null,error:null});
+   return q;
+  };
+  await showPublicProfile('store-seller');
+ });
+ await expect(page.locator('#publicProfileTitle')).toHaveText('@store-seller');
+ await expect(page.locator('#publicProfileResults .profile-item')).toHaveCount(7);
+ await expect(page.locator('#publicStorefrontSummary')).toHaveText('7 of 7 displayed');
+ await expect(page.locator('#publicStorefrontCategory option')).toHaveCount(8);
+ await page.locator('#publicStorefrontCategory').selectOption('collectibles');
+ await expect(page.locator('#publicProfileResults .profile-item')).toHaveCount(1);
+ await expect(page.locator('#publicProfileResults')).toContainText('Sports memorabilia');
+ await page.locator('#publicStorefrontCategory').selectOption('all');
+ await page.locator('#publicStorefrontSearch').fill('manga');
+ await expect(page.locator('#publicProfileResults .profile-item')).toHaveCount(1);
+ await expect(page.locator('#publicProfileResults')).toContainText('One Piece Manga Rare');
+ await page.locator('#publicStorefrontSearch').fill('not-a-listed-item');
+ await expect(page.locator('#publicProfileResults')).toContainText('No listings match');
+ await page.locator('#publicStorefrontSearch').fill('');
+ await page.locator('#publicStorefrontSort').selectOption('price_high');
+ await expect(page.locator('#publicProfileResults .profile-item').first()).toContainText('Vintage collectible');
+ await page.locator('#publicStorefrontSort').selectOption('name');
+ await expect(page.locator('#publicProfileResults .profile-item').first()).toContainText('Game console');
+ await page.locator('[data-public-tab="wanted"]').click();
+ await expect(page.locator('#publicStorefrontTools')).toBeHidden();
+ await page.locator('[data-public-tab="listings"]').click();
+ await expect(page.locator('#publicStorefrontSearch')).toBeVisible();
+ await expect(page.locator('#publicStorefrontSort')).toHaveValue('name');
+ await page.locator('[data-public-listing="store-item-5"]').click();
+ await expect(page.locator('#detailModal')).toHaveClass(/open/);
+ await expect(page.locator('#detailTitle')).toHaveText('Sports memorabilia');
+});
+
+test('seller inventory fetch errors never masquerade as an empty storefront',async({page})=>{
+ await page.route('https://challenges.cloudflare.com/**',route=>route.abort());
+ await page.route('https://prrrzeelltmyugssqnzk.supabase.co/**',route=>route.fulfill({json:[]}));
+ await page.goto('/');await page.waitForLoadState('networkidle');
+ await page.evaluate(async()=>{
+  await supabaseClient.auth.getSession();currentUser=null;
+  supabaseClient.from=table=>{
+   const q={};
+   for(const method of ['select','eq','order','limit'])q[method]=()=>q;
+   q.then=resolve=>Promise.resolve({data:[],error:table==='listings'?{message:'Temporary network failure'}:null}).then(resolve);
+   q.maybeSingle=async()=>({data:table==='profiles'?{username:'store-seller'}:null,error:null});
+   return q;
+  };
+  await showPublicProfile('store-seller');
+ });
+ await expect(page.locator('#publicProfileResults')).toContainText('Could not load this seller');
+ await expect(page.locator('#publicProfileResults')).not.toContainText('No active listings yet');
+ await expect(page.locator('#publicStorefrontTools')).toBeHidden();
+ await expect(page.locator('#publicProfileContent')).toContainText('Listings unavailable');
+});
