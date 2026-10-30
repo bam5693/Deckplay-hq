@@ -403,3 +403,67 @@ test('T1.2: edited sports-card brand and year outrank stale creation labels in b
  await page.locator('#marketSportsYear').fill('2025');
  await expect(page.locator('#grid h3')).toHaveText(['Updated baseball card']);
 });
+
+async function sellerEditorFixture(page){
+ await ready(page);
+ await page.evaluate(async()=>{
+  await supabaseClient.auth.getSession();
+  currentUser={id:'synthetic-edit-owner'};
+  window.editFixtureRow={
+   id:'synthetic-edit-listing',seller_id:'synthetic-edit-owner',
+   title:'Original listed item',description:'Exact condition and included contents',
+   price:24.75,accepts_trades:true,accepts_price_offers:true,
+   status:'active',updated_at:'2026-10-30T10:00:00Z',
+   category:'video_games',product_type:'game',condition:'used',
+   tcg_game:null,collectible_subcategory:null,
+   image_urls:['https://example.test/front.jpg','https://example.test/back.jpg']
+  };
+  supabaseClient.from=()=>({
+   select(){return this},eq(){return this},
+   async maybeSingle(){return {data:editFixtureRow,error:null}}
+  });
+  await window.listingEditor.open('synthetic-edit-listing');
+ });
+ await expect(page.locator('#editListingModal')).toHaveClass(/open/);
+ await expect(page.locator('#editListingTitle')).toHaveValue('Original listed item');
+}
+test('T1.1: seller can keep editing when Cancel discard confirmation is refused',async({page})=>{
+ await sellerEditorFixture(page);
+ await page.locator('#editListingTitle').fill('Edited retro game bundle');
+ page.once('dialog',async dialog=>{expect(dialog.message()).toContain('Discard your unsaved listing changes');await dialog.dismiss()});
+ await page.locator('#editListingModal [data-close-editor]').last().click();
+ await expect(page.locator('#editListingModal')).toHaveClass(/open/);
+ await expect(page.locator('#editListingTitle')).toHaveValue('Edited retro game bundle');
+ page.once('dialog',async dialog=>dialog.accept());
+ await page.locator('#editListingModal [data-close-editor]').last().click();
+ await expect(page.locator('#editListingModal')).not.toHaveClass(/open/);
+});
+test('T1.1: closing an unchanged listing never triggers a confirmation',async({page})=>{
+ await sellerEditorFixture(page);
+ let prompted=false;page.on('dialog',async dialog=>{prompted=true;await dialog.dismiss()});
+ await page.locator('#editListingModal [data-close-editor]').last().click();
+ await expect(page.locator('#editListingModal')).not.toHaveClass(/open/);
+ expect(prompted).toBe(false);
+});
+test('T1.1: Escape and backdrop preserve modified photos and fields unless discard is confirmed',async({page})=>{
+ await sellerEditorFixture(page);
+ await page.locator('#editListingPhotos [data-edit-photo="remove"]').last().click();
+ await expect(page.locator('#editListingPhotos [data-edit-photo="remove"]')).toHaveCount(1);
+ page.once('dialog',async dialog=>dialog.dismiss());
+ await page.keyboard.press('Escape');
+ await expect(page.locator('#editListingModal')).toHaveClass(/open/);
+ await expect(page.locator('#editListingPhotos [data-edit-photo="remove"]')).toHaveCount(1);
+ await page.evaluate(()=>document.getElementById('editListingModal').click());
+ page.once('dialog',async dialog=>dialog.accept());
+ await page.evaluate(()=>document.getElementById('editListingModal').click());
+ await expect(page.locator('#editListingModal')).not.toHaveClass(/open/);
+});
+test('T1.1: switching seller accounts destroys private unsaved edits without prompting',async({page})=>{
+ await sellerEditorFixture(page);
+ await page.locator('#editListingDescription').fill('Private exact details draft');
+ let prompted=false;page.on('dialog',async dialog=>{prompted=true;await dialog.dismiss()});
+ await page.evaluate(()=>{currentUser={id:'different-seller'};window.listingEditor.reset()});
+ await expect(page.locator('#editListingModal')).not.toHaveClass(/open/);
+ await expect(page.locator('#editListingDescription')).toHaveValue('');
+ expect(prompted).toBe(false);
+});
