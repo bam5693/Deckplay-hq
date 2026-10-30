@@ -649,6 +649,6 @@ test('T7.1: failed Android-style native share keeps the collector link copyable'
  const link=await page.locator('#deckplayShareFallbackInput').inputValue();
  expect(new URL(link).searchParams.get('listing')).toBe(LISTING);
  expect(new URL(link).searchParams.has('collector')).toBe(false);
- await page.keyboard.press('Escape');
+ await page.locator('#deckplayShareFallback').getByRole('button',{name:'Close'}).click();
  await expect(page.locator('#deckplayShareFallback')).not.toBeVisible();
 });
