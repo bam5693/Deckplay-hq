@@ -1,5 +1,13 @@
 # DeckPlay HQ — current staging status (2026-10-29)
 
+## 2026-10-30 13:25 Central — first real signed negotiation history accepted
+
+- **PASS**, protected [GitHub run 41106493935](https://github.com/bam5693/Deckplay-hq/actions/runs/41106493935), source `571fe0f`. Existing trusted `private-staging.yml` ran one explicitly gated signed-in test, without relaxing OIDC/Basic Auth. **1/1 real signed browser history test passed**: dedicated synthetic seller/buyer authenticate, create a price offer and seller counter plus trade proposal and seller counter, inspect participant-scoped price/trade history from both accounts, open actual Inbox, and verify anonymous access cannot read private records. Exact-marker cleanup returned successfully; independent read-only query found **0 synthetic listings from the dedicated bot accounts in the last 15 minutes**.
+- Pre-release local browser **188/188**, exact deployed protected staging assets **27/27**, anonymous site denied, signed read-only buyer/seller mobile and desktop acceptance **4/4**. Private Worker version `8f5ac956-abfb-42ee-a8a4-2b29dd0806c4`. This verifies an actual signed-in counter *creation* but does not yet test accepting the counter through an authenticated browser session.
+- **Next P0:** a second narrowly scoped genuine signed-in **trade-counter acceptance** and reserved-listing verification, including rejected direct table tampering, exact approved terms and cleanup. No production/main/PR merge, customer accounts, payments, shipping or billing changed.
+
+---
+
 ## 2026-10-30 12:45 Central — defense-in-depth trade guard (staging database)
 
 **Priority:** Trade integrity, ahead of growth or visual polish. Read-only database audit found that `private.trade_guard` did not itself compare original cash amount, cash direction or note during a status update, and original offer acceptance did not itself test for a pending counteroffer. **Crucial limitation:** `authenticated` is already DENIED direct UPDATE table privileges on `public.trade_offers`. Therefore this is **not a demonstrated signed-in direct-PATCH exploit**; the added safeguards protect future privileged RPCs/code paths and preserve the integrity invariant.
