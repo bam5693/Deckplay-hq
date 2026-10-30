@@ -1,5 +1,5 @@
 {
-  "approvedApplicationTree": "e0c08d925729d78962f40e8ac0bd41482fda6132",
+  "approvedApplicationTree": "73cd277b2fd005d17de3a0fdb386bcef05ea765f",
   "productionSchemaVerified": true,
   "previewAcceptanceVerified": true,
   "rollbackVerified": true,
@@ -25,5 +25,13 @@
     "managedServiceRecoveryVerified": false,
     "physicalAndroidPwaVerified": false,
     "noDestructiveDataResetAuthorized": true
+  },
+  "hotfixApproval": {
+    "scope": "Only merged PR #7 password recovery visibility and PR #8 mobile sign out / signed-in password change, atop the previously deployed production marketplace",
+    "ownerAuthorization": "Owner explicitly requested direct hotfix publication without Work mode",
+    "approvedHead": "daa9ed8907b4438152457207af3c7786d6b59dba",
+    "approvedApplicationTree": "73cd277b2fd005d17de3a0fdb386bcef05ea765f",
+    "deployMethod": "One-time owner-approved GitHub Actions push gate; restore manual dispatch immediately after verification",
+    "noStagingChanges": true
   }
 }
