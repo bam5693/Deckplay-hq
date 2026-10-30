@@ -21,7 +21,7 @@ test('recovery service exception preserves fields and allows retry',async({page}
 });
 test('recovery submits once and clears password fields after success',async({page})=>{
  await recovery(page);await page.evaluate(()=>{window.recoveryCalls=0;supabaseClient.auth.updateUser=async()=>{recoveryCalls++;return await new Promise(resolve=>window.finishRecovery=resolve)}});
- await page.locator('#recoveryPasswordConfirm').press('Enter');await page.locator('#recoveryPasswordConfirm').press('Enter');expect(await page.evaluate(()=>recoveryCalls)).toBe(1);
+ await page.locator('#recoveryPasswordConfirm').press('Enter');await page.locator('#recoveryPasswordConfirm').press('Enter');await expect.poll(()=>page.evaluate(()=>recoveryCalls)).toBe(1);
  await page.evaluate(()=>finishRecovery({data:{user:{id:'fixture'}},error:null}));await expect(page.locator('#passwordRecoveryModal')).not.toHaveClass(/open/);await expect(page.locator('#recoveryPassword')).toHaveValue('');
 });
 
