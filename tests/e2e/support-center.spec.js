@@ -58,6 +58,7 @@ async function signIn(page,id){
 test('signed-out Help Center explains all categories and forbids fake checkout',async({page})=>{
  await boot(page);
  await page.getByRole('button',{name:'Help & support'}).last().click();
+ await page.getByText('Can I pay or print a shipping label?').click();
  await expect(page.getByText('No payment, payout, shipping label or purchase')).toBeVisible();
  await expect(page.locator('#supportPrivate')).toBeHidden();
  await expect(page.getByText('Sign in to open and follow private support tickets.')).toBeVisible();
