@@ -35,7 +35,7 @@ jobs:
           node --check support-center.js
           node --check tests/e2e/support-center.spec.js
           node --check tests/e2e/getting-started.spec.js
-          npx playwright test --config=playwright.local.config.js support-center.spec.js getting-started.spec.js --retries=0 --max-failures=1 --timeout=20000
+          npx playwright test --config=playwright.local.config.js support-center.spec.js pwa-update-notice.spec.js --retries=0 --max-failures=1 --timeout=20000
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
