@@ -8,6 +8,12 @@ on:
         required: true
         type: string
 
+  # One-time owner-approved PR #5 publication on merge; ordinary pushes never publish.
+  push:
+    branches: [main]
+    paths:
+      - 'release/owner-approved-publish-request.txt'
+
 concurrency:
   group: deckplay-hq-production
   cancel-in-progress: false
@@ -17,7 +23,7 @@ permissions:
 
 jobs:
   deploy:
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && startsWith(github.event.head_commit.message, 'Merge pull request #5 ')))
     runs-on: ubuntu-latest
     steps:
       - name: Check out website
@@ -29,7 +35,7 @@ jobs:
       - name: Verify pinned approval, compatibility, rollback and allowlisted assets
         run: node scripts/release-preflight.cjs --publish
         env:
-          DECKPLAY_APPROVED_RELEASE_SHA: ${{ inputs.approved_sha }}
+          DECKPLAY_APPROVED_RELEASE_SHA: ${{ github.event_name == 'push' && github.sha || inputs.approved_sha }}
       - name: Install browser test dependencies
         run: npm ci
       - name: Install Chromium
