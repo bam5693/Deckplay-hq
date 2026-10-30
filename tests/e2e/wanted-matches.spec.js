@@ -93,7 +93,7 @@ test('wanted matches link to real listing details with the correct name and pric
  await expect(page.locator('#wantedSection')).not.toHaveClass(/is-open/);
  await expect(page.locator('#detailModal')).toHaveClass(/open/);
  await expect(page.locator('#detailTitle')).toHaveText('Manga Rare Luffy');
- await expect(page.locator('#detailContent .detail-price')).toHaveText('125.00');
+ await expect(page.locator('#detailContent .detail-price')).toHaveText('$125.00');
 });
 
 async function pendingWantedPublish(page){
