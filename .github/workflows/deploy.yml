@@ -1,9 +1,6 @@
 name: Deploy DeckPlay HQ to Cloudflare Workers
 
 on:
-  push:
-    branches: [main]
-    paths: ['.github/workflows/deploy.yml']
   workflow_dispatch:
     inputs:
       approved_sha:
@@ -32,7 +29,7 @@ jobs:
       - name: Verify pinned approval, compatibility, rollback and allowlisted assets
         run: node scripts/release-preflight.cjs --publish
         env:
-          DECKPLAY_APPROVED_RELEASE_SHA: ${{ github.event_name == 'push' && github.sha || inputs.approved_sha }}
+          DECKPLAY_APPROVED_RELEASE_SHA: ${{ inputs.approved_sha }}
       - name: Install browser test dependencies
         run: npm ci
       - name: Install Chromium
