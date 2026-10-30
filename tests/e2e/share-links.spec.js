@@ -255,3 +255,38 @@ test('T1.4: unknown lot size is not invented and buyer quantity labels cannot in
  expect(result.safeText).toContain('cards<img src=x onerror=alert(1)>');
  expect(result.injectedImages).toBe(0);
 });
+test('T1.4: marketplace cards identify disclosed multi-item lots but do not invent legacy quantities',async({page})=>{
+ await ready(page);
+ await page.evaluate(()=>{
+  const nl=String.fromCharCode(10);
+  const description=['[Listing contents]','Quantity included: 3','Unit: games',
+   'Sold together for the listing price.','[End listing contents]','Three used games'].join(nl);
+  const base={s:'@collector',sellerId:'22222222-2222-4222-8222-222222222222',
+   c:'Video Games',rawCategory:'video_games',p:75,cond:'Used',e:'🎮',imageUrls:[],trades:false};
+  items=[
+   {...base,id:'11111111-1111-4111-8111-111111111111',n:'Three-game bundle',description},
+   {...base,id:'33333333-3333-4333-8333-333333333333',n:'Older game listing',description:'Ask seller about included items'}
+  ];
+  listingSource='live';cat='All';filter='All';game='All';query='';onlyMyListings=false;onlySavedListings=false;render();
+ });
+ await expect(page.locator('#grid .card')).toHaveCount(2);
+ await expect(page.locator('#grid .card').first().locator('.listing-lot-badge')).toHaveText('3 games · lot price');
+ await expect(page.locator('#grid .card').first().locator('.price')).toHaveText('$75.00');
+ await expect(page.locator('#grid .card').nth(1).locator('.listing-lot-badge')).toHaveCount(0);
+ await page.locator('#grid .card').first().getByRole('button',{name:'View item'}).click();
+ await expect(page.locator('.detail-price-scope')).toContainText('Not a per-unit price.');
+});
+test('T1.6: buyer detail explains unknown fees and demo-only checkout next to asking price',async({page})=>{
+ await ready(page);
+ await page.evaluate(()=>{
+  const nl=String.fromCharCode(10);
+  const description=['[Listing contents]','Quantity included: 2','Unit: complete decks',
+   'Sold together for the listing price.','[End listing contents]'].join(nl);
+  showDetails({n:'Synthetic complete decks',p:89,c:'Trading Cards',description,
+   s:'@seller',sellerId:'22222222-2222-4222-8222-222222222222',imageUrls:[]});
+ });
+ await expect(page.locator('.detail-price')).toHaveText('$89.00');
+ await expect(page.locator('.detail-price-scope')).toContainText('2 complete decks included');
+ await expect(page.locator('.detail-fee-disclosure')).toContainText('Shipping, taxes and platform fees are not calculated.');
+ await expect(page.locator('.detail-fee-disclosure')).toContainText('no purchase or payment is processed');
+});
