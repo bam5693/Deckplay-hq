@@ -49,6 +49,26 @@ function setCollectorBrowserMetadata(label){
   ['meta[name="twitter:description"]',description]
  ]) document.querySelector(selector)?.setAttribute('content',value);
 }
+// A blocked clipboard or native share must not strand mobile collectors in a
+// browser prompt. This is a public URL only; never insert private session data.
+function showManualShareLink(url){
+ let dialog=document.getElementById('deckplayShareFallback');
+ if(!dialog){
+  dialog=document.createElement('dialog');
+  dialog.id='deckplayShareFallback';
+  dialog.setAttribute('aria-labelledby','deckplayShareFallbackTitle');
+  dialog.style.cssText='border:1px solid #d8dfeb;border-radius:14px;padding:22px;width:min(480px,calc(100vw - 32px));max-width:100%;color:#172033;box-shadow:0 20px 60px #14213d55';
+  dialog.innerHTML='<form method="dialog"><h2 id="deckplayShareFallbackTitle" style="margin:0 0 8px">Copy public link</h2><p id="deckplayShareFallbackHelp">Sharing is unavailable in this browser. Select the link, then use your device\'s Copy action.</p><input id="deckplayShareFallbackInput" aria-label="Public share link" aria-describedby="deckplayShareFallbackHelp" readonly autocomplete="off" spellcheck="false" style="width:100%;font-size:16px;padding:12px;border:1px solid #9eacc5;border-radius:8px;margin:8px 0 16px"><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="ghost" id="deckplayShareFallbackSelect">Select link</button><button type="submit" class="primary">Close</button></div></form>';
+  dialog.querySelector('#deckplayShareFallbackSelect').addEventListener('click',()=>{
+   const input=dialog.querySelector('#deckplayShareFallbackInput');input.focus();input.select();
+  });
+  document.body.append(dialog);
+ }
+ const input=dialog.querySelector('#deckplayShareFallbackInput');
+ input.value=url;
+ if(!dialog.open)dialog.showModal();
+ input.focus();input.select();
+}
 async function shareLink(kind,id,nativeShare){
  const url=sharedUrl(kind,id);
  if(!url){toast('Only published listings and collector profiles can be shared.');return}
@@ -62,13 +82,13 @@ async function shareLink(kind,id,nativeShare){
    toast('Link copied. Anyone opening it still needs access to this site.');
    return;
   }
-  window.prompt('Copy this DeckPlay link:',url);
+  showManualShareLink(url);
  }catch(error){
   if(error&&error.name==='AbortError')return;
   // Web Share and clipboard permissions can fail on Android and private browsers.
   // Preserve the public URL so collectors can still copy it manually.
   try {
-   window.prompt('Sharing is unavailable. Copy this DeckPlay link:',url);
+   showManualShareLink(url);
   }catch(_error){
    toast('Could not share the link. Please retry from your browser.');
   }
