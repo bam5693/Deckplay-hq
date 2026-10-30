@@ -280,7 +280,7 @@
     el("supportReplies").textContent="Loading replies…";
     status("supportRepliesStatus","");
     status("supportReplyStatus","");
-    await loadReplies(id, false, v, u);
+    await loadReplies(id, false, viewGeneration, u);
 
   }
   // Newest replies are loaded first so a long conversation never hides recent
@@ -300,7 +300,7 @@
         .eq("ticket_id",id).order("created_at",{ascending:false}).order("id",{ascending:false})
         .range(offset,offset+40);
       if(error)throw error;
-      if(!valid(v,u)||selected!==id||request!==replyRequest)return;
+      if(!validWrite(v,u)||selected!==id||request!==replyRequest)return;
       const rows=data||[];
       const page=rows.slice(0,40);
       replyOffset=offset+page.length;
@@ -325,7 +325,7 @@
       button.hidden=!moreReplies;
       status("supportRepliesStatus",moreReplies?"Showing "+replyOffset+" most recent replies. Load earlier replies for more.":"");
     }catch(error){
-      if(valid(v,u)&&selected===id&&request===replyRequest){
+      if(validWrite(v,u)&&selected===id&&request===replyRequest){
         if(!append)el("supportReplies").textContent="Replies could not load. Reopen this ticket to retry.";
         else button.hidden=false;
         status("supportRepliesStatus",append?"Could not load earlier replies. Retry.":"");
@@ -335,7 +335,7 @@
     }
   }
   el("supportRepliesLoadMore").addEventListener("click",()=>{
-    if(selected&&userId)void loadReplies(selected,true,generation,userId);
+    if(selected&&userId)void loadReplies(selected,true,viewGeneration,userId);
   });
   modal.querySelectorAll("[data-support-filter]").forEach(button => button.addEventListener("click", () => {
     const next = button.dataset.supportFilter;
