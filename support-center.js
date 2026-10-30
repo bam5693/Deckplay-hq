@@ -70,7 +70,7 @@
   const status = (id, message) => { el(id).textContent = message || ""; };
   const date = value => new Date(value).toLocaleString();
   const labels = {open:"Open",waiting_on_staff:"Waiting on support",waiting_on_user:"Waiting on collector",resolved:"Resolved"};
-  let userId = null, generation = 0, isStaff = false, staffView = false, ticketFilter = "all", selected = null, tickets = [], returnToFeedback = false, returnTopic = "feedback", feedbackMode = false;
+  let userId = null, generation = 0, isStaff = false, staffView = false, ticketFilter = "all", selected = null, tickets = [], returnToFeedback = false, returnTopic = "feedback", feedbackMode = false, viewGeneration = 0;
   const feedbackKinds = {
     bug: {prefix:"[Bug] ", hint:"What went wrong?"},
     idea: {prefix:"[Idea] ", hint:"What could DeckPlay improve?"},
@@ -96,6 +96,9 @@
   }
   el("supportFeedbackKind").addEventListener("change", updateFeedbackKind);
   const valid = (v,u) => v === generation && userId === u && modal.classList.contains("open");
+  // Read refreshes increment generation. Writes must instead survive unrelated
+  // ticket-list refreshes, while still being discarded after account/view changes.
+  const validWrite = (v,u) => v === viewGeneration && userId === u && modal.classList.contains("open");
   function clearPrivate() {
     selected = null; tickets = []; isStaff = false; staffView = false; ticketFilter = "all";
     modal.querySelectorAll("[data-support-filter]").forEach(button => button.setAttribute("aria-pressed", String(button.dataset.supportFilter === ticketFilter)));
@@ -163,6 +166,7 @@
   el("supportClose").addEventListener("click",()=>closeModal(modal.id));
   modal.addEventListener("click",e=>{if(e.target===modal)closeModal(modal.id)});
   async function show() {
+    ++viewGeneration;
     userId = currentUser?.id || null;
     clearPrivate();
     // Every visit starts with a blank draft, even when a different collector
@@ -268,7 +272,7 @@
     if(!userId)return;
     const form=e.currentTarget,button=form.querySelector('button[type="submit"]');
     if(button.disabled)return;
-    const v=generation,u=userId;
+    const v=viewGeneration,u=userId;
     const rawSubject=el("supportSubject").value.trim();
     const prefix=feedbackMode?(feedbackKinds[el("supportFeedbackKind").value]||feedbackKinds.other).prefix:"";
     const subject=prefix+rawSubject;
@@ -283,11 +287,11 @@
         p_body:el("supportDescription").value.trim()
       });
       if(error)throw error;
-      if(!valid(v,u))return;
-      form.reset();staffView=false;selected=data;
+      if(!validWrite(v,u))return;
+      form.reset();updateFeedbackKind();staffView=false;selected=data;
       status("supportCreateStatus","Ticket created. You can follow replies below.");
       await loadTickets();
-    }catch(error){if(valid(v,u))status("supportCreateStatus",error.message||"Could not create ticket. Try again.")}
+    }catch(error){if(validWrite(v,u))status("supportCreateStatus",error.message||"Could not create ticket. Try again.")}
     finally{button.disabled=false}
   });
   el("supportReplyForm").addEventListener("submit",async e=>{
@@ -295,34 +299,34 @@
     if(!selected||!userId)return;
     const form=e.currentTarget,button=form.querySelector('button[type="submit"]');
     if(button.disabled)return;
-    const id=selected,u=userId,v=generation;
+    const id=selected,u=userId,v=viewGeneration;
     button.disabled=true;status("supportReplyStatus","Sending…");
     try{
       const {error}=await supabaseClient.rpc("reply_support_ticket",{p_ticket_id:id,p_body:el("supportReplyBody").value.trim()});
       if(error)throw error;
-      if(!valid(v,u)||selected!==id)return;
+      if(!validWrite(v,u)||selected!==id)return;
       el("supportReplyBody").value="";
       status("supportReplyStatus","Reply sent.");
       await loadTickets();
-    }catch(error){if(valid(v,u)&&selected===id)status("supportReplyStatus",error.message||"Reply failed. Your text is preserved.")}
+    }catch(error){if(validWrite(v,u)&&selected===id)status("supportReplyStatus",error.message||"Reply failed. Your text is preserved.")}
     finally{button.disabled=false}
   });
   el("supportSetStatus").addEventListener("click",async e=>{
     if(!isStaff||!selected||!userId)return;
-    const button=e.currentTarget,id=selected,u=userId,v=generation;
+    const button=e.currentTarget,id=selected,u=userId,v=viewGeneration;
     if(button.disabled)return;
     button.disabled=true;
     try{
       const {error}=await supabaseClient.rpc("set_support_ticket_status",{p_ticket_id:id,p_status:el("supportStatusSelect").value});
       if(error)throw error;
-      if(valid(v,u)&&selected===id)await loadTickets();
-    }catch(error){if(valid(v,u))status("supportReplyStatus",error.message||"Could not update ticket status.")}
+      if(validWrite(v,u)&&selected===id)await loadTickets();
+    }catch(error){if(validWrite(v,u))status("supportReplyStatus",error.message||"Could not update ticket status.")}
     finally{button.disabled=false}
   });
   supabaseClient.auth.onAuthStateChange((_event,session)=>{
     const next=session?.user?.id||null;
     if(next===userId)return;
-    userId=next;++generation;clearPrivate();
+    userId=next;++generation;++viewGeneration;clearPrivate();
     el("supportNewForm").reset(); // Never carry a private draft into another account.
     if(modal.classList.contains("open"))closeModal(modal.id);
     if(next && returnToFeedback){
