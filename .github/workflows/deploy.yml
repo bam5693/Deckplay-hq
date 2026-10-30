@@ -13,6 +13,7 @@ on:
     branches: [main]
     paths:
       - 'release/owner-approved-publish-request.txt'
+      - '.github/workflows/deploy.yml'
 
 concurrency:
   group: deckplay-hq-production
@@ -23,7 +24,7 @@ permissions:
 
 jobs:
   deploy:
-    if: github.ref == 'refs/heads/main' && (github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && startsWith(github.event.head_commit.message, 'Merge pull request #5 ')))
+    if: "${{ github.ref == 'refs/heads/main' && (github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && startsWith(github.event.head_commit.message, '[owner-approved-publish]'))) }}"
     runs-on: ubuntu-latest
     steps:
       - name: Check out website
