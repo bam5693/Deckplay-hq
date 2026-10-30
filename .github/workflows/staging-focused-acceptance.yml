@@ -24,7 +24,7 @@ jobs:
           path: ~/.cache/ms-playwright
           key: staging-playwright-${{ hashFiles('package-lock.json') }}
       - run: npx playwright install chromium --only-shell
-      - name: Validate isolated staging build and conversation history behavior
+      - name: Validate isolated staging build and focused support ticket workflow
         env:
           DECKPLAY_STAGING_SUPABASE_URL: https://prrrzeelltmyugssqnzk.supabase.co
           DECKPLAY_STAGING_SUPABASE_KEY: sb_publishable_0omvNnv_ZOvXrZ-LHPMyIQ_a9zxD-yh
@@ -32,9 +32,9 @@ jobs:
           node scripts/build-staging.cjs
           node --check scripts/build-staging-worker.cjs
           node scripts/check-inline-js.cjs
-          node --check tests/e2e/inbox-negotiation-history.spec.js
-          node --check tests/e2e/trade-conversation-navigation.spec.js
-          npx playwright test --config=playwright.local.config.js trade-conversation-navigation.spec.js --retries=0 --max-failures=1 --timeout=20000
+          node --check support-center.js
+          node --check tests/e2e/support-center.spec.js
+          npx playwright test --config=playwright.local.config.js support-center.spec.js --retries=0 --max-failures=1 --timeout=20000
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
