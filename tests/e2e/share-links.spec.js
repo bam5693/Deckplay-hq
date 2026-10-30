@@ -469,3 +469,74 @@ test('T1.1: switching seller accounts destroys private unsaved edits without pro
  await expect(page.locator('#editListingDescription')).toHaveValue('');
  expect(prompted).toBe(false);
 });
+
+test('T1.3: buyer sees current seller-edited card set, number, variant and grading instead of stale originals',async({page})=>{
+ await ready(page);
+ const result=await page.evaluate(()=>{
+  const nl=String.fromCharCode(10);
+  const original=['Set: Old Starter','Card number: 001','Variant: Regular','Grader: Old grader','Grade: 8'].join(nl);
+  const edited=['[Listing classification]','Category: Trading Cards','Listing type: Single',
+   'Set: New Set','Card number: 099','Variant: Alternate Art',
+   'Edition / printing: First Edition','Language: Japanese',
+   'Grader: PSA','Grade: 10','Certification: 12345',
+   '[End classification]'].join(nl);
+  const item={n:'One Piece collectible card',p:90,c:'Trading Cards',rawCategory:'trading_cards',
+   game:'one_piece',description:edited+nl+nl+original,imageUrls:[],s:'@seller',sellerId:'seller'};
+  showDetails(item);
+  return {specifics:document.querySelector('.detail-item-specifics')?.textContent,
+   description:document.querySelector('.detail-description')?.textContent};
+ });
+ expect(result.specifics).toContain('Set:New Set');
+ expect(result.specifics).toContain('Card number:099');
+ expect(result.specifics).toContain('Variant:Alternate Art');
+ expect(result.specifics).toContain('Edition / printing:First Edition');
+ expect(result.specifics).toContain('Language:Japanese');
+ expect(result.specifics).toContain('Grader:PSA');
+ expect(result.specifics).toContain('Grade:10');
+ expect(result.specifics).toContain('Certification:12345');
+ expect(result.specifics).not.toContain('Old Starter');
+ expect(result.specifics).not.toContain('Old grader');
+ expect(result.description).toContain('New Set');
+});
+test('T1.3: older card descriptions, sports cards and hardware expose exact useful details',async({page})=>{
+ await ready(page);
+ const result=await page.evaluate(()=>{
+  const nl=String.fromCharCode(10),output=[];
+  const base={n:'Synthetic collectible',p:20,s:'@seller',imageUrls:[],sellerId:'seller'};
+  const cases=[
+   {...base,c:'Trading Cards',rawCategory:'trading_cards',game:'pokemon',
+    description:['Set: Crown Zenith','Card number: 160/159','Variant: Secret Rare','Language: English'].join(nl)},
+   {...base,c:'Trading Cards',rawCategory:'trading_cards',game:'sports_cards',
+    description:['[Listing classification]','Sport: Baseball','Sports brand: Topps','Year: 2025',
+     'Player: Rookie','[End classification]'].join(nl)},
+   {...base,c:'Video Games',rawCategory:'video_games',description:'[Video Game]'+nl+'Platform: Nintendo Switch'},
+   {...base,c:'Consoles & Controllers',rawCategory:'controllers',
+    description:'[Hardware: Controller]'+nl+'Brand: Nintendo'+nl+'Model: Pro Controller'+nl+'Storage/version: wired'}
+  ];
+  for(const item of cases){showDetails(item);output.push(document.querySelector('.detail-item-specifics')?.textContent||'')}
+  return output;
+ });
+ expect(result[0]).toContain('Crown Zenith');
+ expect(result[0]).toContain('160/159');
+ expect(result[1]).toContain('Brand:Topps');
+ expect(result[1]).toContain('Year:2025');
+ expect(result[2]).toContain('Platform:Nintendo Switch');
+ expect(result[3]).toContain('Model:Pro Controller');
+ expect(result[3]).toContain('Storage / version:wired');
+});
+test('T1.3: seller-provided detail fields cannot inject markup and absent details are omitted',async({page})=>{
+ await ready(page);
+ const result=await page.evaluate(()=>{
+  const nl=String.fromCharCode(10);
+  showDetails({n:'Safe card',p:50,c:'Trading Cards',rawCategory:'trading_cards',game:'one_piece',
+   description:'Set: <img src=x onerror=alert(1)>'+nl+'Card number: OP17-001',imageUrls:[]});
+  const el=document.querySelector('.detail-item-specifics');
+  const escaped={text:el?.textContent,images:el?.querySelectorAll('img').length};
+  showDetails({n:'No declared specifics',p:20,c:'Collectibles',rawCategory:'collectibles',
+   description:'Original collectible description only',imageUrls:[]});
+  return {...escaped,empty:document.querySelectorAll('.detail-item-specifics').length};
+ });
+ expect(result.text).toContain('<img src=x onerror=alert(1)>');
+ expect(result.images).toBe(0);
+ expect(result.empty).toBe(0);
+});
