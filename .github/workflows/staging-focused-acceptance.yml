@@ -24,7 +24,7 @@ jobs:
           path: ~/.cache/ms-playwright
           key: staging-playwright-${{ hashFiles('package-lock.json') }}
       - run: npx playwright install chromium --only-shell
-      - name: Validate isolated staging support and first-time buyer/seller journeys
+      - name: Validate historical Inbox offer and trade recovery on desktop/mobile
         env:
           DECKPLAY_STAGING_SUPABASE_URL: https://prrrzeelltmyugssqnzk.supabase.co
           DECKPLAY_STAGING_SUPABASE_KEY: sb_publishable_0omvNnv_ZOvXrZ-LHPMyIQ_a9zxD-yh
@@ -34,9 +34,9 @@ jobs:
           node scripts/check-inline-js.cjs
           node --check support-center.js
           node --check support-center.js
-          node --check tests/e2e/support-center.spec.js
-          node --check tests/e2e/getting-started.spec.js
-          npx playwright test --config=playwright.local.config.js support-center.spec.js support-center.spec.js --retries=0 --max-failures=1 --timeout=20000
+          node --check tests/e2e/inbox-older-activity-discovery.spec.js
+          node --check tests/e2e/inbox-negotiation-history.spec.js
+          npx playwright test --config=playwright.local.config.js inbox-negotiation-history.spec.js inbox-older-activity-discovery.spec.js --retries=0 --max-failures=1 --timeout=20000
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
