@@ -60,6 +60,18 @@
           <select id="supportFeedbackKind"><option value="bug">Something isn't working</option><option value="idea">An improvement idea</option><option value="category">A missing collectible category</option><option value="other">Other feedback</option></select>
           <p class="muted">Your feedback is private to you and support. Please avoid personal information.</p>
         </div>
+        <div id="supportListingReportFields" hidden>
+          <p id="supportReportListingIdentifier" class="muted"></p>
+          <label for="supportReportReason">What concerns you about this listing?</label>
+          <select id="supportReportReason" required>
+            <option value="counterfeit">Counterfeit or misrepresented collectible</option>
+            <option value="misleading">Misleading photos or description</option>
+            <option value="scam">Possible scam or payment pressure</option>
+            <option value="stolen">Possibly stolen property</option>
+            <option value="other">Other safety concern</option>
+          </select>
+          <p class="muted">Reports go privately to support for review. A report never automatically removes a listing. Do not include addresses, passwords, card details or tracking numbers.</p>
+        </div>
         <label for="supportSubject">Subject (8–120 characters)</label>
         <input id="supportSubject" minlength="8" maxlength="120" required>
         <label for="supportDescription">Details (20–3000 characters)</label>
@@ -74,7 +86,7 @@
   const status = (id, message) => { el(id).textContent = message || ""; };
   const date = value => new Date(value).toLocaleString();
   const labels = {open:"Open",waiting_on_staff:"Waiting on support",waiting_on_user:"Waiting on collector",resolved:"Resolved"};
-  let userId = null, generation = 0, isStaff = false, staffView = false, ticketFilter = "all", selected = null, tickets = [], ticketOffset = 0, ticketListRequest = 0, loadingTickets = false, moreTickets = false, replyOffset = 0, moreReplies = false, loadingReplies = false, replyRequest = 0, returnToFeedback = false, returnTopic = "feedback", feedbackMode = false, viewGeneration = 0;
+  let userId = null, generation = 0, isStaff = false, staffView = false, ticketFilter = "all", selected = null, tickets = [], ticketOffset = 0, ticketListRequest = 0, loadingTickets = false, moreTickets = false, replyOffset = 0, moreReplies = false, loadingReplies = false, replyRequest = 0, returnToFeedback = false, returnTopic = "feedback", feedbackMode = false, listingReportId = null, pendingReportId = null, viewGeneration = 0;
   // Drafts are tab-memory only, keyed by ticket and purged on account/view reset.
   const replyDrafts = new Map();
   const feedbackKinds = {
@@ -99,6 +111,28 @@
     el("supportSubject").placeholder = "";
     el("supportSubject").maxLength = 120;
     updateFeedbackKind();
+  }
+  const listingUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const reportReasons = {
+    counterfeit:"Counterfeit or misrepresented collectible",
+    misleading:"Misleading photos or description",
+    scam:"Possible scam or payment pressure",
+    stolen:"Possibly stolen property",
+    other:"Other safety concern"
+  };
+  function setListingReportMode(id = null) {
+    listingReportId = id && listingUuid.test(id) ? id : null;
+    el("supportListingReportFields").hidden = !listingReportId;
+    el("supportCategoryField").hidden = !!listingReportId || feedbackMode;
+    el("supportFeedbackOptions").hidden = !feedbackMode;
+    el("supportNewTitle").textContent = listingReportId ? "Report this listing privately" : feedbackMode ? "Share private beta feedback" : "Open a new support ticket";
+    el("supportNewForm").querySelector('button[type="submit"]').textContent = listingReportId ? "Send listing report" : feedbackMode ? "Send private feedback" : "Create private ticket";
+    el("supportReportListingIdentifier").textContent = listingReportId ? "Listing ID: "+listingReportId : "";
+    el("supportCategory").value = listingReportId ? "safety" : feedbackMode ? "other" : "account";
+    el("supportSubject").value = listingReportId ? "Listing report for safety review" : "";
+    el("supportSubject").readOnly = !!listingReportId;
+    el("supportDescription").maxLength = listingReportId ? 2700 : 3000;
+    if(listingReportId)el("supportReportReason").value = "counterfeit";
   }
   el("supportFeedbackKind").addEventListener("change", updateFeedbackKind);
   const valid = (v,u) => v === generation && userId === u && modal.classList.contains("open");
@@ -177,14 +211,31 @@
     status("supportCreateStatus", "Describe the restricted listing or decision and why it should be reviewed. Do not include sensitive account information.");
   }
   el("supportModerationReview").addEventListener("click", openModerationReview);
+  function openListingReport(id) {
+    if(!listingUuid.test(id || ""))return;
+    if(!currentUser?.id) {
+      pendingReportId = id; // Public listing UUID only; never retain a private draft.
+      beginSupportSignIn("listing_report");
+      return;
+    }
+    void show();
+    setListingReportMode(id);
+    el("supportDescription").focus();
+    status("supportCreateStatus", "Explain what concerns you about this listing. A staff member reviews reports; this does not automatically remove the listing.");
+  }
+  document.addEventListener("click",event=>{
+    const button=event.target.closest("[data-report-listing]");
+    if(!button || !button.closest("#detailContent"))return;
+    openListingReport(button.dataset.reportListing);
+  });
   el("supportSignInButton").addEventListener("click", () => beginSupportSignIn("feedback"));
   // Cancelled sign-in must not unexpectedly reopen support after a later login.
   const authDialog = el("authModal");
   authDialog?.addEventListener("click", event => {
-    if (event.target.closest('[data-close="authModal"]') || event.target === authDialog) { returnToFeedback = false; returnTopic = "feedback"; }
+    if (event.target.closest('[data-close="authModal"]') || event.target === authDialog) { returnToFeedback = false; returnTopic = "feedback"; pendingReportId = null; }
   });
   authDialog?.addEventListener("keydown", event => {
-    if (event.key === "Escape") { returnToFeedback = false; returnTopic = "feedback"; }
+    if (event.key === "Escape") { returnToFeedback = false; returnTopic = "feedback"; pendingReportId = null; }
   });
   el("supportClose").addEventListener("click",()=>closeModal(modal.id));
   modal.addEventListener("click",e=>{if(e.target===modal)closeModal(modal.id)});
@@ -196,6 +247,7 @@
     // previously opened feedback on this shared browser.
     el("supportNewForm").reset();
     setFeedbackMode(false);
+    setListingReportMode(null);
     el("supportPrivate").hidden = !userId;
     el("supportSignIn").hidden = !!userId;
     openModal(modal.id);
@@ -376,6 +428,13 @@
     const rawSubject=el("supportSubject").value.trim();
     const prefix=feedbackMode?(feedbackKinds[el("supportFeedbackKind").value]||feedbackKinds.other).prefix:"";
     const subject=prefix+rawSubject;
+    const reportId=listingReportId,reportReason=el("supportReportReason").value;
+    if(reportId && (!listingUuid.test(reportId) || !reportReasons[reportReason])){
+      status("supportCreateStatus","Choose a valid listing and report reason.");return;
+    }
+    const body=reportId
+      ? "Listing ID: "+reportId+"\nReason: "+reportReasons[reportReason]+"\nDetails: "+el("supportDescription").value.trim()
+      : el("supportDescription").value.trim();
     if(rawSubject.length<8||subject.length>120){
       status("supportCreateStatus","Enter a subject of at least 8 characters that fits the limit.");
       return;
@@ -383,12 +442,12 @@
     button.disabled=true;status("supportCreateStatus","Submitting…");
     try{
       const {data,error}=await supabaseClient.rpc("create_support_ticket",{
-        p_category:feedbackMode?"other":el("supportCategory").value,p_subject:subject,
-        p_body:el("supportDescription").value.trim()
+        p_category:reportId?"safety":feedbackMode?"other":el("supportCategory").value,p_subject:subject,
+        p_body:body
       });
       if(error)throw error;
       if(!validWrite(v,u))return;
-      form.reset();updateFeedbackKind();staffView=false;selected=data;
+      form.reset();setListingReportMode(null);updateFeedbackKind();staffView=false;selected=data;
       // A new open ticket must be visible even if the collector was filtering resolved history.
       ticketFilter="all";
       modal.querySelectorAll("[data-support-filter]").forEach(item => item.setAttribute("aria-pressed", String(item.dataset.supportFilter === "all")));
@@ -436,16 +495,21 @@
     if(next===userId)return;
     userId=next;++generation;++viewGeneration;clearPrivate();
     el("supportNewForm").reset(); // Never carry a private draft into another account.
+    listingReportId=null;
+    el("supportListingReportFields").hidden=true;
     if(modal.classList.contains("open"))closeModal(modal.id);
     if(next && returnToFeedback){
       returnToFeedback=false;
       const topic = returnTopic;
+      const reportId = pendingReportId;
+      pendingReportId=null;
       returnTopic = "feedback";
       // Let the application's own auth listener finish updating currentUser first.
       setTimeout(()=>{
         if(currentUser?.id===next) {
           if(topic==="trade")openTradeConcern();
           else if(topic==="moderation")openModerationReview();
+          else if(topic==="listing_report" && reportId)openListingReport(reportId);
           else openFeedback();
         }
       },0);
