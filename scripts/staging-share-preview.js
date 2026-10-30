@@ -56,3 +56,56 @@ async function renderStagingListingPreview(html,params,fetcher,publicKey){
   return html;
  }
 }
+
+ 
+// T7.3 collector shares: an anonymous, currently active listing is required
+// before a *public handle* can appear in server-rendered social metadata.
+// Never render display_name, bio, location, collection links, email or buyer data.
+// This is private staging only; do not let its metadata remove noindex.
+async function renderStagingCollectorPreview(html,params,fetcher,publicKey){
+ const ids=params.getAll('collector');
+ if(ids.length!==1||params.has('listing')||!STAGING_PREVIEW_UUID.test(ids[0])||
+    !String(publicKey||'').startsWith('sb_publishable_')||
+    !html.includes('noindex,nofollow'))return html;
+ const headers={apikey:publicKey,Accept:'application/json'};
+ const seller=ids[0];
+ const listings=new URL(STAGING_LISTING_PREVIEW_API);
+ listings.searchParams.set('select','id');
+ listings.searchParams.set('seller_id','eq.'+seller);
+ listings.searchParams.set('status','eq.active');
+ listings.searchParams.set('limit','1');
+ try{
+  const exists=await fetcher(listings.href,{
+   method:'GET',headers,redirect:'error',signal:AbortSignal.timeout(3500)
+  });
+  if(!exists.ok)return html;
+  const rows=await exists.json();
+  if(!Array.isArray(rows)||rows.length!==1||!STAGING_PREVIEW_UUID.test(rows[0]?.id))return html;
+  // Only query the specifically allowed public handle, never the whole profile.
+  const profile=new URL('https://prrrzeelltmyugssqnzk.supabase.co/rest/v1/profiles');
+  profile.searchParams.set('select','id,username');
+  profile.searchParams.set('id','eq.'+seller);
+  profile.searchParams.set('limit','1');
+  const result=await fetcher(profile.href,{
+   method:'GET',headers,redirect:'error',signal:AbortSignal.timeout(3500)
+  });
+  if(!result.ok)return html;
+  const people=await result.json();
+  const owner=Array.isArray(people)?people[0]:null;
+  // Keep emails, potentially private display names and untrusted markup out of previews.
+  const handle=String(owner?.username||'').trim().replace(/^@/,'');
+  if(owner?.id!==seller||!/^[a-z0-9][a-z0-9_.-]{1,31}$/i.test(handle))return html;
+  const title='@'+handle+' | DeckPlay HQ';
+  const description='Browse @'+handle+'\'s public active collectibles on DeckPlay HQ. No payment or shipping is processed here.';
+  let out=html.replace(/<title>[^<]*<\/title>/i,'<title>'+previewEscape(title)+'</title>');
+  out=previewMeta(out,'name','description',description);
+  out=previewMeta(out,'property','og:title',title);
+  out=previewMeta(out,'property','og:description',description);
+  out=previewMeta(out,'name','twitter:title',title);
+  out=previewMeta(out,'name','twitter:description',description);
+  return out;
+ }catch(_error){
+  // Failing closed is preferable to fabricating seller identity.
+  return html;
+ }
+}
