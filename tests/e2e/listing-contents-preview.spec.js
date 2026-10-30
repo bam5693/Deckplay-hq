@@ -41,7 +41,7 @@ test('T1.4: whole-lot asking price is clear on buyer details across every collec
  const output=await page.evaluate(cases=>{
   closeModal('sellModal');
   return cases.map(([category,unit,quantity])=>{
-   const desc='[Listing contents]\\nQuantity included: '+quantity+'\\nUnit: '+unit+'\\nSold together for the listing price.\\n[End listing contents]\\nTest collectible';
+   const desc='[Listing contents]\nQuantity included: '+quantity+'\nUnit: '+unit+'\nSold together for the listing price.\n[End listing contents]\nTest collectible';
    showDetails({n:'Synthetic '+category+' lot',p:120,c:category,description:desc,imageUrls:[],sellerId:'other-seller'});
    return {category,text:document.querySelector('.detail-price-scope')?.textContent,
     price:document.querySelector('#detailContent .detail-price')?.textContent};
@@ -61,17 +61,17 @@ test('T1.4: single-quantity disclosures are truthful; legacy and malformed lots 
    return document.querySelector('.detail-price-scope')?.textContent;
   };
  });
- const single=await page.evaluate(()=>showScopedTest('[Listing contents]\\nQuantity included: 1\\nUnit: sealed pack\\nSold together for the listing price.\\n[End listing contents]'));
+ const single=await page.evaluate(()=>showScopedTest('[Listing contents]\nQuantity included: 1\nUnit: sealed pack\nSold together for the listing price.\n[End listing contents]'));
  expect(single).toBe('Price for the complete listing: 1 sealed pack included.');
  const legacy=await page.evaluate(()=>showScopedTest('Vintage complete set; ask seller about contents'));
  expect(legacy).toBe('Asking price for this listing. Check the description for what is included.');
- const invalid=await page.evaluate(()=>showScopedTest('[Listing contents]\\nQuantity included: 100001\\nUnit: cards\\nSold together for the listing price.\\n[End listing contents]'));
+ const invalid=await page.evaluate(()=>showScopedTest('[Listing contents]\nQuantity included: 100001\nUnit: cards\nSold together for the listing price.\n[End listing contents]'));
  expect(invalid).toBe(legacy);
 });
 test('T1.4: unusual unit disclosures remain escaped as text, never injected into buyer listing HTML',async({page})=>{
  await page.evaluate(()=>{
   closeModal('sellModal');
-  const desc='[Listing contents]\\nQuantity included: 2\\nUnit: cards<img src=x onerror=alert(1)>\\nSold together for the listing price.\\n[End listing contents]';
+  const desc='[Listing contents]\nQuantity included: 2\nUnit: cards<img src=x onerror=alert(1)>\nSold together for the listing price.\n[End listing contents]';
   showDetails({n:'Safe listing',p:40,c:'trading_cards',description:desc,imageUrls:[],sellerId:'other-seller'});
  });
  await expect(page.locator('.detail-price-scope')).toContainText('cards<img src=x onerror=alert(1)>');
