@@ -1,5 +1,14 @@
 # DeckPlay HQ — current staging status (2026-10-29)
 
+## 2026-10-30 13:28 Central — signed trade-counter acceptance and cleanup VERIFIED
+
+- **PASS** [focused protected run 41107092195](https://github.com/bam5693/Deckplay-hq/actions/runs/41107092195), staging-only source commit `dcfbfb4`, one genuine signed-in Playwright buyer/seller journey on staging-desktop. The test includes the previous real price/counter + trade/counter history checks, asserts direct unauthorized cash/status PATCH did not change the pending proposal, **accepts the trade counter through the actual authenticated `respond_trade_counter` RPC**, verifies exact approved cash (`5`, `sender_pays`) and note versus immutable original terms, and verifies both listed collectibles are `reserved`.
+- No repeated broad 188-case suite, no redeploy; focused preflight ran targeted Node syntax and fixture-safety tests before the one signed browser scenario under unchanged private OIDC and Basic Auth trust. Workflow change [a2aee3d](https://github.com/bam5693/Deckplay-hq/commit/a2aee3df6a5e16aff381a029600adc0f836eab0f) leaves normal non-focused release gates intact. Signed test source [cf6b092](https://github.com/bam5693/Deckplay-hq/commit/cf6b092b384b9c25712e712eb222be09f193d674).
+- Cleanup succeeded in the real test, confirmed independently with read-only staging queries: **zero bot listings and zero bot trades created in the preceding 20 minutes remained**. Test was confined to disposable `deckplay-buyer@deckplay.test` and `deckplay-seller@deckplay.test`; no public customer, production/main, billing, payments, shipping or PR merge touched.
+- Remaining beta-critical work: broader actual-device Android/PWA usability, moderator/operator recovery and support rehearsal, persistent backup/restore/Storage verification, and an eventual production release plan with conflicts resolved. Staging DB migration guard is defense-in-depth; authenticated role already lacks direct trade-table UPDATE grants.
+
+---
+
 ## 2026-10-30 13:25 Central — first real signed negotiation history accepted
 
 - **PASS**, protected [GitHub run 41106493935](https://github.com/bam5693/Deckplay-hq/actions/runs/41106493935), source `571fe0f`. Existing trusted `private-staging.yml` ran one explicitly gated signed-in test, without relaxing OIDC/Basic Auth. **1/1 real signed browser history test passed**: dedicated synthetic seller/buyer authenticate, create a price offer and seller counter plus trade proposal and seller counter, inspect participant-scoped price/trade history from both accounts, open actual Inbox, and verify anonymous access cannot read private records. Exact-marker cleanup returned successfully; independent read-only query found **0 synthetic listings from the dedicated bot accounts in the last 15 minutes**.
