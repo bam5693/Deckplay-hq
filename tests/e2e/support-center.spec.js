@@ -452,3 +452,89 @@ test('T8.4: canceling moderation-review sign-in does not reopen a private ticket
  await signIn(page,'buyer');
  await expect(page.locator('#supportCenterModal')).not.toHaveClass(/open/);
 });
+
+const LISTING_REPORT_ID='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+async function openSyntheticListingReport(page,id=LISTING_REPORT_ID){
+ await page.evaluate(id=>{
+  let detail=document.getElementById('detailContent');
+  if(!detail){detail=document.createElement('div');detail.id='detailContent';document.body.append(detail)}
+  const button=document.createElement('button');
+  button.type='button';button.textContent='Report listing';
+  button.dataset.reportListing=id;
+  detail.replaceChildren(button);
+ },id);
+ await page.locator('#detailContent [data-report-listing]').click();
+}
+test('T8.4: signed-in buyer files a reason-coded private report tied to the exact listing',async({page})=>{
+ await boot(page);await signIn(page,'buyer');
+ await openSyntheticListingReport(page);
+ await expect(page.locator('#supportCenterModal')).toHaveClass(/open/);
+ await expect(page.locator('#supportNewTitle')).toHaveText('Report this listing privately');
+ await expect(page.locator('#supportCategory')).toHaveValue('safety');
+ await expect(page.locator('#supportListingReportFields')).toBeVisible();
+ await expect(page.locator('#supportReportListingIdentifier')).toContainText(LISTING_REPORT_ID);
+ await expect(page.locator('#supportSubject')).toHaveValue('Listing report for safety review');
+ await expect(page.locator('#supportSubject')).toHaveAttribute('readonly','');
+ await page.locator('#supportReportReason').selectOption('counterfeit');
+ await page.locator('#supportDescription').fill('The card photo and serial number do not match the claimed edition.');
+ await page.getByRole('button',{name:'Send listing report'}).click();
+ await expect(page.locator('#supportCreateStatus')).toHaveText('Ticket created. You can follow replies below.');
+ const data=await page.evaluate(()=>window.__db);
+ expect(data.tickets).toHaveLength(1);
+ expect(data.tickets[0].owner_id).toBe('buyer');
+ expect(data.tickets[0].category).toBe('safety');
+ expect(data.tickets[0].subject).toBe('Listing report for safety review');
+ expect(data.tickets[0].body).toContain('Listing ID: '+LISTING_REPORT_ID);
+ expect(data.tickets[0].body).toContain('Reason: Counterfeit or misrepresented collectible');
+ expect(data.tickets[0].body).toContain('serial number');
+ expect(data.calls.filter(call=>call.name==='create_support_ticket')).toHaveLength(1);
+ expect(data.calls.filter(call=>call.name.includes('ban')||call.name.includes('delete')||call.name.includes('moderate'))).toHaveLength(0);
+ await expect(page.locator('#supportListingReportFields')).toBeHidden();
+ await expect(page.locator('#supportSubject')).not.toHaveAttribute('readonly','');
+});
+test('T8.4: signed-out listing report returns after sign-in with only public listing ID preserved',async({page})=>{
+ await boot(page);
+ await openSyntheticListingReport(page);
+ await expect(page.locator('#authModal')).toHaveClass(/open/);
+ await expect(page.locator('#supportCenterModal')).not.toHaveClass(/open/);
+ await signIn(page,'buyer');
+ await page.evaluate(()=>closeModal('authModal'));
+ await expect(page.locator('#supportCenterModal')).toHaveClass(/open/);
+ await expect(page.locator('#supportReportListingIdentifier')).toContainText(LISTING_REPORT_ID);
+ await expect(page.locator('#supportDescription')).toBeEmpty();
+ await page.locator('#supportReportReason').selectOption('scam');
+ await page.locator('#supportDescription').fill('The seller requested off-platform payment before discussing this item.');
+ await page.getByRole('button',{name:'Send listing report'}).click();
+ const data=await page.evaluate(()=>window.__db.tickets);
+ expect(data).toHaveLength(1);
+ expect(data[0].body).toContain('Reason: Possible scam or payment pressure');
+ expect(data[0].body).toContain(LISTING_REPORT_ID);
+});
+test('T8.4: canceling sign-in forgets pending report and later sign-in stays on current page',async({page})=>{
+ await boot(page);
+ await openSyntheticListingReport(page);
+ await expect(page.locator('#authModal')).toHaveClass(/open/);
+ await page.locator('[data-close="authModal"]').click();
+ await page.evaluate(()=>closeModal('authModal'));
+ await signIn(page,'buyer');
+ await expect(page.locator('#supportCenterModal')).not.toHaveClass(/open/);
+ await expect(page.locator('#supportListingReportFields')).toBeHidden();
+ await page.getByRole('button',{name:'Help & support'}).last().click();
+ await expect(page.locator('#supportNewTitle')).toHaveText('Open a new support ticket');
+ await expect(page.locator('#supportSubject')).toBeEmpty();
+});
+test('T8.4: account switch clears report draft and invalid listing IDs cannot start a report',async({page})=>{
+ await boot(page);await signIn(page,'buyer');
+ await openSyntheticListingReport(page);
+ await page.locator('#supportDescription').fill('Private note about a suspected counterfeit collection.');
+ await page.evaluate(()=>{window.currentUser={id:'other'};window.__authCallback('SIGNED_IN',{user:{id:'other'}})});
+ await expect(page.locator('#supportCenterModal')).not.toHaveClass(/open/);
+ await page.getByRole('button',{name:'Help & support'}).last().click();
+ await expect(page.locator('#supportListingReportFields')).toBeHidden();
+ await expect(page.locator('#supportSubject')).toBeEmpty();
+ await expect(page.locator('#supportDescription')).toBeEmpty();
+ await page.getByRole('button',{name:'Close help and support'}).click();
+ await openSyntheticListingReport(page,'not-a-listing-id');
+ await expect(page.locator('#supportCenterModal')).not.toHaveClass(/open/);
+ expect(await page.evaluate(()=>window.__db.tickets)).toHaveLength(0);
+});
