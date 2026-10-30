@@ -30,6 +30,15 @@
         <button type="button" class="ghost" data-support-filter="active" aria-pressed="false">Open tickets</button>
         <button type="button" class="ghost" data-support-filter="resolved" aria-pressed="false">Resolved tickets</button>
       </div>
+      <section id="supportStaffOverview" hidden aria-label="Verified staff support queue overview" style="border:1px solid #819c9660;border-radius:12px;padding:12px;margin:10px 0">
+        <strong>Staff support overview</strong>
+        <p class="muted" style="font-size:12px;margin:5px 0">Live queue totals from the private support database. No private messages or customer information are included.</p>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <div style="flex:1 1 120px;border:1px solid #819c9640;border-radius:10px;padding:10px"><strong id="supportStaffOpenCount" aria-label="Open support tickets">—</strong><p style="margin:4px 0">Unresolved tickets</p></div>
+          <div style="flex:1 1 120px;border:1px solid #819c9640;border-radius:10px;padding:10px"><strong id="supportStaffSafetyCount" aria-label="Unresolved safety reports">—</strong><p style="margin:4px 0">Safety reports</p></div>
+        </div>
+        <p id="supportStaffOverviewStatus" class="status" role="status" aria-live="polite"></p>
+      </section>
       <p id="supportListStatus" class="status" role="status" aria-live="polite"></p>
       <div id="supportTicketList"></div>
       <button type="button" class="ghost" id="supportLoadMore" hidden>Load older tickets</button>
@@ -198,6 +207,10 @@
     el("supportStaffSafety").hidden = true;
     el("supportStaffSafety").setAttribute("aria-pressed","false");
     el("supportStaffControls").hidden = true;
+    el("supportStaffOverview").hidden = true;
+    el("supportStaffOpenCount").textContent = "—";
+    el("supportStaffSafetyCount").textContent = "—";
+    status("supportStaffOverviewStatus","");
     el("supportReplyBody").value = "";
     ["supportListStatus","supportReplyStatus","supportCreateStatus"].forEach(id=>status(id,""));
   }
@@ -345,8 +358,36 @@
       isStaff=data===true;
       el("supportStaff").hidden=!isStaff;
       el("supportStaffSafety").hidden=!isStaff;
+      if(isStaff)void refreshStaffOverview();
     }catch(error){if(valid(v,u))console.warn("Staff support access unavailable",error)}
     await loadTickets();
+  }
+  // This is a privileged, read-only count query. RLS and the existing MFA-aware
+  // is_deckplay_moderator RPC both guard the staff overview. Never infer counts
+  // from only the first ticket page, and never show invented numbers on failure.
+  async function refreshStaffOverview(){
+    if(!isStaff || !userId)return;
+    const v=viewGeneration,u=userId;
+    const current=()=>v===viewGeneration&&userId===u&&isStaff&&modal.classList.contains("open");
+    const panel=el("supportStaffOverview");
+    panel.hidden=false;
+    el("supportStaffOpenCount").textContent="—";
+    el("supportStaffSafetyCount").textContent="—";
+    status("supportStaffOverviewStatus","Loading live queue totals…");
+    try{
+      const [open,safety]=await Promise.all([
+        supabaseClient.from("support_tickets").select("id",{count:"exact",head:true}).neq("status","resolved"),
+        supabaseClient.from("support_tickets").select("id",{count:"exact",head:true}).eq("category","safety").neq("status","resolved")
+      ]);
+      if(!current())return;
+      if(open.error||safety.error||!Number.isSafeInteger(open.count)||!Number.isSafeInteger(safety.count)||open.count<0||safety.count<0)throw Error("Queue totals unavailable");
+      el("supportStaffOpenCount").textContent=String(open.count);
+      el("supportStaffSafetyCount").textContent=String(safety.count);
+      status("supportStaffOverviewStatus","Live counts updated. Use Staff queue or Safety queue to review requests.");
+    }catch(error){
+      if(!current())return;
+      status("supportStaffOverviewStatus","Queue totals unavailable. Refresh to retry.");
+    }
   }
   // Load older tickets in 40-row pages. The extra row detects whether another
   // page exists; all filters run on the server before pagination.
@@ -506,7 +547,7 @@
   el("supportMine").addEventListener("click",()=>{staffView=false;staffSafetyOnly=false;el("supportStaffSafety").setAttribute("aria-pressed","false");selected=null;el("supportTicketDetail").hidden=true;loadTickets()});
   el("supportStaff").addEventListener("click",()=>{if(!isStaff)return;staffView=true;staffSafetyOnly=false;el("supportStaffSafety").setAttribute("aria-pressed","false");selected=null;el("supportTicketDetail").hidden=true;loadTickets()});
   el("supportStaffSafety").addEventListener("click",()=>{if(!isStaff)return;staffView=true;staffSafetyOnly=true;el("supportStaffSafety").setAttribute("aria-pressed","true");selected=null;el("supportTicketDetail").hidden=true;loadTickets()});
-  el("supportRefresh").addEventListener("click", () => { void loadTickets(); });
+  el("supportRefresh").addEventListener("click", () => { void loadTickets(); if(isStaff)void refreshStaffOverview(); });
   el("supportNewForm").addEventListener("submit",async e=>{
     e.preventDefault();
     if(!userId)return;
@@ -576,7 +617,7 @@
     try{
       const {error}=await supabaseClient.rpc("set_support_ticket_status",{p_ticket_id:id,p_status:el("supportStatusSelect").value});
       if(error)throw error;
-      if(validWrite(v,u)&&selected===id)await loadTickets();
+      if(validWrite(v,u)&&selected===id){await loadTickets(); if(isStaff)void refreshStaffOverview()}
     }catch(error){if(validWrite(v,u))status("supportReplyStatus",error.message||"Could not update ticket status.")}
     finally{button.disabled=false}
   });
