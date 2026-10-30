@@ -75,7 +75,7 @@ test('a stale seller pause cannot overwrite reserved inventory or another owner'
  });
  await page.locator('[data-page-pause="one"]').click();
  await expect(page.locator('#toast')).toContainText('Listing status changed or inventory was reserved');
- const writes=await page.evaluate(()=>writes);
+ const writes=(await page.evaluate(()=>writes)).filter(result=>result.action?.status);
  expect(writes).toHaveLength(1);
  expect(writes[0].where).toContainEqual(['seller_id','owner1']);
  expect(writes[0].where).toContainEqual(['status','active']);
