@@ -10,7 +10,7 @@ if(typeof accessPassword!=='string'||!accessPassword.trim()||/[\r\n]/.test(acces
 module.exports = defineConfig({
   testDir: './tests/e2e',
   outputDir:'test-results/staging',
-  testMatch: ['negotiation-history-live.spec.js', 'staging-auth-smoke.spec.js', 'staging-account-readonly.spec.js', 'listing-editor-live.spec.js', 'category-coverage-live.spec.js', 'accounts.spec.js', 'staging-smoke.spec.js', 'buyer-seller.spec.js', 'deck-listing.spec.js', 'community.spec.js', 'discovery-alerts.spec.js', 'trading.spec.js', 'staging-permissions.spec.js', 'moderator-mfa-live.spec.js', 'listing-drafts-live.spec.js', 'private-message-photos-live.spec.js', 'seller-overview-live.spec.js'],
+  testMatch: ['negotiation-history-live.spec.js', 'staging-auth-smoke.spec.js', 'staging-account-readonly.spec.js', 'listing-editor-live.spec.js', 'seller-pause-live.spec.js', 'category-coverage-live.spec.js', 'accounts.spec.js', 'staging-smoke.spec.js', 'buyer-seller.spec.js', 'deck-listing.spec.js', 'community.spec.js', 'discovery-alerts.spec.js', 'trading.spec.js', 'staging-permissions.spec.js', 'moderator-mfa-live.spec.js', 'listing-drafts-live.spec.js', 'private-message-photos-live.spec.js', 'seller-overview-live.spec.js'],
   workers: 1,
   timeout: 45000,
   retries: 1,
