@@ -623,7 +623,7 @@ test('T7.5: marketplace empty results offer explicit opt-in feedback, never sile
  }})));
  await expect(page.locator('#supportCenterModal')).toHaveClass(/open/);
  await expect(page.locator('#supportSubject')).toHaveValue('Improve marketplace search results');
- await expect(page.locator('#supportDescription')).toContainText('Category: Trading Cards');
+ await expect(page.locator('#supportDescription')).toHaveValue(/Category: Trading Cards/);
  const body=await page.locator('#supportDescription').inputValue();
  expect(body).toContain('Used game filter: yes');
  expect(body).not.toContain('SECRET');
