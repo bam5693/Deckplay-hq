@@ -273,6 +273,8 @@ test('T1.4: marketplace cards identify disclosed multi-item lots but do not inve
  await expect(page.locator('#grid .card').first().locator('.listing-lot-badge')).toHaveText('3 games · lot price');
  await expect(page.locator('#grid .card').first().locator('.price')).toHaveText('$75.00');
  await expect(page.locator('#grid .card').nth(1).locator('.listing-lot-badge')).toHaveCount(0);
+ // The default landing page keeps Marketplace hidden until the user navigates there.
+ await page.evaluate(()=>showMainMarketplace());
  await page.locator('#grid .card').first().getByRole('button',{name:'View item'}).click();
  await expect(page.locator('.detail-price-scope')).toContainText('Not a per-unit price.');
 });
