@@ -2775,7 +2775,7 @@ function startMessageUpdates(){
 loadWanted();
 document.getElementById("year").textContent=new Date().getFullYear();
 setAuthMode("signin");render();refreshSellerRatingCache();
-supabaseClient.auth.getSession().then(({data})=>{currentUser=data.session?.user||null;updateAccountUI();startMessageUpdates();loadBlockedCollectors().then(()=>Promise.all([loadSavedListings(),loadListings(),loadWanted()]));startNotificationUpdates()});
+// INITIAL_SESSION is handled by onAuthStateChange above; do not duplicate startup fetches.
 </script>
 <script>if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("/sw.js").catch(error=>console.warn("App installation worker unavailable:",error)));}</script>
 <script>
