@@ -203,3 +203,55 @@ test('Charles: nonexistent shared collector profile fails closed without an endl
  await expect(page.locator('#deckplaySharedLinkRetry')).toHaveCount(0);
  await expect(page.locator('#toast')).toContainText('collector profile is unavailable');
 });
+
+test('T1.4: buyer detail states the asking price covers all included items across seven categories',async({page})=>{
+ await ready(page);
+ const cases=[
+  ['trading_cards','complete decks',3],['video_games','games',4],['consoles','bundled items',2],
+  ['controllers','controllers',2],['accessories','accessories',6],
+  ['collectibles','figures',5],['other','mixed pieces',7]
+ ];
+ const values=await page.evaluate(cases=>{
+  const nl=String.fromCharCode(10);
+  return cases.map(([category,unit,qty])=>{
+   const description=['[Listing contents]','Quantity included: '+qty,'Unit: '+unit,
+    'Sold together for the listing price.','[End listing contents]','Seller description'].join(nl);
+   showDetails({n:'Synthetic '+category+' lot',c:category,p:120,
+    s:'@seller',sellerId:'22222222-2222-4222-8222-222222222222',imageUrls:[],description});
+   return {category,price:document.querySelector('#detailContent .detail-price')?.textContent,
+    scope:document.querySelector('#detailContent .detail-price-scope')?.textContent};
+  });
+ },cases);
+ expect(values).toHaveLength(7);
+ values.forEach((row,index)=>{
+  expect(row.price).toBe('$120.00');
+  expect(row.scope).toBe('Price for the complete listing: '+cases[index][2]+' '+cases[index][1]+' included. Not a per-unit price.');
+ });
+});
+test('T1.4: unknown lot size is not invented and buyer quantity labels cannot inject HTML',async({page})=>{
+ await ready(page);
+ const result=await page.evaluate(()=>{
+  const item={n:'Synthetic card',c:'Trading cards',p:19.99,s:'@seller',
+   sellerId:'22222222-2222-4222-8222-222222222222',imageUrls:[]};
+  const nl=String.fromCharCode(10);
+  showDetails({...item,description:'Older listing without contents disclosure'});
+  const legacy=document.querySelector('.detail-price-scope')?.textContent;
+  showDetails({...item,description:['[Listing contents]','Quantity included: 1','Unit: sealed pack',
+   'Sold together for the listing price.','[End listing contents]'].join(nl)});
+  const single=document.querySelector('.detail-price-scope')?.textContent;
+  showDetails({...item,description:['[Listing contents]','Quantity included: 100001','Unit: items',
+   'Sold together for the listing price.','[End listing contents]'].join(nl)});
+  const invalid=document.querySelector('.detail-price-scope')?.textContent;
+  showDetails({...item,description:['[Listing contents]','Quantity included: 2',
+   'Unit: cards<img src=x onerror=alert(1)>','Sold together for the listing price.',
+   '[End listing contents]'].join(nl)});
+  return {legacy,single,invalid,
+   safeText:document.querySelector('.detail-price-scope')?.textContent,
+   injectedImages:document.querySelectorAll('.detail-price-scope img').length};
+ });
+ expect(result.legacy).toBe('Asking price for this listing. Check the description for what is included.');
+ expect(result.single).toBe('Price for the complete listing: 1 sealed pack included.');
+ expect(result.invalid).toBe(result.legacy);
+ expect(result.safeText).toContain('cards<img src=x onerror=alert(1)>');
+ expect(result.injectedImages).toBe(0);
+});
