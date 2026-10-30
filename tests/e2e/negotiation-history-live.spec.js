@@ -93,6 +93,46 @@ test('real buyer and seller recover their price and trade counter history in Inb
    return {prices:await get('price_offer_history','offer_id',priceId),trades:await get('trade_counteroffers','id',counterId)};
   },{priceId,counterId});
   expect(anonymous).toEqual({prices:[],trades:[]});
+
+  // P0 signed transaction-integrity gate: a pending counter cannot be bypassed,
+  // and accepting the actual counter reserves only the two fixture listings.
+  const denied=await page.evaluate(async id=>{
+   const {data,error}=await supabaseClient.from('trade_offers').update({
+    status:'accepted',cash_amount:500,cash_direction:'sender_pays',offer_note:'UNAPPROVED CHANGE'
+   }).eq('id',id).select('id');
+   return {count:(data||[]).length,failed:!!error};
+  },tradeId);
+  expect(denied.failed||denied.count===0,'Direct acceptance/cash tampering must not succeed').toBe(true);
+  const before=await page.evaluate(async id=>{
+   const {data,error}=await supabaseClient.from('trade_offers')
+    .select('status,cash_amount,offer_note').eq('id',id).single();
+   if(error)throw Error(error.message);
+   return data;
+  },tradeId);
+  expect(before.status).toBe('pending');
+  expect(Number(before.cash_amount)).toBe(0);
+  expect(before.offer_note).toBe(title);
+
+  await buyer.evaluate(async id=>{
+   const {error}=await supabaseClient.rpc('respond_trade_counter',{p_counter:id,p_accept:true});
+   if(error)throw Error('Valid signed trade-counter acceptance failed: '+error.message);
+  },counterId);
+  const accepted=await buyer.evaluate(async ({tradeId,target,offered})=>{
+   const {data:trade,error}=await supabaseClient.from('trade_offers')
+    .select('status,cash_amount,cash_direction,offer_note,initial_terms').eq('id',tradeId).single();
+   if(error)throw Error(error.message);
+   const {data:listings,error:listingError}=await supabaseClient.from('listings')
+    .select('id,status').in('id',[target,offered]);
+   if(listingError)throw Error(listingError.message);
+   return {trade,listings};
+  },{tradeId,target,offered});
+  expect(accepted.trade.status).toBe('accepted');
+  expect(Number(accepted.trade.cash_amount)).toBe(5);
+  expect(accepted.trade.cash_direction).toBe('sender_pays');
+  expect(accepted.trade.offer_note).toBe('Synthetic counter '+tradeId);
+  expect(accepted.trade.initial_terms.note).toBe(title);
+  expect(accepted.listings).toHaveLength(2);
+  expect(accepted.listings.every(x=>x.status==='reserved')).toBe(true);
  }catch(error){primaryFailure=error;throw error}
  finally{
   const errors=[];
