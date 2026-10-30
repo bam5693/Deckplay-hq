@@ -415,3 +415,40 @@ test('T8.3: delayed reply success clears only its ticket draft, not another tick
   await page.locator('#supportTicketList button').filter({hasText:'Beta sports help'}).click();
   await expect(page.locator('#supportReplyBody')).toHaveValue('Keep this beta draft untouched');
 });
+
+
+test('T8.4: signed-out collector requests a private moderation review without automatic reversal',async({page})=>{
+ await boot(page);
+ await page.getByRole('button',{name:'Help & support'}).last().click();
+ await page.getByText('What if my listing or account was restricted?').click();
+ await expect(page.getByText('Sending a request does not automatically reverse a restriction.')).toBeVisible();
+ await page.getByRole('button',{name:'Request a moderation review'}).click();
+ await expect(page.locator('#authModal')).toHaveClass(/open/);
+ await expect(page.locator('#supportCenterModal')).not.toHaveClass(/open/);
+ await signIn(page,'buyer');
+ await page.evaluate(()=>closeModal('authModal'));
+ await expect(page.locator('#supportCenterModal')).toHaveClass(/open/);
+ await expect(page.locator('#supportCategory')).toHaveValue('safety');
+ await expect(page.locator('#supportSubject')).toHaveValue('Request a moderation review');
+ await page.locator('#supportDescription').fill('Please review the restriction on my synthetic sports-card listing.');
+ await page.getByRole('button',{name:'Create private ticket'}).click();
+ await expect(page.locator('#supportTicketTitle')).toHaveText('Request a moderation review');
+ const ticket=await page.evaluate(()=>window.__db.tickets.at(-1));
+ expect(ticket).toMatchObject({owner_id:'buyer',category:'safety',subject:'Request a moderation review',status:'open'});
+ await page.evaluate(()=>{window.currentUser={id:'other'};window.__authCallback('SIGNED_IN',{user:{id:'other'}})});
+ await expect(page.locator('#supportCenterModal')).not.toHaveClass(/open/);
+ await expect(page.locator('#supportTicketBody')).toBeEmpty();
+ await expect(page.locator('#supportSubject')).toBeEmpty();
+ await page.getByRole('button',{name:'Help & support'}).last().click();
+ await expect(page.locator('#supportTicketList')).not.toContainText('Request a moderation review');
+});
+test('T8.4: canceling moderation-review sign-in does not reopen a private ticket later',async({page})=>{
+ await boot(page);
+ await page.getByRole('button',{name:'Help & support'}).last().click();
+ await page.getByText('What if my listing or account was restricted?').click();
+ await page.getByRole('button',{name:'Request a moderation review'}).click();
+ await page.locator('[data-close="authModal"]').click();
+ await page.evaluate(()=>closeModal('authModal'));
+ await signIn(page,'buyer');
+ await expect(page.locator('#supportCenterModal')).not.toHaveClass(/open/);
+});
