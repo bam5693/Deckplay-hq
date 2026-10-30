@@ -453,7 +453,9 @@ test('T1.1: Escape and backdrop preserve modified photos and fields unless disca
  await page.keyboard.press('Escape');
  await expect(page.locator('#editListingModal')).toHaveClass(/open/);
  await expect(page.locator('#editListingPhotos [data-edit-photo="remove"]')).toHaveCount(1);
+ page.once('dialog',async dialog=>dialog.dismiss());
  await page.evaluate(()=>document.getElementById('editListingModal').click());
+ await expect(page.locator('#editListingModal')).toHaveClass(/open/);
  page.once('dialog',async dialog=>dialog.accept());
  await page.evaluate(()=>document.getElementById('editListingModal').click());
  await expect(page.locator('#editListingModal')).not.toHaveClass(/open/);
