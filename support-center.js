@@ -36,6 +36,8 @@
         <p id="supportTicketBody" style="white-space:pre-wrap;overflow-wrap:anywhere"></p>
         <p id="supportTicketState" class="muted"></p>
         <div id="supportReplies" aria-live="polite"></div>
+        <p id="supportRepliesStatus" class="status" role="status" aria-live="polite"></p>
+        <button type="button" class="ghost" id="supportRepliesLoadMore" hidden>Load earlier replies</button>
         <form id="supportReplyForm">
           <label for="supportReplyBody">Reply privately</label>
           <textarea id="supportReplyBody" minlength="2" maxlength="3000" rows="3" required></textarea>
@@ -71,7 +73,7 @@
   const status = (id, message) => { el(id).textContent = message || ""; };
   const date = value => new Date(value).toLocaleString();
   const labels = {open:"Open",waiting_on_staff:"Waiting on support",waiting_on_user:"Waiting on collector",resolved:"Resolved"};
-  let userId = null, generation = 0, isStaff = false, staffView = false, ticketFilter = "all", selected = null, tickets = [], ticketOffset = 0, ticketListRequest = 0, loadingTickets = false, moreTickets = false, returnToFeedback = false, returnTopic = "feedback", feedbackMode = false, viewGeneration = 0;
+  let userId = null, generation = 0, isStaff = false, staffView = false, ticketFilter = "all", selected = null, tickets = [], ticketOffset = 0, ticketListRequest = 0, loadingTickets = false, moreTickets = false, replyOffset = 0, moreReplies = false, loadingReplies = false, replyRequest = 0, returnToFeedback = false, returnTopic = "feedback", feedbackMode = false, viewGeneration = 0;
   const feedbackKinds = {
     bug: {prefix:"[Bug] ", hint:"What went wrong?"},
     idea: {prefix:"[Idea] ", hint:"What could DeckPlay improve?"},
@@ -110,7 +112,11 @@
     el("supportTicketTitle").textContent = "";
     el("supportTicketBody").textContent = "";
     el("supportTicketState").textContent = "";
+    ++replyRequest; replyOffset = 0; moreReplies = false; loadingReplies = false;
     el("supportReplies").replaceChildren();
+    el("supportRepliesLoadMore").hidden = true;
+    el("supportRepliesLoadMore").disabled = false;
+    status("supportRepliesStatus","");
     el("supportStaff").hidden = true;
     el("supportStaffControls").hidden = true;
     el("supportReplyBody").value = "";
@@ -268,28 +274,69 @@
     el("supportReplyForm").hidden=ticket.status==="resolved";
     el("supportStaffControls").hidden=!isStaff;
     el("supportStatusSelect").value=ticket.status;
+    ++replyRequest; replyOffset = 0; moreReplies = false; loadingReplies = false;
+    el("supportRepliesLoadMore").hidden = true;
+    el("supportRepliesLoadMore").disabled = false;
     el("supportReplies").textContent="Loading replies…";
+    status("supportRepliesStatus","");
     status("supportReplyStatus","");
-    try{
+    await loadReplies(id, false, v, u);
+
+  }
+  // Newest replies are loaded first so a long conversation never hides recent
+  // support responses behind the first 100 messages. Earlier pages prepend in
+  // chronological order without mixing tickets or accounts.
+  async function loadReplies(id, append, v, u) {
+    if (append && (loadingReplies || !moreReplies)) return;
+    const request = ++replyRequest;
+    const offset = append ? replyOffset : 0;
+    const button = el("supportRepliesLoadMore");
+    loadingReplies = true;
+    button.disabled = true;
+    status("supportRepliesStatus", append ? "Loading earlier replies…" : "");
+    try {
       const {data,error}=await supabaseClient.from("support_ticket_replies")
         .select("id,author_id,is_staff,body,created_at")
-        .eq("ticket_id",id).order("created_at",{ascending:true}).order("id",{ascending:true}).limit(100);
+        .eq("ticket_id",id).order("created_at",{ascending:false}).order("id",{ascending:false})
+        .range(offset,offset+40);
       if(error)throw error;
-      if(!valid(v,u)||selected!==id)return;
-      el("supportReplies").replaceChildren();
-      for(const reply of data||[]){
+      if(!valid(v,u)||selected!==id||request!==replyRequest)return;
+      const rows=data||[];
+      const page=rows.slice(0,40);
+      replyOffset=offset+page.length;
+      moreReplies=rows.length>40;
+      const fragment=document.createDocumentFragment();
+      for(const reply of page.reverse()){
         const article=document.createElement("article");
         article.style.cssText="border:1px solid #cbd6e5;border-radius:10px;padding:10px;margin:8px 0;overflow-wrap:anywhere";
         const header=document.createElement("strong");
         header.textContent=(reply.is_staff?"Support":reply.author_id===u?"You":"Collector")+" · "+date(reply.created_at);
-        const body=document.createElement("p");body.style.whiteSpace="pre-wrap";body.textContent=reply.body;
-        article.append(header,body);el("supportReplies").append(article);
+        const body=document.createElement("p");
+        body.style.whiteSpace="pre-wrap";
+        body.textContent=reply.body;
+        article.append(header,body);
+        fragment.append(article);
       }
-      if(!(data||[]).length)el("supportReplies").textContent="No replies yet.";
+      if(append)el("supportReplies").prepend(fragment);
+      else {
+        el("supportReplies").replaceChildren(fragment);
+        if(!page.length)el("supportReplies").textContent="No replies yet.";
+      }
+      button.hidden=!moreReplies;
+      status("supportRepliesStatus",moreReplies?"Showing "+replyOffset+" most recent replies. Load earlier replies for more.":"");
     }catch(error){
-      if(valid(v,u)&&selected===id)el("supportReplies").textContent="Replies could not load. Reopen this ticket to retry.";
+      if(valid(v,u)&&selected===id&&request===replyRequest){
+        if(!append)el("supportReplies").textContent="Replies could not load. Reopen this ticket to retry.";
+        else button.hidden=false;
+        status("supportRepliesStatus",append?"Could not load earlier replies. Retry.":"");
+      }
+    }finally{
+      if(request===replyRequest){loadingReplies=false;button.disabled=false;}
     }
   }
+  el("supportRepliesLoadMore").addEventListener("click",()=>{
+    if(selected&&userId)void loadReplies(selected,true,generation,userId);
+  });
   modal.querySelectorAll("[data-support-filter]").forEach(button => button.addEventListener("click", () => {
     const next = button.dataset.supportFilter;
     if(!["all","active","resolved"].includes(next) || next===ticketFilter) return;
@@ -297,7 +344,9 @@
     modal.querySelectorAll("[data-support-filter]").forEach(item => item.setAttribute("aria-pressed", String(item===button)));
     selected=null;
     el("supportTicketDetail").hidden=true;
+    ++replyRequest;
     el("supportReplies").replaceChildren();
+    el("supportRepliesLoadMore").hidden=true;
     void loadTickets();
   }));
   el("supportMine").addEventListener("click",()=>{staffView=false;selected=null;el("supportTicketDetail").hidden=true;loadTickets()});
