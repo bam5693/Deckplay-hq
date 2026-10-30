@@ -39,7 +39,7 @@ test('Kyle: mobile and desktop seller guide has keyboard-operable tabs and real 
   await expect(page.locator('#guideSeller')).toContainText('correct category');
   await expect(page.locator('#guideSeller')).toContainText('real photos');
   await expect(page.locator('#guideSeller')).toContainText('Inbox');
-  await page.getByRole('button',{name:'Create a listing →'}).click();
+  await page.locator('#guideSeller').getByRole('button',{name:'Create a listing →'}).click();
   await expect(page.locator('#authModal')).toHaveClass(/open/);
   await expect(page.locator('#sellModal')).not.toHaveClass(/open/);
 });
