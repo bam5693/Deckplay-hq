@@ -226,6 +226,7 @@
   document.addEventListener("click",event=>{
     const button=event.target.closest("[data-report-listing]");
     if(!button || !button.closest("#detailContent"))return;
+    if(document.getElementById("detailModal")?.classList.contains("open"))closeModal("detailModal");
     openListingReport(button.dataset.reportListing);
   });
   el("supportSignInButton").addEventListener("click", () => beginSupportSignIn("feedback"));
