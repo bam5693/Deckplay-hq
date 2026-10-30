@@ -1,0 +1,44 @@
+name: Focused listing-editor Android Back regression
+on:
+  push:
+    branches: [test/staging-reporting]
+    paths:
+      - '.github/workflows/listing-editor-back-focused.yml'
+      - 'listing-editor.js'
+      - 'tests/e2e/listing-editor.spec.js'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  local-browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Cheap syntax and isolation preflight
+        run: |
+          set -e
+          node --check listing-editor.js
+          node --check tests/e2e/listing-editor.spec.js
+          node --check scripts/build-staging.cjs
+      - run: npm ci
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: staging-playwright-${{ hashFiles('package-lock.json') }}
+      - run: npx playwright install chromium --only-shell
+      - name: Reproduce and guard Android and desktop Back behavior locally
+        run: npx playwright test --config=playwright.local.config.js listing-editor.spec.js --grep "Android Back" --retries=0 --max-failures=1 --timeout=20000
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: listing-editor-back-test-failure
+          path: |
+            test-results/
+            playwright-report/
+          if-no-files-found: ignore
+          retention-days: 3
