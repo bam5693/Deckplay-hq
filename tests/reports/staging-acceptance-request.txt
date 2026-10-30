@@ -15,3 +15,5 @@
 2026-10-30 T8.3 focused local retry: run 41095899720 passed 54 cases but new case exposed ticket refresh clearing reply confirmation; corrected in 4641436. Run same existing mobile/desktop local checks once, no staging deploy or production changes.
 
 2026-10-30 P0 NEGOTIATION HISTORY: local-only targeted desktop/mobile regression of message-only Inbox recovery of older offers/trades, missing parent offer lookup, participant scoping and account-switch cleanup. Source 147ba94, synthetic tests 291f363, focused manifest a192a1c. Do not deploy until focused checks pass; no staging DB writes or production changes.
+
+2026-10-30 P0 targeted rerun: prior focused local run 41099226445 passed only existing Inbox history cases because Playwright testMatch omitted BOTH new discovery + Wanted specs. Add tests to allowlist at e3ed0d7 and focused manifest at 06a741a. Execute only inbox-negotiation-history.spec.js, inbox-older-activity-discovery.spec.js, wanted-search-handoff.spec.js on mobile+desktop; no deployment or live customer writes. Do not claim unexecuted tests as passing.
