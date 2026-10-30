@@ -69,6 +69,7 @@ test('Worker enforces private authentication BEFORE preview and keeps HEAD stati
  const context=vm.createContext({
   ...sharedContext,assets:{'/index.html':{body:HTML,type:'text/html; charset=utf-8'}},
   STAGING_PREVIEW_PUBLIC_KEY:PUBLIC_KEY,
+  fetch:async()=>{throw Error('Fixture must call the injected render stub')},
   renderStagingListingPreview:async html=>{previewCalls++;return html+'<!-- preview -->'}
  });
  const workerSrc=fs.readFileSync('scripts/staging-handler.js','utf8').replace(/^export default\s*/, 'globalThis.__handler = ');
