@@ -368,3 +368,38 @@ test('T1.2: user-entered HTML remains plain text inside search chips',async({pag
  await page.locator('#marketActiveFilters [data-remove-market-filter="search"]').click();
  await expect(page.locator('#search')).toHaveValue('');
 });
+
+test('T1.2: edited sports-card brand and year outrank stale creation labels in buyer filters',async({page})=>{
+ await ready(page);
+ await page.evaluate(()=>{
+  const nl=String.fromCharCode(10);
+  const original='[Sports Cards]'+nl+'Sport: Baseball'+nl+'Brand: Topps'+nl+'Year: 2022'+nl+'Player: Jordan'+nl+nl;
+  const updated=['[Listing classification]','Category: Trading Cards','Listing type: Single',
+   'Sport: Baseball','Sports brand: Panini','Year: 2025','Player: Jordan',
+   '[End classification]'].join(nl);
+  items=[
+   {id:'updated-card',n:'Updated baseball card',c:'Trading Cards',rawCategory:'trading_cards',
+    game:'sports_cards',p:24,s:'@tanner',description:updated+nl+nl+original,
+    sellerId:'seller-updated',cond:'Near Mint',e:'⚾',imageUrls:[]},
+   {id:'old-card',n:'Legacy baseball card',c:'Trading Cards',rawCategory:'trading_cards',
+    game:'sports_cards',p:20,s:'@tanner',description:original,sellerId:'seller-legacy',
+    cond:'Near Mint',e:'⚾',imageUrls:[]}
+  ];
+  cat='All';game='All';filter='All';query='';onlyMyListings=false;onlySavedListings=false;
+  listingSource='live';document.getElementById('search').value='';showMainMarketplace();render();
+ });
+ await page.locator('#marketFilterToggle').click();
+ await page.locator('#marketCategory').selectOption('Trading Cards');
+ await page.locator('#marketGame').selectOption('sports_cards');
+ await page.locator('#marketSport').selectOption('Baseball');
+ await page.locator('#marketSportsBrand').fill('Panini');
+ await page.locator('#marketSportsYear').fill('2025');
+ await expect(page.locator('#grid h3')).toHaveText(['Updated baseball card']);
+ await page.locator('#marketSportsYear').fill('2022');
+ await expect(page.locator('#grid h3')).toHaveCount(0);
+ await page.locator('#marketSportsBrand').fill('Topps');
+ await expect(page.locator('#grid h3')).toHaveText(['Legacy baseball card']);
+ await page.locator('#marketSportsBrand').fill('Panini');
+ await page.locator('#marketSportsYear').fill('2025');
+ await expect(page.locator('#grid h3')).toHaveText(['Updated baseball card']);
+});
