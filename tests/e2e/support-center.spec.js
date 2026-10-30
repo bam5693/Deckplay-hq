@@ -173,3 +173,54 @@ test('T8.3: buyer and staff filter open/resolved tickets server-side without los
  await expect(page.locator('#supportTicketList')).not.toContainText('Synthetic resolved collectible help');
  await expect(page.locator('#supportListStatus')).toHaveText('No resolved tickets in this view.');
 });
+
+test('T7.6: collector submits typed private feedback for bugs, improvements and missing categories',async({page})=>{
+ await boot(page);await signIn(page,'buyer');
+ for(const [kind,subject,prefix] of [
+  ['bug','Marketplace filter broken','[Bug] '],
+  ['idea','Improve collection sorting','[Idea] '],
+  ['category','Please add vintage toys','[Category request] ']
+ ]){
+  await page.evaluate(()=>document.dispatchEvent(new Event('deckplay:open-feedback')));
+  await expect(page.locator('#supportFeedbackOptions')).toBeVisible();
+  await expect(page.locator('#supportCategoryField')).toBeHidden();
+  await expect(page.locator('#supportNewTitle')).toHaveText('Share private beta feedback');
+  await page.locator('#supportFeedbackKind').selectOption(kind);
+  await page.locator('#supportSubject').fill(subject);
+  await page.locator('#supportDescription').fill('Synthetic feedback about cards, games and general collectibles.');
+  await page.getByRole('button',{name:'Send private feedback'}).click();
+  await expect(page.locator('#supportTicketTitle')).toHaveText(prefix+subject);
+  const call=await page.evaluate(()=>window.__db.calls.filter(c=>c.name==='create_support_ticket').at(-1));
+  expect(call.args.p_category).toBe('other');
+  expect(call.args.p_subject).toBe(prefix+subject);
+ }
+ // Returning to ordinary support must restore the full topic selector and clear the draft.
+ await page.getByRole('button',{name:'Help & support'}).last().click();
+ await expect(page.locator('#supportFeedbackOptions')).toBeHidden();
+ await expect(page.locator('#supportCategoryField')).toBeVisible();
+ await expect(page.locator('#supportNewTitle')).toHaveText('Open a new support ticket');
+ await expect(page.locator('#supportSubject')).toBeEmpty();
+ await page.evaluate(()=>{window.currentUser={id:'other'};window.__authCallback('SIGNED_IN',{user:{id:'other'}})});
+ await page.getByRole('button',{name:'Help & support'}).last().click();
+ await expect(page.locator('#supportTicketList')).not.toContainText('Marketplace filter broken');
+ await expect(page.locator('#supportTicketList')).not.toContainText('Please add vintage toys');
+});
+
+test('T7.6: signed-out feedback returns to the private form after login without carrying drafts',async({page})=>{
+ await boot(page);
+ await page.evaluate(()=>document.dispatchEvent(new Event('deckplay:open-feedback')));
+ await expect(page.locator('#supportCenterModal')).toHaveClass(/open/);
+ await expect(page.locator('#supportPrivate')).toBeHidden();
+ await page.getByRole('button',{name:'Sign in to send feedback'}).click();
+ await expect(page.locator('#authModal')).toHaveClass(/open/);
+ await signIn(page,'buyer');
+ await page.evaluate(()=>closeModal('authModal'));
+ await expect(page.locator('#supportCenterModal')).toHaveClass(/open/);
+ await expect(page.locator('#supportFeedbackOptions')).toBeVisible();
+ await expect(page.locator('#supportSubject')).toBeEmpty();
+ await page.locator('#supportFeedbackKind').selectOption('idea');
+ await page.locator('#supportSubject').fill('Add easier game filters');
+ await page.locator('#supportDescription').fill('Synthetic suggestion for games, consoles and accessories.');
+ await page.getByRole('button',{name:'Send private feedback'}).click();
+ await expect(page.locator('#supportTicketTitle')).toHaveText('[Idea] Add easier game filters');
+});
