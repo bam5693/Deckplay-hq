@@ -215,6 +215,9 @@ jobs:
       - name: Seller desktop only after diagnosed transport reset
         if: success() && github.event.inputs.acceptance_scope == 'seller_desktop'
         run: npx playwright test --config=playwright.staging.config.js staging-account-readonly.spec.js --project=staging-desktop --grep 'synthetic seller' --retries=0 --timeout=40000
+      - name: Verify one real signed-in negotiation history journey with exact fixture cleanup
+        if: ${{ success() && github.event_name == 'push' && startsWith(github.event.head_commit.message, '[focused-history]') }}
+        run: npx playwright test --config=playwright.staging.config.js negotiation-history-live.spec.js --project=staging-desktop --retries=0 --max-failures=1 --timeout=45000
       - uses: actions/upload-artifact@v4
         if: always()
         with:
