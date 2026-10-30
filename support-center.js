@@ -14,6 +14,7 @@
     <details><summary><strong>How do messages and offers work?</strong></summary><p>Use Inbox to contact collectors, review offers and negotiate trades. A trade proposal is not a payment or shipping agreement. Block or report unwanted contact.</p></details>
     <details><summary><strong>Can I pay or print a shipping label?</strong></summary><p>No. Checkout and shipping are demonstrations only. No payment, payout, shipping label or purchase can be completed in this beta.</p></details>
     <details><summary><strong>How do I report a suspicious listing?</strong></summary><p>Use the Report action on the listing or collector. For account access, bugs or other help, open a private support ticket below.</p></details>
+    <details><summary><strong>What if a trade or shipping arrangement goes wrong?</strong></summary><p>DeckPlay beta does not process payments, purchases or shipping. If a collector pressures you to pay off-platform, report the listing or collector. For a proposed trade, delivery concern or confusing shipping preview, send a private support ticket. Do not include addresses, tracking numbers or payment details.</p><button type="button" class="ghost" id="supportTradeConcern">Get help with a trade or shipping concern</button></details>
     <div id="supportSignIn"><p class="muted">Sign in to send feedback or open and follow private support tickets.</p><button type="button" class="primary" id="supportSignInButton">Sign in to send feedback</button></div>
     <section id="supportPrivate" hidden>
       <h3>Your support tickets</h3>
@@ -59,7 +60,7 @@
   const status = (id, message) => { el(id).textContent = message || ""; };
   const date = value => new Date(value).toLocaleString();
   const labels = {open:"Open",waiting_on_staff:"Waiting on support",waiting_on_user:"Waiting on collector",resolved:"Resolved"};
-  let userId = null, generation = 0, isStaff = false, staffView = false, selected = null, tickets = [], returnToFeedback = false;
+  let userId = null, generation = 0, isStaff = false, staffView = false, selected = null, tickets = [], returnToFeedback = false, returnTopic = "feedback";
   const valid = (v,u) => v === generation && userId === u && modal.classList.contains("open");
   function clearPrivate() {
     selected = null; tickets = []; isStaff = false; staffView = false;
@@ -99,19 +100,30 @@
     status("supportCreateStatus", "Share a bug, suggestion or category request. Do not include private information.");
   }
   document.addEventListener("deckplay:open-feedback", openFeedback);
-  el("supportSignInButton").addEventListener("click", () => {
+  function beginSupportSignIn(topic) {
     // Remember only the navigation intent, never a private draft or account ID.
+    returnTopic = topic;
     returnToFeedback = true;
     closeModal(modal.id);
     openModal("authModal");
-  });
+  }
+  function openTradeConcern() {
+    if (!currentUser?.id) { beginSupportSignIn("trade"); return; }
+    void show();
+    el("supportCategory").value = "offers_trades";
+    el("supportSubject").value = "Trade or shipping concern";
+    el("supportDescription").focus();
+    status("supportCreateStatus", "Describe the proposed trade or shipping issue. Do not include addresses or payment details.");
+  }
+  el("supportTradeConcern").addEventListener("click", openTradeConcern);
+  el("supportSignInButton").addEventListener("click", () => beginSupportSignIn("feedback"));
   // Cancelled sign-in must not unexpectedly reopen support after a later login.
   const authDialog = el("authModal");
   authDialog?.addEventListener("click", event => {
-    if (event.target.closest('[data-close="authModal"]')) returnToFeedback = false;
+    if (event.target.closest('[data-close="authModal"]') || event.target === authDialog) { returnToFeedback = false; returnTopic = "feedback"; }
   });
   authDialog?.addEventListener("keydown", event => {
-    if (event.key === "Escape") returnToFeedback = false;
+    if (event.key === "Escape") { returnToFeedback = false; returnTopic = "feedback"; }
   });
   el("supportClose").addEventListener("click",()=>closeModal(modal.id));
   modal.addEventListener("click",e=>{if(e.target===modal)closeModal(modal.id)});
@@ -258,9 +270,14 @@
     if(modal.classList.contains("open"))closeModal(modal.id);
     if(next && returnToFeedback){
       returnToFeedback=false;
+      const topic = returnTopic;
+      returnTopic = "feedback";
       // Let the application's own auth listener finish updating currentUser first.
       setTimeout(()=>{
-        if(currentUser?.id===next)openFeedback();
+        if(currentUser?.id===next) {
+          if(topic==="trade")openTradeConcern();
+          else openFeedback();
+        }
       },0);
     }
   });
