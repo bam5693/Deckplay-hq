@@ -11,6 +11,9 @@ done
 if [[ "$DECKPLAY_PROD_PROJECT_REF" != "yffruutknztvdyioovmp" ]]; then
   echo "Refusing to back up an unexpected Supabase project." >&2; exit 1
 fi
+if [[ "$DECKPLAY_PROD_DATABASE_URL" != *"$DECKPLAY_PROD_PROJECT_REF"* ]]; then
+  echo "Database connection does not identify the intended production project; refusing to proceed." >&2; exit 1
+fi
 if [[ "${#DECKPLAY_BACKUP_PASSPHRASE}" -lt 24 ]]; then
   echo "Backup encryption passphrase must be at least 24 characters." >&2; exit 1
 fi
