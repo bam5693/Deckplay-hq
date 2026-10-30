@@ -1,0 +1,18 @@
+name: Request one real seller lifecycle journey
+on:
+  push:
+    branches: [test/staging-reporting]
+    paths: ['.github/workflows/launch-seller-lifecycle-live.yml']
+permissions:
+  contents: read
+  actions: write
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Reuse the trusted staging OIDC workflow without exposing credentials
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api -X POST "repos/${{ github.repository }}/actions/workflows/private-staging.yml/dispatches" -f ref=test/staging-reporting -F 'inputs[focused_live_test]=seller-pause-live'
