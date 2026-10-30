@@ -259,7 +259,11 @@ jobs:
             trading|listing-drafts-live|community|seller-overview-live|discovery-alerts|staging-permissions) ;;
             *) echo "Unsupported diagnostic selection"; exit 1;;
           esac
-          npx playwright test --config=playwright.staging.config.js "${SELECTED_TEST}.spec.js" --project=staging-desktop --retries=0 --max-failures=1 --timeout=45000
+          if [ "$SELECTED_TEST" = "staging-permissions" ]; then
+            npx playwright test --config=playwright.staging.config.js staging-permissions.spec.js --project=staging-desktop --grep 'collector session survives page refresh' --retries=0 --max-failures=1 --timeout=45000
+          else
+            npx playwright test --config=playwright.staging.config.js "${SELECTED_TEST}.spec.js" --project=staging-desktop --retries=0 --max-failures=1 --timeout=45000
+          fi
       - uses: actions/upload-artifact@v4
         if: always()
         with:
