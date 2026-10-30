@@ -33,9 +33,9 @@ async function boot(page){
     return {error:{message:'Unexpected RPC'}};
    },
    from:table=>{
-    const state={filters:[],orders:[],start:0,end:null,limit:null};
+    const state={filters:[],orders:[],start:0,end:null,limit:null,countOnly:false};
     const query={
-     select(){return query},
+     select(_fields,options={}){state.countOnly=options.count==="exact"&&options.head===true;return query},
      order(field,options={}){state.orders.push([field,options.ascending!==false]);return query},
      limit(count){state.limit=count;return query},
      range(start,end){state.start=start;state.end=end;return query},
@@ -54,6 +54,7 @@ async function boot(page){
        window.__db.failRepliesOlderOnce=false;
        return Promise.resolve({data:null,error:{message:'Simulated older reply fetch error'}}).then(resolve,reject);
       }
+      if(state.countOnly)return Promise.resolve({data:null,count:rows.length,error:null}).then(resolve,reject);
       rows.sort((a,b)=>{
        for(const [field,ascending] of state.orders){
         const left=a[field]??'',right=b[field]??'';
@@ -711,4 +712,35 @@ test('T7.5: signed-out detail feedback never carries listing metadata into a lat
  await expect(page.locator('#supportCenterModal')).toHaveClass(/open/);
  await expect(page.locator('#supportDescription')).toBeEmpty();
  expect(await page.evaluate(()=>window.__db.tickets)).toHaveLength(0);
+});
+
+
+test('T8.2 staff receives exact live ticket and safety totals with account isolation',async({page})=>{
+ await boot(page);
+ await signIn(page,'buyer');
+ await page.getByRole('button',{name:'Help & support'}).last().click();
+ for(const [topic,subject] of [['safety','Synthetic safety report'],['listing','Synthetic listing assistance']]){
+  await page.locator('#supportCategory').selectOption(topic);
+  await page.locator('#supportSubject').fill(subject);
+  await page.locator('#supportDescription').fill('Synthetic test support request without any personal information.');
+  await page.getByRole('button',{name:'Create private ticket'}).click();
+ }
+ await expect(page.locator('#supportStaffOverview')).toBeHidden();
+ await page.evaluate(()=>{window.currentUser={id:'staff'};window.__authCallback('SIGNED_IN',{user:{id:'staff'}})});
+ await page.getByRole('button',{name:'Help & support'}).last().click();
+ await expect(page.locator('#supportStaffOverview')).toBeVisible();
+ await expect(page.locator('#supportStaffOpenCount')).toHaveText('2');
+ await expect(page.locator('#supportStaffSafetyCount')).toHaveText('1');
+ await page.locator('#supportStaffSafety').click();
+ await page.locator('#supportTicketList button').filter({hasText:'Synthetic safety report'}).click();
+ await page.locator('#supportStatusSelect').selectOption('resolved');
+ await page.getByRole('button',{name:'Save status'}).click();
+ await expect(page.locator('#supportStaffOpenCount')).toHaveText('1');
+ await expect(page.locator('#supportStaffSafetyCount')).toHaveText('0');
+ await page.evaluate(()=>{window.currentUser={id:'other'};window.__authCallback('SIGNED_IN',{user:{id:'other'}})});
+ await expect(page.locator('#supportStaffOverview')).toBeHidden();
+ await expect(page.locator('#supportStaffOpenCount')).toHaveText('—');
+ await expect(page.locator('#supportStaffSafetyCount')).toHaveText('—');
+ await page.getByRole('button',{name:'Help & support'}).last().click();
+ await expect(page.locator('#supportStaffOverview')).toBeHidden();
 });
