@@ -30,6 +30,7 @@
       </div>
       <p id="supportListStatus" class="status" role="status" aria-live="polite"></p>
       <div id="supportTicketList"></div>
+      <button type="button" class="ghost" id="supportLoadMore" hidden>Load older tickets</button>
       <section id="supportTicketDetail" hidden style="border-top:1px solid #cbd6e5;margin-top:15px;padding-top:12px">
         <h3 id="supportTicketTitle"></h3>
         <p id="supportTicketBody" style="white-space:pre-wrap;overflow-wrap:anywhere"></p>
@@ -70,7 +71,7 @@
   const status = (id, message) => { el(id).textContent = message || ""; };
   const date = value => new Date(value).toLocaleString();
   const labels = {open:"Open",waiting_on_staff:"Waiting on support",waiting_on_user:"Waiting on collector",resolved:"Resolved"};
-  let userId = null, generation = 0, isStaff = false, staffView = false, ticketFilter = "all", selected = null, tickets = [], returnToFeedback = false, returnTopic = "feedback", feedbackMode = false, viewGeneration = 0;
+  let userId = null, generation = 0, isStaff = false, staffView = false, ticketFilter = "all", selected = null, tickets = [], ticketOffset = 0, ticketListRequest = 0, loadingTickets = false, moreTickets = false, returnToFeedback = false, returnTopic = "feedback", feedbackMode = false, viewGeneration = 0;
   const feedbackKinds = {
     bug: {prefix:"[Bug] ", hint:"What went wrong?"},
     idea: {prefix:"[Idea] ", hint:"What could DeckPlay improve?"},
@@ -100,6 +101,8 @@
   // ticket-list refreshes, while still being discarded after account/view changes.
   const validWrite = (v,u) => v === viewGeneration && userId === u && modal.classList.contains("open");
   function clearPrivate() {
+    ++ticketListRequest; loadingTickets = false; moreTickets = false; ticketOffset = 0;
+    el("supportLoadMore").hidden = true; el("supportLoadMore").disabled = false;
     selected = null; tickets = []; isStaff = false; staffView = false; ticketFilter = "all";
     modal.querySelectorAll("[data-support-filter]").forEach(button => button.setAttribute("aria-pressed", String(button.dataset.supportFilter === ticketFilter)));
     el("supportTicketList").replaceChildren();
@@ -187,39 +190,72 @@
     }catch(error){if(valid(v,u))console.warn("Staff support access unavailable",error)}
     await loadTickets();
   }
-  async function loadTickets() {
-    if(!userId)return;
-    const v=++generation,u=userId;
-    status("supportListStatus","Loading private tickets…");
-    el("supportTicketList").replaceChildren();
+  // Load older tickets in 40-row pages. The extra row detects whether another
+  // page exists; all filters run on the server before pagination.
+  async function loadTickets(append = false) {
+    if (!userId || (append && (loadingTickets || !moreTickets))) return;
+    const request = ++ticketListRequest, v = ++generation, u = userId;
+    const offset = append ? ticketOffset : 0;
+    const loadMore = el("supportLoadMore");
+    loadingTickets = true;
+    loadMore.disabled = true;
+    if (!append) {
+      moreTickets = false;
+      loadMore.hidden = true;
+      el("supportTicketList").replaceChildren();
+    }
+    status("supportListStatus", append ? "Loading older tickets…" : "Loading private tickets…");
     try {
-      let query=supabaseClient.from("support_tickets")
+      let query = supabaseClient.from("support_tickets")
         .select("id,owner_id,category,subject,body,status,created_at,updated_at")
-        .order("updated_at",{ascending:false}).limit(40);
-      if(!staffView)query=query.eq("owner_id",u);
-      // Filter in the database before the 40-ticket limit. Client-side filtering
-      // would incorrectly show empty queues when older matching tickets exist.
-      if(ticketFilter==="active")query=query.neq("status","resolved");
-      if(ticketFilter==="resolved")query=query.eq("status","resolved");
-      const {data,error}=await query;
-      if(error)throw error;
-      if(!valid(v,u))return;
-      tickets=data||[];
-      status("supportListStatus",tickets.length?"Select a ticket to view private replies.":ticketFilter==="active"?"No open tickets in this view.":ticketFilter==="resolved"?"No resolved tickets in this view.":"No tickets in this view.");
-      for(const ticket of tickets){
-        const button=document.createElement("button");
-        button.type="button";button.className="ghost";
-        button.style.cssText="display:block;width:100%;text-align:left;margin:6px 0;white-space:normal;overflow-wrap:anywhere";
-        button.textContent=ticket.subject+" — "+(labels[ticket.status]||ticket.status)+" · "+date(ticket.updated_at);
-        button.addEventListener("click",()=>showTicket(ticket.id));
+        .order("updated_at",{ascending:false}).order("id",{ascending:false})
+        .range(offset, offset + 40);
+      if (!staffView) query = query.eq("owner_id",u);
+      if (ticketFilter === "active") query = query.neq("status","resolved");
+      if (ticketFilter === "resolved") query = query.eq("status","resolved");
+      const {data,error} = await query;
+      if (error) throw error;
+      if (!valid(v,u) || request !== ticketListRequest) return;
+      const rows = data || [];
+      const page = rows.slice(0,40);
+      moreTickets = rows.length > 40;
+      ticketOffset = offset + page.length;
+      if (!append) tickets = [];
+      const known = new Set(tickets.map(ticket => ticket.id));
+      for (const ticket of page) {
+        if (known.has(ticket.id)) continue;
+        known.add(ticket.id);
+        tickets.push(ticket);
+        const button = document.createElement("button");
+        button.type = "button"; button.className = "ghost";
+        button.style.cssText = "display:block;width:100%;text-align:left;margin:6px 0;white-space:normal;overflow-wrap:anywhere";
+        button.textContent = ticket.subject + " — " + (labels[ticket.status] || ticket.status) + " · " + date(ticket.updated_at);
+        button.addEventListener("click", () => showTicket(ticket.id));
         el("supportTicketList").append(button);
       }
-      if(selected&&tickets.some(t=>t.id===selected))await showTicket(selected);
-      else {selected=null;el("supportTicketDetail").hidden=true}
-    }catch(error){
-      if(valid(v,u))status("supportListStatus","Tickets could not load. Refresh to retry.");
+      loadMore.hidden = !moreTickets;
+      status("supportListStatus", tickets.length ? "Showing " + tickets.length + " tickets. Select one to view private replies." :
+        ticketFilter === "active" ? "No open tickets in this view." :
+        ticketFilter === "resolved" ? "No resolved tickets in this view." : "No tickets in this view.");
+      if (!append) {
+        if (selected && tickets.some(ticket => ticket.id === selected)) await showTicket(selected);
+        else { selected = null; el("supportTicketDetail").hidden = true; }
+      }
+    } catch (error) {
+      if (valid(v,u) && request === ticketListRequest) {
+        if (append) {
+          loadMore.hidden = false;
+          status("supportListStatus", "Could not load older tickets. Retry.");
+        } else status("supportListStatus", "Tickets could not load. Refresh to retry.");
+      }
+    } finally {
+      if (request === ticketListRequest) {
+        loadingTickets = false;
+        loadMore.disabled = false;
+      }
     }
   }
+  el("supportLoadMore").addEventListener("click", () => { void loadTickets(true); });
   async function showTicket(id){
     const ticket=tickets.find(t=>t.id===id);
     if(!ticket)return;
@@ -266,7 +302,7 @@
   }));
   el("supportMine").addEventListener("click",()=>{staffView=false;selected=null;el("supportTicketDetail").hidden=true;loadTickets()});
   el("supportStaff").addEventListener("click",()=>{if(!isStaff)return;staffView=true;selected=null;el("supportTicketDetail").hidden=true;loadTickets()});
-  el("supportRefresh").addEventListener("click",loadTickets);
+  el("supportRefresh").addEventListener("click", () => { void loadTickets(); });
   el("supportNewForm").addEventListener("submit",async e=>{
     e.preventDefault();
     if(!userId)return;
@@ -289,6 +325,9 @@
       if(error)throw error;
       if(!validWrite(v,u))return;
       form.reset();updateFeedbackKind();staffView=false;selected=data;
+      // A new open ticket must be visible even if the collector was filtering resolved history.
+      ticketFilter="all";
+      modal.querySelectorAll("[data-support-filter]").forEach(item => item.setAttribute("aria-pressed", String(item.dataset.supportFilter === "all")));
       status("supportCreateStatus","Ticket created. You can follow replies below.");
       await loadTickets();
     }catch(error){if(validWrite(v,u))status("supportCreateStatus",error.message||"Could not create ticket. Try again.")}
