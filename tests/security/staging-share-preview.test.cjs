@@ -90,3 +90,83 @@ test('Worker enforces private authentication BEFORE preview and keeps HEAD stati
  assert.equal(allowed.headers.get('Cache-Control'),'no-store');
  assert.match(allowed.headers.get('X-Robots-Tag'),/noindex/);
 });
+
+
+const collectorPreview=vm.runInNewContext(source+'\nrenderStagingCollectorPreview',sharedContext,{filename:'staging-share-preview.js'});
+const COLLECTOR='22222222-2222-4222-8222-222222222222';
+test('active collector sharing gets only anonymous public handle metadata, not profile PII',async()=>{
+ const calls=[];
+ const fetcher=async(href,options)=>{
+  const url=new URL(href);calls.push({url,options});
+  assert.equal(url.origin,'https://prrrzeelltmyugssqnzk.supabase.co');
+  assert.equal(options.headers.apikey,PUBLIC_KEY);
+  assert.equal(options.headers.Authorization,undefined);
+  assert.equal(options.headers.Cookie,undefined);
+  assert.equal(options.method,'GET');
+  assert.equal(options.redirect,'error');
+  if(url.pathname==='/rest/v1/listings'){
+   assert.equal(url.searchParams.get('select'),'id');
+   assert.equal(url.searchParams.get('seller_id'),'eq.'+COLLECTOR);
+   assert.equal(url.searchParams.get('status'),'eq.active');
+   assert.equal(url.searchParams.get('limit'),'1');
+   return new Response(JSON.stringify([{id:ID}]));
+  }
+  assert.equal(url.pathname,'/rest/v1/profiles');
+  assert.equal(url.searchParams.get('select'),'id,username');
+  assert.equal(url.searchParams.get('id'),'eq.'+COLLECTOR);
+  return new Response(JSON.stringify([{id:COLLECTOR,username:'retro_card_hero',
+   display_name:'DO NOT SHOW REAL NAME',bio:'DO NOT SHOW PRIVATE BIO',
+   location_label:'DO NOT SHOW LOCATION',email:'private@example.test'}]));
+ };
+ const out=await collectorPreview(HTML,new URLSearchParams('collector='+COLLECTOR),fetcher,PUBLIC_KEY);
+ assert.equal(calls.length,2);
+ assert.match(out,/<title>@retro_card_hero \| DeckPlay HQ<\/title>/);
+ assert.match(out,/name="description" content="Browse @retro_card_hero/);
+ assert.match(out,/og:title" content="@retro_card_hero \| DeckPlay HQ"/);
+ assert.match(out,/twitter:description" content="Browse @retro_card_hero/);
+ assert.match(out,/name="robots" content="noindex,nofollow"/);
+ assert.doesNotMatch(out,/DO NOT SHOW|private@example|display_name|location_label|bio/);
+});
+test('collector previews fail closed for no stock, invalid profile, combined URL or downtime',async()=>{
+ const url=new URLSearchParams('collector='+COLLECTOR);
+ let calls=0;
+ const unavailable=async()=>{calls++;return new Response('[]')};
+ for(const args of ['collector=invalid','collector='+COLLECTOR+'&collector='+COLLECTOR,
+  'collector='+COLLECTOR+'&listing='+ID]){
+  assert.equal(await collectorPreview(HTML,new URLSearchParams(args),unavailable,PUBLIC_KEY),HTML);
+ }
+ assert.equal(calls,0);
+ assert.equal(await collectorPreview(HTML,url,unavailable,PUBLIC_KEY),HTML);
+ assert.equal(calls,1,'An empty storefront must not query the profile');
+ const listing=async href=>{
+  if(new URL(href).pathname.endsWith('/listings'))return new Response(JSON.stringify([{id:ID}]));
+  return new Response(JSON.stringify([{id:COLLECTOR,username:'private@example.test'}]));
+ };
+ assert.equal(await collectorPreview(HTML,url,listing,PUBLIC_KEY),HTML);
+ assert.equal(await collectorPreview(HTML,url,async()=>{throw Error('network down')},PUBLIC_KEY),HTML);
+ assert.equal(await collectorPreview(HTML,url,listing,'sb_secret_unsafe'),HTML);
+ assert.equal(await collectorPreview('<html>public index</html>',url,listing,PUBLIC_KEY),'<html>public index</html>');
+});
+test('collector share route preserves staging password gate and does not use GET lookup for HEAD',async()=>{
+ let calls=0;
+ const ctx=vm.createContext({...sharedContext,
+  assets:{'/index.html':{body:HTML,type:'text/html; charset=utf-8'}},
+  STAGING_PREVIEW_PUBLIC_KEY:PUBLIC_KEY,
+  fetch:async()=>{throw Error('Fixture uses renderer stub')},
+  renderStagingListingPreview:async html=>html,
+  renderStagingCollectorPreview:async html=>{calls++;return html+'<!-- collector preview -->'}
+ });
+ const workerSrc=fs.readFileSync('scripts/staging-handler.js','utf8').replace(/^export default\s*/,'globalThis.__handler = ');
+ vm.runInContext(workerSrc,ctx,{filename:'staging-handler.js'});
+ const site=HOST+'/?collector='+COLLECTOR;
+ const deny=await ctx.__handler.fetch(new Request(site),{STAGING_ACCESS_PASSWORD:'synthetic-only'});
+ assert.equal(deny.status,401);assert.equal(calls,0);
+ const auth='Basic '+Buffer.from('deckplay:synthetic-only').toString('base64');
+ const head=await ctx.__handler.fetch(new Request(site,{method:'HEAD',headers:{Authorization:auth}}),{STAGING_ACCESS_PASSWORD:'synthetic-only'});
+ assert.equal(head.status,200);assert.equal(calls,0);
+ const get=await ctx.__handler.fetch(new Request(site,{headers:{Authorization:auth}}),{STAGING_ACCESS_PASSWORD:'synthetic-only'});
+ assert.equal(get.status,200);
+ assert.equal(calls,1);
+ assert.match(await get.text(),/<!-- collector preview -->/);
+ assert.match(get.headers.get('X-Robots-Tag'),/noindex/);
+});
