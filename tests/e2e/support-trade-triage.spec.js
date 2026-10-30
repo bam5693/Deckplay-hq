@@ -35,7 +35,8 @@ test('T8.6: proposed trade, preview confusion and payment pressure use correct p
   ['pressure','[Payment pressure] ','safety']
  ]){
   await page.getByRole('button',{name:'Help & support'}).last().click();
-  await page.getByText('What if a trade or shipping arrangement goes wrong?').click();
+  const concernHelp=page.locator('details').filter({hasText:'What if a trade or shipping arrangement goes wrong?'});
+  if(!await concernHelp.evaluate(node=>node.open))await concernHelp.locator('summary').click();
   await page.getByRole('button',{name:'Get help with a trade or shipping concern'}).click();
   await expect(page.locator('#supportTradeConcernFields')).toBeVisible();
   await expect(page.locator('#supportCategoryField')).toBeHidden();
