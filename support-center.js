@@ -39,6 +39,16 @@
           <div style="flex:1 1 120px;border:1px solid #819c9640;border-radius:10px;padding:10px"><strong id="supportStaffSafetyCount" aria-label="Unresolved safety reports">—</strong><p style="margin:4px 0">Safety reports</p></div>
         </div>
         <p id="supportStaffOverviewStatus" class="status" role="status" aria-live="polite"></p>
+        <section id="supportFeedbackOverview" aria-label="Voluntary marketplace feedback counts" style="border-top:1px solid #819c9640;margin-top:12px;padding-top:10px">
+          <strong>Opt-in marketplace feedback</strong>
+          <p class="muted" style="font-size:12px;margin:5px 0">Counts only feedback tickets people chose to send, not all searches, clicks or conversions. No search terms, message bodies or account identities are queried.</p>
+          <div style="display:flex;gap:10px;flex-wrap:wrap">
+            <div style="flex:1 1 120px"><strong id="supportFeedbackEmptyCount" aria-label="Voluntary no-result reports">—</strong><p style="margin:4px 0">No-result reports</p></div>
+            <div style="flex:1 1 120px"><strong id="supportFeedbackDiscoveryCount" aria-label="Voluntary discovery reports">—</strong><p style="margin:4px 0">Discovery reports</p></div>
+            <div style="flex:1 1 120px"><strong id="supportFeedbackContactCount" aria-label="Voluntary contact-friction reports">—</strong><p style="margin:4px 0">Contact-friction reports</p></div>
+          </div>
+          <p id="supportFeedbackOverviewStatus" class="status" role="status" aria-live="polite"></p>
+        </section>
       </section>
       <p id="supportListStatus" class="status" role="status" aria-live="polite"></p>
       <div id="supportTicketList"></div>
@@ -213,6 +223,8 @@
     el("supportStaffOpenCount").textContent = "—";
     el("supportStaffSafetyCount").textContent = "—";
     status("supportStaffOverviewStatus","");
+    for(const id of ["supportFeedbackEmptyCount","supportFeedbackDiscoveryCount","supportFeedbackContactCount"])el(id).textContent="—";
+    status("supportFeedbackOverviewStatus","");
     el("supportReplyBody").value = "";
     ["supportListStatus","supportReplyStatus","supportCreateStatus"].forEach(id=>status(id,""));
   }
@@ -373,6 +385,8 @@
     const current=()=>v===viewGeneration&&userId===u&&isStaff&&modal.classList.contains("open");
     const panel=el("supportStaffOverview");
     panel.hidden=false;
+    // Feedback counts are independent; a failed diagnostic must not hide safety queue totals.
+    void refreshFeedbackOverview();
     el("supportStaffOpenCount").textContent="—";
     el("supportStaffSafetyCount").textContent="—";
     status("supportStaffOverviewStatus","Loading live queue totals…");
@@ -389,6 +403,29 @@
     }catch(error){
       if(!current())return;
       status("supportStaffOverviewStatus","Queue totals unavailable. Refresh to retry.");
+    }
+  }
+  // Only aggregate voluntary feedback by its fixed, non-sensitive subject label.
+  // Staff RLS and MFA-aware staff recognition still apply; no body/identity reads.
+  async function refreshFeedbackOverview(){
+    if(!isStaff||!userId)return;
+    const v=viewGeneration,u=userId;
+    const current=()=>v===viewGeneration&&userId===u&&isStaff&&modal.classList.contains("open");
+    const ids=["supportFeedbackEmptyCount","supportFeedbackDiscoveryCount","supportFeedbackContactCount"];
+    ids.forEach(id=>el(id).textContent="—");
+    status("supportFeedbackOverviewStatus","Loading opt-in feedback counts…");
+    try{
+      const subjects=["[Idea] Improve marketplace search results","[Idea] Improve listing discovery","[Idea] Improve listing contact experience"];
+      const results=await Promise.all(subjects.map(subject=>supabaseClient.from("support_tickets")
+        .select("id",{count:"exact",head:true}).eq("category","other").eq("subject",subject)));
+      if(!current())return;
+      if(results.some(result=>result.error||!Number.isSafeInteger(result.count)||result.count<0))throw Error("Feedback totals unavailable");
+      results.forEach((result,index)=>{el(ids[index]).textContent=String(result.count)});
+      status("supportFeedbackOverviewStatus","Counts include only voluntarily submitted reports.");
+    }catch(error){
+      if(!current())return;
+      ids.forEach(id=>el(id).textContent="—");
+      status("supportFeedbackOverviewStatus","Feedback counts unavailable. Refresh to retry.");
     }
   }
   // Load older tickets in 40-row pages. The extra row detects whether another
