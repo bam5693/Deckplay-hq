@@ -17,6 +17,8 @@ test('Tanner and Jayden: copy/share links work for every supported listing categ
   const categories=['trading_cards','video_games','consoles','controllers','accessories','collectibles','other'];
   for(const [i,category] of categories.entries()){
    showDetails({databaseId:listing,n:'Synthetic '+category,p:15+i,c:databaseCategory(category),imageUrls:[],sellerId:seller,s:'@seller'});
+   const report=document.querySelector('#detailContent [data-report-listing]');
+   if(!report || report.dataset.reportListing!==listing)throw new Error('Missing listing report action for '+category);
    document.querySelector('#detailContent [data-copy-kind="listing"]').click();
    document.querySelector('#detailContent [data-share-kind="listing"]').click();
   }
