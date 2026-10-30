@@ -1,0 +1,77 @@
+# Copy this file into .github/workflows/production-backup.yml in a PRIVATE
+# repository. NEVER install this workflow in the public Deckplay-hq repository.
+name: DeckPlay production encrypted backup
+on:
+  schedule:
+    - cron: '37 08 * * *'
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: deckplay-production-private-backup
+  cancel-in-progress: false
+jobs:
+  backup:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - name: Refuse public or incorrect backup repository
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -Eeuo pipefail
+          if [[ "$GITHUB_REPOSITORY" != "bam5693/deckplay-hq-private-backups" ]]; then
+            echo "::error::Wrong repository; backup refused."
+            exit 1
+          fi
+          if [[ "$(gh api "repos/$GITHUB_REPOSITORY" --jq .private)" != "true" ]]; then
+            echo "::error::Backup destination is not private; backup refused."
+            exit 1
+          fi
+      - name: Checkout reviewed backup exporter at an immutable commit
+        uses: actions/checkout@v4
+        with:
+          repository: bam5693/Deckplay-hq
+          ref: REPLACE_WITH_REVIEWED_SOURCE_SHA
+          path: deckplay-backup-kit
+          persist-credentials: false
+      - name: Preflight: syntax and simulated inventory/path tests
+        run: |
+          set -Eeuo pipefail
+          node --check deckplay-backup-kit/scripts/private-backup/export-storage.mjs
+          bash -n deckplay-backup-kit/scripts/private-backup/backup-production.sh
+          bash -n deckplay-backup-kit/scripts/private-backup/verify-encrypted.sh
+          node --test deckplay-backup-kit/scripts/private-backup/tests/export-storage.test.mjs
+          command -v docker
+          command -v gpg
+          command -v gh
+      - name: Create and locally verify encrypted Auth/database/Storage backup
+        id: archive
+        env:
+          DECKPLAY_PROD_DATABASE_URL: ${{ secrets.DECKPLAY_PROD_DATABASE_URL }}
+          DECKPLAY_PROD_SERVICE_ROLE_KEY: ${{ secrets.DECKPLAY_PROD_SERVICE_ROLE_KEY }}
+          DECKPLAY_BACKUP_PASSPHRASE: ${{ secrets.DECKPLAY_BACKUP_PASSPHRASE }}
+          DECKPLAY_PROD_PROJECT_REF: yffruutknztvdyioovmp
+        run: bash deckplay-backup-kit/scripts/private-backup/backup-production.sh
+      - name: Publish ONLY encrypted archive in private GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BACKUP_TAG: ${{ steps.archive.outputs.backup_tag }}
+          BACKUP_FILE: ${{ steps.archive.outputs.backup_file }}
+          DECKPLAY_BACKUP_PASSPHRASE: ${{ secrets.DECKPLAY_BACKUP_PASSPHRASE }}
+        run: |
+          set -Eeuo pipefail
+          test -s "$BACKUP_FILE"
+          test -s "$BACKUP_FILE.sha256"
+          gh release create "$BACKUP_TAG" "$BACKUP_FILE" "$BACKUP_FILE.sha256" \
+            --repo "$GITHUB_REPOSITORY" --title "Encrypted DeckPlay backup $BACKUP_TAG" \
+            --notes "Encrypted production Auth, application database and Storage-file snapshot. Integrity checked. NOT a verified isolated Supabase restore." \
+            --latest=false
+          mkdir -m 700 "$RUNNER_TEMP/remote-backup"
+          gh release download "$BACKUP_TAG" --repo "$GITHUB_REPOSITORY" \
+            --pattern '*.gpg' --dir "$RUNNER_TEMP/remote-backup"
+          cmp "$BACKUP_FILE" "$RUNNER_TEMP/remote-backup/$(basename "$BACKUP_FILE")"
+          # Verify downloaded bytes independently, not merely the local upload.
+          cd deckplay-backup-kit
+          bash scripts/private-backup/verify-encrypted.sh "$RUNNER_TEMP/remote-backup/$(basename "$BACKUP_FILE")"
+          echo "Encrypted private Release uploaded, downloaded and verified. Real restore remains a separate gate."
