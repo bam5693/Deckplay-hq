@@ -18,7 +18,22 @@ concurrency:
   group: browser-tests-${{ github.ref }}
   cancel-in-progress: true
 jobs:
+  preflight:
+    # Every draft PR change gets a cheap security check, not an entire Chromium run.
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci
+      - name: Verify account isolation and fixture safety
+        run: node --test tests/security/*test.*
   test:
+    # Full desktop/mobile Playwright suite is a release milestone or a manual request.
+    # Draft PRs get the security preflight above; focused staging acceptance is separate.
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.pull_request.draft == false }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
