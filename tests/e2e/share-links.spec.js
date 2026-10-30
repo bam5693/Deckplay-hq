@@ -85,3 +85,40 @@ test('Charles: blocked collector link cannot open private or blocked listing det
  await expect(page.locator('#detailModal')).not.toHaveClass(/open/);
  await expect(page.locator('#toast')).toContainText('blocked');
 });
+
+test('Jayden: a shared collector profile resolves for signed-out buyers without private data',async({page})=>{
+ await ready(page);
+ await page.evaluate(async seller=>{
+  history.replaceState({},'','/?collector='+seller);
+  supabaseClient.from=table=>{
+   const q={then:resolve=>Promise.resolve({data:[],error:null}).then(resolve)};
+   for(const key of ['select','eq','order','limit'])q[key]=()=>q;
+   q.maybeSingle=async()=>({data:table==='profiles'?{username:'game-and-card-collector',bio:'Trading cards, games and memorabilia',location_label:'Arkansas'}:null,error:null});
+   return q;
+  };
+  await window.deckplayOpenSharedLinkOnce();
+ },SELLER);
+ await expect(page.locator('#publicProfileModal')).toHaveClass(/open/);
+ await expect(page.locator('#publicProfileTitle')).toHaveText('@game-and-card-collector');
+ await expect(page.locator('#publicProfileContent')).toContainText('Trading cards, games and memorabilia');
+ await expect(page.locator('[data-copy-kind="collector"]')).toHaveAttribute('data-copy-id',SELLER);
+ await expect(page.locator('#publicProfileContent')).not.toContainText('private@example.test');
+});
+test('Charles: a delayed shared listing lookup cannot open after account switch',async({page})=>{
+ await ready(page);
+ await page.evaluate(async({listing,seller,buyer})=>{
+  currentUser={id:buyer};
+  history.replaceState({},'','/?listing='+listing);
+  let finish;
+  supabaseClient.from=table=>{
+   const q={};for(const key of ['select','eq'])q[key]=()=>q;
+   q.maybeSingle=()=>table==='listings'?new Promise(resolve=>{finish=resolve}):Promise.resolve({data:null,error:null});
+   return q;
+  };
+  const pending=window.deckplayOpenSharedLinkOnce();
+  currentUser={id:seller};
+  finish({data:{id:listing,title:'Previous-account listing',seller_id:seller,price:10},error:null});
+  await pending;
+ },{listing:LISTING,seller:SELLER,buyer:BUYER});
+ await expect(page.locator('#detailModal')).not.toHaveClass(/open/);
+});
