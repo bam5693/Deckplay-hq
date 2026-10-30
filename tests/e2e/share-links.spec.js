@@ -153,7 +153,7 @@ test('Kyle: a temporary shared-link lookup failure offers a retry and opens the 
 test('Kyle: a temporary shared collector lookup offers a usable retry on mobile and desktop',async({page})=>{
  await ready(page);
  await page.evaluate(seller=>{
-  history.replaceState({},'','/?collector='+seller);
+  history.replaceState({...history.state},'','/?collector='+seller);
   let offline=true;
   window.restoreCollectorLookup=()=>{offline=false};
   supabaseClient.from=table=>{
@@ -178,7 +178,7 @@ test('Kyle: a temporary shared collector lookup offers a usable retry on mobile 
 test('Charles: nonexistent shared collector profile fails closed without an endless retry',async({page})=>{
  await ready(page);
  await page.evaluate(seller=>{
-  history.replaceState({},'','/?collector='+seller);
+  history.replaceState({...history.state},'','/?collector='+seller);
   supabaseClient.from=table=>{
    const q={then:resolve=>Promise.resolve({data:[],error:null}).then(resolve)};
    for(const key of ['select','eq','order','limit'])q[key]=()=>q;
