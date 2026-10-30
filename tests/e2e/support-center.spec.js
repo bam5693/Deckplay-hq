@@ -856,3 +856,49 @@ test('T8.3: staff safety queue locks topic scope and restores normal filters on 
  await expect(page.locator('#supportTicketCategory')).toHaveValue('all');
  await expect(page.locator('#supportTicketList')).not.toContainText('Synthetic account recovery');
 });
+
+
+test('T7.5: authorized staff sees only opt-in aggregate feedback counts and account switch erases them',async({page})=>{
+ await boot(page);
+ await page.evaluate(()=>{
+  const subjects=[
+   '[Idea] Improve marketplace search results',
+   '[Idea] Improve marketplace search results',
+   '[Idea] Improve listing discovery',
+   '[Idea] Improve listing contact experience',
+   '[Feedback] Other collectible suggestion'
+  ];
+  window.__db.tickets=subjects.map((subject,i)=>({
+   id:'feedback-'+i,owner_id:i%2?'buyer':'other',category:'other',subject,
+   body:'PRIVATE free text about personal collectible preferences '+i,
+   status:'open',created_at:new Date().toISOString(),updated_at:new Date().toISOString()
+  }));
+  const original=window.supabaseClient.from.bind(window.supabaseClient);
+  window.__countSelects=[];
+  window.supabaseClient.from=table=>{
+   const query=original(table),select=query.select.bind(query);
+   query.select=(fields,options={})=>{
+    if(options.head===true)window.__countSelects.push({table,fields,options});
+    return select(fields,options);
+   };
+   return query;
+  };
+ });
+ await signIn(page,'staff');
+ await page.getByRole('button',{name:'Help & support'}).last().click();
+ await expect(page.locator('#supportFeedbackEmptyCount')).toHaveText('2');
+ await expect(page.locator('#supportFeedbackDiscoveryCount')).toHaveText('1');
+ await expect(page.locator('#supportFeedbackContactCount')).toHaveText('1');
+ await expect(page.locator('#supportFeedbackOverview')).not.toContainText('PRIVATE free text');
+ await expect(page.locator('#supportFeedbackOverview')).toContainText('not all searches, clicks or conversions');
+ const calls=await page.evaluate(()=>window.__countSelects);
+ expect(calls.filter(c=>c.table==='support_tickets')).toHaveLength(5);
+ expect(calls.every(c=>c.fields==='id'&&c.options.head===true&&c.options.count==='exact')).toBe(true);
+ await page.evaluate(()=>{window.currentUser={id:'buyer'};window.__authCallback('SIGNED_IN',{user:{id:'buyer'}})});
+ await expect(page.locator('#supportStaffOverview')).toBeHidden();
+ await expect(page.locator('#supportFeedbackEmptyCount')).toHaveText('—');
+ await expect(page.locator('#supportFeedbackDiscoveryCount')).toHaveText('—');
+ await expect(page.locator('#supportFeedbackContactCount')).toHaveText('—');
+ await page.getByRole('button',{name:'Help & support'}).last().click();
+ await expect(page.locator('#supportStaffOverview')).toBeHidden();
+});
