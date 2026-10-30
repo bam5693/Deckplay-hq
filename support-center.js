@@ -65,6 +65,10 @@
     selected = null; tickets = []; isStaff = false; staffView = false;
     el("supportTicketList").replaceChildren();
     el("supportTicketDetail").hidden = true;
+    el("supportTicketTitle").textContent = "";
+    el("supportTicketBody").textContent = "";
+    el("supportTicketState").textContent = "";
+    el("supportReplies").replaceChildren();
     el("supportStaff").hidden = true;
     el("supportStaffControls").hidden = true;
     el("supportReplyBody").value = "";
