@@ -249,7 +249,7 @@
       "Used other category filters: "+yes(detail.hasExtra),
       "",
       "What I hoped to find: "
-    ].join("\\n");
+    ].join("\n");
     status("supportCreateStatus","Review and add what you expected before sending. No search words, item IDs or personal information were copied automatically.");
     el("supportDescription").focus();
   }
