@@ -23,6 +23,11 @@
         <button type="button" class="ghost" id="supportStaff" hidden>Staff queue</button>
         <button type="button" class="ghost" id="supportRefresh">Refresh</button>
       </div>
+      <div id="supportStatusFilters" role="group" aria-label="Filter support tickets" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+        <button type="button" class="ghost" data-support-filter="all" aria-pressed="true">All tickets</button>
+        <button type="button" class="ghost" data-support-filter="active" aria-pressed="false">Open tickets</button>
+        <button type="button" class="ghost" data-support-filter="resolved" aria-pressed="false">Resolved tickets</button>
+      </div>
       <p id="supportListStatus" class="status" role="status" aria-live="polite"></p>
       <div id="supportTicketList"></div>
       <section id="supportTicketDetail" hidden style="border-top:1px solid #cbd6e5;margin-top:15px;padding-top:12px">
@@ -60,10 +65,11 @@
   const status = (id, message) => { el(id).textContent = message || ""; };
   const date = value => new Date(value).toLocaleString();
   const labels = {open:"Open",waiting_on_staff:"Waiting on support",waiting_on_user:"Waiting on collector",resolved:"Resolved"};
-  let userId = null, generation = 0, isStaff = false, staffView = false, selected = null, tickets = [], returnToFeedback = false, returnTopic = "feedback";
+  let userId = null, generation = 0, isStaff = false, staffView = false, ticketFilter = "all", selected = null, tickets = [], returnToFeedback = false, returnTopic = "feedback";
   const valid = (v,u) => v === generation && userId === u && modal.classList.contains("open");
   function clearPrivate() {
-    selected = null; tickets = []; isStaff = false; staffView = false;
+    selected = null; tickets = []; isStaff = false; staffView = false; ticketFilter = "all";
+    modal.querySelectorAll("[data-support-filter]").forEach(button => button.setAttribute("aria-pressed", String(button.dataset.supportFilter === ticketFilter)));
     el("supportTicketList").replaceChildren();
     el("supportTicketDetail").hidden = true;
     el("supportTicketTitle").textContent = "";
@@ -157,11 +163,15 @@
         .select("id,owner_id,category,subject,body,status,created_at,updated_at")
         .order("updated_at",{ascending:false}).limit(40);
       if(!staffView)query=query.eq("owner_id",u);
+      // Filter in the database before the 40-ticket limit. Client-side filtering
+      // would incorrectly show empty queues when older matching tickets exist.
+      if(ticketFilter==="active")query=query.neq("status","resolved");
+      if(ticketFilter==="resolved")query=query.eq("status","resolved");
       const {data,error}=await query;
       if(error)throw error;
       if(!valid(v,u))return;
       tickets=data||[];
-      status("supportListStatus",tickets.length?"Select a ticket to view private replies.":"No tickets in this view.");
+      status("supportListStatus",tickets.length?"Select a ticket to view private replies.":ticketFilter==="active"?"No open tickets in this view.":ticketFilter==="resolved"?"No resolved tickets in this view.":"No tickets in this view.");
       for(const ticket of tickets){
         const button=document.createElement("button");
         button.type="button";button.className="ghost";
@@ -210,8 +220,18 @@
       if(valid(v,u)&&selected===id)el("supportReplies").textContent="Replies could not load. Reopen this ticket to retry.";
     }
   }
-  el("supportMine").addEventListener("click",()=>{staffView=false;selected=null;loadTickets()});
-  el("supportStaff").addEventListener("click",()=>{if(!isStaff)return;staffView=true;selected=null;loadTickets()});
+  modal.querySelectorAll("[data-support-filter]").forEach(button => button.addEventListener("click", () => {
+    const next = button.dataset.supportFilter;
+    if(!["all","active","resolved"].includes(next) || next===ticketFilter) return;
+    ticketFilter = next;
+    modal.querySelectorAll("[data-support-filter]").forEach(item => item.setAttribute("aria-pressed", String(item===button)));
+    selected=null;
+    el("supportTicketDetail").hidden=true;
+    el("supportReplies").replaceChildren();
+    void loadTickets();
+  }));
+  el("supportMine").addEventListener("click",()=>{staffView=false;selected=null;el("supportTicketDetail").hidden=true;loadTickets()});
+  el("supportStaff").addEventListener("click",()=>{if(!isStaff)return;staffView=true;selected=null;el("supportTicketDetail").hidden=true;loadTickets()});
   el("supportRefresh").addEventListener("click",loadTickets);
   el("supportNewForm").addEventListener("submit",async e=>{
     e.preventDefault();
