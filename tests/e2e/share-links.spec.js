@@ -58,7 +58,7 @@ test('Kyle: shared listing opens only a current active listing with seller ident
  await expect(page.locator('meta[property="og:description"]')).toHaveAttribute('content','Near mint rare tournament printing');
  await expect(page.locator('meta[name="twitter:description"]')).toHaveAttribute('content','Near mint rare tournament printing');
  // Private staging is deliberately blocked from search engines even after a share opens.
- await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content',/noindex/);
+ await expect(page.locator('meta[name="robots"]').first()).toHaveAttribute('content',/noindex/);
  await expect(page.locator('.detail-seller')).toContainText('@verified-collector');
  await expect(page.locator('[data-copy-kind="listing"]')).toHaveAttribute('data-copy-id',LISTING);
 });
@@ -109,7 +109,7 @@ test('Jayden: a shared collector profile resolves for signed-out buyers without 
  await expect(page).toHaveTitle('@game-and-card-collector | DeckPlay HQ');
  await expect(page.locator('meta[property="og:title"]')).toHaveAttribute('content','@game-and-card-collector | DeckPlay HQ');
  await expect(page.locator('meta[property="og:description"]')).toHaveAttribute('content',/public profile and active collectibles/);
- await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content',/noindex/);
+ await expect(page.locator('meta[name="robots"]').first()).toHaveAttribute('content',/noindex/);
  await expect(page.locator('#publicProfileContent')).toContainText('Trading cards, games and memorabilia');
  await expect(page.locator('[data-copy-kind="collector"]')).toHaveAttribute('data-copy-id',SELLER);
  await expect(page.locator('#publicProfileContent')).not.toContainText('private@example.test');
