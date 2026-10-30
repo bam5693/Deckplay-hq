@@ -23,7 +23,7 @@ permissions:
 
 jobs:
   deploy:
-    if: "${{ github.ref == 'refs/heads/main' && (github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.event.before == 'f527992d92017d00b0ea572cd336ee39ef8d7812' && github.event.head_commit.message == '[owner-approved-hotfix] Publish PR7 and PR8 account fixes')) }}"
+    if: "${{ github.ref == 'refs/heads/main' && (github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.event.before == 'ed78508ec88c09c561c7a9377730abe3bdab1c2f' && github.event.head_commit.message == '[owner-approved-hotfix] Retry PR7 and PR8 after auth test repair')) }}"
     runs-on: ubuntu-latest
     steps:
       - name: Check out website
