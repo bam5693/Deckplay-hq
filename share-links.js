@@ -15,6 +15,24 @@ function setSharedPageTitle(kind,label){
  if(!safe)return;
  document.title=safe+' | DeckPlay HQ';
 }
+// These tags improve in-browser previews only. Social crawlers need server-side
+// public-data rendering and must never be given private account content.
+function setListingBrowserMetadata(row){
+ const title=String(row.title||'').replace(/[\\r\\n\\t]+/g,' ').trim().slice(0,90);
+ if(!title)return;
+ const description=String(row.description||'').replace(/\\s+/g,' ').trim().slice(0,155)
+   || 'Explore this collectible listing on DeckPlay HQ.';
+ const update=(selector,value)=>{
+  const node=document.querySelector(selector);
+  if(node)node.setAttribute('content',value);
+ };
+ setSharedPageTitle('listing',title);
+ update('meta[name="description"]',description);
+ update('meta[property="og:title"]',title+' | DeckPlay HQ');
+ update('meta[property="og:description"]',description);
+ update('meta[name="twitter:title"]',title+' | DeckPlay HQ');
+ update('meta[name="twitter:description"]',description);
+}
 async function shareLink(kind,id,nativeShare){
  const url=sharedUrl(kind,id);
  if(!url){toast('Only published listings and collector profiles can be shared.');return}
@@ -112,7 +130,7 @@ async function openSharedLinkOnce(){
   if(!same())return;
   showMainMarketplace();
   showDetails(marketplaceItemFromRow(data,profile));
-  setSharedPageTitle('listing',data.title);
+  setListingBrowserMetadata(data);
   attempted=true;clearRetry();
  }catch(error){if(same()){
   if(collector)closeModal('publicProfileModal');
