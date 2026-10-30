@@ -224,3 +224,26 @@ test('T7.6: signed-out feedback returns to the private form after login without 
  await page.getByRole('button',{name:'Send private feedback'}).click();
  await expect(page.locator('#supportTicketTitle')).toHaveText('[Idea] Add easier game filters');
 });
+
+test('T7.6: feedback confirmation survives concurrent support-list refresh',async({page})=>{
+ await boot(page);await signIn(page,'buyer');
+ await page.evaluate(()=>{
+  const original=window.supabaseClient.rpc;
+  window.__resumeStaff=null;window.__resumeCreate=null;
+  window.supabaseClient.rpc=async(name,args)=>{
+   if(name==='is_deckplay_moderator')await new Promise(resolve=>{window.__resumeStaff=resolve});
+   if(name==='create_support_ticket')await new Promise(resolve=>{window.__resumeCreate=resolve});
+   return original(name,args);
+  };
+  document.dispatchEvent(new Event('deckplay:open-feedback'));
+ });
+ await page.locator('#supportSubject').fill('Marketplace search issue');
+ await page.locator('#supportDescription').fill('Synthetic feedback about a missing console accessory search result.');
+ await page.getByRole('button',{name:'Send private feedback'}).click();
+ await page.waitForFunction(()=>typeof window.__resumeStaff==='function'&&typeof window.__resumeCreate==='function');
+ await page.evaluate(()=>window.__resumeStaff());
+ await expect(page.locator('#supportListStatus')).toHaveText('No tickets in this view.');
+ await page.evaluate(()=>window.__resumeCreate());
+ await expect(page.locator('#supportTicketTitle')).toHaveText('[Bug] Marketplace search issue');
+ await expect(page.locator('#supportCreateStatus')).toHaveText('Ticket created. You can follow replies below.');
+});
