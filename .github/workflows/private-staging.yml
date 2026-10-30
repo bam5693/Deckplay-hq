@@ -189,7 +189,7 @@ jobs:
           node --test tests/security/staging-share-preview.test.cjs
            node --check getting-started.js
           node --test tests/security/trade-delivery.test.cjs tests/security/staging-browser-config.test.cjs
-          npx playwright test --config=playwright.local.config.js support-center.spec.js support-trade-triage.spec.js listing-gallery.spec.js checkout-simulation.spec.js checkout-preview-clarity.spec.js wanted-search-handoff.spec.js inbox-negotiation-history.spec.js trade-conversation-navigation.spec.js inbox-price-withdrawal.spec.js share-links.spec.js getting-started.spec.js discovery-profiles.spec.js pwa-update-notice.spec.js --retries=0 --max-failures=1 --timeout=20000
+          npx playwright test --config=playwright.local.config.js support-center.spec.js support-trade-triage.spec.js listing-gallery.spec.js checkout-simulation.spec.js checkout-preview-clarity.spec.js wanted-search-handoff.spec.js inbox-negotiation-history.spec.js inbox-older-activity-discovery.spec.js trade-conversation-navigation.spec.js inbox-price-withdrawal.spec.js share-links.spec.js getting-started.spec.js discovery-profiles.spec.js pwa-update-notice.spec.js --retries=0 --max-failures=1 --timeout=20000
       - name: Build and deploy exact private staging source after preflight
         if: github.event_name == 'push'
         env:
