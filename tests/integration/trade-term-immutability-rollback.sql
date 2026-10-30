@@ -27,15 +27,15 @@ with inserted as (
 ) select pg_catalog.set_config('deckplay.fixture.trade',id::text,true) from inserted;
 select pg_catalog.set_config('request.jwt.claim.sub',current_setting('deckplay.fixture.seller'),true);
 do $verify_rejection$
-declare blocked boolean := false;
+declare rejection text := null;
 begin
  begin
   update public.trade_offers
   set status='accepted',cash_amount=500,cash_direction='sender_pays',offer_note='TEST ONLY injected amount'
   where id=current_setting('deckplay.fixture.trade')::uuid;
- exception when others then blocked := true;
+ exception when others then get stacked diagnostics rejection = message_text;
  end;
- if not blocked then raise exception 'P0 FAILURE: original trade terms were editable during acceptance'; end if;
+ if rejection is distinct from 'Trade terms can change only through an accepted counteroffer' then raise exception 'Unexpected rejection type for cash tampering: %',coalesce(rejection,'none'); end if;
  if not exists (select 1 from public.trade_offers
                 where id=current_setting('deckplay.fixture.trade')::uuid
                 and status='pending' and cash_amount=0 and cash_direction='none'
@@ -49,15 +49,15 @@ with counter as (
         5,'sender_pays','TEST ONLY approved counter') as id
 ) select pg_catalog.set_config('deckplay.fixture.counter',id::text,true) from counter;
 do $verify_pending_counter$
-declare blocked boolean := false;
+declare rejection text := null;
 begin
  begin
   update public.trade_offers set status='accepted'
   where id=current_setting('deckplay.fixture.trade')::uuid;
- exception when others then blocked := true;
+ exception when others then get stacked diagnostics rejection = message_text;
  end;
- if not blocked then
-  raise exception 'P0 FAILURE: pending trade counter bypassed by direct acceptance';
+ if rejection is distinct from 'Respond to the pending trade counteroffer first' then
+  raise exception 'Unexpected rejection type for pending counter: %',coalesce(rejection,'none');
  end if;
  if not exists (select 1 from public.trade_offers where id=current_setting('deckplay.fixture.trade')::uuid and status='pending') then
   raise exception 'P0 FAILURE: stale original trade did not remain pending';
@@ -80,4 +80,4 @@ begin
 end
 $verify_acceptance$;
 rollback;
-select 'PASS: cash tampering rejected, approved counter accepted, all fixture data rolled back' as result;
+select 'PASS: exact cash-tampering and pending-counter guards rejected, approved counter accepted, all fixtures rolled back' as result;
