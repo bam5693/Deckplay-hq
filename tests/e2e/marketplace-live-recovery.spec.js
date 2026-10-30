@@ -44,3 +44,23 @@ test('Tanner and Jayden: offline listing requests offer retry instead of pretend
  await expect(page.locator('#grid')).toContainText('No demo items are shown');
  await expect(page.locator('#grid [data-retry-marketplace]')).toBeEnabled();
 });
+
+test('T1.2/T7.5: empty live inventory offers Wanted and private feedback, never fake listings',async({page})=>{
+ await page.evaluate(async()=>{
+  const original=supabaseClient.from;
+  supabaseClient.from=table=>table==='listings'
+   ?{select:()=>({eq:()=>({order:async()=>({data:[],error:null})})})}
+   :original(table);
+  try{await loadListings()}finally{supabaseClient.from=original}
+ });
+ await expect(page.locator('#grid [data-view]')).toHaveCount(0);
+ await expect(page.locator('#grid [data-wanted-from-search]')).toBeVisible();
+ await expect(page.locator('#grid [data-market-search-feedback="empty"]')).toBeVisible();
+ await page.locator('#grid [data-market-search-feedback="empty"]').click();
+ await expect(page.locator('#supportCenterModal')).toHaveClass(/open/);
+ await expect(page.locator('#supportSignIn')).toBeVisible();
+ await expect(page.locator('#supportDescription')).toBeEmpty();
+ await page.locator('#supportClose').click();
+ await page.locator('#grid [data-wanted-from-search]').click();
+ await expect(page.locator('#authModal')).toHaveClass(/open/);
+});
