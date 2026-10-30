@@ -1,4 +1,5 @@
 name: Seller lifecycle acceptance preflight
+# Re-run after fixing the synthetic seller rating-query fixture.
 on:
   push:
     branches: [test/staging-reporting]
