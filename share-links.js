@@ -24,7 +24,13 @@ async function shareLink(kind,id,nativeShare){
   window.prompt('Copy this DeckPlay link:',url);
  }catch(error){
   if(error&&error.name==='AbortError')return;
-  toast('Could not share the link. Try Copy link instead.');
+  // Web Share and clipboard permissions can fail on Android and private browsers.
+  // Preserve the public URL so collectors can still copy it manually.
+  try {
+   window.prompt('Sharing is unavailable. Copy this DeckPlay link:',url);
+  }catch(_error){
+   toast('Could not share the link. Please retry from your browser.');
+  }
  }
 }
 document.addEventListener('click',event=>{
