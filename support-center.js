@@ -124,7 +124,7 @@
     updateFeedbackKind();
   }
   const tradeConcerns = {
-    proposal:{prefix:"[Trade] ",category:"offers_trades",hint:"DeckPlay trades are proposals only. Describe the concern without private contact or payment information."},
+    proposal:{prefix:"",category:"offers_trades",hint:"DeckPlay trades are proposals only. Describe the concern without private contact or payment information."},
     shipping:{prefix:"[Shipping preview] ",category:"offers_trades",hint:"Shipping is only a preview. No label, purchase or delivery is handled by DeckPlay."},
     pressure:{prefix:"[Payment pressure] ",category:"safety",hint:"Do not send money or credentials off-platform. This is a private safety report for staff review, not a payment dispute or refund."}
   };
