@@ -230,30 +230,38 @@
   // Accept only a tiny fixed vocabulary; never copy search text, prices, item IDs or identities.
   function openSearchFeedback(event) {
     const detail=event?.detail||{};
-    if(!["empty","results"].includes(detail.outcome))return;
+    if(!["empty","results","detail"].includes(detail.outcome))return;
     const allowed=["All","Trading Cards","Video Games","Consoles & Controllers","Collectibles"];
     const category=allowed.includes(detail.category)?detail.category:"All";
     openFeedback();
     if(!currentUser?.id)return; // Signed-out navigation retains intent only, never search context.
     el("supportFeedbackKind").value="idea";
     updateFeedbackKind();
-    el("supportSubject").value=detail.outcome==="empty"?"Improve marketplace search results":"Improve listing discovery";
+    el("supportSubject").value=detail.outcome==="empty"?"Improve marketplace search results":detail.outcome==="detail"?"Improve listing contact experience":"Improve listing discovery";
     const yes=value=>value===true?"yes":"no";
     el("supportDescription").value=[
       "Marketplace search feedback (optional, private)",
-      "Outcome: "+(detail.outcome==="empty"?"No matching listings":"Listings shown, but not the right item"),
+      "Outcome: "+(detail.outcome==="empty"?"No matching listings":detail.outcome==="detail"?"Viewed a listing, but did not contact the seller":"Listings shown, but not the right item"),
       "Category: "+category,
       "Used text search: "+yes(detail.hasText),
       "Used game filter: "+yes(detail.hasGame),
       "Used price filter: "+yes(detail.hasPrice),
       "Used other category filters: "+yes(detail.hasExtra),
       "",
-      "What I hoped to find: "
+      detail.outcome==="detail"?"What stopped me from contacting the seller: ":"What I hoped to find: "
     ].join("\n");
     status("supportCreateStatus","Review and add what you expected before sending. No search words, item IDs or personal information were copied automatically.");
     el("supportDescription").focus();
   }
   document.addEventListener("deckplay:search-feedback", openSearchFeedback);
+  // Opt-in listing-detail feedback; no passive exit tracking or listing/user identifiers.
+  document.addEventListener("click", event => {
+    const button=event.target.closest("[data-listing-discovery-feedback]");
+    if(!button || !button.closest("#detailContent") || !document.getElementById("detailModal")?.classList.contains("open"))return;
+    const category=button.dataset.listingDiscoveryFeedback;
+    closeModal("detailModal");
+    openSearchFeedback({detail:{outcome:"detail",category}});
+  });
 
   function beginSupportSignIn(topic) {
     // Remember only the navigation intent, never a private draft or account ID.
