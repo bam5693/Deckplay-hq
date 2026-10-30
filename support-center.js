@@ -108,6 +108,9 @@
   async function show() {
     userId = currentUser?.id || null;
     clearPrivate();
+    // Every visit starts with a blank draft, even when a different collector
+    // previously opened feedback on this shared browser.
+    el("supportNewForm").reset();
     el("supportPrivate").hidden = !userId;
     el("supportSignIn").hidden = !!userId;
     openModal(modal.id);
