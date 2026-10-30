@@ -39,6 +39,8 @@ test('anonymous active listing gets escaped server-generated metadata without le
  assert.match(out,/<title>Dragon Ball Tournament &amp; &lt;script&gt;alert\(&quot;x&quot;\)&lt;\/script&gt; \| DeckPlay HQ<\/title>/);
  assert.match(out,/og:title" content="Dragon Ball Tournament &amp; &lt;script&gt;/);
  assert.match(out,/og:description" content="Explore Dragon Ball Tournament/);
+ assert.match(out,/property="og:url"/);
+ assert.match(out,/listing=11111111-1111-4111-8111-111111111111/);
  assert.doesNotMatch(out,/<script>alert/);
  assert.match(out,/name="robots" content="noindex,nofollow"/);
  assert.doesNotMatch(out,/private messages|service_role|sb_secret_/i);
@@ -124,6 +126,8 @@ test('active collector sharing gets only anonymous public handle metadata, not p
  assert.match(out,/name="description" content="Browse @retro_card_hero/);
  assert.match(out,/og:title" content="@retro_card_hero \| DeckPlay HQ"/);
  assert.match(out,/twitter:description" content="Browse @retro_card_hero/);
+ assert.match(out,/property="og:url"/);
+ assert.match(out,/collector=22222222-2222-4222-8222-222222222222/);
  assert.match(out,/name="robots" content="noindex,nofollow"/);
  assert.doesNotMatch(out,/DO NOT SHOW|private@example|display_name|location_label|bio/);
 });
@@ -169,4 +173,15 @@ test('collector share route preserves staging password gate and does not use GET
  assert.equal(calls,1);
  assert.match(await get.text(),/<!-- collector preview -->/);
  assert.match(get.headers.get('X-Robots-Tag'),/noindex/);
+});
+
+test('T7.3: verified social URLs omit unrelated query parameters and fail closed',async()=>{
+ const url=new URLSearchParams('listing='+ID+'&session=never-reflect-this');
+ const out=await preview(HTML,url,async()=>new Response(JSON.stringify([{id:ID,title:'Public game',status:'active'}])),PUBLIC_KEY);
+ assert.match(out,/property="og:url"/);
+ assert.match(out,/listing=11111111-1111-4111-8111-111111111111/);
+ assert.doesNotMatch(out,/never-reflect-this/);
+ const invalid=await preview(HTML,new URLSearchParams('listing='+ID+'&listing='+ID),async()=>{throw Error('must not fetch')},PUBLIC_KEY);
+ assert.equal(invalid,HTML);
+ assert.doesNotMatch(invalid,/property="og:url"/);
 });

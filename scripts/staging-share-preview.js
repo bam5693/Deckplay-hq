@@ -18,6 +18,14 @@ function previewMeta(html,attribute,key,value){
  if(end<0)return html;
  return html.slice(0,begin)+previewEscape(value)+html.slice(end);
 }
+// T7.3: advertise only the validated public-item route. Never reflect unknown
+// query parameters (which can contain account/session or tracking data).
+// This URL is intentionally PRIVATE staging; the robots noindex gate remains.
+function previewVerifiedShareUrl(html,kind,id){
+ const href='https://deckplay-hq-staging.cstivers56.workers.dev/?'+kind+'='+id;
+ if(!html.includes('</head>')||html.includes('property="og:url"'))return html;
+ return html.replace('</head>','<meta property="og:url" content="'+previewEscape(href)+'">\n</head>');
+}
 async function renderStagingListingPreview(html,params,fetcher,publicKey){
  // Never render search engine previews for invalid, duplicate or mixed links.
  const ids=params.getAll('listing');
@@ -49,6 +57,7 @@ async function renderStagingListingPreview(html,params,fetcher,publicKey){
   out=previewMeta(out,'property','og:description',description);
   out=previewMeta(out,'name','twitter:title',title+' | DeckPlay HQ');
   out=previewMeta(out,'name','twitter:description',description);
+  out=previewVerifiedShareUrl(out,'listing',ids[0]);
   // Deliberately keep private staging's robots noindex and all auth gates.
   return out;
  }catch(_error){
@@ -103,6 +112,7 @@ async function renderStagingCollectorPreview(html,params,fetcher,publicKey){
   out=previewMeta(out,'property','og:description',description);
   out=previewMeta(out,'name','twitter:title',title);
   out=previewMeta(out,'name','twitter:description',description);
+  out=previewVerifiedShareUrl(out,'collector',seller);
   return out;
  }catch(_error){
   // Failing closed is preferable to fabricating seller identity.
