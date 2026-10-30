@@ -22,4 +22,4 @@ jobs:
           node --check scripts/private-backup/export-storage.mjs
           bash -n scripts/private-backup/backup-production.sh
           bash -n scripts/private-backup/verify-encrypted.sh
-          node --test scripts/private-backup/tests/export-storage.test.mjs
+          node --test scripts/private-backup/tests/*.test.mjs
