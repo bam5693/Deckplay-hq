@@ -3144,7 +3144,7 @@ document.getElementById("profilePageContent").addEventListener("click",async eve
   const {data,error}=await action;
   if(!visible())return;
   if(error)throw error;
-  if(mode!=="delete"&&!data)throw Error("Listing status changed or inventory was reserved. Refresh before trying again.");
+  if(mode!=="delete"&&!data)throw Error(mode==="sold"?"This listing changed or was reserved. Refresh your inventory before trying again.":"Listing status changed or inventory was reserved. Refresh before trying again.");
   await loadListings();
   if(!visible())return;
   await showCollectorPage("listings");
