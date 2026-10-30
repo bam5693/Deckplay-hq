@@ -61,6 +61,15 @@
           <select id="supportFeedbackKind"><option value="bug">Something isn't working</option><option value="idea">An improvement idea</option><option value="category">A missing collectible category</option><option value="other">Other feedback</option></select>
           <p class="muted">Your feedback is private to you and support. Please avoid personal information.</p>
         </div>
+        <div id="supportTradeConcernFields" hidden>
+          <label for="supportTradeConcernKind">What happened?</label>
+          <select id="supportTradeConcernKind">
+            <option value="proposal">Question or problem with a proposed trade</option>
+            <option value="shipping">Confusing shipping estimate or preview</option>
+            <option value="pressure">Someone asked me to pay outside DeckPlay</option>
+          </select>
+          <p class="muted" id="supportTradeConcernHint">DeckPlay does not process payments or shipping. Describe only the proposed trade, without addresses, tracking numbers or payment details.</p>
+        </div>
         <div id="supportListingReportFields" hidden>
           <p id="supportReportListingIdentifier" class="muted"></p>
           <label for="supportReportReason">What concerns you about this listing?</label>
@@ -87,7 +96,7 @@
   const status = (id, message) => { el(id).textContent = message || ""; };
   const date = value => new Date(value).toLocaleString();
   const labels = {open:"Open",waiting_on_staff:"Waiting on support",waiting_on_user:"Waiting on collector",resolved:"Resolved"};
-  let userId = null, generation = 0, isStaff = false, staffView = false, staffSafetyOnly = false, ticketFilter = "all", selected = null, tickets = [], ticketOffset = 0, ticketListRequest = 0, loadingTickets = false, moreTickets = false, replyOffset = 0, moreReplies = false, loadingReplies = false, replyRequest = 0, returnToFeedback = false, returnTopic = "feedback", feedbackMode = false, listingReportId = null, pendingReportId = null, viewGeneration = 0;
+  let userId = null, generation = 0, isStaff = false, staffView = false, staffSafetyOnly = false, ticketFilter = "all", selected = null, tickets = [], ticketOffset = 0, ticketListRequest = 0, loadingTickets = false, moreTickets = false, replyOffset = 0, moreReplies = false, loadingReplies = false, replyRequest = 0, returnToFeedback = false, returnTopic = "feedback", feedbackMode = false, tradeConcernMode = false, listingReportId = null, pendingReportId = null, viewGeneration = 0;
   // Drafts are tab-memory only, keyed by ticket and purged on account/view reset.
   const replyDrafts = new Map();
   const feedbackKinds = {
@@ -106,6 +115,7 @@
     feedbackMode = enabled;
     el("supportCategoryField").hidden = enabled;
     el("supportFeedbackOptions").hidden = !enabled;
+    if(enabled)setTradeConcernMode(false);
     el("supportNewTitle").textContent = enabled ? "Share private beta feedback" : "Open a new support ticket";
     el("supportNewForm").querySelector('button[type="submit"]').textContent = enabled ? "Send private feedback" : "Create private ticket";
     el("supportCategory").value = enabled ? "other" : "account";
@@ -113,6 +123,34 @@
     el("supportSubject").maxLength = 120;
     updateFeedbackKind();
   }
+  const tradeConcerns = {
+    proposal:{prefix:"[Trade] ",category:"offers_trades",hint:"DeckPlay trades are proposals only. Describe the concern without private contact or payment information."},
+    shipping:{prefix:"[Shipping preview] ",category:"offers_trades",hint:"Shipping is only a preview. No label, purchase or delivery is handled by DeckPlay."},
+    pressure:{prefix:"[Payment pressure] ",category:"safety",hint:"Do not send money or credentials off-platform. This is a private safety report for staff review, not a payment dispute or refund."}
+  };
+  function updateTradeConcernKind() {
+    if(!tradeConcernMode)return;
+    const kind=tradeConcerns[el("supportTradeConcernKind").value]||tradeConcerns.proposal;
+    el("supportTradeConcernHint").textContent=kind.hint;
+    el("supportSubject").maxLength=120-kind.prefix.length;
+    el("supportDescription").maxLength=2800;
+  }
+  function setTradeConcernMode(enabled) {
+    tradeConcernMode=enabled;
+    el("supportTradeConcernFields").hidden=!enabled;
+    if(enabled){
+      el("supportCategoryField").hidden=true;
+      el("supportFeedbackOptions").hidden=true;
+      el("supportNewTitle").textContent="Get help with a trade or shipping concern";
+      el("supportCategory").value="offers_trades";
+      el("supportSubject").value="Trade or shipping concern";
+      updateTradeConcernKind();
+    }else{
+      el("supportDescription").maxLength=listingReportId?2700:3000;
+      el("supportSubject").maxLength=120;
+    }
+  }
+  el("supportTradeConcernKind").addEventListener("change",updateTradeConcernKind);
   const listingUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   const reportReasons = {
     counterfeit:"Counterfeit or misrepresented collectible",
@@ -123,6 +161,7 @@
   };
   function setListingReportMode(id = null) {
     listingReportId = id && listingUuid.test(id) ? id : null;
+    if(listingReportId)setTradeConcernMode(false);
     el("supportListingReportFields").hidden = !listingReportId;
     el("supportCategoryField").hidden = !!listingReportId || feedbackMode;
     el("supportFeedbackOptions").hidden = !feedbackMode;
@@ -197,8 +236,7 @@
   function openTradeConcern() {
     if (!currentUser?.id) { beginSupportSignIn("trade"); return; }
     void show();
-    el("supportCategory").value = "offers_trades";
-    el("supportSubject").value = "Trade or shipping concern";
+    setTradeConcernMode(true);
     el("supportDescription").focus();
     status("supportCreateStatus", "Describe the proposed trade or shipping issue. Do not include addresses or payment details.");
   }
@@ -250,6 +288,7 @@
     // Every visit starts with a blank draft, even when a different collector
     // previously opened feedback on this shared browser.
     el("supportNewForm").reset();
+    setTradeConcernMode(false);
     setFeedbackMode(false);
     setListingReportMode(null);
     el("supportPrivate").hidden = !userId;
@@ -433,7 +472,8 @@
     if(button.disabled)return;
     const v=viewGeneration,u=userId;
     const rawSubject=el("supportSubject").value.trim();
-    const prefix=feedbackMode?(feedbackKinds[el("supportFeedbackKind").value]||feedbackKinds.other).prefix:"";
+    const tradeKind=tradeConcernMode?(tradeConcerns[el("supportTradeConcernKind").value]||tradeConcerns.proposal):null;
+    const prefix=feedbackMode?(feedbackKinds[el("supportFeedbackKind").value]||feedbackKinds.other).prefix:tradeKind?.prefix||"";
     const subject=prefix+rawSubject;
     const reportId=listingReportId,reportReason=el("supportReportReason").value;
     if(reportId && (!listingUuid.test(reportId) || !reportReasons[reportReason])){
@@ -441,6 +481,7 @@
     }
     const body=reportId
       ? "Listing ID: "+reportId+"\nReason: "+reportReasons[reportReason]+"\nDetails: "+el("supportDescription").value.trim()
+      : tradeKind?"Concern: "+el("supportTradeConcernKind").selectedOptions[0].textContent+"\nDetails: "+el("supportDescription").value.trim()
       : el("supportDescription").value.trim();
     if(rawSubject.length<8||subject.length>120){
       status("supportCreateStatus","Enter a subject of at least 8 characters that fits the limit.");
@@ -449,12 +490,12 @@
     button.disabled=true;status("supportCreateStatus","Submitting…");
     try{
       const {data,error}=await supabaseClient.rpc("create_support_ticket",{
-        p_category:reportId?"safety":feedbackMode?"other":el("supportCategory").value,p_subject:subject,
+        p_category:reportId?"safety":feedbackMode?"other":tradeKind?tradeKind.category:el("supportCategory").value,p_subject:subject,
         p_body:body
       });
       if(error)throw error;
       if(!validWrite(v,u))return;
-      form.reset();setListingReportMode(null);updateFeedbackKind();staffView=false;selected=data;
+      form.reset();setTradeConcernMode(false);setListingReportMode(null);updateFeedbackKind();staffView=false;selected=data;
       // A new open ticket must be visible even if the collector was filtering resolved history.
       ticketFilter="all";
       modal.querySelectorAll("[data-support-filter]").forEach(item => item.setAttribute("aria-pressed", String(item.dataset.supportFilter === "all")));
@@ -502,6 +543,7 @@
     if(next===userId)return;
     userId=next;++generation;++viewGeneration;clearPrivate();
     el("supportNewForm").reset(); // Never carry a private draft into another account.
+    setTradeConcernMode(false);
     listingReportId=null;
     el("supportListingReportFields").hidden=true;
     if(modal.classList.contains("open"))closeModal(modal.id);
