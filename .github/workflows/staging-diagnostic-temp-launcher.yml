@@ -21,3 +21,5 @@ jobs:
             -f 'inputs[focused_live_test]=trading'
 
 # Retry after improving buyer-auth cleanup guard to expose the primary trade failure.
+
+# One final focused diagnostic preserves the first failure and logs only anonymous account-check booleans.
