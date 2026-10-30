@@ -76,6 +76,8 @@ test('collector creates, reads and replies to private ticket, account switch cle
  await expect(page.locator('#supportReplies')).toContainText('Please review my test trade.');
  await page.evaluate(()=>{window.currentUser={id:'other'};window.__authCallback('SIGNED_IN',{user:{id:'other'}})});
  await expect(page.locator('#supportCenterModal')).not.toHaveClass(/open/);
+ await expect(page.locator('#supportTicketBody')).toBeEmpty();
+ await expect(page.locator('#supportReplies')).toBeEmpty();
  await page.getByRole('button',{name:'Help & support'}).last().click();
  await expect(page.locator('#supportTicketList')).not.toContainText('Synthetic trade help');
 });
