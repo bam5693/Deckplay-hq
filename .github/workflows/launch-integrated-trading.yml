@@ -1,0 +1,18 @@
+name: Execute one integrated price-and-bundle trade acceptance
+on:
+  push:
+    branches: [test/staging-reporting]
+    paths: ['.github/workflows/launch-integrated-trading.yml']
+permissions:
+  contents: read
+  actions: write
+jobs:
+  launch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Request one fully signed-in buyer/seller counteroffer and bundle-trade journey
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api -X POST "repos/${{ github.repository }}/actions/workflows/private-staging.yml/dispatches" -f ref=test/staging-reporting -F 'inputs[focused_live_test]=trading'
