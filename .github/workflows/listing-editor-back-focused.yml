@@ -5,6 +5,7 @@ on:
     paths:
       - '.github/workflows/listing-editor-back-focused.yml'
       - 'listing-editor.js'
+      - 'index.html'
       - 'tests/e2e/listing-editor.spec.js'
   workflow_dispatch:
 permissions:
