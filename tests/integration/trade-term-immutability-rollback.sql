@@ -1,9 +1,10 @@
 -- STAGING ONLY; single transaction, always rolled back on success.
--- Uses existing dedicated synthetic identities, never a real customer account.
+-- Uses existing dedicated synthetic identities and admin-side JWT claim simulation
+-- to exercise the privileged trigger path. Direct REST UPDATE is already denied
+-- by authenticated table privileges and is tested separately.
 begin;
 select pg_catalog.set_config('deckplay.fixture.seller',(select id::text from auth.users where email='deckplay-seller@deckplay.test'),true);
 select pg_catalog.set_config('deckplay.fixture.buyer',(select id::text from auth.users where email='deckplay-buyer@deckplay.test'),true);
-set local role authenticated;
 select pg_catalog.set_config('request.jwt.claim.sub',current_setting('deckplay.fixture.seller'),true);
 with inserted as (
  insert into public.listings(seller_id,title,price,category,condition,image_urls,accepts_trades,accepts_price_offers,tcg_game)
@@ -80,4 +81,4 @@ begin
 end
 $verify_acceptance$;
 rollback;
-select 'PASS: exact cash-tampering and pending-counter guards rejected, approved counter accepted, all fixtures rolled back' as result;
+select 'PASS: privileged trigger rejects term changes and pending-counter bypass; legitimate counter accepted; fixtures rolled back' as result;
