@@ -681,7 +681,7 @@ test('T7.5: listing-detail contact friction is opt-in, private and category-only
  await expect(page.locator('#supportSubject')).toHaveValue('Improve listing contact experience');
  const body=await page.locator('#supportDescription').inputValue();
  expect(body).toContain('Category: Video Games');
- expect(body).toContain('What stopped me from contacting the seller:');
+ expect(body).toContain('What would help me contact the seller:');
  expect(body).not.toMatch(/Listing ID|Seller ID|Account ID/);
  expect(await page.evaluate(()=>window.__db.calls.filter(x=>x.name==='create_support_ticket'))).toHaveLength(0);
  await page.locator('#supportDescription').fill(body+'I need clearer condition photos and an explanation of trade terms.');
