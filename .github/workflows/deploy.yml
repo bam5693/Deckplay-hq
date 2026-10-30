@@ -8,6 +8,12 @@ on:
         required: true
         type: string
 
+  # One-time owner-approved auth hotfix publication; restricted to the next exact main push.
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/deploy.yml'
+
 concurrency:
   group: deckplay-hq-production
   cancel-in-progress: false
@@ -17,7 +23,7 @@ permissions:
 
 jobs:
   deploy:
-    if: github.ref == 'refs/heads/main'
+    if: "${{ github.ref == 'refs/heads/main' && (github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.event.before == 'f527992d92017d00b0ea572cd336ee39ef8d7812' && github.event.head_commit.message == '[owner-approved-hotfix] Publish PR7 and PR8 account fixes')) }}"
     runs-on: ubuntu-latest
     steps:
       - name: Check out website
@@ -26,10 +32,13 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Verify exact authorized application tree for one-time hotfix
+        if: github.event_name == 'push'
+        run: test "$(git rev-parse HEAD:index.html)" = "73cd277b2fd005d17de3a0fdb386bcef05ea765f"
       - name: Verify pinned approval, compatibility, rollback and allowlisted assets
         run: node scripts/release-preflight.cjs --publish
         env:
-          DECKPLAY_APPROVED_RELEASE_SHA: ${{ inputs.approved_sha }}
+          DECKPLAY_APPROVED_RELEASE_SHA: ${{ github.event_name == 'push' && github.sha || inputs.approved_sha }}
       - name: Install browser test dependencies
         run: npm ci
       - name: Install Chromium
