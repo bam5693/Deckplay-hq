@@ -89,6 +89,15 @@
     footer.append(button);
     button.addEventListener("click",show);
   }
+  // Feedback uses the existing private ticket workflow, not a new public endpoint.
+  // The event contains no account data or free-text content.
+  document.addEventListener("deckplay:open-feedback", () => {
+    show();
+    if (!currentUser?.id) return; // Never reveal a previous account's draft.
+    el("supportCategory").value = "other";
+    el("supportSubject").focus();
+    status("supportCreateStatus", "Share a bug, suggestion or category request. Do not include private information.");
+  });
   el("supportClose").addEventListener("click",()=>closeModal(modal.id));
   modal.addEventListener("click",e=>{if(e.target===modal)closeModal(modal.id)});
   async function show() {
