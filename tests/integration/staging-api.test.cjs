@@ -205,6 +205,9 @@ test('accepted trade cannot silently rewrite cash terms, but an approved counter
  const counter=ok(api('seller','/rest/v1/rpc/create_trade_counter','POST',{
   p_offer:trade.id,p_cash:5,p_direction:'sender_pays',p_note:run+' approved counter'
  }));
+ const directAccept=api('seller','/rest/v1/trade_offers?id=eq.'+trade.id,'PATCH',{status:'accepted'},{Prefer:'return=representation'});
+ assert(directAccept.status>=400,'Pending counter must block direct acceptance of the old proposal');
+ assert.equal(ok(api('seller','/rest/v1/trade_offers?id=eq.'+trade.id))[0].status,'pending');
  ok(api('buyer','/rest/v1/rpc/respond_trade_counter','POST',{p_counter:counter,p_accept:true}),204);
  const accepted=ok(api('buyer','/rest/v1/trade_offers?id=eq.'+trade.id))[0];
  assert.equal(accepted.status,'accepted','Approved counter must still reserve the trade');
