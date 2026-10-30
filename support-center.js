@@ -14,7 +14,7 @@
     <details><summary><strong>How do messages and offers work?</strong></summary><p>Use Inbox to contact collectors, review offers and negotiate trades. A trade proposal is not a payment or shipping agreement. Block or report unwanted contact.</p></details>
     <details><summary><strong>Can I pay or print a shipping label?</strong></summary><p>No. Checkout and shipping are demonstrations only. No payment, payout, shipping label or purchase can be completed in this beta.</p></details>
     <details><summary><strong>How do I report a suspicious listing?</strong></summary><p>Use the Report action on the listing or collector. For account access, bugs or other help, open a private support ticket below.</p></details>
-    <p id="supportSignIn" class="muted">Sign in to open and follow private support tickets.</p>
+    <div id="supportSignIn"><p class="muted">Sign in to send feedback or open and follow private support tickets.</p><button type="button" class="primary" id="supportSignInButton">Sign in to send feedback</button></div>
     <section id="supportPrivate" hidden>
       <h3>Your support tickets</h3>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
@@ -97,6 +97,11 @@
     el("supportCategory").value = "other";
     el("supportSubject").focus();
     status("supportCreateStatus", "Share a bug, suggestion or category request. Do not include private information.");
+  });
+  el("supportSignInButton").addEventListener("click", () => {
+    // Avoid stacking dialogs or retaining private support content behind login.
+    closeModal(modal.id);
+    openModal("authModal");
   });
   el("supportClose").addEventListener("click",()=>closeModal(modal.id));
   modal.addEventListener("click",e=>{if(e.target===modal)closeModal(modal.id)});
