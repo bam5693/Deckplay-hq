@@ -77,6 +77,8 @@ window.deckplayOpenSharedLinkOnce=openSharedLinkOnce;
 // The auth INITIAL_SESSION callback also invokes this after blocked collectors load.
 // This fallback handles a cached session that initialized before this script loaded.
 async function afterSession(){
+ const params=new URLSearchParams(window.location.search);
+ if(!params.has('listing')&&!params.has('collector'))return;
  if(!supabaseClient)return;
  try{
   const {data}=await supabaseClient.auth.getSession();
