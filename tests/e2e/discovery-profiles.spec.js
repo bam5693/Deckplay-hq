@@ -182,3 +182,51 @@ test('seller inventory fetch errors never masquerade as an empty storefront',asy
  await expect(page.locator('#publicStorefrontTools')).toBeHidden();
  await expect(page.locator('#publicProfileContent')).toContainText('Listings unavailable');
 });
+
+
+test('seller storefront loads older inventory beyond 60, retries failure and reveals new categories',async({page})=>{
+ await page.route('https://challenges.cloudflare.com/**',r=>r.abort());
+ await page.route('https://prrrzeelltmyugssqnzk.supabase.co/**',r=>r.fulfill({json:[]}));
+ await page.goto('/');await page.waitForLoadState('networkidle');
+ await page.evaluate(async()=>{
+  await supabaseClient.auth.getSession();currentUser=null;
+  window.storefrontPageRequests=[];
+  window.failOlderInventory=true;
+  const rows=Array.from({length:62},(_,i)=>({
+   id:'store-page-'+i,seller_id:'fixture-paging',title:i===61?'Rare video game':i===60?'Sports collection':'TCG listing '+i,
+   description:'Staging fixture',price:i+1,category:i===61?'video_games':i===60?'collectibles':'trading_cards',
+   image_urls:[],status:'active',created_at:new Date(Date.UTC(2026,9,29,0,0,0)-i*1000).toISOString()
+  }));
+  supabaseClient.from=table=>{
+   let range=null;
+   const q={};
+   for(const method of ['select','eq','order','limit'])q[method]=()=>q;
+   q.range=(start,end)=>{range={start,end};return q};
+   q.then=resolve=>{
+    if(table!=='listings')return Promise.resolve({data:[],error:null}).then(resolve);
+    if(range){storefrontPageRequests.push(range);
+     if(failOlderInventory){failOlderInventory=false;return Promise.resolve({data:null,error:{message:'Temporary network failure'}}).then(resolve)}
+     return Promise.resolve({data:rows.slice(range.start,range.end+1),error:null}).then(resolve);
+    }
+    return Promise.resolve({data:rows.slice(0,61),error:null}).then(resolve);
+   };
+   q.maybeSingle=async()=>({data:table==='profiles'?{username:'fixture-paging'}:null,error:null});
+   return q;
+  };
+  await showPublicProfile('fixture-paging');
+ });
+ await expect(page.locator('#publicProfileResults .profile-item')).toHaveCount(60);
+ await expect(page.locator('#publicProfileContent')).toContainText('60+ active listings');
+ await expect(page.locator('[data-storefront-more]')).toBeVisible();
+ await page.locator('[data-storefront-more]').click();
+ await expect(page.locator('#publicProfileResults [role="alert"]')).toContainText('Try again');
+ await expect(page.locator('#publicProfileResults .profile-item')).toHaveCount(60);
+ await page.locator('[data-storefront-more]').click();
+ await expect(page.locator('#publicProfileResults .profile-item')).toHaveCount(62);
+ await expect(page.locator('[data-storefront-more]')).toHaveCount(0);
+ await expect(page.locator('#publicStorefrontCategory option')).toHaveCount(4);
+ await page.locator('#publicStorefrontCategory').selectOption('video_games');
+ await expect(page.locator('#publicProfileResults .profile-item')).toHaveCount(1);
+ await expect(page.locator('#publicProfileResults')).toContainText('Rare video game');
+ expect(await page.evaluate(()=>storefrontPageRequests)).toEqual([{start:60,end:120},{start:60,end:120}]);
+});
