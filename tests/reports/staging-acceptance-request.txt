@@ -1,3 +1,5 @@
 2026-10-30 T7.4 focused retry after diagnosing Playwright strict locator collision: seller guide action now scoped to #guideSeller in b87d840. Run only local support-center and getting-started mobile/desktop. Previous run 41026606548 failed on ambiguous test selector, not product behavior. No staging deployment or DB writes.
 
 2026-10-30 05:20 Central — T7.6 focused LOCAL ONLY (no staging deploy): typed private beta feedback bug/idea/category UI in 149b18a, regression af31fec. Run support-center.spec.js + getting-started.spec.js desktop/mobile using existing staging-focused-acceptance gate. Preserve account isolation, signed-out login return, other-category RPC; no live customer data, no payment/shipping, no production.
+
+2026-10-30 T7.5 focused LOCAL ONLY: buyer listing-detail contact-friction feedback and signed-out privacy tests, changes 439bdcf 1876b78 9c4e55c. Run existing support-center.spec.js and getting-started.spec.js mobile/desktop; no staging deployment, production changes, real customer data or payments.
