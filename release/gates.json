@@ -1,5 +1,5 @@
 {
-  "approvedApplicationTree": "7b2c59107e54fb2ef7b7092c6d1fdd283341a713",
+  "approvedApplicationTree": "1d920feb6ebb6429f2e005f7ee36c0ab79d1ad29",
   "productionSchemaVerified": true,
   "previewAcceptanceVerified": true,
   "rollbackVerified": true,
@@ -27,9 +27,9 @@
     "noDestructiveDataResetAuthorized": true
   },
   "hotfixApproval": {
-    "scope": "Login password eye and mobile Cancel button layout consistency",
+    "scope": "Fix auth Cancel button conflict with global close-icon styling while preserving password visibility",
     "ownerAuthorization": "Owner approved eye hotfix and reported mismatched Cancel button with screenshot on 2026-10-30",
-    "approvedApplicationTree": "7b2c59107e54fb2ef7b7092c6d1fdd283341a713",
+    "approvedApplicationTree": "1d920feb6ebb6429f2e005f7ee36c0ab79d1ad29",
     "deployMethod": "Existing manual production workflow with exact approved merged SHA; no staging bundle"
   }
 }
