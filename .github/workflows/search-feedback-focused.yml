@@ -33,4 +33,5 @@ jobs:
           key: staging-playwright-${{ hashFiles('package-lock.json') }}
       - run: npx playwright install chromium --only-shell
       - name: Focused T7.5 feedback and T8.3 ticket topic filtering on mobile and desktop
-        run: npx playwright test --config=playwright.local.config.js support-center.spec.js --grep 'T7.5:|T8.3: ticket topic filters|T8.3: staff safety queue' --project=local-desktop --project=local-mobile --max-failures=1 --timeout=20000
+        run: |
+          npx playwright test --config=playwright.local.config.js support-center.spec.js --grep 'T7.5:|T8.3: ticket topic filters|T8.3: staff safety queue' --project=local-desktop --project=local-mobile --max-failures=1 --timeout=20000
