@@ -66,7 +66,7 @@ test('a stale seller pause cannot overwrite reserved inventory or another owner'
   window.writes=[];let row={id:'one',title:'A card',price:25,status:'active',category:'trading_cards',image_urls:[]};
   supabaseClient.from=table=>{
    let action,where=[];
-   const q={select:()=>q,order:()=>q,eq:(n,v)=>{where.push([n,v]);return q},update:data=>{action=data;return q},
+   const q={select:()=>q,order:()=>q,limit:()=>q,eq:(n,v)=>{where.push([n,v]);return q},update:data=>{action=data;return q},
     maybeSingle:async()=>{writes.push({action,where});return {data:null,error:null}},
     then:(resolve,reject)=>Promise.resolve({data:table==='profiles'?{}:table==='listings'?[row]:[],error:null}).then(resolve,reject)};
    return q;
