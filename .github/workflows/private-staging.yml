@@ -178,6 +178,7 @@ jobs:
           node --check scripts/staging-share-preview.js
           node --check scripts/staging-handler.js
           node --check scripts/build-staging-worker.cjs
+          node --check scripts/verify-staging-assets.cjs
           node --test tests/security/staging-share-preview.test.cjs
            node --check getting-started.js
           node --test tests/security/trade-delivery.test.cjs tests/security/staging-browser-config.test.cjs
