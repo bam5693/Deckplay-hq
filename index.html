@@ -868,6 +868,21 @@ footer p,html[data-theme="dark"] footer p{color:#d6deea!important}
 .deckplay-skip-link:focus-visible{transform:translateY(0);outline:3px solid #79dcd4;outline-offset:2px}
 #deckplay-main:focus{outline:none}
 @media(prefers-reduced-motion:reduce){.deckplay-skip-link{transition:none}}
+
+/* T7.4: concise first-visit buyer/seller guidance, shown on Home only. */
+.guide-panel{margin:20px 0 25px;padding:22px;background:#eaf4f1;color:#142b34;border:1px solid #b9d4cd;border-radius:18px}
+.guide-panel h2{margin:0 0 6px;font-size:clamp(20px,3vw,27px);color:#142b34}
+.guide-panel p{line-height:1.5}
+.guide-panel .guide-tabs{display:flex;gap:9px;flex-wrap:wrap;margin:14px 0}
+.guide-panel [role="tab"]{min-height:44px;border:1px solid #7baba0;border-radius:11px;padding:9px 18px;background:#fff;color:#173e43;font-weight:700;cursor:pointer}
+.guide-panel [role="tab"][aria-selected="true"]{background:#145f62;color:#fff;border-color:#145f62}
+.guide-panel [role="tab"]:focus-visible{outline:3px solid #d19d35;outline-offset:2px}
+.guide-panel [role="tabpanel"][hidden]{display:none!important}
+.guide-panel ol{margin:0 0 15px;padding-left:24px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px 28px}
+.guide-panel li{padding:0 4px;line-height:1.5}
+.guide-panel .guide-limit{margin:15px 0 0;padding:11px 13px;background:#fff4d9;border:1px solid #d6b779;border-radius:10px;color:#40331b}
+body.deckplay-market #gettingStarted{display:none!important}
+@media(max-width:650px){.guide-panel{padding:16px}.guide-panel ol{grid-template-columns:1fr;gap:8px}}
 </style>
 </head>
 <body>
@@ -887,6 +902,35 @@ footer p,html[data-theme="dark"] footer p{color:#d6deea!important}
 <section class="hero">
 <div><div class="kicker">Your collection. Your community.</div><h1>Play. Trade.<br><em>Collect.</em></h1><p>A fresh home for trading cards, collectibles, retro games and the stuff you love finding. Browse, trade and build your collection.</p></div>
 <div class="hero-showcase" aria-hidden="true"><div class="showcase-card showcase-back"><span>COLLECT • PLAY</span><strong>01</strong><small>THE NEXT FIND</small></div><div class="showcase-card showcase-front"><span>DECKPLAY HQ / 2026</span><div class="showcase-orb"></div><strong>RARE<br>FINDS.</strong><small>CARDS · GAMES · CULTURE</small></div><div class="showcase-spark">✦</div></div>
+</section>
+
+
+<section id="gettingStarted" class="guide-panel" aria-labelledby="guideTitle">
+  <h2 id="guideTitle">New to DeckPlay? Start here.</h2>
+  <p>Find and share trading cards, sports memorabilia, video games, consoles, controllers, accessories and other collectibles. No purchase is required to browse.</p>
+  <div class="guide-tabs" role="tablist" aria-label="Getting started">
+    <button type="button" role="tab" id="guideBuyerTab" data-guide-tab="buyer" aria-controls="guideBuyer" aria-selected="true">I'm buying or collecting</button>
+    <button type="button" role="tab" id="guideSellerTab" data-guide-tab="seller" aria-controls="guideSeller" aria-selected="false" tabindex="-1">I'm selling or trading</button>
+  </div>
+  <div id="guideBuyer" role="tabpanel" aria-labelledby="guideBuyerTab" tabindex="0">
+    <ol>
+      <li><strong>Find:</strong> Browse Marketplace, search by name, or filter by category and game.</li>
+      <li><strong>Save:</strong> Sign in and open a listing to add it to your Saved items.</li>
+      <li><strong>Contact:</strong> Open a listing to message the collector; check their profile and item details first.</li>
+      <li><strong>Negotiate:</strong> Where enabled, send a price offer or propose a trade and follow replies in Inbox.</li>
+    </ol>
+    <button type="button" class="primary" data-guide-action="browse">Explore marketplace →</button>
+  </div>
+  <div id="guideSeller" role="tabpanel" aria-labelledby="guideSellerTab" tabindex="0" hidden>
+    <ol>
+      <li><strong>Join:</strong> Sign in or create a collector account; choose Sell an item.</li>
+      <li><strong>Describe:</strong> Pick the correct category, condition, quantity and price. Include exact variants or deck contents when relevant.</li>
+      <li><strong>Photograph:</strong> Add real photos of the item and review the listing before publishing.</li>
+      <li><strong>Respond:</strong> Check Inbox for questions, price offers and trades. Only agree to terms you can fulfill.</li>
+    </ol>
+    <button type="button" class="primary" data-guide-action="sell">Create a listing →</button>
+  </div>
+  <p class="guide-limit"><strong>Beta limitation:</strong> Offers and trades are proposals only. Checkout, payment, payouts, purchased shipping and shipping labels are disabled. Never send payment or address details through a demo checkout.</p>
 </section>
 
 <div class="section-eyebrow home-eyebrow">EXPLORE DECKPLAY</div><h2 class="home-heading">Find your next favorite</h2><p class="muted home-description">From anime cards to retro gaming — find your people and your next pickup.</p>
@@ -2939,6 +2983,7 @@ const ios=/iPad|iPhone|iPod/.test(navigator.userAgent);status.textContent=ios?"I
 <script src="listing-editor.js"></script>
 <script src="support-center.js"></script>
 <script src="share-links.js"></script>
+<script src="getting-started.js"></script>
 </body>
 </html>
 
