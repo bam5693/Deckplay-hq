@@ -619,3 +619,36 @@ test('T3.4: network failure keeps a trade proposal editable and recoverable when
  await page.locator('#detailContent [data-trade-id]').click();
  await expect(page.locator('#tradeOfferNote')).toHaveValue('Bundle offer while network is unstable');
 });
+
+test('T7.1: denied clipboard gives a selectable public link instead of losing the copy action',async({page})=>{
+ await ready(page);
+ await page.evaluate(({listing,seller})=>{
+  Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async()=>{throw new DOMException('Clipboard blocked','NotAllowedError')}}});
+  showDetails({databaseId:listing,n:'Synthetic collectible',p:18,c:'Collectibles',sellerId:seller,s:'@collector',imageUrls:[]});
+  document.querySelector('#detailContent [data-copy-kind="listing"]').click();
+ },{listing:LISTING,seller:SELLER});
+ const dialog=page.locator('#deckplayShareFallback');
+ await expect(dialog).toBeVisible();
+ const link=page.locator('#deckplayShareFallbackInput');
+ await expect(link).toHaveValue(new RegExp('listing='+LISTING+'$'));
+ expect(new URL(await link.inputValue()).searchParams.size).toBe(1);
+ await page.getByRole('button',{name:'Select link'}).click();
+ expect(await link.evaluate(el=>el.selectionEnd-el.selectionStart)).toBe((await link.inputValue()).length);
+ await dialog.getByRole('button',{name:'Close'}).click();
+ await expect(dialog).not.toBeVisible();
+});
+
+test('T7.1: failed Android-style native share keeps the collector link copyable',async({page})=>{
+ await ready(page);
+ await page.evaluate(({listing,seller})=>{
+  Object.defineProperty(navigator,'share',{configurable:true,value:async()=>{throw new DOMException('Sharing denied','NotAllowedError')}});
+  showDetails({databaseId:listing,n:'Synthetic video game',p:35,c:'Video Games',sellerId:seller,s:'@collector',imageUrls:[]});
+  document.querySelector('#detailContent [data-share-kind="listing"]').click();
+ },{listing:LISTING,seller:SELLER});
+ await expect(page.locator('#deckplayShareFallback')).toBeVisible();
+ const link=await page.locator('#deckplayShareFallbackInput').inputValue();
+ expect(new URL(link).searchParams.get('listing')).toBe(LISTING);
+ expect(new URL(link).searchParams.has('collector')).toBe(false);
+ await page.keyboard.press('Escape');
+ await expect(page.locator('#deckplayShareFallback')).not.toBeVisible();
+});
