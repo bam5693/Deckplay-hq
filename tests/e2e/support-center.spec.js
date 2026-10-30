@@ -776,3 +776,29 @@ test('T8.3: a successful in-flight reply preserves newer text in the same ticket
  expect(after).toEqual(['First reply is already on its way.','Second draft written while the first is sending.']);
  await expect(page.locator('#supportReplyBody')).toBeEmpty();
 });
+
+test('T7.5: zero-inventory feedback distinguishes no stock from filtered misses without private telemetry',async({page})=>{
+ await boot(page);await signIn(page,'buyer');
+ await page.evaluate(()=>document.dispatchEvent(new CustomEvent('deckplay:search-feedback',{detail:{
+  outcome:'empty',category:'All',hasFilters:false,hasText:false,hasGame:false,hasPrice:false,hasExtra:false,
+  rawQuery:'PRIVATE SEARCH',listingId:'PRIVATE LISTING'
+ }})));
+ await expect(page.locator('#supportSubject')).toHaveValue('Improve marketplace search results');
+ let body=await page.locator('#supportDescription').inputValue();
+ expect(body).toContain('Outcome: No listings available yet');
+ expect(body).not.toContain('PRIVATE');
+ expect(await page.evaluate(()=>window.__db.calls.filter(c=>c.name==='create_support_ticket'))).toHaveLength(0);
+ await page.evaluate(()=>document.dispatchEvent(new CustomEvent('deckplay:search-feedback',{detail:{
+  outcome:'empty',category:'Collectibles',hasFilters:true,hasText:true
+ }})));
+ body=await page.locator('#supportDescription').inputValue();
+ expect(body).toContain('Outcome: No matching listings');
+ expect(body).toContain('Category: Collectibles');
+ expect(body).not.toContain('PRIVATE');
+ await page.locator('#supportDescription').fill(body+'I could not find vintage action figures.');
+ await page.getByRole('button',{name:'Send private feedback'}).click();
+ await expect(page.locator('#supportCreateStatus')).toContainText('Ticket created');
+ const ticket=await page.evaluate(()=>window.__db.tickets.at(-1));
+ expect(ticket.category).toBe('other');
+ expect(ticket.body).not.toContain('PRIVATE');
+});
