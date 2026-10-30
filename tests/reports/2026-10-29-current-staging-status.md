@@ -1,5 +1,13 @@
 # DeckPlay HQ — current staging status (2026-10-29)
 
+## 2026-10-30 12:17 Central — T4.8 empty search to Wanted Board (verified)
+- Customer behavior: an unsuccessful filtered marketplace search now offers **Post a wanted request**. Signed collectors open the existing Wanted form with the search term and supported game/category prefilled. Existing private Wanted drafts are preserved; unsigned users are routed to sign-in. Saved/My Listings scopes and offline inventory errors never show this unrelated action. No posting occurs until the collector reviews and submits the existing form.
+- Source: [c4946cb](https://github.com/bam5693/Deckplay-hq/commit/c4946cb12b16c7833b704396712535b1ecec741e). Five isolated desktop/mobile browser cases: [93dfed9](https://github.com/bam5693/Deckplay-hq/commit/93dfed9c803895b84d3ad739b4ba7117a0e8acda). Focused gate wired at 378bd40.
+- Exact protected staging release: [run 41097227492](https://github.com/bam5693/Deckplay-hq/actions/runs/41097227492), source request 71160ef: **172/172 focused local browser cases passed** (includes the five new cases in desktop and mobile; mixed with older tests), **27 exact served assets matched** and anonymous access was denied; **four/four signed read-only deployed buyer/seller desktop/mobile sessions passed**. Source compiled and deployed only after cheap preflight passed. This is not a real signed Wanted database-write test or physical-device validation.
+- No main/production, billing, payment/shipping, real customer data or PR merge change. PR #2 remains draft/unmerged. Next: targeted signed synthetic real offer/trade-history acceptance and physical Android/PWA plus operator beta gates; avoid repeating this unchanged full focused release solely for reporting.
+
+---
+
 ## 2026-10-29 18:00 Central — checkout preview trust/privacy batch (release verification pending)
 
 **Customer-facing source:** `3cfa2695` replaces the misleading “Buy now · Test checkout” CTA with “Preview checkout · No purchase”, removes all recipient/street/ZIP entry from the simulator, offers clearly illustrative envelope/tracked/priority choices without invented $5/$9 carrier rates, and separates the actual item asking price from **unavailable** shipping, platform fees, taxes and payable total. No live payment/shipping service is enabled. This deliberately sacrifices a fake end-to-end address form in favor of not soliciting real customer data or implying a final purchase price.
