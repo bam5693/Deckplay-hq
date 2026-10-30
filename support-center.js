@@ -22,6 +22,7 @@
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
         <button type="button" class="ghost" id="supportMine">My tickets</button>
         <button type="button" class="ghost" id="supportStaff" hidden>Staff queue</button>
+        <button type="button" class="ghost" id="supportStaffSafety" hidden aria-pressed="false">Safety queue</button>
         <button type="button" class="ghost" id="supportRefresh">Refresh</button>
       </div>
       <div id="supportStatusFilters" role="group" aria-label="Filter support tickets" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
@@ -86,7 +87,7 @@
   const status = (id, message) => { el(id).textContent = message || ""; };
   const date = value => new Date(value).toLocaleString();
   const labels = {open:"Open",waiting_on_staff:"Waiting on support",waiting_on_user:"Waiting on collector",resolved:"Resolved"};
-  let userId = null, generation = 0, isStaff = false, staffView = false, ticketFilter = "all", selected = null, tickets = [], ticketOffset = 0, ticketListRequest = 0, loadingTickets = false, moreTickets = false, replyOffset = 0, moreReplies = false, loadingReplies = false, replyRequest = 0, returnToFeedback = false, returnTopic = "feedback", feedbackMode = false, listingReportId = null, pendingReportId = null, viewGeneration = 0;
+  let userId = null, generation = 0, isStaff = false, staffView = false, staffSafetyOnly = false, ticketFilter = "all", selected = null, tickets = [], ticketOffset = 0, ticketListRequest = 0, loadingTickets = false, moreTickets = false, replyOffset = 0, moreReplies = false, loadingReplies = false, replyRequest = 0, returnToFeedback = false, returnTopic = "feedback", feedbackMode = false, listingReportId = null, pendingReportId = null, viewGeneration = 0;
   // Drafts are tab-memory only, keyed by ticket and purged on account/view reset.
   const replyDrafts = new Map();
   const feedbackKinds = {
@@ -142,7 +143,7 @@
   function clearPrivate() {
     ++ticketListRequest; loadingTickets = false; moreTickets = false; ticketOffset = 0;
     el("supportLoadMore").hidden = true; el("supportLoadMore").disabled = false;
-    selected = null; tickets = []; replyDrafts.clear(); isStaff = false; staffView = false; ticketFilter = "all";
+    selected = null; tickets = []; replyDrafts.clear(); isStaff = false; staffView = false; staffSafetyOnly = false; ticketFilter = "all";
     modal.querySelectorAll("[data-support-filter]").forEach(button => button.setAttribute("aria-pressed", String(button.dataset.supportFilter === ticketFilter)));
     el("supportTicketList").replaceChildren();
     el("supportTicketDetail").hidden = true;
@@ -155,6 +156,8 @@
     el("supportRepliesLoadMore").disabled = false;
     status("supportRepliesStatus","");
     el("supportStaff").hidden = true;
+    el("supportStaffSafety").hidden = true;
+    el("supportStaffSafety").setAttribute("aria-pressed","false");
     el("supportStaffControls").hidden = true;
     el("supportReplyBody").value = "";
     ["supportListStatus","supportReplyStatus","supportCreateStatus"].forEach(id=>status(id,""));
@@ -260,6 +263,7 @@
       if(!valid(v,u))return;
       isStaff=data===true;
       el("supportStaff").hidden=!isStaff;
+      el("supportStaffSafety").hidden=!isStaff;
     }catch(error){if(valid(v,u))console.warn("Staff support access unavailable",error)}
     await loadTickets();
   }
@@ -284,6 +288,7 @@
         .order("updated_at",{ascending:false}).order("id",{ascending:false})
         .range(offset, offset + 40);
       if (!staffView) query = query.eq("owner_id",u);
+      if (staffView && isStaff && staffSafetyOnly) query = query.eq("category","safety");
       if (ticketFilter === "active") query = query.neq("status","resolved");
       if (ticketFilter === "resolved") query = query.eq("status","resolved");
       const {data,error} = await query;
@@ -307,7 +312,7 @@
         el("supportTicketList").append(button);
       }
       loadMore.hidden = !moreTickets;
-      status("supportListStatus", tickets.length ? "Showing " + tickets.length + " tickets. Select one to view private replies." :
+      status("supportListStatus", tickets.length ? "Showing " + tickets.length + (staffSafetyOnly && staffView ? " safety reports or appeals." : " tickets. Select one to view private replies.") :
         ticketFilter === "active" ? "No open tickets in this view." :
         ticketFilter === "resolved" ? "No resolved tickets in this view." : "No tickets in this view.");
       if (!append) {
@@ -417,8 +422,9 @@
     el("supportRepliesLoadMore").hidden=true;
     void loadTickets();
   }));
-  el("supportMine").addEventListener("click",()=>{staffView=false;selected=null;el("supportTicketDetail").hidden=true;loadTickets()});
-  el("supportStaff").addEventListener("click",()=>{if(!isStaff)return;staffView=true;selected=null;el("supportTicketDetail").hidden=true;loadTickets()});
+  el("supportMine").addEventListener("click",()=>{staffView=false;staffSafetyOnly=false;el("supportStaffSafety").setAttribute("aria-pressed","false");selected=null;el("supportTicketDetail").hidden=true;loadTickets()});
+  el("supportStaff").addEventListener("click",()=>{if(!isStaff)return;staffView=true;staffSafetyOnly=false;el("supportStaffSafety").setAttribute("aria-pressed","false");selected=null;el("supportTicketDetail").hidden=true;loadTickets()});
+  el("supportStaffSafety").addEventListener("click",()=>{if(!isStaff)return;staffView=true;staffSafetyOnly=true;el("supportStaffSafety").setAttribute("aria-pressed","true");selected=null;el("supportTicketDetail").hidden=true;loadTickets()});
   el("supportRefresh").addEventListener("click", () => { void loadTickets(); });
   el("supportNewForm").addEventListener("submit",async e=>{
     e.preventDefault();
