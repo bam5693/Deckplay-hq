@@ -3203,6 +3203,16 @@ setAuthMode("signin");render();refreshSellerRatingCache();
   if(!e.state?.deckplayNav)return;
   const depth=e.state.deckplayDepth;
   if(!Number.isInteger(depth)||depth<0||depth>=states.length)return;
+  // Android/Chrome Back reaches this handler even when the listing editor has
+  // unsaved seller fields or photos. Keep the modal history entry on decline.
+  const top=states.at(-1);
+  if(top?.type==="modal"&&top.id==="editListingModal"&&depth<states.length-1&&
+     document.getElementById("editListingModal")?.classList.contains("open")){
+   if(window.listingEditor?.confirmHistoryClose?.()===false){
+    history.pushState({...e.state,deckplayNav:true,deckplayDepth:states.length-1},"");
+    return;
+   }
+  }
   suppress=true;
   try{
    document.querySelectorAll(".modal.open").forEach(m=>originalClose(m.id));
