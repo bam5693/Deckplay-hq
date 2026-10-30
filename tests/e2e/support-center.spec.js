@@ -33,11 +33,12 @@ async function boot(page){
     return {error:{message:'Unexpected RPC'}};
    },
    from:table=>{
-    const state={filters:[]};
+    const state={filters:[],orders:[],start:0,end:null,limit:null};
     const query={
      select(){return query},
-     order(){return query},
-     limit(){return query},
+     order(field,options={}){state.orders.push([field,options.ascending!==false]);return query},
+     limit(count){state.limit=count;return query},
+     range(start,end){state.start=start;state.end=end;return query},
      eq(field,value){state.filters.push([field,value,false]);return query},
      neq(field,value){state.filters.push([field,value,true]);return query},
      then(resolve,reject){
@@ -45,6 +46,20 @@ async function boot(page){
       const rows=all.filter(row=>state.filters.every(([k,v,not])=>not?row[k]!==v:row[k]===v))
        .filter(row=>table==='support_tickets'?(row.owner_id===window.currentUser?.id||window.currentUser?.id==='staff'):
         window.__db.tickets.some(t=>t.id===row.ticket_id&&(t.owner_id===window.currentUser?.id||window.currentUser?.id==='staff')));
+      if(table==='support_tickets' && state.start>=40 && window.__db.failOlderOnce){
+       window.__db.failOlderOnce=false;
+       return Promise.resolve({data:null,error:{message:'Simulated temporary network error'}}).then(resolve,reject);
+      }
+      rows.sort((a,b)=>{
+       for(const [field,ascending] of state.orders){
+        const left=a[field]??'',right=b[field]??'';
+        const cmp=left<right?-1:left>right?1:0;
+        if(cmp)return ascending?cmp:-cmp;
+       }
+       return 0;
+      });
+      if(state.end!==null)rows=rows.slice(state.start,state.end+1);
+      else if(state.limit!==null)rows=rows.slice(0,state.limit);
       return Promise.resolve({data:rows,error:null}).then(resolve,reject);
      }
     };return query;
@@ -246,4 +261,70 @@ test('T7.6: feedback confirmation survives concurrent support-list refresh',asyn
  await page.evaluate(()=>window.__resumeCreate());
  await expect(page.locator('#supportTicketTitle')).toHaveText('[Bug] Marketplace search issue');
  await expect(page.locator('#supportCreateStatus')).toHaveText('Ticket created. You can follow replies below.');
+});
+
+test('T8.3: collector can browse all older private tickets with server-side filters',async({page})=>{
+ await boot(page);
+ await page.evaluate(()=>{
+  const now=Date.now();
+  for(let i=0;i<95;i++){
+   const timestamp=new Date(now-i*60000).toISOString();
+   window.__db.tickets.push({
+    id:'buyer-'+String(i).padStart(3,'0'),owner_id:'buyer',category:'listing',
+    subject:'Buyer collectible ticket '+String(i).padStart(3,'0'),
+    body:'Synthetic private support history',status:i%3===0?'resolved':'open',
+    created_at:timestamp,updated_at:timestamp
+   });
+  }
+  for(let i=0;i<7;i++){
+   const timestamp=new Date(now-i*60000).toISOString();
+   window.__db.tickets.push({
+    id:'other-'+i,owner_id:'other',category:'account',subject:'Other collector private '+i,
+    body:'Never visible to buyer',status:'open',created_at:timestamp,updated_at:timestamp
+   });
+  }
+ });
+ await signIn(page,'buyer');
+ await page.getByRole('button',{name:'Help & support'}).last().click();
+ await expect(page.locator('#supportTicketList button')).toHaveCount(40);
+ await expect(page.locator('#supportLoadMore')).toBeVisible();
+ await page.locator('#supportLoadMore').click();
+ await expect(page.locator('#supportTicketList button')).toHaveCount(80);
+ await page.locator('#supportLoadMore').click();
+ await expect(page.locator('#supportTicketList button')).toHaveCount(95);
+ await expect(page.locator('#supportLoadMore')).toBeHidden();
+ await expect(page.locator('#supportTicketList')).not.toContainText('Other collector private');
+ await page.locator('[data-support-filter="resolved"]').click();
+ await expect(page.locator('#supportTicketList button')).toHaveCount(32);
+ await expect(page.locator('#supportLoadMore')).toBeHidden();
+ await expect(page.locator('#supportTicketList')).not.toContainText('Other collector private');
+ await page.evaluate(()=>{window.currentUser={id:'other'};window.__authCallback('SIGNED_IN',{user:{id:'other'}})});
+ await page.getByRole('button',{name:'Help & support'}).last().click();
+ await expect(page.locator('#supportTicketList button')).toHaveCount(7);
+ await expect(page.locator('#supportTicketList')).not.toContainText('Buyer collectible ticket');
+ await expect(page.locator('#supportLoadMore')).toBeHidden();
+});
+
+test('T8.3: failed older-ticket page can be retried without losing visible tickets',async({page})=>{
+ await boot(page);
+ await page.evaluate(()=>{
+  for(let i=0;i<44;i++){
+   const timestamp=new Date(Date.now()-i*60000).toISOString();
+   window.__db.tickets.push({
+    id:'older-'+i,owner_id:'buyer',category:'other',subject:'Historical collectible help '+i,
+    body:'Synthetic history',status:'open',created_at:timestamp,updated_at:timestamp
+   });
+  }
+ });
+ await signIn(page,'buyer');
+ await page.getByRole('button',{name:'Help & support'}).last().click();
+ await expect(page.locator('#supportTicketList button')).toHaveCount(40);
+ await page.evaluate(()=>{window.__db.failOlderOnce=true});
+ await page.locator('#supportLoadMore').click();
+ await expect(page.locator('#supportListStatus')).toHaveText('Could not load older tickets. Retry.');
+ await expect(page.locator('#supportTicketList button')).toHaveCount(40);
+ await expect(page.locator('#supportLoadMore')).toBeEnabled();
+ await page.locator('#supportLoadMore').click();
+ await expect(page.locator('#supportTicketList button')).toHaveCount(44);
+ await expect(page.locator('#supportLoadMore')).toBeHidden();
 });
