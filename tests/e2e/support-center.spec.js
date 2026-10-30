@@ -362,3 +362,56 @@ test('T8.3: 125 private replies load newest first and reveal older history witho
  await page.getByRole('button',{name:'Help & support'}).last().click();
  await expect(page.locator('#supportTicketList')).not.toContainText('Long synthetic support conversation');
 });
+
+test('T8.3: switching support tickets preserves only the matching unsent reply draft',async({page})=>{
+  await boot(page);await signIn(page,'buyer');
+  await page.evaluate(()=>{
+    for(const [id,subject] of [['ticket-alpha','Alpha account help'],['ticket-beta','Beta video game help']]){
+      window.__db.tickets.push({id,owner_id:'buyer',category:'other',subject,body:'Synthetic private help details.',status:'open',created_at:new Date().toISOString(),updated_at:new Date().toISOString()});
+    }
+  });
+  await page.getByRole('button',{name:'Help & support'}).last().click();
+  await expect(page.locator('#supportTicketList button')).toHaveCount(2);
+  await page.locator('#supportTicketList button').filter({hasText:'Alpha account help'}).click();
+  await page.locator('#supportReplyBody').fill('Unsent reply about my account');
+  await page.locator('#supportTicketList button').filter({hasText:'Beta video game help'}).click();
+  await expect(page.locator('#supportReplyBody')).toBeEmpty();
+  await page.locator('#supportReplyBody').fill('Unsent reply about my video game');
+  await page.locator('#supportTicketList button').filter({hasText:'Alpha account help'}).click();
+  await expect(page.locator('#supportReplyBody')).toHaveValue('Unsent reply about my account');
+  await page.locator('#supportTicketList button').filter({hasText:'Beta video game help'}).click();
+  await expect(page.locator('#supportReplyBody')).toHaveValue('Unsent reply about my video game');
+  await page.evaluate(()=>{window.currentUser={id:'other'};window.__authCallback('SIGNED_IN',{user:{id:'other'}})});
+  await page.getByRole('button',{name:'Help & support'}).last().click();
+  await expect(page.locator('#supportTicketList')).not.toContainText('Alpha account help');
+  await expect(page.locator('#supportReplyBody')).toBeEmpty();
+});
+
+test('T8.3: delayed reply success clears only its ticket draft, not another ticket draft',async({page})=>{
+  await boot(page);await signIn(page,'buyer');
+  await page.evaluate(()=>{
+    for(const [id,subject] of [['ticket-alpha','Alpha card help'],['ticket-beta','Beta sports help']]){
+      window.__db.tickets.push({id,owner_id:'buyer',category:'other',subject,body:'Synthetic collectible help details.',status:'open',created_at:new Date().toISOString(),updated_at:new Date().toISOString()});
+    }
+    const original=window.supabaseClient.rpc;
+    window.supabaseClient.rpc=(name,args)=>{
+      if(name!=='reply_support_ticket')return original(name,args);
+      return new Promise(resolve=>{window.__releaseSupportReply=()=>original(name,args).then(resolve);});
+    };
+  });
+  await page.getByRole('button',{name:'Help & support'}).last().click();
+  await page.locator('#supportTicketList button').filter({hasText:'Alpha card help'}).click();
+  await page.locator('#supportReplyBody').fill('Sending an alpha ticket reply');
+  await page.getByRole('button',{name:'Send reply'}).click();
+  await expect(page.locator('#supportReplyStatus')).toHaveText('Sending…');
+  await page.locator('#supportTicketList button').filter({hasText:'Beta sports help'}).click();
+  await page.locator('#supportReplyBody').fill('Keep this beta draft untouched');
+  await page.evaluate(()=>window.__releaseSupportReply());
+  await expect(page.locator('#supportReplyForm button[type="submit"]')).toBeEnabled();
+  await expect(page.locator('#supportReplyBody')).toHaveValue('Keep this beta draft untouched');
+  await page.locator('#supportTicketList button').filter({hasText:'Alpha card help'}).click();
+  await expect(page.locator('#supportReplyBody')).toBeEmpty();
+  await expect(page.locator('#supportReplies')).toContainText('Sending an alpha ticket reply');
+  await page.locator('#supportTicketList button').filter({hasText:'Beta sports help'}).click();
+  await expect(page.locator('#supportReplyBody')).toHaveValue('Keep this beta draft untouched');
+});
