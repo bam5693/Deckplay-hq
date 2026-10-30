@@ -13,5 +13,14 @@ function collect(dir,prefix='') {
 collect('dist-staging');
 if(JSON.stringify(files).includes('yffruutknztvdyioovmp'))throw Error('Production project in staging');
 const handler=fs.readFileSync('scripts/staging-handler.js','utf8');
-fs.writeFileSync('dist-staging-worker.mjs','const assets='+JSON.stringify(files)+';\n'+fs.readFileSync('scripts/staging-health.js','utf8')+'\n'+fs.readFileSync('scripts/staging-features.js','utf8')+'\n'+fs.readFileSync('scripts/staging-oidc.mjs','utf8').replaceAll('export async function','async function')+'\n'+handler);
+// The publishable key is already present in the built browser app. Extract it
+// from the verified staging assets, never from a secret/service-role binding.
+const publicKey=files['/index.html']?.body.match(/sb_publishable_[A-Za-z0-9_-]+/)?.[0];
+if(!publicKey)throw Error('No staging publishable key in built assets');
+const preview=fs.readFileSync('scripts/staging-share-preview.js','utf8');
+fs.writeFileSync('dist-staging-worker.mjs','const assets='+JSON.stringify(files)+';\n'+
+ 'const STAGING_PREVIEW_PUBLIC_KEY='+JSON.stringify(publicKey)+';\n'+
+ fs.readFileSync('scripts/staging-health.js','utf8')+'\n'+
+ fs.readFileSync('scripts/staging-features.js','utf8')+'\n'+
+ fs.readFileSync('scripts/staging-oidc.mjs','utf8').replaceAll('export async function','async function')+'\n'+preview+'\n'+handler);
 console.log('Built private staging Worker');
