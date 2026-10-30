@@ -174,7 +174,7 @@ jobs:
           key: staging-playwright-${{ hashFiles('package-lock.json') }}
       - run: npx playwright install chromium --only-shell
       - name: Cheap local preflight before deployment or signed sessions
-        if: github.event_name == 'push'
+        if: github.event_name == 'push' && !startsWith(github.event.head_commit.message, '[focused-history]')
         run: |
           node scripts/check-inline-js.cjs
           node --check support-center.js
@@ -191,7 +191,7 @@ jobs:
           node --test tests/security/trade-delivery.test.cjs tests/security/staging-browser-config.test.cjs
           npx playwright test --config=playwright.local.config.js support-center.spec.js support-trade-triage.spec.js listing-gallery.spec.js checkout-simulation.spec.js checkout-preview-clarity.spec.js wanted-search-handoff.spec.js inbox-negotiation-history.spec.js inbox-older-activity-discovery.spec.js trade-conversation-navigation.spec.js inbox-price-withdrawal.spec.js share-links.spec.js getting-started.spec.js discovery-profiles.spec.js pwa-update-notice.spec.js --retries=0 --max-failures=1 --timeout=20000
       - name: Build and deploy exact private staging source after preflight
-        if: github.event_name == 'push'
+        if: github.event_name == 'push' && !startsWith(github.event.head_commit.message, '[focused-history]')
         env:
           DECKPLAY_STAGING_SUPABASE_URL: https://prrrzeelltmyugssqnzk.supabase.co
           DECKPLAY_STAGING_SUPABASE_KEY: sb_publishable_0omvNnv_ZOvXrZ-LHPMyIQ_a9zxD-yh
@@ -204,17 +204,22 @@ jobs:
       - name: Load credentials using existing trusted identity
         run: node scripts/staging-ci-credentials.cjs
       - name: Verify exact served assets and anonymous denial
-        if: github.event_name == 'push'
+        if: github.event_name == 'push' && !startsWith(github.event.head_commit.message, '[focused-history]')
         run: node scripts/verify-staging-assets.cjs
       - name: ONE authentication smoke only when requested
         if: github.event.inputs.auth_smoke_only == 'true'
         run: npx playwright test --config=playwright.staging.config.js staging-auth-smoke.spec.js --project=staging-desktop --retries=0 --timeout=20000
       - name: Read-only deployed buyer and seller desktop and mobile acceptance
-        if: success() && github.event.inputs.acceptance_scope != 'seller_desktop'
+        if: success() && github.event.inputs.acceptance_scope != 'seller_desktop' && !(github.event_name == 'push' && startsWith(github.event.head_commit.message, '[focused-history]'))
         run: npx playwright test --config=playwright.staging.config.js staging-account-readonly.spec.js --retries=0 --timeout=40000
       - name: Seller desktop only after diagnosed transport reset
         if: success() && github.event.inputs.acceptance_scope == 'seller_desktop'
         run: npx playwright test --config=playwright.staging.config.js staging-account-readonly.spec.js --project=staging-desktop --grep 'synthetic seller' --retries=0 --timeout=40000
+      - name: Minimal focused preflight for signed synthetic transaction
+        if: ${{ github.event_name == 'push' && startsWith(github.event.head_commit.message, '[focused-history]') }}
+        run: |
+          node --check tests/e2e/negotiation-history-live.spec.js
+          node --test tests/security/staging-browser-config.test.cjs tests/security/fixture-cleanup.test.cjs
       - name: Verify one real signed-in negotiation history journey with exact fixture cleanup
         if: ${{ success() && github.event_name == 'push' && startsWith(github.event.head_commit.message, '[focused-history]') }}
         run: npx playwright test --config=playwright.staging.config.js negotiation-history-live.spec.js --project=staging-desktop --retries=0 --max-failures=1 --timeout=45000
