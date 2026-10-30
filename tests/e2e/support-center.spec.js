@@ -902,3 +902,56 @@ test('T7.5: authorized staff sees only opt-in aggregate feedback counts and acco
  await page.getByRole('button',{name:'Help & support'}).last().click();
  await expect(page.locator('#supportStaffOverview')).toBeHidden();
 });
+
+test('T7.5: verified staff can review old opt-in discovery reports without unrelated tickets or pagination loss',async({page})=>{
+ await boot(page);
+ await page.evaluate(()=>{
+  const now=Date.now();
+  window.__db.tickets=Array.from({length:66},(_,i)=>({
+   id:'generic-'+i,owner_id:'other',category:'other',subject:'Other collectible question '+i,
+   body:'Private unrelated details',status:'open',
+   created_at:new Date(now-i*1000).toISOString(),updated_at:new Date(now-i*1000).toISOString()
+  }));
+  for(let i=0;i<2;i++)window.__db.tickets.push({
+   id:'feedback-old-'+i,owner_id:'buyer',category:'other',
+   subject:'[Idea] Improve marketplace search results',body:'Private opt-in feedback '+i,
+   status:'open',created_at:new Date(now-90000-i*1000).toISOString(),
+   updated_at:new Date(now-90000-i*1000).toISOString()
+  });
+ });
+ await signIn(page,'staff');
+ await page.getByRole('button',{name:'Help & support'}).last().click();
+ await expect(page.locator('#supportFeedbackEmptyCount')).toHaveText('2');
+ await page.locator('[data-feedback-queue="empty"]').click();
+ await expect(page.locator('#supportFeedbackQueueNotice')).toBeVisible();
+ await expect(page.locator('#supportTicketCategory')).toHaveValue('other');
+ await expect(page.locator('#supportTicketCategory')).toBeDisabled();
+ await expect(page.locator('#supportTicketList button')).toHaveCount(2);
+ await expect(page.locator('#supportTicketList')).toContainText('Improve marketplace search results');
+ await expect(page.locator('#supportTicketList')).not.toContainText('Other collectible question');
+ await page.locator('#supportFeedbackQueueClear').click();
+ await expect(page.locator('#supportFeedbackQueueNotice')).toBeHidden();
+ await expect(page.locator('#supportTicketCategory')).toBeEnabled();
+ await expect(page.locator('#supportTicketList button')).toHaveCount(40);
+});
+test('T7.5: feedback drill-down is staff-only and never survives account changes',async({page})=>{
+ await boot(page);
+ await page.evaluate(()=>{
+  window.__db.tickets=[{id:'feedback-one',owner_id:'other',category:'other',
+   subject:'[Idea] Improve listing discovery',body:'PRIVATE seller details',status:'open',
+   created_at:new Date().toISOString(),updated_at:new Date().toISOString()}];
+ });
+ await signIn(page,'buyer');
+ await page.getByRole('button',{name:'Help & support'}).last().click();
+ await expect(page.locator('[data-feedback-queue="discovery"]')).toBeHidden();
+ await page.evaluate(()=>{window.currentUser={id:'staff'};window.__authCallback('SIGNED_IN',{user:{id:'staff'}})});
+ await page.getByRole('button',{name:'Help & support'}).last().click();
+ await page.locator('[data-feedback-queue="discovery"]').click();
+ await expect(page.locator('#supportTicketList')).toContainText('Improve listing discovery');
+ await page.evaluate(()=>{window.currentUser={id:'buyer'};window.__authCallback('SIGNED_IN',{user:{id:'buyer'}})});
+ await expect(page.locator('#supportFeedbackQueueNotice')).toBeHidden();
+ await page.getByRole('button',{name:'Help & support'}).last().click();
+ await expect(page.locator('#supportTicketCategory')).toHaveValue('all');
+ await expect(page.locator('#supportTicketCategory')).toBeEnabled();
+ await expect(page.locator('#supportTicketList')).not.toContainText('Improve listing discovery');
+});

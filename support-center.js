@@ -43,13 +43,14 @@
           <strong>Opt-in marketplace feedback</strong>
           <p class="muted" style="font-size:12px;margin:5px 0">Counts only feedback tickets people chose to send, not all searches, clicks or conversions. No search terms, message bodies or account identities are queried.</p>
           <div style="display:flex;gap:10px;flex-wrap:wrap">
-            <div style="flex:1 1 120px"><strong id="supportFeedbackEmptyCount" aria-label="Voluntary no-result reports">—</strong><p style="margin:4px 0">No-result reports</p></div>
-            <div style="flex:1 1 120px"><strong id="supportFeedbackDiscoveryCount" aria-label="Voluntary discovery reports">—</strong><p style="margin:4px 0">Discovery reports</p></div>
-            <div style="flex:1 1 120px"><strong id="supportFeedbackContactCount" aria-label="Voluntary contact-friction reports">—</strong><p style="margin:4px 0">Contact-friction reports</p></div>
+            <div style="flex:1 1 120px"><strong id="supportFeedbackEmptyCount" aria-label="Voluntary no-result reports">—</strong><p style="margin:4px 0">No-result reports</p><button type="button" class="ghost" data-feedback-queue="empty" aria-label="Review no-result reports" style="padding:7px 10px;margin-top:5px">Review reports</button></div>
+            <div style="flex:1 1 120px"><strong id="supportFeedbackDiscoveryCount" aria-label="Voluntary discovery reports">—</strong><p style="margin:4px 0">Discovery reports</p><button type="button" class="ghost" data-feedback-queue="discovery" aria-label="Review discovery reports" style="padding:7px 10px;margin-top:5px">Review reports</button></div>
+            <div style="flex:1 1 120px"><strong id="supportFeedbackContactCount" aria-label="Voluntary contact-friction reports">—</strong><p style="margin:4px 0">Contact-friction reports</p><button type="button" class="ghost" data-feedback-queue="contact" aria-label="Review contact-friction reports" style="padding:7px 10px;margin-top:5px">Review reports</button></div>
           </div>
           <p id="supportFeedbackOverviewStatus" class="status" role="status" aria-live="polite"></p>
         </section>
       </section>
+      <div id="supportFeedbackQueueNotice" hidden role="status" style="padding:10px;margin:8px 0;border:1px solid #819c9640;border-radius:10px"><span id="supportFeedbackQueueLabel"></span> <button type="button" class="ghost" id="supportFeedbackQueueClear">Show all staff tickets</button></div>
       <p id="supportListStatus" class="status" role="status" aria-live="polite"></p>
       <div id="supportTicketList"></div>
       <button type="button" class="ghost" id="supportLoadMore" hidden>Load older tickets</button>
@@ -116,9 +117,11 @@
   const status = (id, message) => { el(id).textContent = message || ""; };
   const date = value => new Date(value).toLocaleString();
   const labels = {open:"Open",waiting_on_staff:"Waiting on support",waiting_on_user:"Waiting on collector",resolved:"Resolved"};
-  let userId = null, generation = 0, isStaff = false, staffView = false, staffSafetyOnly = false, ticketFilter = "all", ticketCategory = "all", selected = null, tickets = [], ticketOffset = 0, ticketListRequest = 0, loadingTickets = false, moreTickets = false, replyOffset = 0, moreReplies = false, loadingReplies = false, replyRequest = 0, returnToFeedback = false, returnTopic = "feedback", feedbackMode = false, tradeConcernMode = false, listingReportId = null, pendingReportId = null, viewGeneration = 0;
+  let userId = null, generation = 0, isStaff = false, staffView = false, staffSafetyOnly = false, ticketFilter = "all", ticketCategory = "all", feedbackQueueSubject = null, selected = null, tickets = [], ticketOffset = 0, ticketListRequest = 0, loadingTickets = false, moreTickets = false, replyOffset = 0, moreReplies = false, loadingReplies = false, replyRequest = 0, returnToFeedback = false, returnTopic = "feedback", feedbackMode = false, tradeConcernMode = false, listingReportId = null, pendingReportId = null, viewGeneration = 0;
   // Drafts are tab-memory only, keyed by ticket and purged on account/view reset.
   const replyDrafts = new Map();
+  const feedbackQueueSubjects = Object.freeze({empty:"[Idea] Improve marketplace search results",discovery:"[Idea] Improve listing discovery",contact:"[Idea] Improve listing contact experience"});
+  const feedbackQueueLabels = Object.freeze({empty:"No-result reports",discovery:"Discovery reports",contact:"Contact-friction reports"});
   const feedbackKinds = {
     bug: {prefix:"[Bug] ", hint:"What went wrong?"},
     idea: {prefix:"[Idea] ", hint:"What could DeckPlay improve?"},
@@ -204,6 +207,7 @@
     el("supportLoadMore").hidden = true; el("supportLoadMore").disabled = false;
     selected = null; tickets = []; replyDrafts.clear(); isStaff = false; staffView = false; staffSafetyOnly = false; ticketFilter = "all"; ticketCategory = "all";
     el("supportTicketCategory").value = "all"; el("supportTicketCategory").disabled = false;
+    feedbackQueueSubject=null;el("supportFeedbackQueueNotice").hidden=true;el("supportFeedbackQueueLabel").textContent="";
     modal.querySelectorAll("[data-support-filter]").forEach(button => button.setAttribute("aria-pressed", String(button.dataset.supportFilter === ticketFilter)));
     el("supportTicketList").replaceChildren();
     el("supportTicketDetail").hidden = true;
@@ -415,7 +419,7 @@
     ids.forEach(id=>el(id).textContent="—");
     status("supportFeedbackOverviewStatus","Loading opt-in feedback counts…");
     try{
-      const subjects=["[Idea] Improve marketplace search results","[Idea] Improve listing discovery","[Idea] Improve listing contact experience"];
+      const subjects=Object.values(feedbackQueueSubjects);
       const results=await Promise.all(subjects.map(subject=>supabaseClient.from("support_tickets")
         .select("id",{count:"exact",head:true}).eq("category","other").eq("subject",subject)));
       if(!current())return;
@@ -454,6 +458,8 @@
       if (ticketFilter === "resolved") query = query.eq("status","resolved");
       // Filter on the server before the 40-row page; never silently omit older matches.
       if (ticketCategory !== "all") query = query.eq("category",ticketCategory);
+      // Staff-only drill-down: a fixed subject filter runs before pagination.
+      if (staffView && isStaff && feedbackQueueSubject) query = query.eq("subject",feedbackQueueSubject);
       const {data,error} = await query;
       if (error) throw error;
       if (!valid(v,u) || request !== ticketListRequest) return;
@@ -586,19 +592,46 @@
     el("supportRepliesLoadMore").hidden=true;
     void loadTickets();
   }));
+  function clearFeedbackQueue(){
+    feedbackQueueSubject=null;
+    el("supportFeedbackQueueNotice").hidden=true;
+    el("supportFeedbackQueueLabel").textContent="";
+  }
+  modal.querySelectorAll("[data-feedback-queue]").forEach(button=>button.addEventListener("click",()=>{
+    if(!isStaff||!userId)return;
+    const key=button.dataset.feedbackQueue,subject=feedbackQueueSubjects[key];
+    if(!subject)return;
+    staffView=true;staffSafetyOnly=false;feedbackQueueSubject=subject;
+    resetTicketCategory("other",true);
+    el("supportStaffSafety").setAttribute("aria-pressed","false");
+    ticketFilter="all";
+    modal.querySelectorAll("[data-support-filter]").forEach(item=>item.setAttribute("aria-pressed",String(item.dataset.supportFilter==="all")));
+    el("supportFeedbackQueueLabel").textContent="Reviewing "+feedbackQueueLabels[key]+" (voluntary reports only).";
+    el("supportFeedbackQueueNotice").hidden=false;
+    selected=null;el("supportTicketDetail").hidden=true;
+    ++replyRequest;el("supportReplies").replaceChildren();el("supportRepliesLoadMore").hidden=true;
+    void loadTickets();
+  }));
+  el("supportFeedbackQueueClear").addEventListener("click",()=>{
+    if(!isStaff||!userId)return;
+    clearFeedbackQueue();resetTicketCategory();
+    selected=null;el("supportTicketDetail").hidden=true;
+    ++replyRequest;el("supportReplies").replaceChildren();el("supportRepliesLoadMore").hidden=true;
+    void loadTickets();
+  });
   el("supportTicketCategory").addEventListener("change",()=>{
     const next=el("supportTicketCategory").value;
     if(!["all","account","listing","messages","offers_trades","safety","other"].includes(next) || el("supportTicketCategory").disabled)return;
-    ticketCategory=next;selected=null;el("supportTicketDetail").hidden=true;
+    clearFeedbackQueue();ticketCategory=next;selected=null;el("supportTicketDetail").hidden=true;
     ++replyRequest;el("supportReplies").replaceChildren();el("supportRepliesLoadMore").hidden=true;
     void loadTickets();
   });
   function resetTicketCategory(next="all",locked=false){
     ticketCategory=next;el("supportTicketCategory").value=next;el("supportTicketCategory").disabled=locked;
   }
-  el("supportMine").addEventListener("click",()=>{staffView=false;staffSafetyOnly=false;resetTicketCategory();el("supportStaffSafety").setAttribute("aria-pressed","false");selected=null;el("supportTicketDetail").hidden=true;loadTickets()});
-  el("supportStaff").addEventListener("click",()=>{if(!isStaff)return;staffView=true;staffSafetyOnly=false;resetTicketCategory();el("supportStaffSafety").setAttribute("aria-pressed","false");selected=null;el("supportTicketDetail").hidden=true;loadTickets()});
-  el("supportStaffSafety").addEventListener("click",()=>{if(!isStaff)return;staffView=true;staffSafetyOnly=true;resetTicketCategory("safety",true);el("supportStaffSafety").setAttribute("aria-pressed","true");selected=null;el("supportTicketDetail").hidden=true;loadTickets()});
+  el("supportMine").addEventListener("click",()=>{clearFeedbackQueue();staffView=false;staffSafetyOnly=false;resetTicketCategory();el("supportStaffSafety").setAttribute("aria-pressed","false");selected=null;el("supportTicketDetail").hidden=true;loadTickets()});
+  el("supportStaff").addEventListener("click",()=>{clearFeedbackQueue();if(!isStaff)return;staffView=true;staffSafetyOnly=false;resetTicketCategory();el("supportStaffSafety").setAttribute("aria-pressed","false");selected=null;el("supportTicketDetail").hidden=true;loadTickets()});
+  el("supportStaffSafety").addEventListener("click",()=>{clearFeedbackQueue();if(!isStaff)return;staffView=true;staffSafetyOnly=true;resetTicketCategory("safety",true);el("supportStaffSafety").setAttribute("aria-pressed","true");selected=null;el("supportTicketDetail").hidden=true;loadTickets()});
   el("supportRefresh").addEventListener("click", () => { void loadTickets(); if(isStaff)void refreshStaffOverview(); });
   el("supportNewForm").addEventListener("submit",async e=>{
     e.preventDefault();
