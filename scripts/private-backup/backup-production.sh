@@ -16,25 +16,14 @@ if [[ "$DECKPLAY_PROD_DATABASE_URL" != *"$DECKPLAY_PROD_PROJECT_REF"* ]]; then
 fi
 # Fail fast if the owner pasted a hostname, psql command or dashboard URL
 # instead of the complete Supabase PostgreSQL connection URI.
-node --input-type=module <<'NODE'
-const uri = process.env.DECKPLAY_PROD_DATABASE_URL;
-let u;
-try { u = new URL(uri); } catch { throw Error('Backup database secret is not a PostgreSQL URI. Copy the Session Pooler URI from Supabase Connect.'); }
-const host = u.hostname.toLowerCase();
-if (!['postgresql:', 'postgres:'].includes(u.protocol) ||
-    !u.username || !u.password || !u.pathname || u.pathname === '/' ||
-    !/(?:^|\\.)supabase\\.(?:co|com)$/.test(host) ||
-    !(u.username.includes('yffruutknztvdyioovmp') || host.includes('yffruutknztvdyioovmp'))) {
-  throw Error('Backup database secret must be the full production Supabase PostgreSQL URI with username, password, database and valid Supabase host. No credentials were printed.');
-}
-NODE
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+node "$SCRIPT_DIR/validate-database-uri.mjs"
 if [[ "${#DECKPLAY_BACKUP_PASSPHRASE}" -lt 24 ]]; then
   echo "Backup encryption passphrase must be at least 24 characters." >&2; exit 1
 fi
 for cmd in docker node gpg tar sha256sum grep; do
   command -v "$cmd" >/dev/null || { echo "Required backup command unavailable: $cmd" >&2; exit 1; }
 done
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 WORK="$(mktemp -d "$RUNNER_TEMP/deckplay-plain.XXXXXXXX")"
 cleanup() { rm -rf -- "$WORK"; }
 trap cleanup EXIT
