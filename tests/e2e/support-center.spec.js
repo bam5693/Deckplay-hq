@@ -570,6 +570,8 @@ test('T8.4: staff safety queue filters reports before pagination and does not ex
  await page.locator('#supportStaff').click();
  await expect(page.locator('#supportTicketList button')).toHaveCount(40);
  await expect(page.locator('#supportStaffSafety')).toHaveAttribute('aria-pressed','false');
+ await page.locator('#supportLoadMore').click();
+ await expect(page.locator('#supportTicketList button')).toHaveCount(80);
  await expect(page.locator('#supportTicketList')).toContainText('Unrelated account issue');
  await page.evaluate(()=>{window.currentUser={id:'buyer'};window.__authCallback('SIGNED_IN',{user:{id:'buyer'}})});
  await expect(page.locator('#supportCenterModal')).not.toHaveClass(/open/);
