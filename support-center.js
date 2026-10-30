@@ -608,8 +608,9 @@
       if(replyDrafts.get(id)===submittedRaw)replyDrafts.delete(id);
       if(selected!==id)return; // Never erase or overwrite the other ticket's draft.
       if(el("supportReplyBody").value===submittedRaw)el("supportReplyBody").value="";
-      status("supportReplyStatus",replyDrafts.has(id)?"Reply sent. Your newer draft is saved.":"Reply sent.");
-      await loadTickets();
+      const newerDraftSaved=replyDrafts.has(id);
+      await loadTickets(); // Refresh reopens the ticket and clears the previous status line.
+      if(validWrite(v,u)&&selected===id)status("supportReplyStatus",newerDraftSaved?"Reply sent. Your newer draft is saved.":"Reply sent.");
     }catch(error){if(validWrite(v,u)&&selected===id)status("supportReplyStatus",error.message||"Reply failed. Your text is preserved.")}
     finally{button.disabled=false}
   });
