@@ -1,0 +1,36 @@
+name: Focused private search feedback checks
+on:
+  workflow_dispatch:
+  push:
+    branches: [test/staging-reporting]
+    paths: ['.github/workflows/search-feedback-focused.yml']
+permissions:
+  contents: read
+concurrency:
+  group: deckplay-search-feedback-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  focused-ui:
+    if: github.ref == 'refs/heads/test/staging-reporting'
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Cheap preflight
+        run: |
+          node scripts/check-inline-js.cjs
+          node --check support-center.js
+          node --check tests/e2e/support-center.spec.js
+      - name: Cache Chromium
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: staging-playwright-${{ hashFiles('package-lock.json') }}
+      - run: npx playwright install chromium --only-shell
+      - name: T7.5 opt-in search feedback mobile and desktop
+        run: npx playwright test --config=playwright.local.config.js support-center.spec.js --grep 'T7.5:' --project=local-desktop --project=local-mobile --max-failures=1 --timeout=20000
