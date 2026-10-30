@@ -1,15 +1,18 @@
 {
   "approvedApplicationTree": null,
   "productionSchemaVerified": false,
-  "previewAcceptanceVerified": false,
+  "previewAcceptanceVerified": true,
   "rollbackVerified": true,
   "blockers": [
     "Existing actual full production archive restored and all 61 table fingerprints match; a fresh database snapshot still requires secure production connection access",
     "Managed Auth sign-in/MFA, external configuration recovery and Storage service re-upload remain unverified",
-    "Updated candidate requires signed deployed preview verification",
     "Production schema remains intentionally unchanged; apply only the approved migration and require its read-only contract before publishing"
   ],
   "productionMigrationRehearsalVerified": true,
   "backupProcedureRehearsalVerified": true,
-  "candidateCodeCommit": "e9b0bbd405fa64caae20478584d4d181a3aefa58"
+  "candidateCodeCommit": "bec838936f1963617fd1124a85989bbeb4dae938",
+  "actualDatabaseRestoreVerified": true,
+  "actualRecoveredMigrationVerified": true,
+  "storageObjectBytesVerified": true,
+  "managedServiceRecoveryVerified": false
 }
