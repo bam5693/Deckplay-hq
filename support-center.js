@@ -30,6 +30,7 @@
         <button type="button" class="ghost" data-support-filter="active" aria-pressed="false">Open tickets</button>
         <button type="button" class="ghost" data-support-filter="resolved" aria-pressed="false">Resolved tickets</button>
       </div>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px"><label for="supportTicketCategory">Ticket topic</label><select id="supportTicketCategory" aria-label="Filter support tickets by topic"><option value="all">All topics</option><option value="account">Account and sign-in</option><option value="listing">Listings and photos</option><option value="messages">Inbox and messages</option><option value="offers_trades">Offers and trades</option><option value="safety">Safety concerns</option><option value="other">Other collectibles / feedback</option></select></div>
       <section id="supportStaffOverview" hidden aria-label="Verified staff support queue overview" style="border:1px solid #819c9660;border-radius:12px;padding:12px;margin:10px 0">
         <strong>Staff support overview</strong>
         <p class="muted" style="font-size:12px;margin:5px 0">Live queue totals from the private support database. No private messages or customer information are included.</p>
@@ -105,7 +106,7 @@
   const status = (id, message) => { el(id).textContent = message || ""; };
   const date = value => new Date(value).toLocaleString();
   const labels = {open:"Open",waiting_on_staff:"Waiting on support",waiting_on_user:"Waiting on collector",resolved:"Resolved"};
-  let userId = null, generation = 0, isStaff = false, staffView = false, staffSafetyOnly = false, ticketFilter = "all", selected = null, tickets = [], ticketOffset = 0, ticketListRequest = 0, loadingTickets = false, moreTickets = false, replyOffset = 0, moreReplies = false, loadingReplies = false, replyRequest = 0, returnToFeedback = false, returnTopic = "feedback", feedbackMode = false, tradeConcernMode = false, listingReportId = null, pendingReportId = null, viewGeneration = 0;
+  let userId = null, generation = 0, isStaff = false, staffView = false, staffSafetyOnly = false, ticketFilter = "all", ticketCategory = "all", selected = null, tickets = [], ticketOffset = 0, ticketListRequest = 0, loadingTickets = false, moreTickets = false, replyOffset = 0, moreReplies = false, loadingReplies = false, replyRequest = 0, returnToFeedback = false, returnTopic = "feedback", feedbackMode = false, tradeConcernMode = false, listingReportId = null, pendingReportId = null, viewGeneration = 0;
   // Drafts are tab-memory only, keyed by ticket and purged on account/view reset.
   const replyDrafts = new Map();
   const feedbackKinds = {
@@ -191,7 +192,8 @@
   function clearPrivate() {
     ++ticketListRequest; loadingTickets = false; moreTickets = false; ticketOffset = 0;
     el("supportLoadMore").hidden = true; el("supportLoadMore").disabled = false;
-    selected = null; tickets = []; replyDrafts.clear(); isStaff = false; staffView = false; staffSafetyOnly = false; ticketFilter = "all";
+    selected = null; tickets = []; replyDrafts.clear(); isStaff = false; staffView = false; staffSafetyOnly = false; ticketFilter = "all"; ticketCategory = "all";
+    el("supportTicketCategory").value = "all"; el("supportTicketCategory").disabled = false;
     modal.querySelectorAll("[data-support-filter]").forEach(button => button.setAttribute("aria-pressed", String(button.dataset.supportFilter === ticketFilter)));
     el("supportTicketList").replaceChildren();
     el("supportTicketDetail").hidden = true;
@@ -413,6 +415,8 @@
       if (staffView && isStaff && staffSafetyOnly) query = query.eq("category","safety");
       if (ticketFilter === "active") query = query.neq("status","resolved");
       if (ticketFilter === "resolved") query = query.eq("status","resolved");
+      // Filter on the server before the 40-row page; never silently omit older matches.
+      if (ticketCategory !== "all") query = query.eq("category",ticketCategory);
       const {data,error} = await query;
       if (error) throw error;
       if (!valid(v,u) || request !== ticketListRequest) return;
@@ -435,6 +439,7 @@
       }
       loadMore.hidden = !moreTickets;
       status("supportListStatus", tickets.length ? "Showing " + tickets.length + (staffSafetyOnly && staffView ? " safety reports or appeals." : " tickets. Select one to view private replies.") :
+        ticketCategory !== "all" ? "No " + el("supportTicketCategory").selectedOptions[0].textContent.toLowerCase() + " tickets in this view." :
         ticketFilter === "active" ? "No open tickets in this view." :
         ticketFilter === "resolved" ? "No resolved tickets in this view." : "No tickets in this view.");
       if (!append) {
@@ -544,9 +549,19 @@
     el("supportRepliesLoadMore").hidden=true;
     void loadTickets();
   }));
-  el("supportMine").addEventListener("click",()=>{staffView=false;staffSafetyOnly=false;el("supportStaffSafety").setAttribute("aria-pressed","false");selected=null;el("supportTicketDetail").hidden=true;loadTickets()});
-  el("supportStaff").addEventListener("click",()=>{if(!isStaff)return;staffView=true;staffSafetyOnly=false;el("supportStaffSafety").setAttribute("aria-pressed","false");selected=null;el("supportTicketDetail").hidden=true;loadTickets()});
-  el("supportStaffSafety").addEventListener("click",()=>{if(!isStaff)return;staffView=true;staffSafetyOnly=true;el("supportStaffSafety").setAttribute("aria-pressed","true");selected=null;el("supportTicketDetail").hidden=true;loadTickets()});
+  el("supportTicketCategory").addEventListener("change",()=>{
+    const next=el("supportTicketCategory").value;
+    if(!["all","account","listing","messages","offers_trades","safety","other"].includes(next) || el("supportTicketCategory").disabled)return;
+    ticketCategory=next;selected=null;el("supportTicketDetail").hidden=true;
+    ++replyRequest;el("supportReplies").replaceChildren();el("supportRepliesLoadMore").hidden=true;
+    void loadTickets();
+  });
+  function resetTicketCategory(next="all",locked=false){
+    ticketCategory=next;el("supportTicketCategory").value=next;el("supportTicketCategory").disabled=locked;
+  }
+  el("supportMine").addEventListener("click",()=>{staffView=false;staffSafetyOnly=false;resetTicketCategory();el("supportStaffSafety").setAttribute("aria-pressed","false");selected=null;el("supportTicketDetail").hidden=true;loadTickets()});
+  el("supportStaff").addEventListener("click",()=>{if(!isStaff)return;staffView=true;staffSafetyOnly=false;resetTicketCategory();el("supportStaffSafety").setAttribute("aria-pressed","false");selected=null;el("supportTicketDetail").hidden=true;loadTickets()});
+  el("supportStaffSafety").addEventListener("click",()=>{if(!isStaff)return;staffView=true;staffSafetyOnly=true;resetTicketCategory("safety",true);el("supportStaffSafety").setAttribute("aria-pressed","true");selected=null;el("supportTicketDetail").hidden=true;loadTickets()});
   el("supportRefresh").addEventListener("click", () => { void loadTickets(); if(isStaff)void refreshStaffOverview(); });
   el("supportNewForm").addEventListener("submit",async e=>{
     e.preventDefault();
