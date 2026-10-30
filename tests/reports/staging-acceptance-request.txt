@@ -12,3 +12,4 @@
 
 2026-10-30 11:50 Central — T8.2 staff-only support command overview. Verify support-center.js Node parse and ONLY support-center.spec.js local mobile+desktop behavior. Test real server-queried unresolved/safety ticket counts (HEAD exact/RLS, not first-page counts), staff-auth-only UI, post-resolve refresh and account-switch wipe; no production or staging API writes, no full suite. Source d1ff2f5, regression c6d01e3. Run focused local first and block deployment if any test fails.
 2026-10-30 T8.3 in-flight support reply draft preservation; focused LOCAL support-center mobile/desktop regression, commits 356a12b and ea8e9c3. No staging deploy or production writes.
+2026-10-30 T8.3 focused local retry: run 41095899720 passed 54 cases but new case exposed ticket refresh clearing reply confirmation; corrected in 4641436. Run same existing mobile/desktop local checks once, no staging deploy or production changes.
