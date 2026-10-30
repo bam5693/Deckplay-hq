@@ -1,0 +1,21 @@
+name: Temporary staging trade diagnostic launcher
+on:
+  push:
+    branches: [test/staging-reporting]
+    paths: ['.github/workflows/staging-diagnostic-temp-launcher.yml']
+permissions:
+  contents: read
+  actions: write
+jobs:
+  trigger:
+    if: github.ref == 'refs/heads/test/staging-reporting'
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Dispatch existing private staging workflow with narrow trade diagnostics
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api -X POST repos/${{ github.repository }}/actions/workflows/private-staging.yml/dispatches \
+            -f ref=test/staging-reporting \
+            -f 'inputs[focused_live_test]=trading'
