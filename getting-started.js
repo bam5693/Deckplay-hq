@@ -34,6 +34,15 @@
     selectGuide(tabs[next].dataset.guideTab);
     tabs[next].focus();
   });
+  const feedback = document.createElement("button");
+  feedback.type = "button";
+  feedback.className = "ghost";
+  feedback.textContent = "Share beta feedback";
+  feedback.setAttribute("aria-label", "Share private beta feedback with DeckPlay support");
+  feedback.addEventListener("click", () => {
+    document.dispatchEvent(new Event("deckplay:open-feedback"));
+  });
+  guide.append(feedback);
   const footer = document.querySelector("footer");
   if (footer) {
     const button = document.createElement("button");
