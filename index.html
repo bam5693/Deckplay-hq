@@ -2772,7 +2772,6 @@ function startMessageUpdates(){
  messagePoll=setInterval(()=>{if(!document.hidden){refreshUnreadCount();refreshTradeAlerts();refreshNotificationCount();scheduleLiveInboxRefresh()}},10000);
 }
 
-loadWanted();
 document.getElementById("year").textContent=new Date().getFullYear();
 setAuthMode("signin");render();refreshSellerRatingCache();
 // INITIAL_SESSION is handled by onAuthStateChange above; do not duplicate startup fetches.
