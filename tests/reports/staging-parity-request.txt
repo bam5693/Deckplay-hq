@@ -1,1 +1,2 @@
 2026-10-30 T8.3 read-only post-deployment exact private staging asset parity. Verify all served files, anonymous 401 Basic Auth, staging Supabase only, source HEAD and no production writes. Deploy run 41026343950 succeeded. No extra deployment.
+2026-10-30: verify exact staging assets after passing 6 focused Android Back draft guards run 41134639804, private deploy 41134713003. Only read the protected staging site. Production unchanged.
