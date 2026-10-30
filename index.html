@@ -2769,7 +2769,7 @@ function startMessageUpdates(){
  .on("postgres_changes",{event:"*",schema:"public",table:"trade_offers"},updateInboxActivity)
  .on("postgres_changes",{event:"*",schema:"public",table:"price_offer_history"},updateInboxActivity)
  .on("postgres_changes",{event:"UPDATE",schema:"public",table:"listings"},()=>loadListings()).subscribe();
- messagePoll=setInterval(()=>{if(!document.hidden){refreshUnreadCount();refreshTradeAlerts();refreshNotificationCount();scheduleLiveInboxRefresh()}},10000);
+ messagePoll=setInterval(()=>{if(!document.hidden){refreshUnreadCount();refreshTradeAlerts();scheduleLiveInboxRefresh()}},30000);
 }
 
 document.getElementById("year").textContent=new Date().getFullYear();
