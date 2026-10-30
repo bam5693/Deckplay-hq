@@ -4,7 +4,7 @@ window.listingEditor=(()=>{
  const modal=document.getElementById('editListingModal'),form=document.getElementById('editListingForm'),status=document.getElementById('editListingStatus');
  const classification=createListingEditorClassification(document.getElementById('editListingClassification'),status);
  const photos=createListingEditorPhotos(document.getElementById('editListingPhotos'),status);
- let version=0,record=null,busy=false,cleanSnapshot="";
+ let version=0,record=null,busy=false,cleanSnapshot="",editorHistoryDepth=null;
  // FormData omits nameless controls, so compare all actual seller-edit fields.
  // Photo changes live in a separate stateful editor and must be checked too.
  const formSnapshot=()=>JSON.stringify([...form.elements].filter(el=>el.id&&
@@ -17,12 +17,32 @@ window.listingEditor=(()=>{
   if(!busy&&hasUnsavedChanges()&&!window.confirm('Discard your unsaved listing changes?'))return;
   reset();
  }
+ const discardEditorState=()=>{
+  version++;record=null;cleanSnapshot='';editorHistoryDepth=null;form.reset();
+  photos.reset();classification.reset();status.textContent='';lock(false);
+ };
+ // Browser / Android Back fires popstate before the global navigation listener.
+ // Restore the same modal history depth if the seller keeps their draft.
+ // Do not call closeModal here: it calls history.back() and would skip a screen.
+ window.addEventListener('popstate',event=>{
+  if(!modal.classList.contains('open')||!event.state?.deckplayNav||
+     !Number.isInteger(editorHistoryDepth)||event.state.deckplayDepth>=editorHistoryDepth)return;
+  if([...document.querySelectorAll('.modal.open')].at(-1)!==modal)return;
+  if((busy&&record)||(hasUnsavedChanges()&&!window.confirm('Discard your unsaved listing changes?'))){
+   event.stopImmediatePropagation();
+   history.pushState({...event.state,deckplayNav:true,deckplayDepth:editorHistoryDepth},'');
+   return;
+  }
+  // The global popstate handler now closes the editor at the correct screen.
+  // Invalidate in-flight owner lookups and clear all private photo/form state.
+  discardEditorState();
+ },true);
  const lock=value=>{busy=value;for(const el of form.elements)el.disabled=value;document.getElementById('saveListingEdits').textContent=value?'Saving…':'Save changes';photos.setBusy(value);classification.setBusy(value)};
- function reset(){version++;record=null;cleanSnapshot='';form.reset();photos.reset();classification.reset();status.textContent='';lock(false);closeModal('editListingModal')}
+ function reset(){discardEditorState();closeModal('editListingModal')}
  async function open(id){
   if(!currentUser)return;const owner=currentUser.id,epoch=listingAccountVersion,request=++version;
   const valid=()=>currentUser?.id===owner&&listingAccountVersion===epoch&&version===request;
-  record=null;form.reset();photos.reset();classification.reset();lock(true);status.textContent='Loading current listing…';openModal('editListingModal');
+  record=null;form.reset();photos.reset();classification.reset();lock(true);status.textContent='Loading current listing…';openModal('editListingModal');editorHistoryDepth=history.state?.deckplayNav?history.state.deckplayDepth:null;
   try{
    const {data,error}=await supabaseClient.from('listings').select('id,seller_id,title,description,price,accepts_trades,accepts_price_offers,updated_at,status,image_urls,category,tcg_game,collectible_subcategory,product_type,condition').eq('id',id).eq('seller_id',owner).eq('status','active').maybeSingle();
    if(!valid())return;if(error)throw error;if(!data||data.seller_id!==owner||data.status!=='active'||!data.updated_at)throw Error('This listing is no longer available to edit. Refresh your listings.');
