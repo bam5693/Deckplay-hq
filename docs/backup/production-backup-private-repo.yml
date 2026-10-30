@@ -32,7 +32,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: bam5693/Deckplay-hq
-          ref: REPLACE_WITH_REVIEWED_SOURCE_SHA
+          ref: 7e2254b3ecace644928c13cf8a530c87bb601ba4
           path: deckplay-backup-kit
           persist-credentials: false
       - name: Preflight: syntax and simulated inventory/path tests
