@@ -1,1 +1,1 @@
-2026-10-29 focused modal navigation acceptance: run six desktop/mobile cases for trade and price offer modal-to-Inbox routes, blocked collector read-only and Android Back. Atomic navigation avoids delayed popstate restoration. Local-only, no staging redeploy.
+2026-10-30 T8.3 focused acceptance request at aeaac1692bd6fd9553c6871a301df59b10f64818: local-only desktop/mobile support-center.spec.js; support ticket creation, replies, server-side open/resolved status filtering, staff scope and account isolation. No live staging DB writes, no deployment or payments.
