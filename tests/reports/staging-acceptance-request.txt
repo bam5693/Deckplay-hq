@@ -1,1 +1,1 @@
-2026-10-30 T8.3 focused acceptance request at aeaac1692bd6fd9553c6871a301df59b10f64818: local-only desktop/mobile support-center.spec.js; support ticket creation, replies, server-side open/resolved status filtering, staff scope and account isolation. No live staging DB writes, no deployment or payments.
+2026-10-30 focused current-HEAD T7.4 first-time buyer/seller onboarding plus T8.3 support regression, local-only Pixel 7 and desktop Chromium. Private deployed asset parity already passed run 41026459064; no Supabase writes, no redeployment.
