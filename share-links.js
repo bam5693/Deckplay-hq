@@ -11,16 +11,16 @@ function sharedUrl(kind,id){
 // Update the visible browser tab after a validated public item is resolved.
 // Crawlers require server-rendered metadata; this is deliberately not an SEO claim.
 function setSharedPageTitle(kind,label){
- const safe=String(label||'').replace(/[\\r\\n\\t]+/g,' ').trim().slice(0,90);
+ const safe=String(label||'').replace(/[\r\n\t]+/g,' ').trim().slice(0,90);
  if(!safe)return;
  document.title=safe+' | DeckPlay HQ';
 }
 // These tags improve in-browser previews only. Social crawlers need server-side
 // public-data rendering and must never be given private account content.
 function setListingBrowserMetadata(row){
- const title=String(row.title||'').replace(/[\\r\\n\\t]+/g,' ').trim().slice(0,90);
+ const title=String(row.title||'').replace(/[\r\n\t]+/g,' ').trim().slice(0,90);
  if(!title)return;
- const description=String(row.description||'').replace(/\\s+/g,' ').trim().slice(0,155)
+ const description=String(row.description||'').replace(/\s+/g,' ').trim().slice(0,155)
    || 'Explore this collectible listing on DeckPlay HQ.';
  const update=(selector,value)=>{
   const node=document.querySelector(selector);
@@ -32,6 +32,22 @@ function setListingBrowserMetadata(row){
  update('meta[property="og:description"]',description);
  update('meta[name="twitter:title"]',title+' | DeckPlay HQ');
  update('meta[name="twitter:description"]',description);
+}
+// Browser-tab metadata for an already-loaded public collector profile only.
+// A profile name is never fetched with privileged credentials or from private chats.
+// Social crawlers still require explicitly scoped server-rendered previews.
+function setCollectorBrowserMetadata(label){
+ const title=String(label||'').replace(/[\r\n\t]+/g,' ').trim().slice(0,90);
+ if(!title)return;
+ const description='Browse this collector\'s public profile and active collectibles on DeckPlay HQ.';
+ setSharedPageTitle('collector',title);
+ for(const [selector,value] of [
+  ['meta[name="description"]',description],
+  ['meta[property="og:title"]',title+' | DeckPlay HQ'],
+  ['meta[property="og:description"]',description],
+  ['meta[name="twitter:title"]',title+' | DeckPlay HQ'],
+  ['meta[name="twitter:description"]',description]
+ ]) document.querySelector(selector)?.setAttribute('content',value);
 }
 async function shareLink(kind,id,nativeShare){
  const url=sharedUrl(kind,id);
@@ -112,7 +128,10 @@ async function openSharedLinkOnce(){
    if(!await checkBlocked(id,account,same)||!same())return;
    const outcome=await showPublicProfile(id);
    if(!same())return;
-   if(outcome==='ready'){attempted=true;clearRetry();return}
+   if(outcome==='ready'){
+    setCollectorBrowserMetadata(document.getElementById('publicProfileTitle')?.textContent);
+    attempted=true;clearRetry();return
+   }
    // A failed profile lookup can leave a modal over the Retry button.
    closeModal('publicProfileModal');
    if(outcome==='missing'){
