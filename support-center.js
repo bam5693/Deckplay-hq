@@ -596,15 +596,19 @@
     const form=e.currentTarget,button=form.querySelector('button[type="submit"]');
     if(button.disabled)return;
     const id=selected,u=userId,v=viewGeneration;
+    // Snapshot the submitted text. Collectors may keep typing while the RPC is in flight.
+    // Never erase a newer draft just because an older version was accepted.
+    const submittedRaw=el("supportReplyBody").value;
+    const submittedBody=submittedRaw.trim();
     button.disabled=true;status("supportReplyStatus","Sending…");
     try{
-      const {error}=await supabaseClient.rpc("reply_support_ticket",{p_ticket_id:id,p_body:el("supportReplyBody").value.trim()});
+      const {error}=await supabaseClient.rpc("reply_support_ticket",{p_ticket_id:id,p_body:submittedBody});
       if(error)throw error;
       if(!validWrite(v,u))return;
-      replyDrafts.delete(id); // The server accepted this ticket reply, even if another ticket is now open.
+      if(replyDrafts.get(id)===submittedRaw)replyDrafts.delete(id);
       if(selected!==id)return; // Never erase or overwrite the other ticket's draft.
-      el("supportReplyBody").value="";
-      status("supportReplyStatus","Reply sent.");
+      if(el("supportReplyBody").value===submittedRaw)el("supportReplyBody").value="";
+      status("supportReplyStatus",replyDrafts.has(id)?"Reply sent. Your newer draft is saved.":"Reply sent.");
       await loadTickets();
     }catch(error){if(validWrite(v,u)&&selected===id)status("supportReplyStatus",error.message||"Reply failed. Your text is preserved.")}
     finally{button.disabled=false}
