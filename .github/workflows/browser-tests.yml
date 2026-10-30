@@ -31,6 +31,7 @@ jobs:
       - name: Verify account isolation and fixture safety
         run: node --test tests/security/*test.*
   test:
+    needs: preflight
     # Full desktop/mobile Playwright suite is a release milestone or a manual request.
     # Draft PRs get the security preflight above; focused staging acceptance is separate.
     if: ${{ github.event_name == 'workflow_dispatch' || github.event.pull_request.draft == false }}
@@ -42,8 +43,6 @@ jobs:
         with:
           node-version: '22'
       - run: npm ci
-      - name: Verify staging authorization and fixture cleanup boundaries
-        run: node --test tests/security/*test.*
       - name: Cache Playwright browsers
         uses: actions/cache@v4
         with:
