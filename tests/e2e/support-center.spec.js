@@ -2,7 +2,7 @@ const {test,expect}=require('@playwright/test');
 const path=require('node:path');
 // Isolated UI/API contract test: no Supabase traffic, no private credentials, no quota usage.
 async function boot(page){
- await page.setContent('<footer></footer><div id="accountMenu"><button id="signOutButton">Sign out</button></div>');
+ await page.setContent('<footer></footer><div id="accountMenu"><button id="signOutButton">Sign out</button></div><div id="authModal" class="modal"><button type="button" data-close="authModal">Close sign in</button></div>');
  await page.evaluate(()=>{
   window.currentUser=null;
   window.__db={tickets:[],replies:[],calls:[]};
@@ -61,7 +61,7 @@ test('signed-out Help Center explains all categories and forbids fake checkout',
  await page.getByText('Can I pay or print a shipping label?').click();
  await expect(page.getByText('No payment, payout, shipping label or purchase')).toBeVisible();
  await expect(page.locator('#supportPrivate')).toBeHidden();
- await expect(page.getByText('Sign in to open and follow private support tickets.')).toBeVisible();
+ await expect(page.getByText('Sign in to send feedback or open and follow private support tickets.')).toBeVisible();
 });
 test('collector creates, reads and replies to private ticket, account switch clears view',async({page})=>{
  await boot(page);await signIn(page,'buyer');
@@ -101,4 +101,37 @@ test('verified staff sees queue, responds privately and resolves ticket',async({
  await page.getByRole('button',{name:'Save status'}).click();
  await expect(page.locator('#supportTicketState')).toContainText('Resolved');
  await expect(page.locator('#supportReplyForm')).toBeHidden();
+});
+
+test('T8.3: signed-out trade or shipping concern returns to a private ticket after sign-in',async({page})=>{
+ await boot(page);
+ await page.getByRole('button',{name:'Help & support'}).last().click();
+ await page.getByText('What if a trade or shipping arrangement goes wrong?').click();
+ await expect(page.getByText('DeckPlay beta does not process payments')).toBeVisible();
+ await page.getByRole('button',{name:'Get help with a trade or shipping concern'}).click();
+ await expect(page.locator('#authModal')).toHaveClass(/open/);
+ await expect(page.locator('#supportCenterModal')).not.toHaveClass(/open/);
+ await signIn(page,'buyer');
+ await page.evaluate(()=>closeModal('authModal')); // Application auth handler closes its own dialog.
+ await expect(page.locator('#supportCenterModal')).toHaveClass(/open/);
+ await expect(page.locator('#supportCategory')).toHaveValue('offers_trades');
+ await expect(page.locator('#supportSubject')).toHaveValue('Trade or shipping concern');
+ await page.locator('#supportDescription').fill('Synthetic question about a proposed trade; no personal details.');
+ await page.getByRole('button',{name:'Create private ticket'}).click();
+ await expect(page.locator('#supportTicketTitle')).toHaveText('Trade or shipping concern');
+ await expect(page.locator('#supportTicketBody')).toContainText('Synthetic question');
+ await page.evaluate(()=>{window.currentUser={id:'other'};window.__authCallback('SIGNED_IN',{user:{id:'other'}})});
+ await expect(page.locator('#supportCenterModal')).not.toHaveClass(/open/);
+ await expect(page.locator('#supportTicketBody')).toBeEmpty();
+ await expect(page.locator('#supportSubject')).toBeEmpty();
+});
+test('T8.3: cancelling sign-in discards pending trade support navigation',async({page})=>{
+ await boot(page);
+ await page.getByRole('button',{name:'Help & support'}).last().click();
+ await page.getByText('What if a trade or shipping arrangement goes wrong?').click();
+ await page.getByRole('button',{name:'Get help with a trade or shipping concern'}).click();
+ await page.locator('[data-close="authModal"]').click();
+ await page.evaluate(()=>closeModal('authModal'));
+ await signIn(page,'buyer');
+ await expect(page.locator('#supportCenterModal')).not.toHaveClass(/open/);
 });
