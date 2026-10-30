@@ -77,6 +77,24 @@ test('Charles: stale or invalid shared listing fails closed, without a demo list
  await expect(page.locator('#detailModal')).not.toHaveClass(/open/);
  await expect(page.locator('#toast')).toContainText('no longer available');
 });
+test('Charles and Kyle: duplicate or mixed shared URL destinations fail closed on mobile and desktop',async({page})=>{
+ await page.route('https://challenges.cloudflare.com/**',route=>route.abort());
+ await page.route('https://prrrzeelltmyugssqnzk.supabase.co/**',route=>route.fulfill({json:[]}));
+ for(const query of [
+  'listing='+LISTING+'&listing='+SELLER,
+  'collector='+SELLER+'&collector='+LISTING,
+  'listing='+LISTING+'&collector=',
+  'collector='+SELLER+'&listing='
+ ]){
+  await page.goto('/?'+query);
+  await page.waitForLoadState('networkidle');
+  await page.evaluate(()=>window.deckplayOpenSharedLinkOnce());
+  await expect(page.locator('#detailModal')).not.toHaveClass(/open/);
+  await expect(page.locator('#publicProfileModal')).not.toHaveClass(/open/);
+  await expect(page.locator('#toast')).toContainText('shared link is invalid');
+ }
+});
+
 test('Charles: blocked collector link cannot open private or blocked listing details',async({page})=>{
  await ready(page);
  await page.evaluate(async({listing,seller,buyer})=>{
