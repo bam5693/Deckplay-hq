@@ -27,6 +27,29 @@ test('older console collector becomes searchable with a microsecond and id curso
  await page.evaluate(()=>loadInbox());
  await expect(page.locator('.conversation-bubbles')).toContainText('Original console inquiry');
 });
+test('conversation search stays editable and keeps its caret through a slow refresh',async({page})=>{
+ const search=page.locator('[data-conversation-search]');
+ await search.fill('Char');
+ await page.evaluate(()=>{
+  const original=supabaseClient.from;
+  supabaseClient.from=table=>{
+   if(table!=='collector_messages')return original(table);
+   const q={then:resolve=>new Promise(done=>window.finishSearchRefresh=done).then(resolve)};
+   for(const key of ['select','order','limit'])q[key]=()=>q;
+   return q;
+  };
+  window.searchRefresh=loadInbox();
+ });
+ await expect(search).toBeVisible();
+ await search.press('End');await search.pressSequentially('les');
+ await expect(search).toHaveValue('Charles');
+ await page.evaluate(()=>finishSearchRefresh({data:leadingMessages,error:null}));
+ await page.evaluate(()=>searchRefresh);
+ await expect(search).toHaveValue('Charles');await expect(search).toBeFocused();
+ expect(await search.evaluate(el=>el.selectionStart)).toBe(7);
+ await search.pressSequentially('!');
+ await expect(search).toHaveValue('Charles!');
+});
 test('failed conversation paging is retryable without losing the composer draft',async({page})=>{
  await page.locator('[data-conversation-id="charles"]').click();
  await page.locator('#chatInput').fill('Mixed collectible lot draft');

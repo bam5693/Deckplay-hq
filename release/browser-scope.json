@@ -1,6 +1,6 @@
 {
-  "baseIndexBlob": "4885a287a6e88e902d10c39d81277c3f73b95d4f",
-  "indexBlob": "7b648b8efdcbe482e9b7a0d16d101e1a172fb475",
+  "baseIndexBlob": "7b648b8efdcbe482e9b7a0d16d101e1a172fb475",
+  "indexBlob": "e0c08d925729d78962f40e8ac0bd41482fda6132",
   "baselineRun": 40956841483,
   "correctedFixtureRun": 40957716016,
   "specs": [
@@ -15,6 +15,9 @@
     "tests/e2e/inbox-trade-details.spec.js",
     "tests/e2e/account-boundaries.spec.js",
     "tests/e2e/notification-prices.spec.js",
-    "tests/e2e/regressions.spec.js"
+    "tests/e2e/regressions.spec.js",
+    "tests/e2e/listing-gallery.spec.js",
+    "tests/e2e/listing-editor.spec.js",
+    "tests/e2e/listing-publication.spec.js"
   ]
 }

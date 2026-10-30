@@ -1,10 +1,12 @@
 {
   "approvedApplicationTree": null,
   "productionSchemaVerified": false,
-  "previewAcceptanceVerified": true,
-  "rollbackVerified": false,
+  "previewAcceptanceVerified": false,
+  "rollbackVerified": true,
   "blockers": [
-    "Actual private production backup/Auth/Storage recovery has not been verified; privileged connection or private backup unavailable",
+    "Existing actual full production archive restored and all 61 table fingerprints match; a fresh database snapshot still requires secure production connection access",
+    "Managed Auth sign-in/MFA, external configuration recovery and Storage service re-upload remain unverified",
+    "Updated candidate requires signed deployed preview verification",
     "Production schema remains intentionally unchanged; apply only the approved migration and require its read-only contract before publishing"
   ],
   "productionMigrationRehearsalVerified": true,
