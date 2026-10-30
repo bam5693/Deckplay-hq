@@ -14,9 +14,18 @@ async function main(){
   for(const entry of fs.readdirSync(dir,{withFileTypes:true})){
    const relative=prefix+entry.name,local=path.join(dir,entry.name);
    if(entry.isDirectory()){await verify(local,relative+'/');continue}
-   const response=await fetch(origin+'/'+relative,{headers,redirect:'manual',signal:AbortSignal.timeout(15000)});
-   assert.equal(response.status,200,'Asset unavailable: '+relative);
-   assert.ok(Buffer.from(await response.arrayBuffer()).equals(fs.readFileSync(local)),'Deployed asset differs: '+relative);count++;
+   const expected=fs.readFileSync(local);
+   // Cloudflare may briefly serve an earlier Worker isolate right after deployment.
+   // Retry ONLY mismatched assets with a short fixed cap; never accept non-identical bytes.
+   let match=false;
+   for(let attempt=0;attempt<4;attempt++){
+    if(attempt)await new Promise(resolve=>setTimeout(resolve,1500*attempt));
+    const response=await fetch(origin+'/'+relative,{headers:{...headers,'Cache-Control':'no-cache'},redirect:'manual',signal:AbortSignal.timeout(15000)});
+    assert.equal(response.status,200,'Asset unavailable: '+relative);
+    if(Buffer.from(await response.arrayBuffer()).equals(expected)){match=true;break;}
+   }
+   assert.ok(match,'Deployed asset differs after bounded retries: '+relative);
+   count++;
   }
  }
  await verify('dist-staging');
