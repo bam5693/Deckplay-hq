@@ -122,3 +122,30 @@ test('Charles: a delayed shared listing lookup cannot open after account switch'
  },{listing:LISTING,seller:SELLER,buyer:BUYER});
  await expect(page.locator('#detailModal')).not.toHaveClass(/open/);
 });
+
+test('Kyle: a temporary shared-link lookup failure offers a retry and opens the current active listing',async({page})=>{
+ await ready(page);
+ await page.evaluate(({listing,seller})=>{
+  history.replaceState({},'','/?listing='+listing);
+  let offline=true;
+  window.restoreSharedLookup=()=>{offline=false};
+  supabaseClient.from=table=>{
+   if(offline)throw new Error('Temporary offline test');
+   const q={};
+   for(const key of ['select','eq'])q[key]=()=>q;
+   q.maybeSingle=async()=>({data:table==='listings'?{
+    id:listing,title:'Recovered synthetic game collectible',category:'video_games',
+    seller_id:seller,price:22,condition:'used',image_urls:[]
+   }:{username:'retry-collector'},error:null});
+   return q;
+  };
+ },{listing:LISTING,seller:SELLER});
+ await page.evaluate(()=>window.deckplayOpenSharedLinkOnce());
+ await expect(page.locator('#deckplaySharedLinkRetry')).toBeVisible();
+ await expect(page.locator('#detailModal')).not.toHaveClass(/open/);
+ await page.evaluate(()=>window.restoreSharedLookup());
+ await page.getByRole('button',{name:'Retry shared link'}).click();
+ await expect(page.locator('#detailModal')).toHaveClass(/open/);
+ await expect(page.locator('#detailTitle')).toHaveText('Recovered synthetic game collectible');
+ await expect(page.locator('#deckplaySharedLinkRetry')).toHaveCount(0);
+});
