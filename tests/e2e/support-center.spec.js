@@ -744,3 +744,35 @@ test('T8.2 staff receives exact live ticket and safety totals with account isola
  await page.getByRole('button',{name:'Help & support'}).last().click();
  await expect(page.locator('#supportStaffOverview')).toBeHidden();
 });
+
+test('T8.3: a successful in-flight reply preserves newer text in the same ticket',async({page})=>{
+ await boot(page);await signIn(page,'buyer');
+ await page.getByRole('button',{name:'Help & support'}).last().click();
+ await page.locator('#supportSubject').fill('Delayed reply regression');
+ await page.locator('#supportDescription').fill('A synthetic support ticket for delayed reply behavior.');
+ await page.getByRole('button',{name:'Create private ticket'}).click();
+ await expect(page.locator('#supportTicketTitle')).toHaveText('Delayed reply regression');
+ await page.evaluate(()=>{
+  const original=window.supabaseClient.rpc.bind(window.supabaseClient);
+  window.__replyRelease=null;
+  const gate=new Promise(resolve=>{window.__replyRelease=resolve});
+  window.supabaseClient.rpc=async(name,args)=>{
+   if(name==='reply_support_ticket')await gate;
+   return original(name,args);
+  };
+ });
+ await page.locator('#supportReplyBody').fill('First reply is already on its way.');
+ await page.getByRole('button',{name:'Send reply'}).click();
+ await expect(page.locator('#supportReplyStatus')).toHaveText('Sending…');
+ await page.locator('#supportReplyBody').fill('Second draft written while the first is sending.');
+ await page.evaluate(()=>window.__replyRelease());
+ await expect(page.locator('#supportReplyStatus')).toContainText('newer draft is saved');
+ await expect(page.locator('#supportReplyBody')).toHaveValue('Second draft written while the first is sending.');
+ const before=await page.evaluate(()=>window.__db.replies.map(row=>row.body));
+ expect(before).toEqual(['First reply is already on its way.']);
+ await page.getByRole('button',{name:'Send reply'}).click();
+ await expect(page.locator('#supportReplyStatus')).toHaveText('Reply sent.');
+ const after=await page.evaluate(()=>window.__db.replies.map(row=>row.body));
+ expect(after).toEqual(['First reply is already on its way.','Second draft written while the first is sending.']);
+ await expect(page.locator('#supportReplyBody')).toBeEmpty();
+});
