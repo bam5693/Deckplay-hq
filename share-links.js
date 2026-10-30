@@ -8,6 +8,13 @@ function sharedUrl(kind,id){
  url.searchParams.set(kind,id);
  return url.href;
 }
+// Update the visible browser tab after a validated public item is resolved.
+// Crawlers require server-rendered metadata; this is deliberately not an SEO claim.
+function setSharedPageTitle(kind,label){
+ const safe=String(label||'').replace(/[\\r\\n\\t]+/g,' ').trim().slice(0,90);
+ if(!safe)return;
+ document.title=safe+' | DeckPlay HQ';
+}
 async function shareLink(kind,id,nativeShare){
  const url=sharedUrl(kind,id);
  if(!url){toast('Only published listings and collector profiles can be shared.');return}
@@ -105,6 +112,7 @@ async function openSharedLinkOnce(){
   if(!same())return;
   showMainMarketplace();
   showDetails(marketplaceItemFromRow(data,profile));
+  setSharedPageTitle('listing',data.title);
   attempted=true;clearRetry();
  }catch(error){if(same()){
   if(collector)closeModal('publicProfileModal');
