@@ -38,10 +38,11 @@ async function boot(page){
      select(){return query},
      order(){return query},
      limit(){return query},
-     eq(field,value){state.filters.push([field,value]);return query},
+     eq(field,value){state.filters.push([field,value,false]);return query},
+     neq(field,value){state.filters.push([field,value,true]);return query},
      then(resolve,reject){
       const all=table==='support_tickets'?window.__db.tickets:window.__db.replies;
-      const rows=all.filter(row=>state.filters.every(([k,v])=>row[k]===v))
+      const rows=all.filter(row=>state.filters.every(([k,v,not])=>not?row[k]!==v:row[k]===v))
        .filter(row=>table==='support_tickets'?(row.owner_id===window.currentUser?.id||window.currentUser?.id==='staff'):
         window.__db.tickets.some(t=>t.id===row.ticket_id&&(t.owner_id===window.currentUser?.id||window.currentUser?.id==='staff')));
       return Promise.resolve({data:rows,error:null}).then(resolve,reject);
@@ -134,4 +135,41 @@ test('T8.3: cancelling sign-in discards pending trade support navigation',async(
  await page.evaluate(()=>closeModal('authModal'));
  await signIn(page,'buyer');
  await expect(page.locator('#supportCenterModal')).not.toHaveClass(/open/);
+});
+
+test('T8.3: buyer and staff filter open/resolved tickets server-side without losing account isolation',async({page})=>{
+ await boot(page);await signIn(page,'buyer');
+ await page.getByRole('button',{name:'Help & support'}).last().click();
+ for(const subject of ['Synthetic open collectible help','Synthetic resolved collectible help']){
+  await page.locator('#supportSubject').fill(subject);
+  await page.locator('#supportDescription').fill('Synthetic account question about a collectible listing.');
+  await page.getByRole('button',{name:'Create private ticket'}).click();
+ }
+ // Authorized staff resolves one ticket; the other remains open.
+ await page.evaluate(()=>{window.currentUser={id:'staff'};window.__authCallback('SIGNED_IN',{user:{id:'staff'}})});
+ await page.getByRole('button',{name:'Help & support'}).last().click();
+ await page.locator('#supportStaff').click();
+ await page.locator('#supportTicketList button').filter({hasText:'Synthetic resolved collectible help'}).click();
+ await page.locator('#supportStatusSelect').selectOption('resolved');
+ await page.getByRole('button',{name:'Save status'}).click();
+ await page.locator('[data-support-filter="active"]').click();
+ await expect(page.locator('#supportTicketList')).toContainText('Synthetic open collectible help');
+ await expect(page.locator('#supportTicketList')).not.toContainText('Synthetic resolved collectible help');
+ await expect(page.locator('[data-support-filter="active"]')).toHaveAttribute('aria-pressed','true');
+ await page.locator('[data-support-filter="resolved"]').click();
+ await expect(page.locator('#supportTicketList')).toContainText('Synthetic resolved collectible help');
+ await expect(page.locator('#supportTicketList')).not.toContainText('Synthetic open collectible help');
+ // Collector only sees their own tickets, including resolved history.
+ await page.evaluate(()=>{window.currentUser={id:'buyer'};window.__authCallback('SIGNED_IN',{user:{id:'buyer'}})});
+ await page.getByRole('button',{name:'Help & support'}).last().click();
+ await expect(page.locator('[data-support-filter="all"]')).toHaveAttribute('aria-pressed','true');
+ await page.locator('[data-support-filter="resolved"]').click();
+ await expect(page.locator('#supportTicketList')).toContainText('Synthetic resolved collectible help');
+ await page.locator('[data-support-filter="active"]').click();
+ await expect(page.locator('#supportTicketList')).toContainText('Synthetic open collectible help');
+ await page.evaluate(()=>{window.currentUser={id:'other'};window.__authCallback('SIGNED_IN',{user:{id:'other'}})});
+ await page.getByRole('button',{name:'Help & support'}).last().click();
+ await page.locator('[data-support-filter="resolved"]').click();
+ await expect(page.locator('#supportTicketList')).not.toContainText('Synthetic resolved collectible help');
+ await expect(page.locator('#supportListStatus')).toHaveText('No resolved tickets in this view.');
 });
