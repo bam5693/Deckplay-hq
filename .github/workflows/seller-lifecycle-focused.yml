@@ -1,5 +1,5 @@
 name: Seller lifecycle acceptance preflight
-# Run focused buyer and seller safety cases after fixture read/write separation.
+# Preserve previous Mark sold behavior while verifying new pause and resume paths.
 on:
   push:
     branches: [test/staging-reporting]
