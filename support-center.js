@@ -48,9 +48,14 @@
         </div>
       </section>
       <form id="supportNewForm" style="border-top:1px solid #cbd6e5;margin-top:18px;padding-top:12px">
-        <h3>Open a new support ticket</h3>
-        <label for="supportCategory">Topic</label>
-        <select id="supportCategory" required><option value="account">Account and sign-in</option><option value="listing">Listings and photos</option><option value="messages">Inbox and messages</option><option value="offers_trades">Offers and trades</option><option value="safety">Safety concern</option><option value="other">Other collectibles / feedback</option></select>
+        <h3 id="supportNewTitle">Open a new support ticket</h3>
+        <div id="supportCategoryField"><label for="supportCategory">Topic</label>
+        <select id="supportCategory" required><option value="account">Account and sign-in</option><option value="listing">Listings and photos</option><option value="messages">Inbox and messages</option><option value="offers_trades">Offers and trades</option><option value="safety">Safety concern</option><option value="other">Other collectibles / feedback</option></select></div>
+        <div id="supportFeedbackOptions" hidden>
+          <label for="supportFeedbackKind">What would you like to share?</label>
+          <select id="supportFeedbackKind"><option value="bug">Something isn't working</option><option value="idea">An improvement idea</option><option value="category">A missing collectible category</option><option value="other">Other feedback</option></select>
+          <p class="muted">Your feedback is private to you and support. Please avoid personal information.</p>
+        </div>
         <label for="supportSubject">Subject (8–120 characters)</label>
         <input id="supportSubject" minlength="8" maxlength="120" required>
         <label for="supportDescription">Details (20–3000 characters)</label>
@@ -65,7 +70,31 @@
   const status = (id, message) => { el(id).textContent = message || ""; };
   const date = value => new Date(value).toLocaleString();
   const labels = {open:"Open",waiting_on_staff:"Waiting on support",waiting_on_user:"Waiting on collector",resolved:"Resolved"};
-  let userId = null, generation = 0, isStaff = false, staffView = false, ticketFilter = "all", selected = null, tickets = [], returnToFeedback = false, returnTopic = "feedback";
+  let userId = null, generation = 0, isStaff = false, staffView = false, ticketFilter = "all", selected = null, tickets = [], returnToFeedback = false, returnTopic = "feedback", feedbackMode = false;
+  const feedbackKinds = {
+    bug: {prefix:"[Bug] ", hint:"What went wrong?"},
+    idea: {prefix:"[Idea] ", hint:"What could DeckPlay improve?"},
+    category: {prefix:"[Category request] ", hint:"Which collectible category is missing?"},
+    other: {prefix:"[Feedback] ", hint:"What would you like us to know?"}
+  };
+  function updateFeedbackKind() {
+    if (!feedbackMode) return;
+    const kind = feedbackKinds[el("supportFeedbackKind").value] || feedbackKinds.other;
+    el("supportSubject").placeholder = kind.hint;
+    el("supportSubject").maxLength = 120 - kind.prefix.length;
+  }
+  function setFeedbackMode(enabled) {
+    feedbackMode = enabled;
+    el("supportCategoryField").hidden = enabled;
+    el("supportFeedbackOptions").hidden = !enabled;
+    el("supportNewTitle").textContent = enabled ? "Share private beta feedback" : "Open a new support ticket";
+    el("supportNewForm").querySelector('button[type="submit"]').textContent = enabled ? "Send private feedback" : "Create private ticket";
+    el("supportCategory").value = enabled ? "other" : "account";
+    el("supportSubject").placeholder = "";
+    el("supportSubject").maxLength = 120;
+    updateFeedbackKind();
+  }
+  el("supportFeedbackKind").addEventListener("change", updateFeedbackKind);
   const valid = (v,u) => v === generation && userId === u && modal.classList.contains("open");
   function clearPrivate() {
     selected = null; tickets = []; isStaff = false; staffView = false; ticketFilter = "all";
@@ -100,10 +129,10 @@
   // The event contains no account data or free-text content.
   function openFeedback() {
     void show();
+    setFeedbackMode(true);
     if (!currentUser?.id) return; // Never reveal a previous account's draft.
-    el("supportCategory").value = "other";
     el("supportSubject").focus();
-    status("supportCreateStatus", "Share a bug, suggestion or category request. Do not include private information.");
+    status("supportCreateStatus", "Describe your experience without personal information.");
   }
   document.addEventListener("deckplay:open-feedback", openFeedback);
   function beginSupportSignIn(topic) {
@@ -139,6 +168,7 @@
     // Every visit starts with a blank draft, even when a different collector
     // previously opened feedback on this shared browser.
     el("supportNewForm").reset();
+    setFeedbackMode(false);
     el("supportPrivate").hidden = !userId;
     el("supportSignIn").hidden = !!userId;
     openModal(modal.id);
@@ -239,10 +269,17 @@
     const form=e.currentTarget,button=form.querySelector('button[type="submit"]');
     if(button.disabled)return;
     const v=generation,u=userId;
+    const rawSubject=el("supportSubject").value.trim();
+    const prefix=feedbackMode?(feedbackKinds[el("supportFeedbackKind").value]||feedbackKinds.other).prefix:"";
+    const subject=prefix+rawSubject;
+    if(rawSubject.length<8||subject.length>120){
+      status("supportCreateStatus","Enter a subject of at least 8 characters that fits the limit.");
+      return;
+    }
     button.disabled=true;status("supportCreateStatus","Submitting…");
     try{
       const {data,error}=await supabaseClient.rpc("create_support_ticket",{
-        p_category:el("supportCategory").value,p_subject:el("supportSubject").value.trim(),
+        p_category:feedbackMode?"other":el("supportCategory").value,p_subject:subject,
         p_body:el("supportDescription").value.trim()
       });
       if(error)throw error;
