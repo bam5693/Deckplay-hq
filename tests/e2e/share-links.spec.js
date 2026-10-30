@@ -540,3 +540,82 @@ test('T1.3: seller-provided detail fields cannot inject markup and absent detail
  expect(result.images).toBe(0);
  expect(result.empty).toBe(0);
 });
+
+
+// T3.4: actual trade compose UI; synthetic account and listing API, no staging writes.
+async function openSyntheticTradeComposer(page,buyer='trade-draft-buyer',seller='trade-draft-seller',target='trade-draft-target'){
+ await page.evaluate(({buyer,seller,target})=>{
+  currentUser={id:buyer};
+  syncInboxDraftUser();
+  supabaseClient.from=table=>{
+   const q={select:()=>q,eq:()=>q,order:()=>q,
+    range:async()=>({data:table==='listings'?[{id:'trade-owned-card',title:'My listed Pokémon card'},{id:'trade-owned-game',title:'My listed Switch game'}]:[],error:null})};
+   return q;
+  };
+  showDetails({databaseId:target,n:'Seller collectible bundle',p:90,c:'Collectibles',
+   imageUrls:[],sellerId:seller,s:'@seller',trades:true});
+ },{buyer,seller,target});
+ await page.locator('#detailContent [data-trade-id]').click();
+ await expect(page.locator('#tradeComposeModal')).toHaveClass(/open/);
+ await expect(page.locator('#tradeOfferedListing option')).toHaveCount(3);
+}
+test('T3.4: multi-item trade draft survives modal close, different listing and page reload without leaking terms',async({page})=>{
+ await ready(page);
+ await openSyntheticTradeComposer(page);
+ await page.locator('#tradeOfferedListing').selectOption('trade-owned-card');
+ await page.locator('#tradeAddItem').click();
+ await page.locator('#tradeCashDirection').selectOption('sender_pays');
+ await page.locator('#tradeCashAmount').fill('24.50');
+ await page.locator('#tradeOfferNote').fill('My Pokémon card plus cash for your figure; please check the corners.');
+ await page.locator('#tradeComposeModal [data-close]').click();
+ await openSyntheticTradeComposer(page,'trade-draft-buyer','trade-draft-other-seller','trade-other-target');
+ await expect(page.locator('#tradeOfferNote')).toHaveValue('');
+ await expect(page.locator('#tradeBundleItems li')).toHaveCount(0);
+ await expect(page.locator('#tradeCashDirection')).toHaveValue('none');
+ await page.locator('#tradeComposeModal [data-close]').click();
+ await openSyntheticTradeComposer(page);
+ await expect(page.locator('#tradeOfferNote')).toContainText('My Pokémon card plus cash');
+ await expect(page.locator('#tradeBundleItems li')).toHaveCount(1);
+ await expect(page.locator('#tradeCashDirection')).toHaveValue('sender_pays');
+ await expect(page.locator('#tradeCashAmount')).toHaveValue('24.5');
+ await page.reload();await page.waitForLoadState('networkidle');
+ await openSyntheticTradeComposer(page);
+ await expect(page.locator('#tradeOfferNote')).toHaveValue(/My Pokémon card plus cash/);
+ await expect(page.locator('#tradeBundleItems li')).toHaveCount(1);
+ await expect(page.locator('#tradeOfferStatus')).toContainText('Trade draft restored');
+});
+test('T3.4: switching collectors destroys the former trade draft and prevents cross-account proposal leakage',async({page})=>{
+ await ready(page);await openSyntheticTradeComposer(page);
+ await page.locator('#tradeOfferNote').fill('Private buyer-only negotiation details');
+ await page.evaluate(()=>{
+  currentUser={id:'another-test-collector'};syncInboxDraftUser();
+ });
+ await expect(page.locator('#tradeComposeModal')).not.toHaveClass(/open/);
+ await expect(page.locator('#tradeOfferNote')).toHaveValue('');
+ await page.evaluate(()=>{
+  currentUser={id:'trade-draft-buyer'};syncInboxDraftUser();
+ });
+ await openSyntheticTradeComposer(page);
+ await expect(page.locator('#tradeOfferNote')).toHaveValue('');
+ const snapshot=await page.evaluate(()=>sessionStorage.getItem('deckplay-trade-compose-v1:trade-draft-buyer'));
+ expect(snapshot).toBeNull();
+});
+test('T3.4: network failure keeps a trade proposal editable and recoverable when composer is reopened',async({page})=>{
+ await ready(page);await openSyntheticTradeComposer(page);
+ await page.locator('#tradeOfferNote').fill('Bundle offer while network is unstable');
+ await page.evaluate(()=>{
+  supabaseClient.from=table=>{
+   const q={select:()=>q,eq:()=>q,order:()=>q,range:async()=>({data:[{id:'trade-owned-card',title:'My card'}],error:null}),
+    maybeSingle:async()=>({data:null,error:null}),
+    insert:()=>({select:()=>({single:async()=>({data:null,error:{message:'Network unavailable'}})})})};
+   return q;
+  };
+ });
+ await page.locator('#tradeComposeForm button[type="submit"]').click();
+ await expect(page.locator('#tradeOfferStatus')).toContainText('Network unavailable');
+ await expect(page.locator('#tradeOfferNote')).toHaveValue('Bundle offer while network is unstable');
+ await page.locator('#tradeComposeModal [data-close]').click();
+ await page.evaluate(()=>showDetails({databaseId:'trade-draft-target',n:'Seller collectible bundle',p:90,c:'Collectibles',imageUrls:[],sellerId:'trade-draft-seller',s:'@seller',trades:true}));
+ await page.locator('#detailContent [data-trade-id]').click();
+ await expect(page.locator('#tradeOfferNote')).toHaveValue('Bundle offer while network is unstable');
+});
