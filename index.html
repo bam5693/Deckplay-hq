@@ -3094,7 +3094,7 @@ document.getElementById("year").textContent=new Date().getFullYear();
 setAuthMode("signin");render();refreshSellerRatingCache();
 // INITIAL_SESSION is handled by onAuthStateChange above; do not duplicate startup fetches.
 </script>
-<script>if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("/sw.js").catch(error=>console.warn("App installation worker unavailable:",error)));}</script>
+<script src="/pwa-update-notice.js" defer></script>
 <script>
 /* Android/PWA Back navigation: dismiss the top dialog before leaving the page. */
 (function(){
