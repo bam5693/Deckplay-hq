@@ -92,7 +92,7 @@ test('Worker enforces private authentication BEFORE preview and keeps HEAD stati
 });
 
 
-const collectorPreview=vm.runInNewContext(source+'\nrenderStagingCollectorPreview',sharedContext,{filename:'staging-share-preview.js'});
+const collectorPreview=vm.runInNewContext(source+'\nrenderStagingCollectorPreview',{...sharedContext},{filename:'staging-share-preview.js'});
 const COLLECTOR='22222222-2222-4222-8222-222222222222';
 test('active collector sharing gets only anonymous public handle metadata, not profile PII',async()=>{
  const calls=[];
