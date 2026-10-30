@@ -1,0 +1,51 @@
+/* T7.4: first-time buyer/seller guide; read-only, no analytics or account data. */
+(() => {
+  const guide = document.getElementById("gettingStarted");
+  if (!guide) return;
+  const tabs = [...guide.querySelectorAll("[data-guide-tab]")];
+  const panels = {buyer:document.getElementById("guideBuyer"), seller:document.getElementById("guideSeller")};
+  function selectGuide(role) {
+    if (!Object.prototype.hasOwnProperty.call(panels, role)) return;
+    for (const tab of tabs) {
+      const selected = tab.dataset.guideTab === role;
+      tab.setAttribute("aria-selected", String(selected));
+      tab.tabIndex = selected ? 0 : -1;
+    }
+    for (const [name, panel] of Object.entries(panels)) panel.hidden = name !== role;
+  }
+  guide.addEventListener("click", event => {
+    const tab = event.target.closest("[data-guide-tab]");
+    if (tab && guide.contains(tab)) { selectGuide(tab.dataset.guideTab); return; }
+    const action = event.target.closest("[data-guide-action]");
+    if (!action || !guide.contains(action)) return;
+    if (action.dataset.guideAction === "sell") { openSell(); return; }
+    if (action.dataset.guideAction === "browse") {
+      showMainMarketplace();
+      document.getElementById("market")?.scrollIntoView({behavior:"smooth", block:"start"});
+    }
+  });
+  guide.addEventListener("keydown", event => {
+    const tab = event.target.closest("[data-guide-tab]");
+    if (!tab || !guide.contains(tab) || !["ArrowLeft","ArrowRight","Home","End"].includes(event.key)) return;
+    event.preventDefault();
+    const index = tabs.indexOf(tab);
+    const next = event.key === "Home" ? 0 : event.key === "End" ? tabs.length - 1 :
+      (index + (event.key === "ArrowRight" ? 1 : -1) + tabs.length) % tabs.length;
+    selectGuide(tabs[next].dataset.guideTab);
+    tabs[next].focus();
+  });
+  const footer = document.querySelector("footer");
+  if (footer) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "ghost";
+    button.textContent = "Getting started";
+    button.setAttribute("aria-label", "Getting started: buyer and seller guide");
+    button.addEventListener("click", () => {
+      showHomePage();
+      requestAnimationFrame(() => guide.scrollIntoView({behavior:"smooth", block:"start"}));
+    });
+    footer.append(button);
+  }
+  selectGuide("buyer");
+})();
