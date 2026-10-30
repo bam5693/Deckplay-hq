@@ -18,7 +18,7 @@ jobs:
         run: |
           gh api -X POST repos/${{ github.repository }}/actions/workflows/private-staging.yml/dispatches \
             -f ref=test/staging-reporting \
-            -f 'inputs[focused_live_test]=trading'
+            -f 'inputs[focused_live_test]=staging-permissions'
 
 # Retry after improving buyer-auth cleanup guard to expose the primary trade failure.
 
