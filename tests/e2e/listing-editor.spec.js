@@ -91,3 +91,55 @@ test('sports listing editor restores original sport, brand, year and player and 
  const description=await page.evaluate(()=>editWrites[0].description);expect(description).toContain('Year: 2025\nPlayer: Correct player');expect(description).toContain('Surface scratch disclosed');
  await page.evaluate(()=>finishEdit({data:{id:'edit-item'},error:null}));
 });
+
+
+test('Android Back keeps a dirty seller draft when discard is declined and closes only after confirmation',async({page})=>{
+ await fixture(page);
+ await page.locator('#editListingTitle').fill('Unsaved buyer-facing correction');
+ const depth=await page.evaluate(()=>history.state.deckplayDepth);
+ const prompts=[];
+ page.on('dialog',async dialog=>{prompts.push(dialog.message());await dialog.dismiss()});
+ await page.evaluate(()=>history.back());
+ await expect.poll(()=>page.evaluate(()=>history.state.deckplayDepth)).toBe(depth);
+ await expect(page.locator('#editListingModal')).toHaveClass(/open/);
+ await expect(page.locator('#editListingTitle')).toHaveValue('Unsaved buyer-facing correction');
+ expect(prompts).toEqual(['Discard your unsaved listing changes?']);
+ page.removeAllListeners('dialog');
+ page.on('dialog',async dialog=>{prompts.push(dialog.message());await dialog.accept()});
+ await page.evaluate(()=>history.back());
+ await expect(page.locator('#editListingModal')).not.toHaveClass(/open/);
+ await expect(page.locator('#editListingTitle')).toHaveValue('');
+ await expect.poll(()=>page.evaluate(()=>history.state.deckplayDepth)).toBe(depth-1);
+ expect(prompts).toHaveLength(2);
+ expect(await page.evaluate(()=>editWrites)).toEqual([]);
+});
+test('Android Back closes an unchanged editor without prompting and allows reopening',async({page})=>{
+ await fixture(page);
+ const depth=await page.evaluate(()=>history.state.deckplayDepth);
+ const prompts=[];
+ page.on('dialog',async dialog=>{prompts.push(dialog.message());await dialog.dismiss()});
+ await page.evaluate(()=>history.back());
+ await expect(page.locator('#editListingModal')).not.toHaveClass(/open/);
+ await expect.poll(()=>page.evaluate(()=>history.state.deckplayDepth)).toBe(depth-1);
+ expect(prompts).toEqual([]);
+ await page.locator('[data-edit-listing]').click();
+ await expect(page.locator('#editListingTitle')).toHaveValue('TEST ONLY original');
+});
+test('Android Back does not destroy a seller draft during an in-flight save',async({page})=>{
+ await fixture(page);
+ await page.locator('#editListingPrice').fill('12.50');
+ const depth=await page.evaluate(()=>history.state.deckplayDepth);
+ await page.locator('#saveListingEdits').click();
+ await expect.poll(()=>page.evaluate(()=>editWrites.length)).toBe(1);
+ await page.evaluate(()=>history.back());
+ await expect.poll(()=>page.evaluate(()=>history.state.deckplayDepth)).toBe(depth);
+ await expect(page.locator('#editListingModal')).toHaveClass(/open/);
+ await expect(page.locator('#editListingPrice')).toHaveValue('12.50');
+ await page.evaluate(()=>failEdit(Error('Synthetic failed save')));
+ await expect(page.locator('#editListingStatus')).toContainText('Synthetic failed save');
+ const prompts=[];
+ page.on('dialog',async dialog=>{prompts.push(dialog.message());await dialog.accept()});
+ await page.evaluate(()=>history.back());
+ await expect(page.locator('#editListingModal')).not.toHaveClass(/open/);
+ expect(prompts).toHaveLength(1);
+});
