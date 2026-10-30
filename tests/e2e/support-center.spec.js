@@ -610,3 +610,57 @@ test('T8.4: private staff safety queue combines status filters before selecting 
  await expect(page.locator('#supportTicketList')).not.toContainText('Safety item');
  await expect(page.locator('#supportStaffSafety')).toHaveAttribute('aria-pressed','false');
 });
+
+test('T7.5: marketplace empty results offer explicit opt-in feedback, never silent telemetry',async({page})=>{
+ const html=require('node:fs').readFileSync(path.resolve(__dirname,'../../index.html'),'utf8');
+ expect(html).toContain('data-market-search-feedback="empty"');
+ expect(html).toContain('data-market-search-feedback="results"');
+ expect(html).toContain('deckplay:search-feedback');
+ await boot(page);await signIn(page,'buyer');
+ await page.evaluate(()=>document.dispatchEvent(new CustomEvent('deckplay:search-feedback',{detail:{
+  outcome:'empty',category:'Trading Cards',hasText:true,hasGame:true,hasPrice:false,hasExtra:true,
+  rawQuery:'SECRET PRIVATE SEARCH TERMS',listingId:'SECRET LISTING ID'
+ }})));
+ await expect(page.locator('#supportCenterModal')).toHaveClass(/open/);
+ await expect(page.locator('#supportSubject')).toHaveValue('Improve marketplace search results');
+ await expect(page.locator('#supportDescription')).toContainText('Category: Trading Cards');
+ const body=await page.locator('#supportDescription').inputValue();
+ expect(body).toContain('Used game filter: yes');
+ expect(body).not.toContain('SECRET');
+ expect(body).toContain('What I hoped to find:');
+ expect(await page.evaluate(()=>window.__db.calls.filter(x=>x.name==='create_support_ticket'))).toHaveLength(0);
+ await page.locator('#supportDescription').fill(body+'A missing collectible from the supported category.');
+ await page.getByRole('button',{name:'Send private feedback'}).click();
+ await expect(page.locator('#supportCreateStatus')).toContainText('Ticket created');
+ const ticket=await page.evaluate(()=>window.__db.tickets[0]);
+ expect(ticket.category).toBe('other');
+ expect(ticket.subject).toBe('[Idea] Improve marketplace search results');
+ expect(ticket.body).not.toContain('SECRET');
+});
+test('T7.5: signed-out search feedback and account changes never retain private search context',async({page})=>{
+ await boot(page);
+ await page.evaluate(()=>document.dispatchEvent(new CustomEvent('deckplay:search-feedback',{detail:{
+  outcome:'results',category:'<private term>',hasText:true,hasGame:true,hasPrice:true,hasExtra:true,
+  rawQuery:'SECRET SHOULD NEVER BE COPIED'
+ }})));
+ await expect(page.locator('#supportCenterModal')).toHaveClass(/open/);
+ await expect(page.locator('#supportSignIn')).toBeVisible();
+ await expect(page.locator('#supportDescription')).toBeEmpty();
+ await page.locator('#supportSignInButton').click();
+ await expect(page.locator('#authModal')).toHaveClass(/open/);
+ await signIn(page,'buyer');
+ await page.evaluate(()=>closeModal('authModal'));
+ await expect(page.locator('#supportCenterModal')).toHaveClass(/open/);
+ await expect(page.locator('#supportDescription')).toBeEmpty();
+ await page.evaluate(()=>document.dispatchEvent(new CustomEvent('deckplay:search-feedback',{detail:{
+  outcome:'results',category:'Video Games',hasText:false,hasGame:false,hasPrice:true,hasExtra:false
+ }})));
+ await expect(page.locator('#supportSubject')).toHaveValue('Improve listing discovery');
+ const body=await page.locator('#supportDescription').inputValue();
+ expect(body).toContain('Category: Video Games');
+ expect(body).not.toContain('SECRET');
+ await page.evaluate(()=>{window.currentUser={id:'other'};window.__authCallback('SIGNED_IN',{user:{id:'other'}})});
+ await expect(page.locator('#supportCenterModal')).not.toHaveClass(/open/);
+ await expect(page.locator('#supportDescription')).toBeEmpty();
+ expect(await page.evaluate(()=>window.__db.tickets)).toHaveLength(0);
+});
