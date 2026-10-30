@@ -2318,11 +2318,11 @@ let inboxDraftUser=null,messageAccountVersion=0,inboxConversationFilter={search:
 function syncInboxDraftUser(){
  const id=currentUser?.id||null;
  if(inboxDraftUser!==id){
-  if(inboxDraftUser)try{sessionStorage.removeItem(inboxDraftStorageKey(inboxDraftUser));sessionStorage.removeItem(inboxTextRetryStorageKey(inboxDraftUser));sessionStorage.removeItem("deckplay-trade-retries-v1:"+inboxDraftUser)}catch{}
+  if(inboxDraftUser)try{sessionStorage.removeItem(inboxDraftStorageKey(inboxDraftUser));sessionStorage.removeItem(inboxTextRetryStorageKey(inboxDraftUser));sessionStorage.removeItem("deckplay-trade-retries-v1:"+inboxDraftUser);sessionStorage.removeItem("deckplay-trade-compose-v1:"+inboxDraftUser)}catch{}
   ++messageAccountVersion;
   resetWantedPublisher();closeModal("wantedModal");
   ++listingAccountVersion;++cloudDraftRequestVersion;cloudDraftBusy=false;cloudDraftControls(false);document.getElementById("listingCloudDraftStatus").textContent="";document.getElementById("listingForm").reset();document.getElementById("listingType").dispatchEvent(new Event("change"));listingSelectedPhotos=[];renderListingPhotos();syncCategoryFields();syncGradedCondition();document.getElementById("deckFields").hidden=true;document.getElementById("listingStatus").textContent="";closeModal("sellModal");
-  profileInventoryFilter={search:"",status:"all",category:"all"};window.listingEditor?.reset();window.sellerOverview?.reset();window.privateMessagePhotos?.reset();inboxDrafts.clear();messageSendAttempts.clear();tradeSendAttempts.clear();inboxOlderMessages.clear();inboxOlderExhausted.clear();inboxNegotiationPages.clear();inboxConversationCursor=null;inboxConversationExhausted=false;inboxOlderPriceOffers.clear();inboxOlderTradeOffers.clear();inboxPriceCursor=null;inboxTradeCursor=null;inboxPriceExhausted=false;inboxTradeExhausted=false;inboxConversationFilter={search:"",unread:false};inboxDraftUser=id;if(id)restoreInboxDrafts(id);tradeBundleSelection=[];document.getElementById("tradeBundleItems").replaceChildren();document.getElementById("tradeBundleCount").textContent="";
+  profileInventoryFilter={search:"",status:"all",category:"all"};window.listingEditor?.reset();window.sellerOverview?.reset();window.privateMessagePhotos?.reset();inboxDrafts.clear();messageSendAttempts.clear();tradeSendAttempts.clear();inboxOlderMessages.clear();inboxOlderExhausted.clear();inboxNegotiationPages.clear();inboxConversationCursor=null;inboxConversationExhausted=false;inboxOlderPriceOffers.clear();inboxOlderTradeOffers.clear();inboxPriceCursor=null;inboxTradeCursor=null;inboxPriceExhausted=false;inboxTradeExhausted=false;inboxConversationFilter={search:"",unread:false};inboxDraftUser=id;if(id)restoreInboxDrafts(id);++tradePickerVersion;tradeTargetId=null;tradeRecipientId=null;document.getElementById("tradeComposeForm").reset();document.getElementById("tradeCashAmount").disabled=true;document.getElementById("tradeOfferStatus").textContent="";closeModal("tradeComposeModal");tradeBundleSelection=[];document.getElementById("tradeBundleItems").replaceChildren();document.getElementById("tradeBundleCount").textContent="";
   ++blockedCollectorsLoadVersion;blockedCollectorIds.clear();document.getElementById("blockedUsersList").replaceChildren();document.getElementById("settingsBlockCount").textContent="";
   ++reportDialogVersion;reportTargetUser=null;reportTargetListing=null;reportTargetBlocked=false;document.getElementById("reportForm").reset();document.getElementById("reportStatus").textContent="";document.querySelector('#reportForm button[type="submit"]').disabled=false;closeModal("reportModal");
   ++notificationSettingsVersion;notificationSettingsOwner=null;notificationSettingsLoading=false;notificationPreferenceControls(true);document.querySelectorAll("[data-notify-pref]").forEach(input=>input.checked=false);document.getElementById("notificationSettingsStatus").textContent="";++inboxLoadVersion;++profileLoadVersion;++priceOffersLoadVersion;++tradeOffersLoadVersion;++unreadCountLoadVersion;++profileEditorLoadVersion;selectedInboxCollector=null;
@@ -2786,6 +2786,66 @@ document.getElementById("composeForm").addEventListener("submit",async e=>{
 
 let tradeTargetId=null,tradeRecipientId=null,tradePickerVersion=0,tradeBundleSelection=[];
 function selectedTradeInventory(){return [...new Set([...tradeBundleSelection,document.getElementById("tradeOfferedListing").value].filter(Boolean))]}
+// Trade composition is private to the signed-in collector and this browser tab.
+// Persist drafts at input time to survive a reload; never persist a draft for a
+// different collector or silently reuse selected listings that became unavailable.
+const tradeComposeDraftKey=owner=>"deckplay-trade-compose-v1:"+owner;
+function tradeComposeDrafts(owner){
+ try{
+  const raw=JSON.parse(sessionStorage.getItem(tradeComposeDraftKey(owner))||"[]");
+  const now=Date.now();
+  return Array.isArray(raw)?raw.filter(d=>d&&typeof d.target==="string"&&d.target.length<=120&&typeof d.recipient==="string"&&d.recipient.length<=120&&typeof d.note==="string"&&d.note.length<=1500&&Number.isFinite(d.at)&&d.at>=now-604800000&&d.at<=now).slice(-15):[];
+ }catch{return []}
+}
+function rememberTradeComposeDraft(){
+ const owner=currentUser?.id,target=tradeTargetId,recipient=tradeRecipientId;
+ if(!owner||!target||!recipient||!document.getElementById("tradeComposeModal").classList.contains("open"))return;
+ const note=document.getElementById("tradeOfferNote").value;
+ const direction=document.getElementById("tradeCashDirection").value;
+ const amount=document.getElementById("tradeCashAmount").value;
+ const offered=selectedTradeInventory().slice(0,5);
+ const draft={target,recipient,note,direction,amount,offered,at:Date.now()};
+ const rows=tradeComposeDrafts(owner).filter(x=>x.target!==target||x.recipient!==recipient);
+ if(note.trim()||offered.length||direction!=="none"){
+  rows.push(draft);
+ }
+ try{
+  if(rows.length)sessionStorage.setItem(tradeComposeDraftKey(owner),JSON.stringify(rows.slice(-15)));
+  else sessionStorage.removeItem(tradeComposeDraftKey(owner));
+ }catch{/* Unavailable tab storage must not break sending a trade. */}
+}
+function discardTradeComposeDraft(owner,target,recipient){
+ try{
+  const rows=tradeComposeDrafts(owner).filter(d=>d.target!==target||d.recipient!==recipient);
+  if(rows.length)sessionStorage.setItem(tradeComposeDraftKey(owner),JSON.stringify(rows));
+  else sessionStorage.removeItem(tradeComposeDraftKey(owner));
+ }catch{}
+}
+function restoreTradeComposeDraft(owner,target,recipient,listingLoadSucceeded){
+ if(currentUser?.id!==owner||tradeTargetId!==target||tradeRecipientId!==recipient)return;
+ const draft=tradeComposeDrafts(owner).find(d=>d.target===target&&d.recipient===recipient);
+ if(!draft)return;
+ const input=document.getElementById("tradeOfferNote"),select=document.getElementById("tradeOfferedListing");
+ input.value=draft.note;
+ const dir=["none","sender_pays","recipient_pays"].includes(draft.direction)?draft.direction:"none";
+ const value=Number(draft.amount);
+ document.getElementById("tradeCashDirection").value=dir;
+ const cash=document.getElementById("tradeCashAmount");
+ cash.disabled=dir==="none";cash.required=dir!=="none";
+ cash.value=dir==="none"?"0":Number.isFinite(value)&&value>=0&&value<=100000?String(value):"";
+ const available=new Set([...select.options].map(o=>o.value).filter(Boolean));
+ const wanted=Array.isArray(draft.offered)?draft.offered.filter(x=>typeof x==="string").slice(0,5):[];
+ tradeBundleSelection=listingLoadSucceeded?[...new Set(wanted.filter(id=>available.has(id)))]:[];
+ select.value="";
+ renderTradeBundle();
+ if(!listingLoadSucceeded&&wanted.length)return;
+ const removed=wanted.length-tradeBundleSelection.length;
+ const message=removed>0?"Draft restored, but "+removed+" previously selected listing"+(removed===1?" is":"s are")+" no longer active. Review before sending.":"Trade draft restored. Review before sending.";
+ document.getElementById("tradeOfferStatus").textContent=message;
+}
+document.getElementById("tradeComposeForm").addEventListener("input",rememberTradeComposeDraft);
+document.getElementById("tradeComposeForm").addEventListener("change",rememberTradeComposeDraft);
+
 function renderTradeBundle(){
  const select=document.getElementById("tradeOfferedListing"),selected=selectedTradeInventory();
  for(const option of select.options)option.disabled=!!option.value&&(tradeBundleSelection.includes(option.value)||tradeBundleSelection.length>=5);
@@ -2794,13 +2854,15 @@ function renderTradeBundle(){
  document.getElementById("tradeAddItem").disabled=!select.value||tradeBundleSelection.includes(select.value)||tradeBundleSelection.length>=5;
 }
 document.getElementById("tradeOfferedListing").addEventListener("change",renderTradeBundle);
-document.getElementById("tradeAddItem").addEventListener("click",()=>{const select=document.getElementById("tradeOfferedListing");if(!select.value||tradeBundleSelection.includes(select.value)||tradeBundleSelection.length>=5)return;tradeBundleSelection.push(select.value);select.value="";renderTradeBundle()});
-document.getElementById("tradeBundleItems").addEventListener("click",e=>{const remove=e.target.closest("[data-remove-trade-item]");if(!remove)return;tradeBundleSelection=tradeBundleSelection.filter(id=>id!==remove.dataset.removeTradeItem);renderTradeBundle()});
+document.getElementById("tradeAddItem").addEventListener("click",()=>{const select=document.getElementById("tradeOfferedListing");if(!select.value||tradeBundleSelection.includes(select.value)||tradeBundleSelection.length>=5)return;tradeBundleSelection.push(select.value);select.value="";renderTradeBundle();rememberTradeComposeDraft()});
+document.getElementById("tradeBundleItems").addEventListener("click",e=>{const remove=e.target.closest("[data-remove-trade-item]");if(!remove)return;tradeBundleSelection=tradeBundleSelection.filter(id=>id!==remove.dataset.removeTradeItem);renderTradeBundle();rememberTradeComposeDraft()});
 document.getElementById("detailContent").addEventListener("click",async e=>{
  const button=e.target.closest("[data-trade-id]");if(!button)return;
  if(!currentUser){setAuthMode("signin");openModal("authModal");return}
+ rememberTradeComposeDraft();
  const requestId=++tradePickerVersion,userId=currentUser.id,targetId=button.dataset.tradeId;
  tradeTargetId=targetId;tradeRecipientId=button.dataset.tradeSeller;
+ document.getElementById("tradeComposeForm").reset();document.getElementById("tradeCashAmount").disabled=true;
  const item=items.find(x=>String(x.databaseId)===targetId);
  document.getElementById("tradeTargetLabel").textContent="Trading for: "+(item?.n||"this listing");
  const select=document.getElementById("tradeOfferedListing"),status=document.getElementById("tradeOfferStatus");
@@ -2815,8 +2877,8 @@ document.getElementById("detailContent").addEventListener("click",async e=>{
    rows.push(...(data||[]));if((data||[]).length<100)break;
   }
   const seen=new Set();for(const row of rows){if(seen.has(row.id))continue;seen.add(row.id);const option=document.createElement("option");option.value=row.id;option.textContent=row.title;select.appendChild(option)}
-  status.textContent="";
- }catch(error){if(current())status.textContent="Could not load your listings: "+(error.message||"Please try again.")}
+  status.textContent="";restoreTradeComposeDraft(userId,targetId,tradeRecipientId,true);
+ }catch(error){if(current()){status.textContent="Could not load your listings: "+(error.message||"Please try again.");restoreTradeComposeDraft(userId,targetId,tradeRecipientId,false)}}
  finally{if(current()){select.disabled=false;renderTradeBundle()}}
 });
 document.getElementById("tradeCashDirection").addEventListener("change",e=>{const field=document.getElementById("tradeCashAmount");field.disabled=e.target.value==="none";field.required=e.target.value!=="none";if(field.disabled)field.value="0";else if(Number(field.value)===0)field.value=""});
@@ -2835,8 +2897,8 @@ document.getElementById("tradeComposeForm").addEventListener("submit",async e=>{
  try{
   const {data:sentTrade,error}=await sendTradeProposalOnce({cash_amount:cashDirection==="none"?0:cashAmount,cash_direction:cashDirection,listing_id:targetId,sender_id:userId,recipient_id:recipientId,offered_listing_id:offeredId||null,offered_listing_ids:offeredIds,offer_note:note});if(error)throw error;
   if(!current())return;
-  if(input.value===draft&&JSON.stringify(selectedTradeInventory())===JSON.stringify(offeredIds)&&document.getElementById("tradeCashDirection").value===cashDirection&&Number(document.getElementById("tradeCashAmount").value)===cashAmount){form.reset();tradeBundleSelection=[];renderTradeBundle();document.getElementById("tradeCashAmount").disabled=true;status.textContent="";closeModal("tradeComposeModal");toast("Trade offer sent!")}
-  else status.textContent="Trade sent. Your new draft is ready.";
+  if(input.value===draft&&JSON.stringify(selectedTradeInventory())===JSON.stringify(offeredIds)&&document.getElementById("tradeCashDirection").value===cashDirection&&Number(document.getElementById("tradeCashAmount").value)===cashAmount){discardTradeComposeDraft(userId,targetId,recipientId);form.reset();tradeBundleSelection=[];renderTradeBundle();document.getElementById("tradeCashAmount").disabled=true;status.textContent="";closeModal("tradeComposeModal");toast("Trade offer sent!")}
+  else {rememberTradeComposeDraft();status.textContent="Trade sent. Your new draft is ready."}
   void sendCollectorEmailForSource(sentTrade?.id);
  }catch(error){if(current())status.textContent="Could not send: "+(error.message||"Please try again.")}
  finally{delete form.dataset.pending;form.removeAttribute("aria-busy");button.disabled=false;if(!current()&&status.textContent==="Sending offer…")status.textContent=""}
