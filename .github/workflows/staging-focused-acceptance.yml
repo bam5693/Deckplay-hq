@@ -32,6 +32,7 @@ jobs:
           node scripts/build-staging.cjs
           node --check scripts/build-staging-worker.cjs
           node scripts/check-inline-js.cjs
+          node --test tests/security/pwa-worker.test.cjs
           node --check support-center.js
           node --check tests/e2e/support-center.spec.js
           node --check tests/e2e/getting-started.spec.js
