@@ -43,12 +43,16 @@ async function boot(page){
      neq(field,value){state.filters.push([field,value,true]);return query},
      then(resolve,reject){
       const all=table==='support_tickets'?window.__db.tickets:window.__db.replies;
-      const rows=all.filter(row=>state.filters.every(([k,v,not])=>not?row[k]!==v:row[k]===v))
+      let rows=all.filter(row=>state.filters.every(([k,v,not])=>not?row[k]!==v:row[k]===v))
        .filter(row=>table==='support_tickets'?(row.owner_id===window.currentUser?.id||window.currentUser?.id==='staff'):
         window.__db.tickets.some(t=>t.id===row.ticket_id&&(t.owner_id===window.currentUser?.id||window.currentUser?.id==='staff')));
       if(table==='support_tickets' && state.start>=40 && window.__db.failOlderOnce){
        window.__db.failOlderOnce=false;
        return Promise.resolve({data:null,error:{message:'Simulated temporary network error'}}).then(resolve,reject);
+      }
+      if(table==='support_ticket_replies' && state.start>=40 && window.__db.failRepliesOlderOnce){
+       window.__db.failRepliesOlderOnce=false;
+       return Promise.resolve({data:null,error:{message:'Simulated older reply fetch error'}}).then(resolve,reject);
       }
       rows.sort((a,b)=>{
        for(const [field,ascending] of state.orders){
@@ -327,4 +331,34 @@ test('T8.3: failed older-ticket page can be retried without losing visible ticke
  await page.locator('#supportLoadMore').click();
  await expect(page.locator('#supportTicketList button')).toHaveCount(44);
  await expect(page.locator('#supportLoadMore')).toBeHidden();
+});
+
+test('T8.3: 125 private replies load newest first and reveal older history without leaking accounts',async({page})=>{
+ await boot(page);await signIn(page,'buyer');
+ await page.evaluate(()=>{
+  const start=Date.parse('2026-10-01T00:00:00Z');
+  window.__db.tickets.push({id:'long-thread',owner_id:'buyer',category:'account',subject:'Long synthetic support conversation',body:'Synthetic support history, no real users.',status:'open',created_at:new Date(start).toISOString(),updated_at:new Date(start+125000).toISOString()});
+  for(let i=0;i<125;i++)window.__db.replies.push({id:'reply-'+String(i).padStart(3,'0'),ticket_id:'long-thread',author_id:i%2?'staff':'buyer',is_staff:!!(i%2),body:'Synthetic reply '+String(i).padStart(3,'0'),created_at:new Date(start+i*1000).toISOString()});
+ });
+ await page.getByRole('button',{name:'Help & support'}).last().click();
+ await page.locator('#supportTicketList button').first().click();
+ await expect(page.locator('#supportReplies article')).toHaveCount(40);
+ await expect(page.locator('#supportReplies article').last()).toContainText('Synthetic reply 124');
+ await expect(page.locator('#supportReplies article').first()).toContainText('Synthetic reply 085');
+ await page.evaluate(()=>window.__db.failRepliesOlderOnce=true);
+ await page.locator('#supportRepliesLoadMore').click();
+ await expect(page.locator('#supportRepliesStatus')).toContainText('Retry');
+ await expect(page.locator('#supportReplies article')).toHaveCount(40);
+ for(const expected of [80,120,125]){
+  await page.locator('#supportRepliesLoadMore').click();
+  await expect(page.locator('#supportReplies article')).toHaveCount(expected);
+ }
+ await expect(page.locator('#supportReplies article').first()).toContainText('Synthetic reply 000');
+ await expect(page.locator('#supportReplies article').last()).toContainText('Synthetic reply 124');
+ await expect(page.locator('#supportRepliesLoadMore')).toBeHidden();
+ await page.evaluate(()=>{window.currentUser={id:'other'};window.__authCallback('SIGNED_IN',{user:{id:'other'}})});
+ await expect(page.locator('#supportReplies')).toBeEmpty();
+ await expect(page.locator('#supportRepliesLoadMore')).toBeHidden();
+ await page.getByRole('button',{name:'Help & support'}).last().click();
+ await expect(page.locator('#supportTicketList')).not.toContainText('Long synthetic support conversation');
 });
