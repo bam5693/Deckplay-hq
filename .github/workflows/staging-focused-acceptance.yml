@@ -36,7 +36,8 @@ jobs:
           node --check support-center.js
           node --check tests/e2e/inbox-older-activity-discovery.spec.js
           node --check tests/e2e/inbox-negotiation-history.spec.js
-          npx playwright test --config=playwright.local.config.js inbox-negotiation-history.spec.js inbox-older-activity-discovery.spec.js --retries=0 --max-failures=1 --timeout=20000
+          node --check tests/e2e/wanted-search-handoff.spec.js
+          npx playwright test --config=playwright.local.config.js inbox-negotiation-history.spec.js inbox-older-activity-discovery.spec.js wanted-search-handoff.spec.js --retries=0 --max-failures=1 --timeout=20000
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
