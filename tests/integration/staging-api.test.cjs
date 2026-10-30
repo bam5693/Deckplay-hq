@@ -184,6 +184,39 @@ test('profile edits persist while another user cannot change it',()=>{
  assert.equal(ok(api('buyer','/rest/v1/profiles?id=eq.'+users.seller,'PATCH',{bio:'tampered'},{Prefer:'return=representation'})).length,0);
  assert.equal(ok(api(null,'/rest/v1/profiles?id=eq.'+users.seller))[0].bio,'TEST ONLY profile');
 });
+test('accepted trade cannot silently rewrite cash terms, but an approved counter can',()=>{
+ const target=createListing(),offered=createListing('buyer');
+ const trade=ok(api('buyer','/rest/v1/trade_offers','POST',{
+  listing_id:target.id,offered_listing_id:offered.id,
+  sender_id:users.buyer,recipient_id:users.seller,offer_note:run,
+  cash_amount:0,cash_direction:'none'
+ },{Prefer:'return=representation'}),201)[0];
+ const tamper=api('seller','/rest/v1/trade_offers?id=eq.'+trade.id,'PATCH',{
+  status:'accepted',cash_amount:500,cash_direction:'sender_pays',offer_note:'Unapproved cash demand'
+ },{Prefer:'return=representation'});
+ assert(tamper.status>=400,'Recipient may not rewrite trade terms while accepting an original offer');
+ const original=ok(api('seller','/rest/v1/trade_offers?id=eq.'+trade.id))[0];
+ assert.equal(original.status,'pending','Rejected terms change must preserve pending state');
+ assert.equal(Number(original.cash_amount),0,'Rejected terms change must preserve original amount');
+ assert.equal(original.offer_note,run,'Original description must remain unchanged');
+ for(const [role,id] of [['seller',target.id],['buyer',offered.id]]){
+  assert.equal(ok(api(role,'/rest/v1/listings?id=eq.'+id))[0].status,'active');
+ }
+ const counter=ok(api('seller','/rest/v1/rpc/create_trade_counter','POST',{
+  p_offer:trade.id,p_cash:5,p_direction:'sender_pays',p_note:run+' approved counter'
+ }));
+ ok(api('buyer','/rest/v1/rpc/respond_trade_counter','POST',{p_counter:counter,p_accept:true}),204);
+ const accepted=ok(api('buyer','/rest/v1/trade_offers?id=eq.'+trade.id))[0];
+ assert.equal(accepted.status,'accepted','Approved counter must still reserve the trade');
+ assert.equal(Number(accepted.cash_amount),5);
+ assert.equal(accepted.cash_direction,'sender_pays');
+ assert.equal(accepted.offer_note,run+' approved counter');
+ assert.equal(accepted.initial_terms.note,run,'Original accepted terms remain auditable');
+ for(const [role,id] of [['seller',target.id],['buyer',offered.id]]){
+  assert.equal(ok(api(role,'/rest/v1/listings?id=eq.'+id))[0].status,'reserved');
+ }
+});
+
 test('trade counteroffer can be accepted only by its recipient',()=>{
  const target=createListing(),offered=createListing('buyer');
  const t=ok(api('buyer','/rest/v1/trade_offers','POST',{listing_id:target.id,offered_listing_id:offered.id,sender_id:users.buyer,recipient_id:users.seller,offer_note:run},{Prefer:'return=representation'}),201)[0];
