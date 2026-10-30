@@ -55,6 +55,16 @@
       requestAnimationFrame(() => guide.scrollIntoView({behavior:"smooth", block:"start"}));
     });
     footer.append(button);
+    // Feedback stays reachable from Marketplace, Inbox and Profile, not just Home.
+    const feedbackFooter = document.createElement("button");
+    feedbackFooter.type = "button";
+    feedbackFooter.className = "ghost";
+    feedbackFooter.textContent = "Beta feedback";
+    feedbackFooter.setAttribute("aria-label", "Open private beta feedback");
+    feedbackFooter.addEventListener("click", () => {
+      document.dispatchEvent(new Event("deckplay:open-feedback"));
+    });
+    footer.append(feedbackFooter);
   }
   selectGuide("buyer");
 })();
