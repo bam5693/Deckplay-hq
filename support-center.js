@@ -59,7 +59,7 @@
   const status = (id, message) => { el(id).textContent = message || ""; };
   const date = value => new Date(value).toLocaleString();
   const labels = {open:"Open",waiting_on_staff:"Waiting on support",waiting_on_user:"Waiting on collector",resolved:"Resolved"};
-  let userId = null, generation = 0, isStaff = false, staffView = false, selected = null, tickets = [];
+  let userId = null, generation = 0, isStaff = false, staffView = false, selected = null, tickets = [], returnToFeedback = false;
   const valid = (v,u) => v === generation && userId === u && modal.classList.contains("open");
   function clearPrivate() {
     selected = null; tickets = []; isStaff = false; staffView = false;
@@ -91,17 +91,27 @@
   }
   // Feedback uses the existing private ticket workflow, not a new public endpoint.
   // The event contains no account data or free-text content.
-  document.addEventListener("deckplay:open-feedback", () => {
-    show();
+  function openFeedback() {
+    void show();
     if (!currentUser?.id) return; // Never reveal a previous account's draft.
     el("supportCategory").value = "other";
     el("supportSubject").focus();
     status("supportCreateStatus", "Share a bug, suggestion or category request. Do not include private information.");
-  });
+  }
+  document.addEventListener("deckplay:open-feedback", openFeedback);
   el("supportSignInButton").addEventListener("click", () => {
-    // Avoid stacking dialogs or retaining private support content behind login.
+    // Remember only the navigation intent, never a private draft or account ID.
+    returnToFeedback = true;
     closeModal(modal.id);
     openModal("authModal");
+  });
+  // Cancelled sign-in must not unexpectedly reopen support after a later login.
+  const authDialog = el("authModal");
+  authDialog?.addEventListener("click", event => {
+    if (event.target.closest('[data-close="authModal"]')) returnToFeedback = false;
+  });
+  authDialog?.addEventListener("keydown", event => {
+    if (event.key === "Escape") returnToFeedback = false;
   });
   el("supportClose").addEventListener("click",()=>closeModal(modal.id));
   modal.addEventListener("click",e=>{if(e.target===modal)closeModal(modal.id)});
@@ -246,5 +256,12 @@
     userId=next;++generation;clearPrivate();
     el("supportNewForm").reset(); // Never carry a private draft into another account.
     if(modal.classList.contains("open"))closeModal(modal.id);
+    if(next && returnToFeedback){
+      returnToFeedback=false;
+      // Let the application's own auth listener finish updating currentUser first.
+      setTimeout(()=>{
+        if(currentUser?.id===next)openFeedback();
+      },0);
+    }
   });
 })();
