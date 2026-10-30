@@ -48,6 +48,22 @@ with counter as (
  select public.create_trade_counter(current_setting('deckplay.fixture.trade')::uuid,
         5,'sender_pays','TEST ONLY approved counter') as id
 ) select pg_catalog.set_config('deckplay.fixture.counter',id::text,true) from counter;
+do $verify_pending_counter$
+declare blocked boolean := false;
+begin
+ begin
+  update public.trade_offers set status='accepted'
+  where id=current_setting('deckplay.fixture.trade')::uuid;
+ exception when others then blocked := true;
+ end;
+ if not blocked then
+  raise exception 'P0 FAILURE: pending trade counter bypassed by direct acceptance';
+ end if;
+ if not exists (select 1 from public.trade_offers where id=current_setting('deckplay.fixture.trade')::uuid and status='pending') then
+  raise exception 'P0 FAILURE: stale original trade did not remain pending';
+ end if;
+end
+$verify_pending_counter$;
 select pg_catalog.set_config('request.jwt.claim.sub',current_setting('deckplay.fixture.buyer'),true);
 select public.respond_trade_counter(current_setting('deckplay.fixture.counter')::uuid,true);
 do $verify_acceptance$
