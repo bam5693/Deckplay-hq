@@ -149,3 +149,45 @@ test('Kyle: a temporary shared-link lookup failure offers a retry and opens the 
  await expect(page.locator('#detailTitle')).toHaveText('Recovered synthetic game collectible');
  await expect(page.locator('#deckplaySharedLinkRetry')).toHaveCount(0);
 });
+
+test('Kyle: a temporary shared collector lookup offers a usable retry on mobile and desktop',async({page})=>{
+ await ready(page);
+ await page.evaluate(seller=>{
+  history.replaceState({},'','/?collector='+seller);
+  let offline=true;
+  window.restoreCollectorLookup=()=>{offline=false};
+  supabaseClient.from=table=>{
+   const q={then:resolve=>Promise.resolve({data:[],error:null}).then(resolve)};
+   for(const key of ['select','eq','order','limit'])q[key]=()=>q;
+   q.maybeSingle=async()=>table==='profiles'
+    ?offline?{data:null,error:{message:'temporary connection loss'}}:{data:{username:'recovered-collector',bio:'Video games and sports collectibles'},error:null}
+    :{data:null,error:null};
+   return q;
+  };
+ },SELLER);
+ await page.evaluate(()=>window.deckplayOpenSharedLinkOnce());
+ await expect(page.locator('#deckplaySharedLinkRetry')).toBeVisible();
+ await expect(page.locator('#publicProfileModal')).not.toHaveClass(/open/);
+ await page.evaluate(()=>window.restoreCollectorLookup());
+ await page.getByRole('button',{name:'Retry shared link'}).click();
+ await expect(page.locator('#publicProfileTitle')).toHaveText('@recovered-collector');
+ await expect(page.locator('#publicProfileModal')).toHaveClass(/open/);
+ await expect(page.locator('#deckplaySharedLinkRetry')).toHaveCount(0);
+});
+
+test('Charles: nonexistent shared collector profile fails closed without an endless retry',async({page})=>{
+ await ready(page);
+ await page.evaluate(seller=>{
+  history.replaceState({},'','/?collector='+seller);
+  supabaseClient.from=table=>{
+   const q={then:resolve=>Promise.resolve({data:[],error:null}).then(resolve)};
+   for(const key of ['select','eq','order','limit'])q[key]=()=>q;
+   q.maybeSingle=async()=>({data:null,error:null});
+   return q;
+  };
+ },SELLER);
+ await page.evaluate(()=>window.deckplayOpenSharedLinkOnce());
+ await expect(page.locator('#publicProfileModal')).not.toHaveClass(/open/);
+ await expect(page.locator('#deckplaySharedLinkRetry')).toHaveCount(0);
+ await expect(page.locator('#toast')).toContainText('collector profile is unavailable');
+});

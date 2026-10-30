@@ -85,8 +85,15 @@ async function openSharedLinkOnce(){
  try{
   if(collector){
    if(!await checkBlocked(id,account,same)||!same())return;
-   await showPublicProfile(id);
-   if(same()){attempted=true;clearRetry()}
+   const outcome=await showPublicProfile(id);
+   if(!same())return;
+   if(outcome==='ready'){attempted=true;clearRetry();return}
+   // A failed profile lookup can leave a modal over the Retry button.
+   closeModal('publicProfileModal');
+   if(outcome==='missing'){
+    attempted=true;clearRetry();toast('This collector profile is unavailable.');return;
+   }
+   showRetry('Collector profile could not load. Check your connection and retry.');
    return;
   }
   const {data,error}=await supabaseClient.from('listings').select('id,title,description,category,tcg_game,collectible_subcategory,price,condition,accepts_trades,accepts_price_offers,image_urls,created_at,seller_id').eq('id',id).eq('status','active').maybeSingle();
@@ -99,7 +106,10 @@ async function openSharedLinkOnce(){
   showMainMarketplace();
   showDetails(marketplaceItemFromRow(data,profile));
   attempted=true;clearRetry();
- }catch(error){if(same())showRetry('Shared link could not be opened. Check your connection and retry.')}
+ }catch(error){if(same()){
+  if(collector)closeModal('publicProfileModal');
+  showRetry('Shared link could not be opened. Check your connection and retry.');
+ }}
  finally{
   opening=false;
   if(!same()&&!attempted)showRetry('Your account changed. Retry opening this shared link.');

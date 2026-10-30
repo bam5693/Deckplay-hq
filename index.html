@@ -1943,7 +1943,8 @@ async function showPublicProfile(id){
  const content=document.getElementById("publicProfileContent");content.textContent="Loading collector…";openModal("publicProfileModal");
  const [pResult,lResult,wResult,blockResult]=await Promise.all([supabaseClient.from("profiles").select("username,bio,favorite_tcg,location_label,avatar_url,collection_links,collection_inquiry_mode").eq("id",id).maybeSingle(),supabaseClient.from("listings").select("id,title,description,price,image_urls,condition,category,tcg_game,collectible_subcategory,accepts_trades,accepts_price_offers,created_at,seller_id").eq("seller_id",id).eq("status","active").order("created_at",{ascending:false}).order("id",{ascending:false}).limit(61),supabaseClient.from("wanted_posts").select("id,title,details,game").eq("user_id",id).order("created_at",{ascending:false}).limit(30),currentUser?supabaseClient.from("user_blocks").select("blocked_id").eq("blocker_id",currentUser.id).eq("blocked_id",id).maybeSingle():Promise.resolve({data:null})]);
  if(!current())return;
- if(pResult.error||!pResult.data){content.textContent="Collector profile unavailable.";return}
+ if(pResult.error){content.textContent="Could not load collector profile. Please retry.";return "retry"}
+ if(!pResult.data){content.textContent="Collector profile unavailable.";return "missing"}
  const followResult=currentUser&&currentUser.id!==id?await supabaseClient.from("seller_follows").select("seller_id").eq("follower_id",currentUser.id).eq("seller_id",id).maybeSingle():{data:null};
  const isFollowing=!!followResult.data;
  const ratingMarkup=await sellerRatingHtml(id);
@@ -2011,6 +2012,7 @@ async function showPublicProfile(id){
    return;
   }
   const inquiry=e.target.closest("[data-collection-inquiry]");if(inquiry){if(!currentUser){openModal("authModal");return}collectionInquiryRecipient=id;collectionInquiryOwner=currentUser.id;document.getElementById("collectionInquiryForm").reset();document.getElementById("collectionInquiryIntent").querySelector('[value="buy"]').disabled=p.collection_inquiry_mode==="trades";document.getElementById("collectionInquiryStatus").textContent="";closeModal("publicProfileModal");openModal("collectionInquiryModal");return}const tab=e.target.closest("[data-public-tab]");if(tab){showTab(tab.dataset.publicTab);return}const follow=e.target.closest("[data-follow-profile]");if(follow){if(!currentUser){openModal("authModal");return}follow.disabled=true;const result=isFollowing?await supabaseClient.from("seller_follows").delete().eq("follower_id",currentUser.id).eq("seller_id",id):await supabaseClient.from("seller_follows").insert({follower_id:currentUser.id,seller_id:id});if(result.error){toast(result.error.message);follow.disabled=false;return}toast(isFollowing?"Seller unfollowed.":"You'll hear about new listings from this seller.");await showPublicProfile(id);return}const report=e.target.closest("[data-report-profile]");if(report){startReport(id);return}const contact=e.target.closest("[data-message-profile]");if(contact){if(!currentUser){openModal("authModal");return}closeModal("publicProfileModal");await showInboxPage(id);return}const view=e.target.closest("[data-public-listing]");if(view){const l=listings.find(x=>x.id===view.dataset.publicListing);if(l){closeModal("publicProfileModal");showDetails(marketplaceItemFromRow(l,p))}}};
+ return "ready";
 }
 document.getElementById("myMessages").addEventListener("click",async()=>{closeAccountMenu();if(!currentUser)return;await showInboxPage()});
 async function showInboxPage(targetCollectorId=null){
