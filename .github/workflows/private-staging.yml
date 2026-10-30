@@ -23,6 +23,12 @@ on:
         required: false
         type: boolean
         default: false
+      focused_live_test:
+        description: 'One deployed signed-in journey for diagnosis; no deployment, no API sweep'
+        required: false
+        type: choice
+        options: [none, trading, listing-drafts-live, community, seller-overview-live, discovery-alerts, staging-permissions]
+        default: none
   # Batch release requests run focused local checks, then deploy and verify.
   # Broad stateful/photo suites remain manual; ordinary commits spend no CI minutes.
   push:
@@ -35,7 +41,7 @@ permissions:
   id-token: write
 jobs:
   staging-identity:
-    if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.auth_smoke_only != 'true' && github.event.inputs.account_readonly_only != 'true' }}
+    if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.auth_smoke_only != 'true' && github.event.inputs.account_readonly_only != 'true' && (github.event.inputs.focused_live_test == 'none' || github.event.inputs.focused_live_test == '') }}
     permissions:
       contents: read
       id-token: write
@@ -52,7 +58,7 @@ jobs:
       - run: node scripts/staging-ci-credentials.cjs
       # Preserve older staging runs for diagnosis; transactional tests are serialized below.
   staging-accounts:
-    if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.auth_smoke_only != 'true' && github.event.inputs.account_readonly_only != 'true' }}
+    if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.auth_smoke_only != 'true' && github.event.inputs.account_readonly_only != 'true' && (github.event.inputs.focused_live_test == 'none' || github.event.inputs.focused_live_test == '') }}
     needs: staging-identity
     concurrency:
       group: private-staging-transactions
@@ -215,6 +221,53 @@ jobs:
           path: |
             test-results/
             playwright-report/
+          retention-days: 3
+
+  focused-live-diagnostic:
+    if: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/test/staging-reporting' && github.event.inputs.focused_live_test != 'none' && github.event.inputs.focused_live_test != '' }}
+    name: One signed-in staging workflow, fail fast
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    environment: deckplay-staging
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Use existing trusted staging-only identity exchange
+        run: node scripts/staging-ci-credentials.cjs
+      - run: npm ci
+      - name: Minimal safe staging preflight
+        run: |
+          node scripts/check-inline-js.cjs
+          node --test tests/security/staging-browser-config.test.cjs tests/security/fixture-cleanup.test.cjs
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: staging-playwright-${{ hashFiles('package-lock.json') }}
+      - run: npx playwright install chromium --only-shell
+      - name: Run only the selected signed-in browser journey on private staging
+        env:
+          SELECTED_TEST: ${{ github.event.inputs.focused_live_test }}
+        run: |
+          case "$SELECTED_TEST" in
+            trading|listing-drafts-live|community|seller-overview-live|discovery-alerts|staging-permissions) ;;
+            *) echo "Unsupported diagnostic selection"; exit 1;;
+          esac
+          npx playwright test --config=playwright.staging.config.js "${SELECTED_TEST}.spec.js" --project=staging-desktop --retries=0 --max-failures=1 --timeout=45000
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: private-staging-single-journey-diagnostic
+          path: |
+            test-results/staging-junit.xml
+            test-results/staging/
+            playwright-report/staging/
+          if-no-files-found: warn
           retention-days: 3
 
   report-failure:
