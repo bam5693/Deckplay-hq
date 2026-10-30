@@ -259,7 +259,7 @@
          "",
          "What would help me contact the seller: "]
       : ["Marketplace search feedback (optional, private)",
-         "Outcome: "+(detail.outcome==="empty"?"No matching listings":"Listings shown, but not the right item"),
+         "Outcome: "+(detail.outcome==="empty"?(detail.hasFilters===false?"No listings available yet":"No matching listings"):"Listings shown, but not the right item"),
          "Category: "+category,
          "Used text search: "+(detail.hasText===true?"yes":"no"),
          "Used game filter: "+(detail.hasGame===true?"yes":"no"),
