@@ -27,3 +27,54 @@ test('Charles Tanner and Jayden can preview lots across cards games collectibles
  await page.locator('#listingIncludedQuantity').fill('1.5');
  await expect(page.locator('#listingContentsPreview')).toContainText('whole number');
 });
+
+test('T1.4: whole-lot asking price is clear on buyer details across every collectible category',async({page})=>{
+ const cases=[
+  ['trading_cards','complete decks',3],
+  ['video_games','games',4],
+  ['consoles','bundled items',2],
+  ['controllers','controllers',2],
+  ['accessories','accessories',6],
+  ['collectibles','figures',5],
+  ['other','mixed pieces',7]
+ ];
+ const output=await page.evaluate(cases=>{
+  closeModal('sellModal');
+  return cases.map(([category,unit,quantity])=>{
+   const desc='[Listing contents]\\nQuantity included: '+quantity+'\\nUnit: '+unit+'\\nSold together for the listing price.\\n[End listing contents]\\nTest collectible';
+   showDetails({n:'Synthetic '+category+' lot',p:120,c:category,description:desc,imageUrls:[],sellerId:'other-seller'});
+   return {category,text:document.querySelector('.detail-price-scope')?.textContent,
+    price:document.querySelector('#detailContent .detail-price')?.textContent};
+  });
+ },cases);
+ expect(output).toHaveLength(7);
+ for(let i=0;i<cases.length;i++){
+  expect(output[i].price).toBe('$120.00');
+  expect(output[i].text).toBe('Price for the complete listing: '+cases[i][2]+' '+cases[i][1]+' included. Not a per-unit price.');
+ }
+});
+test('T1.4: single-quantity disclosures are truthful; legacy and malformed lots are not assumed single-copy',async({page})=>{
+ await page.evaluate(()=>{
+  closeModal('sellModal');
+  window.showScopedTest=(description)=>{
+   showDetails({n:'Synthetic sealed pack',p:19.99,c:'trading_cards',description,imageUrls:[],sellerId:'other-seller'});
+   return document.querySelector('.detail-price-scope')?.textContent;
+  };
+ });
+ const single=await page.evaluate(()=>showScopedTest('[Listing contents]\\nQuantity included: 1\\nUnit: sealed pack\\nSold together for the listing price.\\n[End listing contents]'));
+ expect(single).toBe('Price for the complete listing: 1 sealed pack included.');
+ const legacy=await page.evaluate(()=>showScopedTest('Vintage complete set; ask seller about contents'));
+ expect(legacy).toBe('Asking price for this listing. Check the description for what is included.');
+ const invalid=await page.evaluate(()=>showScopedTest('[Listing contents]\\nQuantity included: 100001\\nUnit: cards\\nSold together for the listing price.\\n[End listing contents]'));
+ expect(invalid).toBe(legacy);
+});
+test('T1.4: unusual unit disclosures remain escaped as text, never injected into buyer listing HTML',async({page})=>{
+ await page.evaluate(()=>{
+  closeModal('sellModal');
+  const desc='[Listing contents]\\nQuantity included: 2\\nUnit: cards<img src=x onerror=alert(1)>\\nSold together for the listing price.\\n[End listing contents]';
+  showDetails({n:'Safe listing',p:40,c:'trading_cards',description:desc,imageUrls:[],sellerId:'other-seller'});
+ });
+ await expect(page.locator('.detail-price-scope')).toContainText('cards<img src=x onerror=alert(1)>');
+ await expect(page.locator('.detail-price-scope img')).toHaveCount(0);
+ await expect(page.locator('.detail-price-scope')).toContainText('Not a per-unit price');
+});
