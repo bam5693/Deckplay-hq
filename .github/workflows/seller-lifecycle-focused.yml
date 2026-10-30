@@ -1,0 +1,42 @@
+name: Seller lifecycle acceptance preflight
+on:
+  push:
+    branches: [test/staging-reporting]
+    paths: ['.github/workflows/seller-lifecycle-focused.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  seller-lifecycle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Lowest-cost syntax, migration contract and stage build
+        run: |
+          node scripts/check-inline-js.cjs
+          node --check tests/e2e/seller-pause.spec.js
+          node --check tests/e2e/seller-inventory.spec.js
+          node --check scripts/build-staging.cjs
+          grep -q "paused" supabase/staging/seller-listing-pause.sql
+      - run: npm ci
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: staging-playwright-${{ hashFiles('package-lock.json') }}
+      - run: npx playwright install chromium --only-shell
+      - name: Seller lifecycle across 7 catalog sections, seller account boundaries and stale reservations
+        run: npx playwright test --config=playwright.local.config.js seller-pause.spec.js seller-inventory.spec.js --retries=0 --max-failures=1 --timeout=20000
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: seller-lifecycle-test-failure
+          path: |
+            test-results/
+            playwright-report/
+          if-no-files-found: ignore
+          retention-days: 3
