@@ -2761,8 +2761,9 @@ function startMessageUpdates(){
  if(messageChannel){supabaseClient.removeChannel(messageChannel);messageChannel=null}
  if(messagePoll){clearInterval(messagePoll);messagePoll=null}
  if(!currentUser){document.getElementById("notificationBell").hidden=true;document.getElementById("notificationBadge").hidden=true;return}
- refreshUnreadCount();refreshTradeAlerts();refreshNotificationCount();
- const updateInboxActivity=()=>{refreshUnreadCount();refreshTradeAlerts();refreshNotificationCount();scheduleLiveInboxRefresh()};
+ refreshUnreadCount();refreshTradeAlerts();
+ // Notification updates have their own realtime subscription and polling loop.
+ const updateInboxActivity=()=>{refreshUnreadCount();refreshTradeAlerts();scheduleLiveInboxRefresh()};
  messageChannel=supabaseClient.channel("deckplay-inbox-"+currentUser.id)
  .on("postgres_changes",{event:"INSERT",schema:"public",table:"collector_messages",filter:"recipient_id=eq."+currentUser.id},updateInboxActivity)
  .on("postgres_changes",{event:"*",schema:"public",table:"price_offers"},updateInboxActivity)
