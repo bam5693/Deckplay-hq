@@ -62,6 +62,8 @@
 
 - [ ] **T2.3** Earlier conversation history and negotiation events paginate in correct stable order even on tied timestamps; old offer-only conversations remain discoverable.
 - [ ] **T2.4** Send errors, reloads, duplicate taps, stale responses and account switches do not silently drop drafts, duplicate messages or leak private content.
+  - **CANDIDATE — 2026-10-31, failed Inbox refresh resilience:** Existing private conversation and unsent draft stay visible during transient refresh failure, with explicit out-of-date notice and accessible retry; repeated failures do not stack notices, and initial load still fails to retry-only screen. [PR #14](https://github.com/bam5693/Deckplay-hq/pull/14), [4/4 local mobile/desktop scenarios](https://github.com/bam5693/Deckplay-hq/actions/runs/41223221399), [protected staging deploy](https://github.com/bam5693/Deckplay-hq/actions/runs/41223289192), [27 exact assets and anonymous 401](https://github.com/bam5693/Deckplay-hq/actions/runs/41223338264). **T2.4 remains unchecked** pending remaining delivery/account-isolation acceptance. Public production untouched.
+
 - [ ] **T2.5** Price offers, trades, counters and alerts open the correct conversation, with useful read-state reconciliation.
 - [ ] **T2.6** Private message photos can be exchanged and opened by authorized participants on staging, with type/size/rate limits, cross-user denial, mobile retries and safety handling. Public release remains disabled until its own security/recovery approval.
 
