@@ -1252,3 +1252,59 @@ test('T2.3 Jump to latest is scoped to the current conversation and hides for sh
  await expect(page.locator('.chat-jump-latest')).toBeHidden();
  await expect(page.locator('.chat-person h3')).toContainText('buyer-b');
 });
+
+test('T2.3 live Inbox refresh keeps older reading position without stealing keyboard focus',async({page})=>{
+ await inbox(page);
+ await page.evaluate(async()=>{
+  const original=supabaseClient.from;
+  window.__historyRows=Array.from({length:80},(_,i)=>({
+   id:'history-'+String(i).padStart(4,'0'),sender_id:'buyer-a',recipient_id:'fixture-seller',
+   body:'Earlier One Piece trade update number '+i,read_at:new Date().toISOString(),
+   created_at:new Date(Date.now()-i*60000).toISOString()
+  }));
+  supabaseClient.from=table=>{
+   if(table!=='collector_messages')return original(table);
+   const q={then:(resolve,reject)=>Promise.resolve({data:window.__historyRows,error:null}).then(resolve,reject)};
+   for(const key of ['select','order','limit','in','eq','is','maybeSingle'])q[key]=()=>q;
+   q.update=()=>q;
+   return q;
+  };
+  await loadInbox('buyer-a');
+ });
+ const log=page.locator('.conversation-bubbles');
+ const size=await log.evaluate(el=>el.scrollHeight-el.clientHeight);
+ expect(size).toBeGreaterThan(200);
+ await log.evaluate(el=>{el.scrollTop=Math.round((el.scrollHeight-el.clientHeight)/3)});
+ await page.locator('#inboxThreadBack').focus();
+ const before=await log.evaluate(el=>el.scrollHeight-el.clientHeight-el.scrollTop);
+ await page.evaluate(()=>loadInbox('buyer-a'));
+ const after=await page.locator('.conversation-bubbles').evaluate(el=>el.scrollHeight-el.clientHeight-el.scrollTop);
+ expect(Math.abs(before-after)).toBeLessThan(5);
+ await expect(page.locator('#inboxThreadBack')).toBeFocused();
+ await expect(page.locator('.chat-jump-latest')).toBeVisible();
+});
+
+test('T2.3 Inbox refresh follows newest message only when reading near bottom',async({page})=>{
+ await inbox(page);
+ await page.evaluate(async()=>{
+  const original=supabaseClient.from;
+  const rows=Array.from({length:80},(_,i)=>({
+   id:'history-'+i,sender_id:'buyer-a',recipient_id:'fixture-seller',
+   body:'Card condition conversation update '+i,read_at:new Date().toISOString(),
+   created_at:new Date(Date.now()-i*60000).toISOString()
+  }));
+  supabaseClient.from=table=>{
+   if(table!=='collector_messages')return original(table);
+   const q={then:(resolve,reject)=>Promise.resolve({data:rows,error:null}).then(resolve,reject)};
+   for(const key of ['select','order','limit','in','eq','is','maybeSingle'])q[key]=()=>q;
+   q.update=()=>q;return q;
+  };
+  await loadInbox('buyer-a');
+ });
+ const log=page.locator('.conversation-bubbles');
+ await log.evaluate(el=>{el.scrollTop=el.scrollHeight-el.clientHeight-20});
+ await page.evaluate(()=>loadInbox('buyer-a'));
+ const distance=await page.locator('.conversation-bubbles').evaluate(el=>el.scrollHeight-el.clientHeight-el.scrollTop);
+ expect(distance).toBeLessThanOrEqual(3);
+ await expect(page.locator('.chat-jump-latest')).toBeHidden();
+});
