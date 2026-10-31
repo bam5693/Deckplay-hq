@@ -103,3 +103,21 @@ test('a saved-items refresh does not resurrect an item being unsaved',async({pag
  await expect(page.locator('[data-heart]')).toBeEnabled();
  await expect(page.locator('[data-heart]')).toHaveText('♡');
 });
+
+test('an old account pending save never enters a new account saved-list refresh',async({page})=>{
+ await fixture(page);
+ await page.evaluate(()=>resetSavedListingsForAccount('first-buyer'));
+ await page.locator('[data-heart]').click();
+ await page.evaluate(()=>{
+  currentUser={id:'second-buyer'};resetSavedListingsForAccount('second-buyer');render();
+  supabaseClient.from=()=>({select:()=>({eq:()=>({})})});
+  window.savedReadQueue=[];readMarketplaceRequest=()=>new Promise(resolve=>savedReadQueue.push(resolve));
+  window.savedRefreshDone=false;loadSavedListings().then(()=>savedRefreshDone=true);
+ });
+ await expect.poll(()=>page.evaluate(()=>savedReadQueue.length)).toBe(1);
+ await page.evaluate(()=>savedReadQueue.shift()({data:[],error:null}));
+ await expect.poll(()=>page.evaluate(()=>savedRefreshDone)).toBe(true);
+ expect(await page.evaluate(()=>[...saved])).toEqual([]);
+ await page.evaluate(()=>finishFavorite({error:null}));
+ expect(await page.evaluate(()=>[...saved])).toEqual([]);
+});
