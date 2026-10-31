@@ -206,6 +206,69 @@ test('T3.4 signed duplicate trade retries keep exactly one pending proposal acro
   expect(reopened.id).not.toBe(first.id);
   const repeatAgain=await create(title);
   expect(repeatAgain.error).toMatch(/identical pending trade proposal already exists/i);
+  // The INSERT must really commit to staging, then we deliberately lose the
+  // HTTP success result and the first confirmation read. Retrying must recover
+  // the same ID without sending a second INSERT or a second notification.
+  const lostResponse=await buyer.evaluate(async({target,offered,sellerId,note})=>{
+   const payload={listing_id:target,sender_id:currentUser.id,recipient_id:sellerId,
+    offered_listing_id:offered,offered_listing_ids:[offered],offer_note:note,
+    cash_amount:0,cash_direction:'none'};
+   const realFrom=supabaseClient.from.bind(supabaseClient);
+   let interceptedInsert=0,committedId=null,lostSuccess=false,lostLookup=false;
+   supabaseClient.from=(table)=>{
+    const q=realFrom(table);
+    if(table!=='trade_offers')return q;
+    const insert=q.insert.bind(q),select=q.select.bind(q);
+    q.insert=(row)=>{
+     interceptedInsert++;
+     const chain=insert(row),realSelect=chain.select.bind(chain);
+     chain.select=columns=>{
+      const selected=realSelect(columns),realSingle=selected.single.bind(selected);
+      selected.single=async()=>{
+       const response=await realSingle();
+       if(!response.error&&response.data?.id&&!lostSuccess){
+        lostSuccess=true;committedId=response.data.id;
+        throw Error('Synthetic success response lost after a real DB commit');
+       }
+       return response;
+      };
+      return selected;
+     };
+     return chain;
+    };
+    q.select=columns=>{
+     const selected=select(columns),realMaybeSingle=selected.maybeSingle.bind(selected);
+     selected.maybeSingle=async()=>{
+      if(!lostLookup){lostLookup=true;throw Error('Synthetic confirmation lookup temporarily offline')}
+      return realMaybeSingle();
+     };
+     return selected;
+    };
+    return q;
+   };
+   try{
+    let firstError=null;
+    try{await sendTradeProposalOnce(payload)}catch(error){firstError=error.message}
+    const savedRetry=sessionStorage.getItem('deckplay-trade-retries-v1:'+currentUser.id);
+    supabaseClient.from=realFrom;
+    const recovered=await sendTradeProposalOnce(payload);
+    const cleanedRetry=sessionStorage.getItem('deckplay-trade-retries-v1:'+currentUser.id);
+    return {firstError,committedId,recovered:recovered.data?.id,interceptedInsert,savedRetry:!!savedRetry,cleanedRetry:cleanedRetry===null};
+   }finally{supabaseClient.from=realFrom}
+  },{target,offered,sellerId,note:title+' response-lost'});
+  expect(lostResponse.firstError).toMatch(/Synthetic success response lost after a real DB commit/);
+  expect(lostResponse.interceptedInsert).toBe(1);
+  expect(lostResponse.committedId).toMatch(/^[a-f0-9-]{36}$/);
+  expect(lostResponse.recovered).toBe(lostResponse.committedId);
+  expect(lostResponse.savedRetry).toBe(true);
+  expect(lostResponse.cleanedRetry).toBe(true);
+  const confirmedOnce=await buyer.evaluate(async({target,note})=>{
+   const {data,error}=await supabaseClient.from('trade_offers').select('id').eq('listing_id',target).eq('sender_id',currentUser.id).eq('offer_note',note).eq('status','pending');
+   if(error)throw Error(error.message);
+   return data.map(x=>x.id);
+  },{target,note:title+' response-lost'});
+  expect(confirmedOnce).toEqual([lostResponse.committedId]);
+
  }catch(error){primaryError=error;throw error}
  finally{
   const errors=[];
