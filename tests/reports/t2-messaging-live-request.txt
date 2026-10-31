@@ -1,2 +1,1 @@
-T2.1 next vertical slice: actual signed buyer starts from saved video-game listing Message seller action with no prior conversation, sends through compose form, enters direct seller Inbox thread; seller replies, buyer receives. T2.4 error and duplicate checks remain in same focused acceptance.
-Use existing trusted private staging, exact build and parity, disposable scoped fixtures only. Never production.
+Focused signed T2.1 first-contact retry after failed run 41232243001. Close listing detail overlay before showing Inbox; verify actual listing contact -> conversation -> reply -> retry. Private staging only, source parity, no production or broad tests.
