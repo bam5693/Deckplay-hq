@@ -1,0 +1,33 @@
+name: Guide keyboard and reduced-motion regression
+on:
+  pull_request:
+    branches: [test/staging-reporting]
+    paths:
+      - getting-started.js
+      - tests/e2e/getting-started.spec.js
+      - .github/workflows/guide-accessibility-focused.yml
+permissions:
+  contents: read
+jobs:
+  focused-local-browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Check guide and test syntax
+        run: |
+          node --check getting-started.js
+          node --check tests/e2e/getting-started.spec.js
+          node scripts/check-inline-js.cjs
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: staging-playwright-${{ hashFiles('package-lock.json') }}
+      - run: npx playwright install chromium --only-shell
+      - name: Focused mobile and desktop guide checks
+        run: npx playwright test --config=playwright.local.config.js getting-started.spec.js --retries=0 --max-failures=1 --timeout=20000
