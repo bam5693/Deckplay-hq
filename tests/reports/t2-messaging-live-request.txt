@@ -1,1 +1,1 @@
-Focused T2.1 regression after runs 41232243001 and 41232725521: existing-listing Message seller -> compose send -> visible Inbox; guard against prior async page render. Includes T2.4 persisted message retry checks, private staging only, one test and scoped fixtures.
+T2.1 focused signed first-contact source-of-hide diagnostic after runs 41232243001, 41232725521 and 41232848390. One private staging build and signed browser test; test captures only DOM navigation stack and state upon Inbox hidden failure. No production, no untrusted identities, no broad suite. 2026-10-31.
