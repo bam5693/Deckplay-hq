@@ -153,3 +153,24 @@ test('a newly installed waiting PWA update prompts an already-open tab', async (
   });
   await expect(page.locator('#deckplayAppUpdate')).toBeVisible();
 });
+
+test('a PWA already installing at registration is tracked until it can prompt', async ({ page }) => {
+  await page.addInitScript(() => {
+    const fake = new EventTarget();
+    fake.controller = { version: 'existing' };
+    const installer = new EventTarget();
+    installer.state = 'installing';
+    const registration = Object.assign(new EventTarget(), { installing: installer, waiting: null, update: async () => {} });
+    fake.register = async () => registration;
+    Object.defineProperty(navigator, 'serviceWorker', { configurable: true, value: fake });
+    window.__alreadyInstalling = { registration, installer };
+  });
+  await page.goto('/');
+  await page.waitForFunction(() => Boolean(window.__alreadyInstalling));
+  await page.evaluate(() => {
+    __alreadyInstalling.installer.state = 'installed';
+    __alreadyInstalling.registration.waiting = __alreadyInstalling.installer;
+    __alreadyInstalling.installer.dispatchEvent(new Event('statechange'));
+  });
+  await expect(page.locator('#deckplayAppUpdate')).toBeVisible();
+});
