@@ -37,4 +37,4 @@ jobs:
       - run: npx playwright install chromium --only-shell
       - name: Focused T7.5 feedback and T8.3 ticket topic filtering on mobile and desktop
         run: |
-          npx playwright test --config=playwright.local.config.js support-center.spec.js --grep 'T7.6:|T7.5:|T8.3: ticket topic filters|T8.3: staff safety queue|T8.3: delayed staff status failure|T8.3: collector tickets load while optional staff authorization' --project=local-desktop --project=local-mobile --max-failures=1 --timeout=20000
+          npx playwright test --config=playwright.local.config.js support-center.spec.js --grep 'T7.6:|T7.5:|T8.3: ticket topic filters|T8.3: staff safety queue|T8.3: delayed staff status failure|T8.3: collector tickets load while optional staff authorization|T8.4: oversized listing report retains draft and does not submit' --project=local-desktop --project=local-mobile --max-failures=1 --timeout=20000
