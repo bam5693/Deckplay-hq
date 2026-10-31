@@ -1336,6 +1336,7 @@ test('T8.4: oversized listing report retains draft and does not submit',async({p
  await boot(page);await signIn(page,'buyer');
  await openSyntheticListingReport(page);
  await page.locator('#supportReportReason').selectOption('counterfeit');
+ await page.locator('#supportDescription').evaluate(el=>{el.maxLength=3000});
  await page.locator('#supportDescription').fill('x'.repeat(3000));
  await page.getByRole('button',{name:'Send listing report'}).click();
  await expect(page.locator('#supportCreateStatus')).toContainText('too long');
