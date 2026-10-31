@@ -1,5 +1,5 @@
 name: Run one read-only signed-in buyer catalog diagnostic
-# Capture initial account-reset state before any manual initializer diagnostics.
+# Verify real signed-in catalog startup after deferred Auth callback deployment.
 on:
   push:
     branches: [test/staging-reporting]
