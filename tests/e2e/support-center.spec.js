@@ -1286,7 +1286,7 @@ test('T7.6: selected feedback area is submitted privately and survives same-acco
  await expect(page.locator('#supportTicketBody')).toContainText('Area: Sports cards');
  const call=await page.evaluate(()=>window.__db.calls.filter(row=>row.name==='create_support_ticket').at(-1));
  expect(call.args.p_category).toBe('other');
- expect(call.args.p_body).toBe('Area: Sports cards\\nDetails: A graded sports card should show the exact grading details.');
+ expect(call.args.p_body).toBe('Area: Sports cards\nDetails: A graded sports card should show the exact grading details.');
  // Search feedback sets a fixed marketplace context, without copying search words.
  await page.evaluate(()=>document.dispatchEvent(new CustomEvent('deckplay:search-feedback',{
   detail:{outcome:'empty',category:'Trading Cards',hasText:true,hasFilters:true}
