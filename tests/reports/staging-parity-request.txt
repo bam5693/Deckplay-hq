@@ -4,3 +4,5 @@ Protected private staging deployment run 41182194487 PASS at request HEAD 7317e7
 Compare exact served assets to current isolated staging branch, deny anonymous Basic Auth, verify noindex and isolated Supabase configuration. No staging DB writes, no production or billing changes.
 
 2026-10-31 04:01 Central — Verify exact private staging asset parity after PWA offline-refresh safety deployment run 41186891673. Source f17129d; focused eight browser cases at run 41186833013 PASSED. No production, merges, billing, privileged writes or secret rotation.
+
+2026-10-31 T1.2 protected marketplace deployment run 41215719676 SUCCESS, staging request commit 62c4e16f829a06ed7e416409dc6a17ecebfafba9. Run exact served assets, auth 401, and isolated staging Supabase parity against current staging branch. Focused 44/44 local checks passed in 41215280394; synthetic signed buyer read-only category and empty-state test b443c784 prepared. Production untouched.
