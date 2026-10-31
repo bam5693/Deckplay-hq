@@ -1,6 +1,7 @@
 const {test,expect}=require('@playwright/test');
 const OWNER='22222222-2222-4222-8222-222222222222';
 test.beforeEach(async({page})=>{
+  page.on('pageerror',error=>console.log('OWNER_PREVIEW_PAGE_ERROR:',error.message));
   await page.route('https://challenges.cloudflare.com/**',route=>route.abort());
   await page.route('https://*.supabase.co/rest/v1/**',route=>route.fulfill({status:200,contentType:'application/json',body:'[]'}));
   await page.goto('/');
@@ -49,13 +50,23 @@ test('profile sign out remains reachable and invokes safe auth signout',async({p
     currentUser={id};
     const el=document.getElementById('collectorPage');el.hidden=false;el.style.display='block';
     window.previewSignouts=0;
-    window.confirm=()=>true;
-    supabaseClient.auth.signOut=async()=>{window.previewSignouts++;return {error:null}};
+    window.previewConfirmCalls=0;
+    window.confirm=()=>{window.previewConfirmCalls++;return true};
+    const replacement=async()=>{window.previewSignouts++;return {error:null}};
+    Object.defineProperty(supabaseClient.auth,'signOut',{configurable:true,writable:true,value:replacement});
+    window.previewAuthPatched=supabaseClient.auth.signOut===replacement;
   },OWNER);
   await expect(page.locator('#profileSignOut')).toBeVisible();
   // Set the synthetic account at the moment of the click; initial auth hydration
   // may clear a fake identity between test setup and a Playwright click.
-  await page.evaluate(id=>{currentUser={id};document.getElementById('profileSignOut').click()},OWNER);
+  const diagnosis=await page.evaluate(id=>{
+    currentUser={id};
+    document.getElementById('profileSignOut').click();
+    return {patched:window.previewAuthPatched,confirms:window.previewConfirmCalls,signouts:window.previewSignouts,userPresent:currentUser?.id===id,handler:typeof deckplaySignOut};
+  },OWNER);
+  console.log('OWNER_PREVIEW_SIGNOUT_DIAGNOSIS',JSON.stringify(diagnosis));
+  expect(diagnosis.patched).toBe(true);
+  await expect.poll(()=>page.evaluate(()=>window.previewConfirmCalls)).toBe(1);
   await expect.poll(()=>page.evaluate(()=>window.previewSignouts)).toBe(1);
   await expect(page.locator('#collectorPage')).toBeHidden();
 });
