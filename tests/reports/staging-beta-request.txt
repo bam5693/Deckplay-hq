@@ -156,3 +156,5 @@ Focused verification request: validate staging startup and notification polling 
 2026-10-31 focused signed staging accepted-deal progress completion: seller moves to arranging, mobile buyer confirms, seller confirms, both independently read completed; direct table update denied, closed retry denied. Existing exact synthetic fixture cleanup. No full suite.
 
 2026-10-31 T3.5 one focused real rendered Inbox button acceptance: seller Arranging dropdown, mobile buyer Confirm button, desktop seller Confirm button, independent completed readback and denied direct mutation. Exact cleanup. No deployment or broad V1 suite.
+
+2026-10-31 T3.2 focused signed real three-item multi-category bundle snapshot acceptance, seller desktop and mobile buyer; counter cash sender-pays and all inventory reserved; exact fixture cleanup. No broad suite.
