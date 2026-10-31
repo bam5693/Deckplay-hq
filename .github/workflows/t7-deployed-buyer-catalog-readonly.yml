@@ -1,0 +1,52 @@
+name: T7 private staging mobile buyer catalog readiness
+on:
+  push:
+    branches: [test/staging-reporting]
+    paths: ['.github/workflows/t7-deployed-buyer-catalog-readonly.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+  id-token: write
+concurrency:
+  group: deckplay-t7-catalog-readonly
+  cancel-in-progress: false
+jobs:
+  signed-buyer-mobile:
+    name: Signed buyer mobile catalog settled-state check
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    environment: deckplay-staging
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Authenticate read-only private staging using trusted runner identity
+        run: node scripts/staging-ci-credentials.cjs
+      - run: npm ci
+      - name: Cheap source and fixture preflight
+        run: |
+          node --check tests/e2e/staging-account-readonly.spec.js
+          node --test tests/security/staging-browser-config.test.cjs
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: staging-playwright-${{ hashFiles('package-lock.json') }}
+      - run: npx playwright install chromium --only-shell
+      - name: Verify signed mobile buyer catalog, all categories and empty search recovery
+        run: >-
+          npx playwright test --config=playwright.staging.config.js
+          staging-account-readonly.spec.js
+          --project=staging-mobile
+          --grep "signed buyer browses live categories and recovers from empty search"
+          --workers=1 --retries=0 --timeout=60000
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: t7-signed-buyer-mobile-failure
+          path: |
+            test-results/staging/
+            test-results/staging-junit.xml
+          if-no-files-found: ignore
+          retention-days: 3
