@@ -63,6 +63,7 @@ test('T2.1 signed buyer and seller exchange real Inbox messages',async({browser}
   try{
    await buyer.locator('[aria-label="Send message"]').click();
    await expect(buyer.locator('.chat-send-status')).toContainText('Could not send:',{timeout:15000});
+   await expect(buyer.locator('.chat-send-status')).toContainText('Tap Send to retry');
    await expect(buyer.locator('#chatInput')).toHaveValue(failedDraft);
   }finally{
    await buyer.evaluate(()=>{supabaseClient.from=window.__t2FromOriginal;delete window.__t2FromOriginal});
