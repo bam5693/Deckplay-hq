@@ -1343,3 +1343,17 @@ test('T8.4: oversized listing report retains draft and does not submit',async({p
  await expect(page.locator('#supportDescription')).toHaveValue('x'.repeat(3000));
  expect(await page.evaluate(()=>window.__db.calls.filter(c=>c.name==='create_support_ticket').length)).toBe(0);
 });
+
+test('T8.3: whitespace-only support replies never reach RPC and preserve draft',async({page})=>{
+ await boot(page);await signIn(page,'buyer');
+ await page.getByRole('button',{name:'Help & support'}).last().click();
+ await page.locator('#supportSubject').fill('Private reply validation');
+ await page.locator('#supportDescription').fill('Synthetic ticket to verify support reply validation.');
+ await page.getByRole('button',{name:'Create private ticket'}).click();
+ await page.locator('#supportReplyBody').fill('  ');
+ await page.getByRole('button',{name:'Send reply'}).click();
+ await expect(page.locator('#supportReplyStatus')).toContainText('at least two characters');
+ await expect(page.locator('#supportReplyBody')).toHaveValue('  ');
+ const replies=await page.evaluate(()=>window.__db.calls.filter(x=>x.name==='reply_support_ticket').length);
+ expect(replies).toBe(0);
+});
