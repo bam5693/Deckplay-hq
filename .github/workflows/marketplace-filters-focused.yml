@@ -2,7 +2,9 @@ name: Marketplace filters focused verification
 on:
   push:
     branches: [test/staging-reporting]
-    paths: ['.github/workflows/marketplace-filters-focused.yml']
+    paths:
+      - '.github/workflows/marketplace-filters-focused.yml'
+      - 'tests/e2e/marketplace-filter-boundaries.spec.js'
 permissions:
   contents: read
 concurrency:
@@ -29,7 +31,7 @@ jobs:
           key: marketplace-filter-chromium-${{ hashFiles('package-lock.json') }}
       - run: npx playwright install chromium --only-shell
       - name: Verify T1.2 marketplace filter and recovery behavior on mobile and desktop
-        run: npx playwright test --config=playwright.local.config.js marketplace-filter-boundaries.spec.js --retries=0 --max-failures=1 --timeout=20000
+        run: npx playwright test --config=playwright.local.config.js marketplace-filter-boundaries.spec.js --retries=0 --timeout=20000
       - uses: actions/upload-artifact@v4
         if: always()
         with:
