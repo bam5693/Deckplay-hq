@@ -1906,8 +1906,11 @@ document.addEventListener("DOMContentLoaded",syncWantedGameOptions);
 function wantedMetadata(post){const details=post.details||"";const start=details.indexOf("[DeckPlay match: ");if(start<0)return null;const end=details.indexOf("]",start);if(end<0)return null;try{return JSON.parse(details.slice(start+17,end))}catch{return null}}
 function wantedListingField(description,field){
  const prefix=field.toLowerCase()+":";
- const lines=String(description||"").replace(/\\r\\n|\\n|\r\n?/g,"\n").split("\n");
- const row=lines.find(line=>line.trimStart().toLowerCase().startsWith(prefix));
+ const normalized=String(description||"").replace(/\\r\\n|\\n|\r\n?/g,"\n");
+ // The latest seller-edited classification supersedes stale creation notes.
+ const updated=normalized.match(/(?:^|\n)\[Listing classification\]\n([\s\S]*?)\n\[End classification\]/);
+ const source=updated?updated[1]:normalized;
+ const row=source.split("\n").find(line=>line.trimStart().toLowerCase().startsWith(prefix));
  return row?row.trimStart().slice(prefix.length).trim():"";
 }
 function exactWantedMatches(post){
