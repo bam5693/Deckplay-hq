@@ -1,0 +1,5 @@
+T1.1 — targeted real seller photo-upload failure, rollback and retry on private staging (2026-10-31).
+Verified source: photo cleanup 2de7ad30eb95b74deefb39d4996559880559cb00; focused desktop/mobile synthetic cleanup and cleanup-error 4/4 PASS run 41217540732.
+Protected staging deployment 41217869999 PASS; exact served assets, private gate and staging-only configuration parity 41217936502 PASS.
+Test fixture: tests/e2e/listing-photo-retry-live.spec.js commit 3781b81056cbbacb16a443c0c82312e7ad6cbbd9.
+Use existing private-staging CI identity, disposable seller/buyer, real image storage, deliberate second upload failure, check first object rollback, retry two photos, verify actual listing and buyer, exact fixture cleanup. Do not run the old broad category matrix or previously accepted seller flows. No production/main, live payments, shipping, billing or PR merge.
