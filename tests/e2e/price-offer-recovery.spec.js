@@ -183,3 +183,37 @@ test('Jayden inbox trade reply does not suggest retry after a committed response
  expect(await page.evaluate(()=>offerToasts)).toContain('Trade declined');
  await expect(page.locator('[data-inbox-trade="declined"]')).toBeEnabled();
 });
+
+
+test('a seller who countered cannot see the buyer-only Withdraw action',async({page})=>{
+ await page.route('https://challenges.cloudflare.com/**',r=>r.abort());
+ await page.route('https://prrrzeelltmyugssqnzk.supabase.co/**',r=>r.fulfill({json:[]}));
+ await page.goto('/');
+ const views=await page.evaluate(async()=>{
+  await supabaseClient.auth.getSession();
+  const savedUser=currentUser,savedFrom=supabaseClient.from;
+  const offer={id:'synthetic-offer',listing_id:'synthetic-listing',buyer_id:'synthetic-buyer',seller_id:'synthetic-seller',amount:22.5,status:'countered',last_actor_id:'synthetic-seller',updated_at:new Date().toISOString()};
+  supabaseClient.from=table=>{
+   const q={select:()=>q,order:()=>q,limit:async()=>({data:[offer],error:null}),in:async()=>({data:table==='listings'?[{id:'synthetic-listing',title:'Synthetic One Piece card',price:25}]:[{id:'synthetic-buyer',username:'buyer'},{id:'synthetic-seller',username:'seller'}],error:null})};
+   if(['price_offers','listings','profiles'].includes(table))return q;
+   return savedFrom(table);
+  };
+  const view=()=>({actions:[...document.querySelectorAll('#priceOffersList [data-price-action]')].map(el=>el.dataset.priceAction),text:document.getElementById('priceOffersList').textContent});
+  try{
+   currentUser={id:'synthetic-seller'};
+   await loadPriceOffers();const sellerWaiting=view();
+   currentUser={id:'synthetic-buyer'};
+   await loadPriceOffers();const buyerResponds=view();
+   offer.status='pending';offer.last_actor_id='synthetic-buyer';
+   await loadPriceOffers();const buyerCanWithdraw=view();
+   currentUser={id:'synthetic-seller'};
+   await loadPriceOffers();const sellerCanRespond=view();
+   return {sellerWaiting,buyerResponds,buyerCanWithdraw,sellerCanRespond};
+  }finally{supabaseClient.from=savedFrom;currentUser=savedUser}
+ });
+ expect(views.sellerWaiting.actions).toEqual([]);
+ expect(views.sellerWaiting.text).toContain('Waiting for the other collector');
+ expect(views.buyerResponds.actions).toEqual(['accept','counter','decline']);
+ expect(views.buyerCanWithdraw.actions).toEqual(['withdraw']);
+ expect(views.sellerCanRespond.actions).toEqual(['accept','counter','decline']);
+});
