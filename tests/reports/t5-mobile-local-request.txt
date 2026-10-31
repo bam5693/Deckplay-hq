@@ -1,0 +1,1 @@
+Focused Trunk 5 Node-only check of mobile Inbox 16px input font and safe-area placement. No staging deployment, browser, DB writes or production changes.
