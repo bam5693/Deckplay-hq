@@ -120,3 +120,5 @@ Focused verification request: validate staging startup and notification polling 
 2026-10-31 T3.4 focused trade retry follow-up: use actual authorized respond_trade_offer RPC to decline first pending seller proposal. New signed fixture must still reject identical different-ID duplicate, allow changed terms and reopening, clean exact markers. No broad sweep.
 
 2026-10-31 T3.4 one focused signed buyer/seller trade uncertainty test: real staging INSERT commits then synthetic response and lookup failure, browser retries same trade and confirms the original ID, exactly one row. No full sweep, destructive account changes, or production writes.
+
+2026-10-31 T3.5 focused authenticated buyer/seller Inbox follow-up after trade counter acceptance: desktop seller and Pixel 7 mobile buyer see accepted trade status, real history, transaction next-step tracking and disclosure of unverified payment/shipping. Existing synthetic offer/trade fixture cleanup remains scoped. No broad sweep or prod deployment.
