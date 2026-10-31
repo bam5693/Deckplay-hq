@@ -14,7 +14,7 @@ test('T2.1 signed buyer and seller exchange real Inbox messages',async({browser}
  const seller=await context.newPage();
  const buyerContext=await browser.newContext({baseURL:process.env.DECKPLAY_STAGING_URL,httpCredentials:{username:'deckplay',password:process.env.DECKPLAY_STAGING_ACCESS_PASSWORD},ignoreHTTPSErrors:!!process.env.CODEX_NETWORK_PROXY_ACTIVE});
  const buyer=await buyerContext.newPage();
- const title=marker(),reply=title+' seller reply';
+ const title=marker(),buyerMessage=title+' buyer message',reply=title+' seller reply';
  let buyerReady=false,sellerReady=false,failed=null;
  try{
   await signIn(seller,'SELLER');sellerReady=true;
@@ -22,16 +22,18 @@ test('T2.1 signed buyer and seller exchange real Inbox messages',async({browser}
   await seedListing(seller,title,{category:'video_games',description:'T2.1 synthetic messaging fixture'});
   await signIn(buyer,'BUYER');buyerReady=true;
   const buyerId=await buyer.evaluate(()=>currentUser.id);
+  // Establish a real participant-scoped thread; the actions below exercise the rendered composer.
+  await buyer.evaluate(async({sellerId,title})=>{const {error}=await supabaseClient.from('collector_messages').insert({sender_id:currentUser.id,recipient_id:sellerId,body:title+' opener'});if(error)throw Error(error.message)},{sellerId,title});
   await buyer.evaluate(id=>showInboxPage(id),sellerId);
   await expect(buyer.locator('.chat-composer[data-chat-recipient="'+sellerId+'"]')).toBeVisible({timeout:20000});
-  await buyer.locator('#chatInput').fill(title);
+  await buyer.locator('#chatInput').fill(buyerMessage);
   await buyer.locator('[aria-label="Send message"]').click();
   await expect.poll(async()=>buyer.evaluate(async body=>{
    const {data,error}=await supabaseClient.from('collector_messages').select('id').eq('body',body).eq('sender_id',currentUser.id);
    if(error)throw Error(error.message);return data.length;
-  },title),{timeout:18000}).toBe(1);
+  },buyerMessage),{timeout:18000}).toBe(1);
   await seller.evaluate(id=>showInboxPage(id),buyerId);
-  await expect(seller.locator('.conversation-bubbles')).toContainText(title,{timeout:20000});
+  await expect(seller.locator('.conversation-bubbles')).toContainText(buyerMessage,{timeout:20000});
   await seller.locator('#chatInput').fill(reply);
   await seller.locator('[aria-label="Send message"]').click();
   await expect.poll(async()=>seller.evaluate(async body=>{
@@ -41,7 +43,7 @@ test('T2.1 signed buyer and seller exchange real Inbox messages',async({browser}
   await buyer.evaluate(id=>showInboxPage(id),sellerId);
   await expect(buyer.locator('.conversation-bubbles')).toContainText(reply,{timeout:20000});
   // Sender and recipient must each see only one persisted copy.
-  for(const [page,body] of [[buyer,title],[seller,reply]]){
+  for(const [page,body] of [[buyer,buyerMessage],[seller,reply]]){
    const count=await page.evaluate(async body=>{
     const {data,error}=await supabaseClient.from('collector_messages').select('id').eq('body',body);
     if(error)throw Error(error.message);return data.length;
