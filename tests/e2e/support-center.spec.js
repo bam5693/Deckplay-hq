@@ -1030,3 +1030,79 @@ test('T7.6: old-account feedback response cannot unlock another collector submis
  await expect(page.locator('#supportTicketList')).not.toContainText('Buyer marketplace feedback');
  await expect(page.getByRole('button',{name:'Send private feedback'})).toBeEnabled();
 });
+
+
+test('T8.3: stale reply from another account cannot unlock the current reply',async({page})=>{
+ await boot(page);
+ await page.evaluate(()=>{
+  const now=new Date().toISOString();
+  window.__db.tickets=[
+   {id:'buyer-ticket',owner_id:'buyer',category:'messages',subject:'Buyer private inbox help',body:'First account only',status:'open',created_at:now,updated_at:now},
+   {id:'other-ticket',owner_id:'other',category:'listing',subject:'Other collector listing help',body:'Second account only',status:'open',created_at:now,updated_at:now}
+  ];
+  const original=window.supabaseClient.rpc;
+  window.__replyReleases=[];
+  window.supabaseClient.rpc=(name,args)=>{
+   if(name!=='reply_support_ticket')return original(name,args);
+   const result=original(name,args);
+   return new Promise(resolve=>window.__replyReleases.push(()=>resolve(result)));
+  };
+ });
+ await signIn(page,'buyer');
+ await page.getByRole('button',{name:'Help & support'}).last().click();
+ await page.locator('#supportTicketList button').filter({hasText:'Buyer private inbox help'}).click();
+ await page.locator('#supportReplyBody').fill('Private first-account reply.');
+ await page.getByRole('button',{name:'Send reply'}).click();
+ await page.waitForFunction(()=>window.__replyReleases.length===1);
+ await page.evaluate(()=>{window.currentUser={id:'other'};window.__authCallback('SIGNED_IN',{user:{id:'other'}})});
+ await expect(page.locator('#supportCenterModal')).not.toHaveClass(/open/);
+ await page.getByRole('button',{name:'Help & support'}).last().click();
+ await expect(page.locator('#supportTicketList')).not.toContainText('Buyer private inbox help');
+ await page.locator('#supportTicketList button').filter({hasText:'Other collector listing help'}).click();
+ await expect(page.getByRole('button',{name:'Send reply'})).toBeEnabled();
+ await page.locator('#supportReplyBody').fill('Private second-account reply.');
+ await page.getByRole('button',{name:'Send reply'}).click();
+ await page.waitForFunction(()=>window.__replyReleases.length===2);
+ await page.evaluate(()=>window.__replyReleases[0]());
+ await expect(page.getByRole('button',{name:'Send reply'})).toBeDisabled();
+ await expect(page.locator('#supportReplyBody')).toHaveValue('Private second-account reply.');
+ await expect(page.locator('#supportReplies')).not.toContainText('Private first-account reply.');
+ await page.evaluate(()=>window.__replyReleases[1]());
+ await expect(page.locator('#supportReplies')).toContainText('Private second-account reply.');
+ await expect(page.getByRole('button',{name:'Send reply'})).toBeEnabled();
+});
+
+test('T8.3: switching tickets unlocks the new composer but not an older pending response',async({page})=>{
+ await boot(page);
+ await page.evaluate(()=>{
+  const now=new Date().toISOString();
+  window.__db.tickets=[
+   {id:'card-help',owner_id:'buyer',category:'listing',subject:'Card listing support',body:'First ticket',status:'open',created_at:now,updated_at:now},
+   {id:'game-help',owner_id:'buyer',category:'listing',subject:'Video game support',body:'Second ticket',status:'open',created_at:now,updated_at:now}
+  ];
+  const original=window.supabaseClient.rpc;
+  window.__replyReleases=[];
+  window.supabaseClient.rpc=(name,args)=>{
+   if(name!=='reply_support_ticket')return original(name,args);
+   const result=original(name,args);
+   return new Promise(resolve=>window.__replyReleases.push(()=>resolve(result)));
+  };
+ });
+ await signIn(page,'buyer');
+ await page.getByRole('button',{name:'Help & support'}).last().click();
+ await page.locator('#supportTicketList button').filter({hasText:'Card listing support'}).click();
+ await page.locator('#supportReplyBody').fill('Question about a graded card.');
+ await page.getByRole('button',{name:'Send reply'}).click();
+ await page.waitForFunction(()=>window.__replyReleases.length===1);
+ await page.locator('#supportTicketList button').filter({hasText:'Video game support'}).click();
+ await expect(page.getByRole('button',{name:'Send reply'})).toBeEnabled();
+ await page.locator('#supportReplyBody').fill('Question about a game console.');
+ await page.getByRole('button',{name:'Send reply'}).click();
+ await page.waitForFunction(()=>window.__replyReleases.length===2);
+ await page.evaluate(()=>window.__replyReleases[0]());
+ await expect(page.getByRole('button',{name:'Send reply'})).toBeDisabled();
+ await expect(page.locator('#supportReplyBody')).toHaveValue('Question about a game console.');
+ await page.evaluate(()=>window.__replyReleases[1]());
+ await expect(page.locator('#supportReplies')).toContainText('Question about a game console.');
+ await expect(page.getByRole('button',{name:'Send reply'})).toBeEnabled();
+});
