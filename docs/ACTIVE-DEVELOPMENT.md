@@ -86,3 +86,7 @@
 ### T5 narrow phone listing preview — source validation complete
 - `index.html` commit `eb6903b` stacks seller listing-preview cover image above info below 420px, makes image full width and wraps long variants/details; source-level regression `783c3f9` added.
 - [Focused 41246977356](https://github.com/bam5693/Deckplay-hq/actions/runs/41246977356) PASS 11/11 Node checks, including retained privacy checks; pre-existing listing editor Android Back workflow also passed 41246948289 on changed source. This does not constitute screenshot review, signed deployed staging or physical Android acceptance. Next: focused narrow-viewport visual browser check, private staging integration, real phone sign-off once an owner test account exists. No production change.
+
+### T5 narrow listing preview browser layout accepted
+- Local 375px-wide mobile-browser geometry regression at `411ab4b` confirms the photo sits above listing details, details occupy substantial card width and card has no horizontal overflow. Uses local synthetic listing fixture, no real accounts.
+- [Focused run 41247603736](https://github.com/bam5693/Deckplay-hq/actions/runs/41247603736) **PASS 1/1 mobile browser + source preflight**. Visual device inspection and authenticated shared staging checks remain open. Next T5 priority: integrate safe branch changes into deployed private staging, subject to build parity/concurrency, then physical-phone acceptance when user is ready. Production untouched.
