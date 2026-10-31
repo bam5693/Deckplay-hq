@@ -80,6 +80,8 @@ test('T5.4: reduced-motion preference avoids animated guide navigation',async({p
   await page.emulateMedia({reducedMotion:'reduce'});
   await page.evaluate(()=>{
     window.__guideScrolls=[];
+    window.__topScrolls=[];
+    window.scrollTo=function(options){window.__topScrolls.push(options?.behavior)};
     Element.prototype.scrollIntoView=function(options) {
       window.__guideScrolls.push({id:this.id,behavior:options?.behavior});
     };
@@ -88,4 +90,6 @@ test('T5.4: reduced-motion preference avoids animated guide navigation',async({p
   await expect.poll(()=>page.evaluate(()=>window.__guideScrolls.some(item=>item.id==='market'&&item.behavior==='auto'))).toBe(true);
   await page.getByRole('button',{name:'Getting started: buyer and seller guide'}).click();
   await expect.poll(()=>page.evaluate(()=>window.__guideScrolls.some(item=>item.id==='gettingStarted'&&item.behavior==='auto'))).toBe(true);
+  expect(await page.evaluate(()=>window.__topScrolls)).toEqual(expect.arrayContaining(['auto']));
+  expect(await page.evaluate(()=>window.__topScrolls.every(behavior=>behavior==='auto'))).toBe(true);
 });
