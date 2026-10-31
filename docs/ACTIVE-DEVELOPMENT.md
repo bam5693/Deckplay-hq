@@ -74,3 +74,7 @@
 ### T8 oversize private reply protection
 - Added defensive length check to `support-center.js` `1fcf231` so unexpectedly oversized trimmed private support replies (>3000) do not reach the backend or lose their draft. The normal form already has a 3000-character maxlength; this validates unusual client-state/DOM cases.
 - Local browser acceptance case `8ffc3d8` verifies no API RPC is attempted, on both desktop/mobile. [Focused run 41245063220](https://github.com/bam5693/Deckplay-hq/actions/runs/41245063220) **PASS 54/54**; no live accounts, shared staging deploy, or production changes. Move to more impactful beta work rather than rechecking same support validations.
+
+### T5 PWA already-open tab update detection — verified
+- `pwa-update-notice.js` commit `b1ef0cc` listens for service-worker `updatefound` and installed waiting replacement, offering explicit refresh on existing tabs without automatic reload or draft loss. Browser regression `3db3376` covers both local-mobile and desktop.
+- [Focused run 41245694160](https://github.com/bam5693/Deckplay-hq/actions/runs/41245694160) **PASS 14/14** with syntax preflight; no production or staging deploy, still needs actual Android/PWA acceptance before public beta.
