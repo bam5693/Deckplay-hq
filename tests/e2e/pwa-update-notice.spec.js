@@ -4,11 +4,11 @@ async function mockWorker(page, { controlled = false, waiting = false } = {}) {
   await page.addInitScript(({ controlled, waiting }) => {
     const fake = new EventTarget();
     fake.controller = controlled ? { version: 'existing' } : null;
-    const registration = {
+    const registration = Object.assign(new EventTarget(), {
       waiting: waiting ? { state: 'installed' } : null,
       updates: 0,
       async update() { this.updates += 1; }
-    };
+    });
     fake.register = async (path, options) => {
       window.__pwaRegistrationArgs = { path, options };
       return registration;
@@ -135,4 +135,21 @@ test('PWA refresh and dismiss controls have mobile-sized tap targets', async ({ 
     expect(dimensions.height, label + ' must be easy to tap').toBeGreaterThanOrEqual(44);
     expect(dimensions.width, label + ' must be easy to tap').toBeGreaterThanOrEqual(44);
   }
+});
+
+test('a newly installed waiting PWA update prompts an already-open tab', async ({ page }) => {
+  await mockWorker(page, { controlled: true });
+  await page.goto('/');
+  await page.waitForFunction(() => Boolean(window.__pwaRegistrationArgs));
+  await page.evaluate(() => {
+    const registration = window.__pwaFakeRegistration;
+    const installer = new EventTarget();
+    installer.state = 'installing';
+    registration.installing = installer;
+    registration.dispatchEvent(new Event('updatefound'));
+    installer.state = 'installed';
+    registration.waiting = installer;
+    installer.dispatchEvent(new Event('statechange'));
+  });
+  await expect(page.locator('#deckplayAppUpdate')).toBeVisible();
 });
