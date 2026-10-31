@@ -36,6 +36,7 @@ on:
     paths:
       - 'tests/reports/staging-beta-request.txt'
       - 'tests/reports/release-preview-request.json'
+      - 'tests/reports/seller-grid-live-request.txt'
 permissions:
   contents: read
   id-token: write
@@ -153,7 +154,7 @@ jobs:
           echo 'Result: ${{ job.status }}. Charles checks API transactions and authorization; Kyle checks deployed mobile/desktop browser journeys. Tanner and Jayden rotate seller/buyer roles in complete-deck and sports/TCG trade browser simulations using the same two disposable accounts. These are deterministic actions; AI inference is verified separately by the manual lead-review workflow. Reports contain persona annotations and named steps. Payment/shipping remain previews.' >> "$GITHUB_STEP_SUMMARY"
 
   staging-auth-smoke:
-    if: ${{ (github.event_name == 'push' || github.event.inputs.auth_smoke_only == 'true' || github.event.inputs.account_readonly_only == 'true') && github.ref == 'refs/heads/test/staging-reporting' && !startsWith(github.event.head_commit.message, '[release-preview]') }}
+    if: ${{ (github.event_name == 'push' || github.event.inputs.auth_smoke_only == 'true' || github.event.inputs.account_readonly_only == 'true') && github.ref == 'refs/heads/test/staging-reporting' && !startsWith(github.event.head_commit.message, '[release-preview]') && !startsWith(github.event.head_commit.message, '[seller-grid-live]') }}
     name: Focused beta preflight and private staging acceptance
     concurrency:
       group: deckplay-staging-deploy
@@ -254,6 +255,48 @@ jobs:
           path: |
             test-results/
             playwright-report/
+          retention-days: 3
+
+  seller-grid-live:
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/test/staging-reporting' && startsWith(github.event.head_commit.message, '[seller-grid-live]') }}
+    name: Targeted signed seller stale-sale and delete acceptance
+    concurrency:
+      group: private-staging-transactions
+      cancel-in-progress: false
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    environment: deckplay-staging
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Authenticate using existing trusted private staging identity
+        run: node scripts/staging-ci-credentials.cjs
+      - run: npm ci
+      - name: Preflight exact synthetic fixture cleanup and browser scope
+        run: |
+          node --check tests/e2e/seller-grid-live.spec.js
+          node --test tests/security/fixture-cleanup.test.cjs tests/security/staging-browser-config.test.cjs
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: staging-playwright-${{ hashFiles('package-lock.json') }}
+      - run: npx playwright install chromium --only-shell
+      - name: Signed seller and buyer confirm stale Mark sold, delete and cleanup
+        run: npx playwright test --config=playwright.staging.config.js seller-grid-live.spec.js --project=staging-desktop --retries=0 --max-failures=1 --timeout=170000
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: seller-grid-live-focused-failure
+          path: |
+            test-results/staging/
+            test-results/staging-junit.xml
+          if-no-files-found: ignore
           retention-days: 3
 
   focused-live-diagnostic:
