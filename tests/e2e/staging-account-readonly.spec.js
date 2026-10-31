@@ -42,3 +42,39 @@ for(const role of ['BUYER','SELLER'])test('deployed synthetic '+role.toLowerCase
  await page.locator('#myListingsReset').click();await expect(page.locator('#market h2')).toHaveText('Marketplace picks');
 });
 
+
+
+// T1.2 scoped deployed acceptance: inspect actual signed buyer catalog, no fixtures or writes.
+// Category coverage is evaluated against the signed session's current visible inventory,
+// including the valid zero-results state; no fake listings are introduced.
+test('signed buyer browses live categories and recovers from empty search',async({page})=>{
+ await signIn(page,'BUYER');
+ await page.evaluate(()=>showMainMarketplace());
+ await expect.poll(()=>page.evaluate(()=>listingSource),{timeout:20000,intervals:[250,500,1000]}).toBe('live');
+ await expect(page.locator('#market')).toBeVisible();
+ await page.locator('#marketFilterToggle').click();
+ await page.locator('#marketClearFilters').click();
+ const categories=['Trading Cards','Video Games','Consoles & Controllers','Collectibles'];
+ for(const category of categories){
+  await page.locator('#marketCategory').selectOption(category);
+  const state=await page.evaluate(()=>({
+   selected:cat,
+   displayed:[...document.querySelectorAll('#grid [data-view]')].map(node=>node.dataset.view).sort(),
+   expected:items.filter(item=>item.c===cat&&!blockedCollectorIds.has(item.sellerId)).map(item=>String(item.id)).sort(),
+   live:listingSource
+  }));
+  expect(state.live).toBe('live');
+  expect(state.selected).toBe(category);
+  expect(state.displayed).toEqual(state.expected);
+  if(!state.expected.length)await expect(page.locator('#grid')).toContainText('No listings match your search and filters');
+ }
+ await page.locator('#marketClearFilters').click();
+ await page.locator('#search').fill('deckplay-t12-synthetic-unique-no-match-7e22');
+ await expect(page.locator('#grid [data-view]')).toHaveCount(0);
+ await expect(page.locator('#grid')).toContainText('No listings match your search and filters');
+ await page.locator('[data-reset-market-search]').click();
+ await expect(page.locator('#search')).toHaveValue('');
+ await expect(page.locator('#marketCategory')).toHaveValue('All');
+ await expect(page.locator('[data-cat="All"]')).toHaveClass(/active/);
+ await expect(page.locator('#grid')).not.toContainText('No listings match your search and filters');
+});
