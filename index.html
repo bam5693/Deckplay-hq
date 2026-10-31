@@ -1036,13 +1036,18 @@ const blockedCollectorIds=new Set();
 let blockedCollectorsLoadVersion=0;
 async function loadBlockedCollectors(){
  const request=++blockedCollectorsLoadVersion,userId=currentUser?.id;
- if(!userId){blockedCollectorIds.clear();return}
+ if(!userId){blockedCollectorIds.clear();return true}
  try{
-  const {data,error}=await supabaseClient.from("user_blocks").select("blocked_id").eq("blocker_id",userId);
-  if(request!==blockedCollectorsLoadVersion||currentUser?.id!==userId)return;
+  const lookup=supabaseClient.from("user_blocks").select("blocked_id").eq("blocker_id",userId);
+  const {data,error}=await readMarketplaceRequest(lookup,8000);
+  if(request!==blockedCollectorsLoadVersion||currentUser?.id!==userId)return false;
   if(error)throw error;
   blockedCollectorIds.clear();(data||[]).forEach(x=>blockedCollectorIds.add(x.blocked_id));
- }catch(error){if(request===blockedCollectorsLoadVersion&&currentUser?.id===userId)console.warn("Unable to load blocked collectors",error)}
+  return true;
+ }catch(error){
+  if(request===blockedCollectorsLoadVersion&&currentUser?.id===userId)console.warn("Could not confirm blocked collectors; catalog will remain hidden until retry",error);
+  return false;
+ }
 }
 let sellerRatingCache=new Map();
 async function refreshSellerRatingCache(){
@@ -1125,8 +1130,16 @@ function marketplaceItemFromRow(row,profile){return {rawCategory:row.category,pl
 // Bound network requests so mobile browsers never leave the marketplace spinning.
 async function readMarketplaceRequest(request,timeoutMs){
  const controller=new AbortController();
- const deadline=setTimeout(()=>controller.abort(),timeoutMs);
- try{return await (typeof request.abortSignal==="function"?request.abortSignal(controller.signal):request)}
+ let deadline;
+ const timeout=new Promise((_,reject)=>{
+  deadline=setTimeout(()=>{
+   controller.abort();
+   reject(new Error("Marketplace request timed out. Retry the request."));
+  },timeoutMs);
+ });
+ // Promise.race is essential: a stalled network adapter may ignore AbortSignal.
+ const operation=typeof request.abortSignal==="function"?request.abortSignal(controller.signal):request;
+ try{return await Promise.race([operation,timeout])}
  finally{clearTimeout(deadline)}
 }
 async function loadListings(){
@@ -1577,7 +1590,7 @@ document.getElementById("category").addEventListener("change",syncGradedConditio
 syncGradedCondition();
 document.getElementById("listingType").addEventListener("change",()=>{const type=document.getElementById("listingType").value,category=document.getElementById("category");const map={single:"trading_cards",deck:"trading_cards",lot:"trading_cards",sealed:"trading_cards",game:"video_games",console:"consoles",figure:"collectibles",other:"other"};if(map[type])category.value=map[type];if(type==="console")document.getElementById("consoleItemType").value="Console";toggleTcgField();syncCategoryFields();syncGradedCondition();updateListingQuickSummary()});toggleTcgField();
 document.getElementById("search").addEventListener("input",event=>{rememberInboxDraft();query=event.target.value;if(["deckplay-home","inbox-focus","profile-focus"].some(name=>document.body.classList.contains(name)))showMainMarketplace();render()});
-grid.addEventListener("click",async event=>{const retry=event.target.closest("[data-retry-marketplace]");if(retry){retry.disabled=true;await loadListings();return}const refresh=event.target.closest("[data-refresh-marketplace]");if(refresh){refresh.disabled=true;await loadListings();return}const profile=event.target.closest("[data-card-profile]");if(profile){await showPublicProfile(profile.dataset.cardProfile);return}const manage=event.target.closest("[data-sold],[data-delete-listing]");if(manage){if(!currentUser)return;const item=items.find(x=>String(x.id)===String(manage.dataset.sold||manage.dataset.deleteListing));if(!item||item.sellerId!==currentUser.id||!item.databaseId)return;const deleting=manage.hasAttribute("data-delete-listing");if(!confirm(deleting?"Permanently delete this listing?":"Mark this listing as sold and remove it from the marketplace?"))return;manage.disabled=true;const request=supabaseClient.from("listings");const {error}=deleting?await request.delete().eq("id",item.databaseId).eq("seller_id",currentUser.id):await request.update({status:"sold"}).eq("id",item.databaseId).eq("seller_id",currentUser.id);if(error){toast(error.message);manage.disabled=false;return}toast(deleting?"Listing deleted":"Listing marked sold");await loadListings();return}const heart=event.target.closest("[data-heart]");if(heart){await window.favoriteActions.toggle(heart.dataset.heart);return}const view=event.target.closest("[data-view]");if(view){const item=items.find(candidate=>String(candidate.id)===view.dataset.view);if(item)showDetails(item)}});
+grid.addEventListener("click",async event=>{const retry=event.target.closest("[data-retry-marketplace]");if(retry){retry.disabled=true;const ok=await loadBlockedCollectors();if(ok)await loadListings();else{items=[];listingSource="error";render()}return}const refresh=event.target.closest("[data-refresh-marketplace]");if(refresh){refresh.disabled=true;const ok=await loadBlockedCollectors();if(ok)await loadListings();else{items=[];listingSource="error";render()}return}const profile=event.target.closest("[data-card-profile]");if(profile){await showPublicProfile(profile.dataset.cardProfile);return}const manage=event.target.closest("[data-sold],[data-delete-listing]");if(manage){if(!currentUser)return;const item=items.find(x=>String(x.id)===String(manage.dataset.sold||manage.dataset.deleteListing));if(!item||item.sellerId!==currentUser.id||!item.databaseId)return;const deleting=manage.hasAttribute("data-delete-listing");if(!confirm(deleting?"Permanently delete this listing?":"Mark this listing as sold and remove it from the marketplace?"))return;manage.disabled=true;const request=supabaseClient.from("listings");const {error}=deleting?await request.delete().eq("id",item.databaseId).eq("seller_id",currentUser.id):await request.update({status:"sold"}).eq("id",item.databaseId).eq("seller_id",currentUser.id);if(error){toast(error.message);manage.disabled=false;return}toast(deleting?"Listing deleted":"Listing marked sold");await loadListings();return}const heart=event.target.closest("[data-heart]");if(heart){await window.favoriteActions.toggle(heart.dataset.heart);return}const view=event.target.closest("[data-view]");if(view){const item=items.find(candidate=>String(candidate.id)===view.dataset.view);if(item)showDetails(item)}});
 document.getElementById("accountMenuPortal").appendChild(document.getElementById("accountMenu"));
 document.getElementById("accountButton").addEventListener("click",()=>{if(!currentUser){setAuthMode("signin");openModal("authModal");return}const menu=document.getElementById("accountMenu");menu.hidden=!menu.hidden;document.getElementById("accountButton").setAttribute("aria-expanded",String(!menu.hidden))});
 document.addEventListener("click",event=>{if(!event.target.closest(".account-wrap")&&!event.target.closest("#accountMenu"))document.getElementById("accountMenu").hidden=true});
@@ -1798,7 +1811,13 @@ function applyDeckplayAuthSession(event,session){
  if(event==="INITIAL_SESSION"&&!session?.user&&currentUser?.id)return;
  currentUser=session?.user||null;
  syncInboxDraftUser();updateAccountUI();startMessageUpdates();startNotificationUpdates();
- loadBlockedCollectors().then(()=>{
+ const expectedUserId=currentUser?.id||null;
+ loadBlockedCollectors().then(ready=>{
+  if((currentUser?.id||null)!==expectedUserId)return;
+  if(!ready){
+   // Fail closed instead of leaking blocked-seller listings or spinning forever.
+   items=[];listingSource="error";render();return;
+  }
   if(event==="INITIAL_SESSION"||event==="INITIAL_SESSION_RECOVERY")void window.deckplayOpenSharedLinkOnce?.();
   return Promise.all([loadSavedListings(),loadListings(),loadWanted()]);
  });
