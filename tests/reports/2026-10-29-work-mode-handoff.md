@@ -1,5 +1,7 @@
 # DeckPlay HQ — Work mode clock-in handoff (2026-10-29)
 
+> **Mandatory before any manual `G` or scheduled development:** follow [the one-writer session lease](../../docs/DEVELOPMENT-COORDINATION.md) on separate `ops/deckplay-session-lock` branch. Acquire and verify your unique lease before edits/CI/deploy; do not race an existing owner. This supersedes older 'continue immediately' wording when another session owns the project.
+
 ## Latest verified checkpoint — authentication repaired
 Read the final section of `2026-10-29-clock-in-development.md` for current evidence. Automated private staging authentication succeeds through the existing trusted OIDC credential exchange; direct uncredentialed browser navigation still receives the intended HTTP challenge. Missing Playwright credentials now fail before launch. Do not rotate secrets or disable protection.
 
