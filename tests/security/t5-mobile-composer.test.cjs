@@ -29,3 +29,11 @@ test('mobile dock navigation captions remain readable within six-column layout',
  assert.match(rule[1],/font-size:11px!important/);
  assert.match(html,/#mobileDock\{grid-template-columns:repeat\(6,minmax\(0,1fr\)\)!important/);
 });
+
+test('narrow mobile listing preview stacks photo above readable full-width details',()=>{
+ const rule=html.match(/@media\(max-width:420px\)\{\s*\.listing-preview-card\{([^}]*)\}\s*\.listing-preview-image\{([^}]*)\}\s*\.listing-preview-info\{([^}]*)\}/);
+ assert.ok(rule,'Narrow mobile listing preview CSS exists');
+ assert.match(rule[1],/flex-direction:column/);
+ assert.match(rule[2],/width:100%/);
+ assert.match(rule[3],/overflow-wrap:anywhere/);
+});
