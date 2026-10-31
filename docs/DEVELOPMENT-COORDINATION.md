@@ -4,10 +4,10 @@
 
 ## Two independent development lanes
 
-- **Manual G:** may develop on `test/staging-reporting`; validate current HEAD before write, always use the latest contents SHA, and never force-update a ref or overwrite divergent changes.
-- **Hourly developer:** works **only** on `dev/hourly-autonomous`. No direct edits to staging, `main`, production or the retired lock branch. It must not run shared staging deployments or stateful staging DB tests.
+- **Manual G:** owns Trunks 1, 2, 3, 5, 6, 7 and 8 (NOT Trunk 4), and may develop on `test/staging-reporting`; validate current HEAD before write, always use the latest contents SHA, and never force-update a ref or overwrite divergent changes.
+- **Hourly developer:** exclusively owns Trunk 4 (T4.1–T4.6 Discovery and Collections), starting with T4.1 favorites; works **only** on `dev/hourly-autonomous`. No direct edits to staging, `main`, production or the retired lock branch. It must not run shared staging deployments or stateful staging DB tests.
 - Read-only daily watches do not change code. If one lane's work needs the other lane's changes, use a reviewed integration PR / ordinary non-force merge after resolving conflicts, rather than forcing or resetting either branch.
-- At each manual G, read `docs/ACTIVE-DEVELOPMENT.md` on staging first and resume its single next unfinished task; the hourly lane maintains its own brief handoff on its branch without overwriting the staging checkpoint. Preserve accepted V1 evidence and run only focused tests justified by actual changes.
+- At each manual G, read `docs/ACTIVE-DEVELOPMENT.md` on staging first; if its active task is T4, leave that to the hourly owner and select one unfinished item from Trunks 1/2/3/5/6/7/8. Resume the manual lane's next unfinished task; the hourly lane maintains its own brief handoff on its branch without overwriting the staging checkpoint. Preserve accepted V1 evidence and run only focused tests justified by actual changes.
 - Independent code edits on different branches can happen concurrently. Shared test fixtures, database migrations, deployed staging and final integrations must remain serialized with existing GitHub Actions `concurrency` controls and explicit preflight; no parallel staging DB writers.
 
 ## Active Actions visibility (deployment/test coordination only)
