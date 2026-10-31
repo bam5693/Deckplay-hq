@@ -5,8 +5,9 @@ const {signIn}=require('../helpers/staging.cjs');
 // cleanup, no changes to production or to the isolated staging database.
 test('signed-in buyer reload starts catalog and resolves auth privacy preflight',async({page})=>{
  test.setTimeout(40000);
- const pageErrors=[];
+ const pageErrors=[],startupWarnings=[];
  page.on('pageerror',error=>pageErrors.push(String(error.message||error).slice(0,220)));
+ page.on('console',message=>{if(message.text().includes('Signed-in interface setup stopped before marketplace initialization'))startupWarnings.push(message.text().slice(0,250))});
  await signIn(page,'BUYER');
  await page.reload({waitUntil:'domcontentloaded'});
  // The Supabase auth callback may swallow synchronous exceptions, so verify
@@ -21,7 +22,7 @@ test('signed-in buyer reload starts catalog and resolves auth privacy preflight'
   authVersion:authSessionGeneration,
   source:listingSource
  }));
- console.log('AUTH INITIAL SNAPSHOT '+JSON.stringify(before));
+ console.log('AUTH INITIAL SNAPSHOT '+JSON.stringify({...before,startupWarnings}));
  const startup=await page.evaluate(()=>{
   const steps=[];
   for(const [name,fn] of [
@@ -48,7 +49,7 @@ test('signed-in buyer reload starts catalog and resolves auth privacy preflight'
   await expect.poll(async()=> (await check()).source,{timeout:17000,intervals:[250,500,1000]}).toBe('live');
  }finally{
   const state=await check();
-  console.log('AUTH CATALOG RESULT '+JSON.stringify({...state,pageErrors}));
+  console.log('AUTH CATALOG RESULT '+JSON.stringify({...state,pageErrors,startupWarnings}));
  }
  await expect(page.locator('#count')).not.toContainText('Loading live listings');
  await expect(page.locator('#market')).toBeAttached();
