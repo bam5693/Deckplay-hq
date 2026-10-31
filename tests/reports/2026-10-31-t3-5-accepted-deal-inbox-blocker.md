@@ -1,0 +1,14 @@
+# T3.5 accepted-deal Inbox progress — 2026-10-31 verified partial, acceptance OPEN
+
+## Completed
+- Applied staging-only migration `supabase/migrations/20261031113000_secure_deal_progress_rpcs.sql`. The authenticated-only `ensure_deal_progress` validates an accepted trade or price offer and participants; `set_deal_progress` scopes status/confirmations to authorized participants and protects closed/cancelled deals. Anonymous EXECUTE disabled, direct RLS writes stay denied. No production migration.
+- `index.html` now initializes progress through these secure RPCs, no direct table writes; updated protected private staging Worker deployment [41199482036](https://github.com/bam5693/Deckplay-hq/actions/runs/41199482036) and [41200594371](https://github.com/bam5693/Deckplay-hq/actions/runs/41200594371), both successful.
+- Live synthetic signed-in seller test demonstrated `ensure_deal_progress` returns the exact synthetic deal row with status `accepted`. Accepted deal cards render valid `Transaction: accepted` progress text. A following test scoped to the exact deal ID showed that the correct rendered card can become **hidden** during an Inbox refresh.
+- Improved lazy loading and retry, eager rendering for accepted deal panels, plus preservation of previously open state in `index.html` staging. These changes require more careful lifecycle debugging before acceptance. [Latest T3.5 test 41201315331](https://github.com/bam5693/Deckplay-hq/actions/runs/41201315331) FAILS **correct deal row visible** assertion because the matched card is present but hidden. This is not a database access error.
+- Prior T3.1 and T3.4 accepted tests remain accepted, but T3.5 is **NOT** checked; last reliable T3.4 signed tests [41196421943](https://github.com/bam5693/Deckplay-hq/actions/runs/41196421943) passed.
+
+## Required next work
+1. Diagnose `loadInbox` / `openThread` refresh lifecycles and `.chat-deal-panel` expanded state; avoid rapid replacement/closing of an already open transaction panel. Prefer one durable per-conversation state, stable event delegation or a targeted rerender instead of repeated whole-thread swaps.
+2. Ensure progress display is limited to relevant transaction and stays discoverable in a mobile thread. Dedicated staging synthetic users have many historical accepted offers; a broad `.transaction-next-steps` selector matched 54 cards, so assertions must always scope to the exact `deal_progress.id`.
+3. Re-run **one** focused signed buyer+seller acceptance only after a concrete tested change, and verify transaction controls stay visible after the Inbox refresh and the Pixel 7 mobile-emulated buyer can view the same exact progress record. Confirm synthetic records and Storage remain cleaned; do not weaken authorization.
+4. Don't run broad V1 sweep now; the separate final sweep is scheduled for October 31 at 5:30 PM Central. Preserve cross-session CAS writer lease protocol.
