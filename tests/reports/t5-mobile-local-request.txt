@@ -1,1 +1,1 @@
-Focused Trunk 5 Node-only check of mobile Inbox 16px input font and safe-area placement. No staging deployment, browser, DB writes or production changes.
+T5 mobile editable-field focus-zoom prevention (search, sign-in, listing forms) plus existing Inbox safe-area and privacy source checks. Run only existing Node-only workflow. No browser, staging Worker deploy or production changes.
