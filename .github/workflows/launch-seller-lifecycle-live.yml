@@ -1,5 +1,5 @@
 name: Request one real seller paused-overview journey
-# One actual signed-in staging seller inventory pause/overview/resume readback after exact deployment.
+# One live seller overview retry after corrected visible USD price expectation; real staging only.
 on:
   push:
     branches: [test/staging-reporting]
