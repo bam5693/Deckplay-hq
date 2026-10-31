@@ -1,16 +1,16 @@
 # DeckPlay HQ — Hourly Trunk 4 continuity
-**Owner:** dev/hourly-autonomous only; draft PR #10 into manual-owned staging. No shared staging/main/production/DB writes, merges or deployments. Retired lease unused.
+**Owner:** `dev/hourly-autonomous` only; draft PR #10 targets manual-owned staging. No shared staging/main/production/DB writes, merges, or deployments. Lease retired.
 
-## DONE — reviewable code (NOT acceptance)
-- **T4.1 Favorites:** Account/offline saved-listing recovery inherited from staging `ac6b5a9`; pending save/remove race fix `a56f40f`, `962e32a` with four modeled passes. Browser + deployed acceptance missing.
-- **T4.2 Wanted:** Account/stale-load isolation `ed1c054`, retry/profile fallback `74dc82d`, precise cross-category matching `e53a2fb`, seller-edited classification precedence `b27f92f`; seven modeled non-card fixtures and syntax checks passed. Browser + deployed acceptance missing.
-- **T4.3 Alerts:** Prior private staging stale-alert recovery `f2d1d7f`, protected run 41209070078. Still candidate: signed alert destination and privacy/event matrix missing.
-- **T4.4 Collection privacy:** `e030bcb` now refuses to render a blocked collector's profile, storefront or external collection links when `user_blocks` confirms a block; on block-lookup failure it shows a retry instead of treating the collector as unblocked. `5b7d713` adds two focused browser regressions in `tests/e2e/collection-sharing.spec.js`. Five inline index scripts and the test file parsed; three extracted real-code privacy-boundary logic checks (blocked, lookup error, clear) passed. **Playwright/browser and staging tests NOT run.**
+## DONE — reviewable code, NOT V1 acceptance
+- **T4.1 Favorites:** Staging offline/account isolation `ac6b5a9`; hourly pending-save race fixes `a56f40f`, `962e32a`. Four modeled checks passed; browser/deployed acceptance outstanding.
+- **T4.2 Wanted:** Isolation `ed1c054`, retry `74dc82d`, cross-category matching `e53a2fb`, seller-edit precedence `b27f92f`. Seven modeled fixtures and syntax passed; browser/deployed acceptance outstanding.
+- **T4.3 Alerts:** Existing private-staging candidate `f2d1d7f`, protected run `41209070078`; signed event/privacy matrix incomplete.
+- **T4.4 Collection privacy:** Blocked/error profile link protection `e030bcb`; focused browser regressions `5b7d713` prepared, not executed; three logic checks and inline syntax passed.
+- **T4.5 Collection consent (THIS RUN):** `c59d8a8` prevents a failed profile read from silently overwriting saved collection links/consent, disables Save until a successful reload, and prevents enabling buy/trade inquiries with zero public collection links (server already requires links). Focused browser regressions added `01a9fad`, NOT executed. Five actual inline scripts and test source parsed successfully; six static source assertions passed. **No staging acceptance claimed.**
 
-## IN PROGRESS
-**T4.4 remains OPEN/CANDIDATE, not accepted.** The hourly scoreboard T4.1–T4.6 remains unchecked. Preserve all historical accepted evidence in staging. PR #10 includes T4.1/T4.2/T4.4 for manual review. Shared `index.html` must be reconciled against independently advanced staging HEAD; never overwrite/rebase/merge automatically. CI read-only PR jobs auto-triggered by code commits; no CI dispatch performed.
+## IN PROGRESS / BLOCKER
+T4.1–T4.6 remain unchecked on this branch's V1 scoreboard; preserve prior staging evidence. New T4.5 behavior needs focused browser execution and reviewed integration before acceptance. No local browser runner available here; no repeated broad CI suites or staging DB tests. Shared `index.html` has diverged from manual staging HEAD `a19f7f1` (observed 2026-10-31); PR #10 requires careful non-force conflict review. No changes to shared staging.
 
 ## NEXT
-1. When a focused safe browser runner is available, run only new T4.4 blocked/error profile tests and affected T4.1/T4.2 cases, then request reviewed integration; no stateful staging tests from this branch.
-2. If browser runner unavailable, build the next independent unfinished T4.5 collection consent feature on hourly branch, preserving existing server-side opt-in rules.
-**Blockers:** no verified local Playwright execution or signed staging acceptance; manual staging owner must review PR #10. No V1 T4 item was newly accepted this run.
+1. Continue independent **T4.6 first-contact/blocked-user inquiry UI**: inspect existing server-side daily/duplicate/block protections before adding only a genuine missing customer-facing safeguard; do not retest accepted T3.
+2. When a safe focused browser runner becomes available, execute only changed T4.5 consent tests plus affected T4.4 privacy tests, then request reviewed PR #10 integration. Do not dispatch stateful staging tests from hourly branch.
