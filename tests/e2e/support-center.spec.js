@@ -1268,3 +1268,36 @@ test('T8.3: collector tickets load while optional staff authorization is pending
  await page.evaluate(()=>window.__releaseStaffRole[1]());
  await expect(page.locator('#supportStaff')).toBeHidden();
 });
+
+test('T7.6: selected feedback area is submitted privately and survives same-account drafts',async({page})=>{
+ await boot(page);await signIn(page,'seller');
+ await page.evaluate(()=>document.dispatchEvent(new Event('deckplay:open-feedback')));
+ const categories=['trading_cards','sports_cards','video_games','consoles','controllers','accessories','collectibles','other'];
+ for(const value of categories)await expect(page.locator('#supportFeedbackArea option[value="'+value+'"]')).toHaveCount(1);
+ await page.locator('#supportFeedbackKind').selectOption('idea');
+ await page.locator('#supportFeedbackArea').selectOption('sports_cards');
+ await page.locator('#supportSubject').fill('Sports card condition feedback');
+ await page.locator('#supportDescription').fill('A graded sports card should show the exact grading details.');
+ await page.locator('#supportClose').click();
+ await page.evaluate(()=>document.dispatchEvent(new Event('deckplay:open-feedback')));
+ await expect(page.locator('#supportFeedbackArea')).toHaveValue('sports_cards');
+ await expect(page.locator('#supportDescription')).toHaveValue('A graded sports card should show the exact grading details.');
+ await page.getByRole('button',{name:'Send private feedback'}).click();
+ await expect(page.locator('#supportTicketBody')).toContainText('Area: Sports cards');
+ const call=await page.evaluate(()=>window.__db.calls.filter(row=>row.name==='create_support_ticket').at(-1));
+ expect(call.args.p_category).toBe('other');
+ expect(call.args.p_body).toBe('Area: Sports cards\\nDetails: A graded sports card should show the exact grading details.');
+ // Search feedback sets a fixed marketplace context, without copying search words.
+ await page.evaluate(()=>document.dispatchEvent(new CustomEvent('deckplay:search-feedback',{
+  detail:{outcome:'empty',category:'Trading Cards',hasText:true,hasFilters:true}
+ })));
+ await expect(page.locator('#supportFeedbackArea')).toHaveValue('marketplace');
+ await page.locator('#supportFeedbackArea').selectOption('accessories');
+ await page.locator('#supportSubject').fill('Accessory filter improvement');
+ await page.locator('#supportDescription').fill('Please add a filter for vintage console accessories.');
+ await page.evaluate(()=>{window.currentUser={id:'other'};window.__authCallback('SIGNED_IN',{user:{id:'other'}})});
+ await page.evaluate(()=>document.dispatchEvent(new Event('deckplay:open-feedback')));
+ await expect(page.locator('#supportFeedbackArea')).toHaveValue('general');
+ await expect(page.locator('#supportDescription')).toBeEmpty();
+ await expect(page.locator('#supportTicketList')).not.toContainText('Sports card condition feedback');
+});
