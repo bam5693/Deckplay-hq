@@ -1,6 +1,10 @@
 const {test,expect}=require('@playwright/test');
 async function openFixture(page,item){
- await page.route('https://**/*',route=>route.abort());
+ // Keep existing navigation checks independent of remote image servers.
+ // A separate test below deliberately aborts one photo to verify recovery.
+ await page.route('https://**/*',route=>route.request().resourceType()==='image'
+  ?route.fulfill({status:200,contentType:'image/png',body:Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScL/nwAAAABJRU5ErkJggg==','base64')})
+  :route.abort());
  await page.goto('/');
  await page.evaluate(value=>showDetails(value),item);
 }
@@ -44,4 +48,24 @@ test('Jayden: TCG and game listing details handle single or missing photos witho
  await expect(page.locator('.detail-price')).toHaveText('$12.75');
  await expect(page.locator('.detail-photo-placeholder')).toBeVisible();
  await expect(page.locator('[data-detail-photo]')).toHaveCount(0);
+});
+
+
+test('T1.5 unavailable buyer photo has visible recovery and another photo still opens',async({page})=>{
+ await openFixture(page,{n:'Synthetic photo recovery',p:15,c:'Trading Cards',imageUrls:[]});
+ await page.route('https://example.test/broken.jpg',route=>route.abort());
+ await page.evaluate(()=>showDetails({n:'Synthetic photo recovery',p:15,c:'Trading Cards',imageUrls:['https://example.test/broken.jpg','https://example.test/good.jpg']}));
+ await expect(page.locator('.detail-photo-load-status')).toContainText('This photo could not load');
+ await expect(page.locator('#detailZoomButton')).toBeHidden();
+ await page.getByRole('button',{name:'Next listing photo'}).click();
+ await expect(page.locator('#detailGalleryMain')).toHaveAttribute('src','https://example.test/good.jpg');
+ await expect(page.locator('.detail-photo-load-status')).toBeHidden();
+ await expect(page.locator('#detailZoomButton')).toBeVisible();
+ await page.getByRole('button',{name:'Enlarge listing photo'}).click();
+ await expect(page.locator('#detailPhotoZoom')).toBeVisible();
+ await page.keyboard.press('Escape');
+ await expect(page.locator('#detailPhotoZoom')).toHaveCount(0);
+ await page.getByRole('button',{name:'Previous listing photo'}).click();
+ await expect(page.locator('.detail-photo-load-status')).toContainText('This photo could not load');
+ await expect(page.locator('#detailZoomButton')).toBeHidden();
 });
