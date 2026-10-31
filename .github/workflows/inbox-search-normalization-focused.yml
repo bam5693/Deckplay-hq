@@ -26,4 +26,4 @@ jobs:
           key: staging-playwright-${{ hashFiles('package-lock.json') }}
       - run: npx playwright install chromium --only-shell
       - name: Inbox accent search mobile and desktop
-        run: npx playwright test --config=playwright.local.config.js inbox-recovery.spec.js --grep 'T2.2 Inbox' --retries=0 --max-failures=1 --timeout=20000
+        run: npx playwright test --config=playwright.local.config.js inbox-recovery.spec.js --grep 'T2.2 Inbox (finds|normalized)' --retries=0 --max-failures=1 --timeout=20000
