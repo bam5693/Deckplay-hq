@@ -87,9 +87,7 @@ test('T1.3 latest edited classification wins over stale legacy card condition, s
  await fixture(page);
  await page.evaluate(async()=>{
   editRow={...editRow,category:'trading_cards',product_type:'single',tcg_game:'one_piece',condition:'used',
-   description:'[Card Condition]\\nNear Mint\\n\\nSet: Old Release\\nVariant: Original Art\\n\\n[Listing classification]\\nCard condition: Lightly Played\\nSet: Current Release\\nVariant: Alternate Art\\nCard number: 007\\nEdition / printing: Second printing\\n[End classification]\\n\\nTiny surface scratch disclosed.'};
-  // Fixture is a string value, not an escaped JSON description.
-  editRow.description=editRow.description.replace(/\\\\n/g,'\\n');
+   description:'[Card Condition]\nNear Mint\n\nSet: Old Release\nVariant: Original Art\n\n[Listing classification]\nCard condition: Lightly Played\nSet: Current Release\nVariant: Alternate Art\nCard number: 007\nEdition / printing: Second printing\n[End classification]\n\nTiny surface scratch disclosed.'};
   await listingEditor.open('edit-item');
  });
  await page.locator('#editListingClassification summary').click();
@@ -103,7 +101,7 @@ test('T1.3 latest edited classification wins over stale legacy card condition, s
  await expect.poll(()=>page.evaluate(()=>editWrites.length)).toBe(1);
  const changes=await page.evaluate(()=>editWrites[0]);
  expect(changes.condition).toBe('used');
- const block=changes.description.match(/\\[Listing classification\\]\\n([\\s\\S]*?)\\n\\[End classification\\]/)?.[1];
+ const block=changes.description.match(/\[Listing classification\]\n([\s\S]*?)\n\[End classification\]/)?.[1];
  expect(block).toContain('Card condition: Lightly Played');
  expect(block).toContain('Set: Current Release');
  expect(block).toContain('Variant: Alternate Art');
