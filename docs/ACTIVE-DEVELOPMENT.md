@@ -20,3 +20,10 @@
 **Fallback:** If a trusted staging signed test is blocked, move to another manual-owned unblocked feature, preserve this exact checkpoint; avoid new staging workflows when existing allowlisted trusted runner suffices.
 
 **Safety:** Check Actions only before shared staging deployments/stateful tests, serialize staging transactions, keep secrets/OIDC/Basic Auth/RLS unchanged; no production/main/PR merges/live payments/shipping/billing or new spending without separate approval.
+
+## Manual G handoff — Trunk 5 mobile usability (2026-10-31)
+- Trunk 2 scoped automated acceptance closed with caveats; see `tests/reports/2026-10-31-t2-closeout-inventory.md`. Do not rerun its accepted tests without a material change.
+- Trunk 1 is owned by hourly Worker 2 on `dev/hourly-trunk1`; its earlier T1.3 historical checkpoint above is informational, **not an instruction for manual G to take Worker 2's work**.
+- Manual G moved to **Trunk 5** mobile usability: `3b4575c` sets the Inbox message composer to minimum 16px on small viewports to prevent mobile Safari input focus zoom. **Code only, not yet browser or physical device accepted**.
+- NEXT: one inexpensive focused mobile CSS/layout regression for composer size and focus at Pixel viewport, then inspect mobile keyboard/Android Back behavior. If browser test is unavailable, do cheap source/static preflight and continue independent mobile work, without claiming device acceptance.
+- No production/main merge, staging deployment or customer data changes from this T5 batch.
