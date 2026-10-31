@@ -2,10 +2,10 @@
   "version": 1,
   "project": "DeckPlay HQ",
   "scope": "test/staging-reporting",
-  "holder": "hourly",
-  "token": "hourly-20261031144213333-bytlledr9nu",
-  "focus": "V1 continuation from staging checkpoint; select unfinished customer workflow",
-  "acquired_at": "2026-10-31T14:42:13.333Z",
-  "expires_at": "2026-10-31T15:27:13.333Z",
-  "updated_at": "2026-10-31T14:42:13.333Z"
+  "holder": null,
+  "token": null,
+  "focus": null,
+  "acquired_at": null,
+  "expires_at": null,
+  "updated_at": "2026-10-31T14:45:45.241Z"
 }
