@@ -1,5 +1,5 @@
 name: Execute one integrated price-and-bundle trade acceptance
-# Final bounded check after authentic buyer catalog bootstrap gained hard deadlines and fail-closed block rules.
+# One full two-account trade after real signed-in buyer catalog recovery passed run 41153365064.
 on:
   push:
     branches: [test/staging-reporting]
