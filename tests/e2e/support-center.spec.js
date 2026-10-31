@@ -995,3 +995,38 @@ test('T7.6: newer feedback draft survives a delayed successful send and can be s
  expect(calls.map(call=>call.args.p_subject)).toEqual(['[Idea] Improve video game search','[Idea] Add console accessory filters']);
  expect(calls.every(call=>call.args.p_category==='other')).toBe(true);
 });
+
+
+test('T7.6: old-account feedback response cannot unlock another collector submission',async({page})=>{
+ await boot(page);await signIn(page,'buyer');
+ await page.evaluate(()=>{
+  const original=window.supabaseClient.rpc;
+  window.__feedbackReleases=[];
+  window.supabaseClient.rpc=(name,args)=>{
+   if(name!=='create_support_ticket')return original(name,args);
+   const result=original(name,args);
+   return new Promise(resolve=>window.__feedbackReleases.push(()=>resolve(result)));
+  };
+  document.dispatchEvent(new Event('deckplay:open-feedback'));
+ });
+ await page.locator('#supportSubject').fill('Buyer marketplace feedback');
+ await page.locator('#supportDescription').fill('Private first-account feedback about collectibles.');
+ await page.getByRole('button',{name:'Send private feedback'}).click();
+ await page.waitForFunction(()=>window.__feedbackReleases.length===1);
+ await page.evaluate(()=>{window.currentUser={id:'other'};window.__authCallback('SIGNED_IN',{user:{id:'other'}})});
+ await expect(page.locator('#supportCenterModal')).not.toHaveClass(/open/);
+ await page.evaluate(()=>document.dispatchEvent(new Event('deckplay:open-feedback')));
+ await expect(page.locator('#supportSubject')).toBeEmpty();
+ await page.locator('#supportSubject').fill('Other collector game feedback');
+ await page.locator('#supportDescription').fill('Second-account feedback about console accessories.');
+ await page.getByRole('button',{name:'Send private feedback'}).click();
+ await page.waitForFunction(()=>window.__feedbackReleases.length===2);
+ await page.evaluate(()=>window.__feedbackReleases[0]());
+ await expect(page.getByRole('button',{name:'Send private feedback'})).toBeDisabled();
+ await expect(page.locator('#supportSubject')).toHaveValue('Other collector game feedback');
+ await expect(page.locator('#supportCreateStatus')).toHaveText('Submitting…');
+ await page.evaluate(()=>window.__feedbackReleases[1]());
+ await expect(page.locator('#supportTicketTitle')).toHaveText('[Bug] Other collector game feedback');
+ await expect(page.locator('#supportTicketList')).not.toContainText('Buyer marketplace feedback');
+ await expect(page.getByRole('button',{name:'Send private feedback'})).toBeEnabled();
+});
