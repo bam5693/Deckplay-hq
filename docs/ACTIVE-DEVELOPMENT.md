@@ -44,3 +44,8 @@
 - Commit `6743633` sets 44px minimum height for PWA update Refresh and Later controls. Matching desktop/mobile-emulated Playwright assertion added at `bf1ff62` for touch width and height.
 - [Focused run 41240284015](https://github.com/bam5693/Deckplay-hq/actions/runs/41240284015) **PASS 12/12**, including prior mobile keyboard deferral and offline draft safety, exact changed-source preflight. No production or staging deploy.
 - Remaining signed mobile Inbox/physical Android Back and keyboard testing is tracked in [issue #24](https://github.com/bam5693/Deckplay-hq/issues/24); old authorized Inbox Back regression exists in `tests/e2e/inbox-recovery.spec.js`. Do not bypass prior blocked test edit. Continue mobile-specific work that has separate supported acceptance.
+
+### T5 local mobile Inbox Back evidence — verified
+- Added dedicated, read-only, cheap Actions workflow `.github/workflows/t5-inbox-back-focused.yml` (commit `693f8fa`), reusing **existing** Inbox recovery tests without changing the blocked signed staging messaging test file.
+- [Focused run 41240815845](https://github.com/bam5693/Deckplay-hq/actions/runs/41240815845) **PASS 2/2 local mobile-emulated browser cases**: Android Back from a direct conversation retains unsent buyer draft when reopened; switching threads produces no phantom Back steps. Inline JS and syntax preflight passed.
+- **Not** signed/live staging or physical Android device sign-off. These remain in [Issue #24](https://github.com/bam5693/Deckplay-hq/issues/24). No production/main merge, staging Worker deploy, or database writes.
