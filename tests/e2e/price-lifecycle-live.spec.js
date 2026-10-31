@@ -144,8 +144,10 @@ test('T3.1 mobile buyer and desktop seller negotiate through visible price-offer
   await signIn(page,'SELLER');signedSeller=true;
   const id=await seedListing(page,title,{description:'TEST ONLY BOT mobile price negotiation',category:'video_games'});
   await signIn(buyer,'BUYER');
-  // Get live authorized listing data and expose it through the real detail modal.
+  // Wait for the app's real catalog refresh before opening details; otherwise
+  // a post-login catalog response can replace the test's selected listing.
   await buyer.evaluate(async listingId=>{
+   await loadListings();
    const {data,error}=await supabaseClient.from('listings').select('*').eq('id',listingId).single();
    if(error||!data)throw Error(error?.message||'Staging listing not found');
    const item=marketplaceItemFromRow(data,{username:'synthetic_seller'});
@@ -153,6 +155,9 @@ test('T3.1 mobile buyer and desktop seller negotiate through visible price-offer
    showDetails(item);
   },id);
   await expect(buyer.locator('#detailTitle')).toHaveText(title);
+  const view=await buyer.evaluate(id=>({buyer:currentUser?.id,found:items.some(item=>item.databaseId===id),seller:items.find(item=>item.databaseId===id)?.sellerId}),id);
+  expect(view.found).toBe(true);
+  expect(view.seller).not.toBe(view.buyer);
   await buyer.locator('#detailContent [data-price-offer-id]').click();
   await expect(buyer.locator('#priceOfferModal')).toHaveClass(/open/);
   await buyer.locator('#priceOfferAmount').fill('20');
