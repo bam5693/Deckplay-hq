@@ -2700,7 +2700,34 @@ if(tradeById.size){
   if(requestId!==inboxLoadVersion||currentUser?.id!==userId)return;
   if(!recipientError&&recipient?.id===requestedTarget)groups.set(requestedTarget,[]);
  }
- if(!groups.size){el.innerHTML='<section class="inbox-recovery"><p class="muted">Your inbox is empty. Messages and offers will appear here together.</p><button type="button" class="secondary" data-inbox-retry>Refresh inbox</button></section>';return}
+ async function loadOlderInboxActivity(e){
+  const button=e.currentTarget,status=el.querySelector("[data-inbox-activity-status]");
+  if(button.disabled)return;
+  button.disabled=true;button.setAttribute("aria-busy","true");status.textContent="Looking for older offers and trades…";
+  const priceQuery=!inboxPriceExhausted&&inboxPriceCursor
+   ?supabaseClient.from("price_offers").select("id,buyer_id,seller_id,amount,status,last_actor_id,updated_at").or(inboxActivityBefore("updated_at",inboxPriceCursor)).order("updated_at",{ascending:false}).order("id",{ascending:false}).limit(200)
+   :Promise.resolve({data:[],error:null});
+  const tradeQuery=!inboxTradeExhausted&&inboxTradeCursor
+   ?supabaseClient.from("trade_offers").select("id,listing_id,offered_listing_id,offered_listing_ids,item_snapshots,initial_terms,sender_id,recipient_id,status,offer_note,cash_amount,cash_direction,created_at").or(inboxActivityBefore("created_at",inboxTradeCursor)).order("created_at",{ascending:false}).order("id",{ascending:false}).limit(200)
+   :Promise.resolve({data:[],error:null});
+  const [olderPrice,olderTrade]=await Promise.all([Promise.resolve(priceQuery).catch(error=>({error})),Promise.resolve(tradeQuery).catch(error=>({error}))]);
+  if(requestId!==inboxLoadVersion||currentUser?.id!==userId)return;
+  if(olderPrice.error||olderTrade.error){status.textContent="Could not load older offers or trades. Try again.";button.disabled=false;button.removeAttribute("aria-busy");return}
+  if(!inboxPriceExhausted){const rows=olderPrice.data||[],oldest=rows.at(-1);if(oldest)inboxPriceCursor={date:oldest.updated_at,id:oldest.id};inboxPriceExhausted=rows.length<200;for(const row of rows)inboxOlderPriceOffers.set(row.id,row)}
+  if(!inboxTradeExhausted){const rows=olderTrade.data||[],oldest=rows.at(-1);if(oldest)inboxTradeCursor={date:oldest.created_at,id:oldest.id};inboxTradeExhausted=rows.length<200;for(const row of rows)inboxOlderTradeOffers.set(row.id,row)}
+  await loadInbox();
+  if(currentUser?.id!==userId||!el.isConnected)return;
+  (el.querySelector("[data-inbox-more-activity]")||el.querySelector("[data-conversation-search]"))?.focus({preventScroll:true});
+ }
+ if(!groups.size){
+  // An empty result must leave the old mobile single-thread mode behind.
+  selectedInboxCollector=null;
+  document.getElementById("inboxPage").classList.remove("thread-open");
+  const canFindOlderOffers=!inboxPriceExhausted||!inboxTradeExhausted;
+  el.innerHTML='<section class="inbox-recovery"><p class="muted">'+(canFindOlderOffers?'No recent conversations found. Older offers or trades may still be available.':'Your inbox is empty. Messages and offers will appear here together.')+'</p><button type="button" class="secondary" data-inbox-retry>Refresh inbox</button>'+(canFindOlderOffers?'<div class="conversation-history-tools"><button type="button" class="ghost" data-inbox-more-activity>Find older offers and trades</button><span class="muted" data-inbox-activity-status role="status" aria-live="polite"></span></div>':'')+'</section>';
+  el.querySelector("[data-inbox-more-activity]")?.addEventListener("click",loadOlderInboxActivity);
+  return;
+ }
  for(const entries of groups.values()){entries.sort(compareInboxEntries);const latest=new Set();for(const x of [...entries].reverse())if(x.type==="price"&&!latest.has(x.offer_id)){x.isLatest=true;latest.add(x.offer_id)}}
  const ids=[...groups.keys()],{data:people}=await supabaseClient.from("profiles").select("id,username,display_name,avatar_url").in("id",ids);
  if(requestId!==inboxLoadVersion||currentUser?.id!==userId)return;
@@ -2755,25 +2782,7 @@ if(tradeById.size){
   if(currentUser?.id!==userId||!el.isConnected)return;
   (el.querySelector("[data-inbox-more-conversations]")||el.querySelector("[data-conversation-search]"))?.focus({preventScroll:true});
  });
- el.querySelector("[data-inbox-more-activity]")?.addEventListener("click",async e=>{
-  const button=e.currentTarget,status=el.querySelector("[data-inbox-activity-status]");
-  if(button.disabled)return;
-  button.disabled=true;button.setAttribute("aria-busy","true");status.textContent="Looking for older offers and trades…";
-  const priceQuery=!inboxPriceExhausted&&inboxPriceCursor
-   ?supabaseClient.from("price_offers").select("id,buyer_id,seller_id,amount,status,last_actor_id,updated_at").or(inboxActivityBefore("updated_at",inboxPriceCursor)).order("updated_at",{ascending:false}).order("id",{ascending:false}).limit(200)
-   :Promise.resolve({data:[],error:null});
-  const tradeQuery=!inboxTradeExhausted&&inboxTradeCursor
-   ?supabaseClient.from("trade_offers").select("id,listing_id,offered_listing_id,offered_listing_ids,item_snapshots,initial_terms,sender_id,recipient_id,status,offer_note,cash_amount,cash_direction,created_at").or(inboxActivityBefore("created_at",inboxTradeCursor)).order("created_at",{ascending:false}).order("id",{ascending:false}).limit(200)
-   :Promise.resolve({data:[],error:null});
-  const [olderPrice,olderTrade]=await Promise.all([Promise.resolve(priceQuery).catch(error=>({error})),Promise.resolve(tradeQuery).catch(error=>({error}))]);
-  if(requestId!==inboxLoadVersion||currentUser?.id!==userId)return;
-  if(olderPrice.error||olderTrade.error){status.textContent="Could not load older offers or trades. Try again.";button.disabled=false;button.removeAttribute("aria-busy");return}
-  if(!inboxPriceExhausted){const rows=olderPrice.data||[],oldest=rows.at(-1);if(oldest)inboxPriceCursor={date:oldest.updated_at,id:oldest.id};inboxPriceExhausted=rows.length<200;for(const row of rows)inboxOlderPriceOffers.set(row.id,row)}
-  if(!inboxTradeExhausted){const rows=olderTrade.data||[],oldest=rows.at(-1);if(oldest)inboxTradeCursor={date:oldest.created_at,id:oldest.id};inboxTradeExhausted=rows.length<200;for(const row of rows)inboxOlderTradeOffers.set(row.id,row)}
-  await loadInbox();
-  if(currentUser?.id!==userId||!el.isConnected)return;
-  (el.querySelector("[data-inbox-more-activity]")||el.querySelector("[data-conversation-search]"))?.focus({preventScroll:true});
- });
+ el.querySelector("[data-inbox-more-activity]")?.addEventListener("click",loadOlderInboxActivity);
  const openThread=async (id,preserveDistanceFromBottom=null,focusHistory=false)=>{
  rememberInboxDraft();
  const sameThread=document.getElementById("inboxPage").classList.contains("thread-open")&&selectedInboxCollector===id;

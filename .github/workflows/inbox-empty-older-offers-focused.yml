@@ -1,0 +1,29 @@
+name: Inbox empty recent activity discovery
+on:
+  pull_request:
+    branches: [test/staging-reporting]
+    paths:
+      - index.html
+      - tests/e2e/inbox-recovery.spec.js
+      - .github/workflows/inbox-empty-older-offers-focused.yml
+permissions:
+  contents: read
+jobs:
+  focused:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: node scripts/check-inline-js.cjs && node --check tests/e2e/inbox-recovery.spec.js
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: staging-playwright-${{ hashFiles('package-lock.json') }}
+      - run: npx playwright install chromium --only-shell
+      - name: Older offer discovery from empty Inbox on mobile and desktop
+        run: npx playwright test --config=playwright.local.config.js inbox-recovery.spec.js --grep 'T2.3 (empty recent Inbox|older offer lookup failure)' --retries=0 --max-failures=1 --timeout=20000
