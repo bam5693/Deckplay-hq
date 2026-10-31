@@ -901,6 +901,10 @@ footer p,html[data-theme="dark"] footer p{color:#d6deea!important}
 .guide-panel .guide-limit{margin:15px 0 0;padding:11px 13px;background:#fff4d9;border:1px solid #d6b779;border-radius:10px;color:#40331b}
 body.deckplay-market #gettingStarted{display:none!important}
 @media(max-width:650px){.guide-panel{padding:16px}.guide-panel ol{grid-template-columns:1fr;gap:8px}}
+/* T5: editable mobile fields inherit 15px body text; keep at least 16px to avoid iOS focus zoom while preserving larger user-selected text. */
+@media(max-width:700px){
+ input:is([type=text],[type=email],[type=password],[type=search],[type=number],[type=tel],[type=url],[type=date],[type=datetime-local],[type=time],:not([type])),textarea,select{font-size:max(16px,1em)}
+}
 </style>
 </head>
 <body>
