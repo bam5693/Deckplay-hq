@@ -2910,7 +2910,49 @@ if(tradeById.size){
    // Eagerly load into each new panel rather than relying solely on toggle events.
    void renderDealDetails();
   }
- if(unread.length){const {error}=await supabaseClient.from("collector_messages").update({read_at:new Date().toISOString()}).in("id",unread).eq("recipient_id",currentUser.id);if(!error&&requestId===inboxLoadVersion&&currentUser?.id===userId){const readAt=new Date().toISOString(),readIds=new Set(unread);entries.forEach(x=>{if(readIds.has(x.id))x.read_at=readAt});for(const row of inboxOlderMessages.get(id)||[])if(readIds.has(row.id))row.read_at=readAt;el.querySelectorAll("[data-conversation-id]").forEach(contact=>{if(contact.dataset.conversationId===id)contact.querySelector(".conversation-unread")?.remove()});filterInboxConversations();refreshUnreadCount()}}
+ if(unread.length){
+  let readBusy=false;
+  const readStatus=document.createElement("p");
+  readStatus.className="chat-read-recovery muted";
+  readStatus.setAttribute("role","status");
+  readStatus.setAttribute("aria-live","polite");
+  readStatus.hidden=true;
+  composer.before(readStatus);
+  const stillShowingThread=()=>requestId===inboxLoadVersion&&currentUser?.id===userId&&
+   selectedInboxCollector===id&&!document.getElementById("inboxPage").hidden&&
+   thread.contains(composer)&&thread.contains(readStatus);
+  const markRead=async()=>{
+   if(readBusy||!stillShowingThread())return;
+   readBusy=true;
+   readStatus.hidden=true;
+   readStatus.replaceChildren();
+   const readAt=new Date().toISOString();
+   let error;
+   try{({error}=await supabaseClient.from("collector_messages").update({read_at:readAt}).in("id",unread).eq("recipient_id",userId))}
+   catch(cause){error=cause}
+   readBusy=false;
+   if(!stillShowingThread())return;
+   if(error){
+    readStatus.hidden=false;
+    readStatus.append(document.createTextNode("Messages are still unread. Could not update read status. "));
+    const retry=document.createElement("button");
+    retry.type="button";retry.className="ghost";retry.textContent="Retry marking read";
+    retry.addEventListener("click",markRead);
+    readStatus.append(retry);
+    return;
+   }
+   const readIds=new Set(unread);
+   entries.forEach(x=>{if(readIds.has(x.id))x.read_at=readAt});
+   for(const row of inboxOlderMessages.get(id)||[])if(readIds.has(row.id))row.read_at=readAt;
+   el.querySelectorAll("[data-conversation-id]").forEach(contact=>{
+    if(contact.dataset.conversationId===id)contact.querySelector(".conversation-unread")?.remove()
+   });
+   readStatus.remove();
+   filterInboxConversations();
+   refreshUnreadCount();
+  };
+  await markRead();
+ }
  };
  el.querySelectorAll("[data-conversation-id]").forEach(b=>b.addEventListener("click",()=>openThread(b.dataset.conversationId)));
  if(requestedTarget&&groups.has(requestedTarget))await openThread(requestedTarget);
