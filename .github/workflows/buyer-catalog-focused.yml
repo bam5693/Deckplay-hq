@@ -1,5 +1,5 @@
 name: Buyer catalog load and discovery acceptance
-# Focused account-switch privacy and buyer catalog startup regression acceptance.
+# Verify deferred seller-overview DOM globals cannot abort authenticated buyer startup.
 on:
   push:
     branches: [test/staging-reporting]
