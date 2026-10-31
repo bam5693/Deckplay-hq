@@ -429,3 +429,18 @@ test('Clear filters resets detailed platform and hardware selections',async({pag
  await expect(page.locator('#marketPlatform')).toHaveValue('All');
  await expect(page.locator('#marketHardwareType')).toHaveValue('All');
 });
+
+test('hidden category-specific filters do not masquerade as active search restrictions',async({page})=>{
+ await installFixture(page,[]);
+ await page.evaluate(()=>{
+  cat='All';game='All';filter='All';query='';
+  document.getElementById('marketSport').value='Football';
+  document.getElementById('marketSportsYear').value='2024';
+  document.getElementById('marketSportsPlayer').value='Synthetic player';
+  document.getElementById('marketPlatform').innerHTML='<option value="All">All</option><option value="PS5">PS5</option>';
+  document.getElementById('marketPlatform').value='PS5';
+  render();
+ });
+ await expect(page.locator('#grid')).toContainText('No listings are available yet');
+ await expect(page.locator('#grid')).not.toContainText('No listings match your search and filters');
+});
