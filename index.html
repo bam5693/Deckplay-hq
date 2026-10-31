@@ -3181,7 +3181,7 @@ document.getElementById("composeForm").addEventListener("submit",async e=>{
   const {data:sentMessage,error}=await sendCollectorMessageOnce({sender_id:userId,recipient_id:recipient,listing_id:listing||null,body});if(error)throw error;
   if(currentUser?.id!==userId||messageAccountVersion!==accountVersion)return;
   if(composeRecipient===recipient&&composeListing===listing){
-   if(input.value===draft){form.reset();status.textContent="";closeModal("composeModal");toast("Message sent");try{await showInboxPage(recipient)}catch{toast("Message sent. Open your inbox to continue the conversation.")}}
+   if(input.value===draft){form.reset();status.textContent="";closeModal("composeModal");closeModal("detailModal");toast("Message sent");try{await showInboxPage(recipient)}catch{toast("Message sent. Open your inbox to continue the conversation.")}}
    else status.textContent="Message sent. Your new draft is ready.";
   }
   if(!document.getElementById("inboxPage").hidden){try{await loadInbox()}catch{toast("Message sent. Refresh your inbox to see it.")}}
