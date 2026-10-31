@@ -205,3 +205,13 @@
 5. PR #5 has shipped; leave subsequent production releases separate and gated by explicit owner approval. Continue improving independent backup/Auth/Storage recovery without halting staging development.
 
 **Output per development run:** `Trunk ID; customer-visible change; exact commit; verified local/API/browser/deployment evidence; accepted checklist IDs; next unfinished ID`. If code cannot run, say exactly what could not be verified. Do not claim progress percentage until current-head acceptance reconciliation is honest. Never change this scoreboard merely to report activity.
+
+
+## Trunk 9 — Competitive intelligence, differentiation and marketing (6)
+> Research/advisory workstream. Acceptance means a dated, evidence-linked recommendation or approved decision, **not** that marketing claims, payments or launch capabilities are live. Trunk 9 worker owns research notes only and never edits application code, staging deployments or the other eight trunks.
+- [ ] **T9.1** Maintain dated, sourced competitor comparison (fees, target collectors, categories, buying/selling/trading, protection and mobile UX), separating advertised features from personally verified features.
+- [ ] **T9.2** Identify DeckPlay's demonstrated differentiators, unverified claims, and top three customer reasons to switch, with evidence from current staging capabilities.
+- [ ] **T9.3** Review onboarding, search, listings, offers/trades and trust friction; recommend ranked KEEP / IMPROVE / DEFER / REMOVE changes with expected user impact and engineering effort.
+- [ ] **T9.4** Draft realistic low-cost beta acquisition and marketing experiments, channel, audience, messaging, measurement and stop criteria; no spending or posting without approval.
+- [ ] **T9.5** Define measurable marketplace health and launch-readiness indicators (seller activation, listing liquidity, buyer conversion, trade completion, dispute/support load), without inventing production metrics.
+- [ ] **T9.6** Deliver a concise owner decision memo with urgent risks, unnecessary features, competitive opportunities, explicit evidence, and recommendations; require approval for scope or product-policy changes.
