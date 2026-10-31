@@ -2,10 +2,10 @@
   "version": 1,
   "project": "DeckPlay HQ",
   "scope": "test/staging-reporting",
-  "holder": "manual-g",
-  "token": "manual-g-20261031T094534261Z-qyx49lwe",
-  "focus": "Staging regression sweep and safe production backup restore verification",
-  "acquired_at": "2026-10-31T09:45:34.261Z",
-  "expires_at": "2026-10-31T10:30:34.261Z",
-  "updated_at": "2026-10-31T09:45:34.261Z"
+  "holder": null,
+  "token": null,
+  "focus": null,
+  "acquired_at": null,
+  "expires_at": null,
+  "updated_at": "2026-10-31T10:00:14.248Z"
 }
