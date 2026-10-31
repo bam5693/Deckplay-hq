@@ -1405,10 +1405,31 @@ function showDetails(item){
  const photos=(item.imageUrls||[]).map(safeImageUrl).filter(Boolean);
  const gallery=photos.length?`<div class="detail-gallery"><div class="detail-main-photo"><button type="button" class="detail-zoom-button" id="detailZoomButton" aria-label="Enlarge listing photo"><img id="detailGalleryMain" src="${escapeHtml(photos[0])}" alt="${escapeHtml(item.n)} — photo 1 of ${photos.length}"></button></div>${photos.length>1?`<div class="detail-gallery-controls"><button type="button" data-detail-step="-1" aria-label="Previous listing photo">‹</button><span id="detailPhotoCounter" class="detail-photo-counter" role="status" aria-live="polite">Photo 1 of ${photos.length}</span><button type="button" data-detail-step="1" aria-label="Next listing photo">›</button></div>`:""}${photos.length>1?`<div class="detail-thumbs">${photos.map((src,i)=>`<button type="button" class="${i===0?"selected":""}" data-detail-photo="${i}" aria-pressed="${i===0?"true":"false"}" aria-label="View photo ${i+1} of ${photos.length}"><img src="${escapeHtml(src)}" alt="Photo ${i+1}"></button>`).join("")}</div>`:""}</div>`:'<div class="detail-photo-placeholder" aria-hidden="true">◇</div>';
  document.getElementById("detailContent").innerHTML=`<div class="detail-layout">${gallery}<div class="detail-info"><div class="kind">${item.trades?"Trades welcome":"Community marketplace"}</div><h2 id="detailTitle">${escapeHtml(item.n)}</h2><div class="detail-price">$${Number(item.p).toFixed(2)}</div><p class="detail-price-scope" role="note">${escapeHtml(listingAskingPriceScope(item.description))}</p><p class="detail-fee-disclosure" style="font-size:12px;color:#657087">Asking price only. Shipping, taxes and platform fees are not calculated. Checkout is a demonstration; no purchase or payment is processed.</p>${item.databaseId?`<div class="detail-share-actions"><button type="button" class="ghost" data-share-kind="listing" data-share-id="${escapeHtml(item.databaseId)}">Share listing</button><button type="button" class="ghost" data-copy-kind="listing" data-copy-id="${escapeHtml(item.databaseId)}">Copy link</button>${item.sellerId&&item.sellerId!==currentUser?.id?`<button type="button" class="ghost" data-report-listing="${escapeHtml(item.databaseId)}">Report listing</button>`:""}</div>`:""}<button type="button" class="detail-buy-preview" data-checkout-preview>Preview checkout · No purchase</button><div class="detail-facts"><span>Category: <strong>${escapeHtml(item.c||"Collectibles")}</strong></span><span>Condition: <strong>${escapeHtml(item.cond||"Not specified")}</strong></span>${item.gameLabel?`<span>Series: <strong>${escapeHtml(item.gameLabel)}</strong></span>`:""}</div>${listingBuyerSpecifics(item)}<p class="detail-description">${escapeHtml(readableListingDescription(item.description||"No description provided."))}</p><div class="detail-seller"><span class="detail-seller-avatar">${escapeHtml((item.s||"C").charAt(0).toUpperCase())}</span><div><small>Listed by</small><div>${item.sellerId?`<button type="button" class="seller-link" data-profile-id="${escapeHtml(item.sellerId)}">${escapeHtml(item.s)}</button>`:escapeHtml(item.s)}</div>${item.sellerId&&sellerRatingCache.has(item.sellerId)?`<small class="detail-seller-rating">★ ${escapeHtml(String(sellerRatingCache.get(item.sellerId).average))} / 5 · ${sellerRatingCache.get(item.sellerId).count} reviews</small>`:""}</div></div>${item.sellerId&&item.sellerId!==currentUser?.id?`<div class="detail-actions"><button type="button" class="primary" data-contact-id="${escapeHtml(item.sellerId)}" data-contact-listing="${escapeHtml(item.databaseId)}">Message seller</button>${item.priceOffers&&item.databaseId?`<button type="button" class="ghost" data-price-offer-id="${escapeHtml(item.databaseId)}">Make an offer</button>`:""}${item.trades?`<button type="button" class="ghost" data-trade-id="${escapeHtml(item.databaseId)}" data-trade-seller="${escapeHtml(item.sellerId)}">Propose trade</button>`:""}</div><div class="detail-feedback-row" style="margin-top:8px;text-align:center"><button type="button" class="ghost" style="font-size:12px;padding:8px 12px" data-listing-discovery-feedback="${escapeHtml(item.c||"All")}">What would help you contact this seller?</button></div>`:""}</div></div>`;
+ // If a listing photo was removed or cannot load on mobile, give the buyer
+ // a usable fallback instead of an empty/broken zoom button.
+ const mainPhoto=document.getElementById("detailGalleryMain");
+ const zoomButton=document.getElementById("detailZoomButton");
+ const photoStatus=document.createElement("p");
+ photoStatus.className="detail-photo-load-status";
+ photoStatus.setAttribute("role","status");
+ photoStatus.hidden=true;
+ if(mainPhoto&&zoomButton){
+  zoomButton.parentElement.append(photoStatus);
+  mainPhoto.addEventListener("error",()=>{
+   zoomButton.style.display="none";
+   photoStatus.textContent="This photo could not load. Choose another photo or try again later.";
+   photoStatus.hidden=false;
+  });
+  mainPhoto.addEventListener("load",()=>{
+   zoomButton.style.display="";photoStatus.hidden=true;photoStatus.textContent="";
+  });
+ }
  const selectDetailPhoto=index=>{
   if(!photos.length)return;
   const selected=(index+photos.length)%photos.length,img=document.getElementById("detailGalleryMain");
   if(!img)return;
+  if(zoomButton)zoomButton.style.display="";
+  photoStatus.hidden=true;photoStatus.textContent="";
   img.src=photos[selected];img.alt=item.n+" — photo "+(selected+1)+" of "+photos.length;
   document.getElementById("detailPhotoCounter")?.replaceChildren(document.createTextNode("Photo "+(selected+1)+" of "+photos.length));
   document.querySelectorAll("[data-detail-photo]").forEach(button=>{
