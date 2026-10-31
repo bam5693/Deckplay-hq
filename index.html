@@ -1590,7 +1590,37 @@ document.getElementById("category").addEventListener("change",syncGradedConditio
 syncGradedCondition();
 document.getElementById("listingType").addEventListener("change",()=>{const type=document.getElementById("listingType").value,category=document.getElementById("category");const map={single:"trading_cards",deck:"trading_cards",lot:"trading_cards",sealed:"trading_cards",game:"video_games",console:"consoles",figure:"collectibles",other:"other"};if(map[type])category.value=map[type];if(type==="console")document.getElementById("consoleItemType").value="Console";toggleTcgField();syncCategoryFields();syncGradedCondition();updateListingQuickSummary()});toggleTcgField();
 document.getElementById("search").addEventListener("input",event=>{rememberInboxDraft();query=event.target.value;if(["deckplay-home","inbox-focus","profile-focus"].some(name=>document.body.classList.contains(name)))showMainMarketplace();render()});
-grid.addEventListener("click",async event=>{const retry=event.target.closest("[data-retry-marketplace]");if(retry){retry.disabled=true;const ok=await loadBlockedCollectors();if(ok)await loadListings();else{items=[];listingSource="error";render()}return}const refresh=event.target.closest("[data-refresh-marketplace]");if(refresh){refresh.disabled=true;const ok=await loadBlockedCollectors();if(ok)await Promise.all([loadSavedListings(),loadListings()]);else{items=[];listingSource="error";render()}return}const profile=event.target.closest("[data-card-profile]");if(profile){await showPublicProfile(profile.dataset.cardProfile);return}const manage=event.target.closest("[data-sold],[data-delete-listing]");if(manage){if(!currentUser)return;const item=items.find(x=>String(x.id)===String(manage.dataset.sold||manage.dataset.deleteListing));if(!item||item.sellerId!==currentUser.id||!item.databaseId)return;const deleting=manage.hasAttribute("data-delete-listing");if(!confirm(deleting?"Permanently delete this listing?":"Mark this listing as sold and remove it from the marketplace?"))return;manage.disabled=true;const request=supabaseClient.from("listings");const {error}=deleting?await request.delete().eq("id",item.databaseId).eq("seller_id",currentUser.id):await request.update({status:"sold"}).eq("id",item.databaseId).eq("seller_id",currentUser.id);if(error){toast(error.message);manage.disabled=false;return}toast(deleting?"Listing deleted":"Listing marked sold");await loadListings();return}const heart=event.target.closest("[data-heart]");if(heart){await window.favoriteActions.toggle(heart.dataset.heart);return}const view=event.target.closest("[data-view]");if(view){const item=items.find(candidate=>String(candidate.id)===view.dataset.view);if(item)showDetails(item)}});
+grid.addEventListener("click",async event=>{const retry=event.target.closest("[data-retry-marketplace]");if(retry){retry.disabled=true;const ok=await loadBlockedCollectors();if(ok)await loadListings();else{items=[];listingSource="error";render()}return}const refresh=event.target.closest("[data-refresh-marketplace]");if(refresh){refresh.disabled=true;const ok=await loadBlockedCollectors();if(ok)await Promise.all([loadSavedListings(),loadListings()]);else{items=[];listingSource="error";render()}return}const profile=event.target.closest("[data-card-profile]");if(profile){await showPublicProfile(profile.dataset.cardProfile);return}const manage=event.target.closest("[data-sold],[data-delete-listing]");
+if(manage){
+ if(!currentUser||manage.disabled)return;
+ const id=manage.dataset.sold||manage.dataset.deleteListing;
+ const item=items.find(x=>String(x.id)===String(id));
+ const owner=currentUser.id,epoch=listingAccountVersion;
+ const stillOwner=()=>currentUser?.id===owner&&listingAccountVersion===epoch;
+ if(!item||item.sellerId!==owner||!item.databaseId)return;
+ const deleting=manage.hasAttribute("data-delete-listing");
+ if(!confirm(deleting?"Permanently delete this listing?":"Mark this listing as sold and remove it from the marketplace?"))return;
+ manage.disabled=true;
+ try{
+  // The public listing card can be stale while a trade reserves an item.
+  // Require the current owner and active status, and inspect the affected row.
+  const request=supabaseClient.from("listings");
+  const action=(deleting?request.delete():request.update({status:"sold"}))
+   .eq("id",item.databaseId).eq("seller_id",owner).eq("status","active").select("id").maybeSingle();
+  const {data,error}=await action;
+  if(!stillOwner())return;
+  if(error)throw error;
+  if(!data)throw Error("This listing changed, was reserved, or is no longer active. Refresh and retry.");
+  await loadListings();
+  if(stillOwner())toast(deleting?"Listing deleted":"Listing marked sold");
+ }catch(error){
+  if(stillOwner())toast(error?.message||"Listing could not be changed. Refresh and retry.","error");
+ }finally{
+  if(stillOwner()&&manage.isConnected)manage.disabled=false;
+ }
+ return;
+}
+const heart=event.target.closest("[data-heart]");if(heart){await window.favoriteActions.toggle(heart.dataset.heart);return}const view=event.target.closest("[data-view]");if(view){const item=items.find(candidate=>String(candidate.id)===view.dataset.view);if(item)showDetails(item)}});
 document.getElementById("accountMenuPortal").appendChild(document.getElementById("accountMenu"));
 document.getElementById("accountButton").addEventListener("click",()=>{if(!currentUser){setAuthMode("signin");openModal("authModal");return}const menu=document.getElementById("accountMenu");menu.hidden=!menu.hidden;document.getElementById("accountButton").setAttribute("aria-expanded",String(!menu.hidden))});
 document.addEventListener("click",event=>{if(!event.target.closest(".account-wrap")&&!event.target.closest("#accountMenu"))document.getElementById("accountMenu").hidden=true});
