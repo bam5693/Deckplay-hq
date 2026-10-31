@@ -22,23 +22,6 @@ test('T2.1 signed buyer and seller exchange real Inbox messages',async({browser}
   const listingId=await seedListing(seller,title,{category:'video_games',description:'T2.1 synthetic messaging fixture'});
   await signIn(buyer,'BUYER');buyerReady=true;
   const buyerId=await buyer.evaluate(()=>currentUser.id);
-  // Diagnostic only: track the source of Inbox visibility writes during first contact.
-  await buyer.evaluate(()=>{
-   const inbox=document.getElementById('inboxPage'),descriptor=Object.getOwnPropertyDescriptor(HTMLElement.prototype,'hidden');
-   window.__t2NavTrace=[];
-   if(!descriptor?.get||!descriptor?.set)throw Error('Cannot instrument Inbox hidden property');
-   Object.defineProperty(inbox,'hidden',{
-    configurable:true,
-    get(){return descriptor.get.call(this)},
-    set(value){
-     window.__t2NavTrace.push({hidden:!!value,body:document.body.className,stack:new Error('Inbox hidden write').stack?.split('\\n').slice(1,6).join(' | ')});
-     descriptor.set.call(this,value);
-    }
-   });
-   const observer=new MutationObserver(()=>window.__t2NavTrace.push({body:document.body.className,hidden:inbox.hidden,type:'body-class'}));
-   observer.observe(document.body,{attributes:true,attributeFilter:['class']});
-   window.__t2TraceObserver=observer;
-  });
   // First contact: render the actual saved video-game listing details, click its
   // Message seller action, send through the real compose form, and require Inbox navigation.
   await buyer.evaluate(async id=>{
@@ -50,11 +33,7 @@ test('T2.1 signed buyer and seller exchange real Inbox messages',async({browser}
   await expect(buyer.locator('#composeModal')).toHaveClass(/open/);
   await buyer.locator('#composeBody').fill(title+' opener');
   await buyer.locator('#composeForm button[type="submit"]').click();
-  try{await expect(buyer.locator('#inboxPage')).toBeVisible({timeout:6000})}
-  catch(error){
-   const trace=await buyer.evaluate(()=>({log:window.__t2NavTrace?.slice(-35),body:document.body.className,hidden:document.getElementById('inboxPage').hidden,composer:document.getElementById('composeStatus').textContent,modal:document.getElementById('composeModal').className}));
-   throw Error('First contact Inbox hidden: '+JSON.stringify(trace)+'\\n'+error.message);
-  }
+  await expect(buyer.locator('#inboxPage')).toBeVisible({timeout:20000});
   await expect(buyer.locator('.chat-composer[data-chat-recipient="'+sellerId+'"]')).toBeVisible({timeout:20000});
   await buyer.locator('#chatInput').fill(buyerMessage);
   await buyer.locator('[aria-label="Send message"]').click();
