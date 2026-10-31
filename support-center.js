@@ -823,6 +823,11 @@
     // Never erase a newer draft just because an older version was accepted.
     const submittedRaw=el("supportReplyBody").value;
     const submittedBody=submittedRaw.trim();
+    if(submittedBody.length>3000){
+      status("supportReplyStatus","Reply is too long. Shorten it to 3000 characters; your draft is preserved.");
+      el("supportReplyBody").focus();
+      return;
+    }
     if(submittedBody.length<2){
       status("supportReplyStatus","Write at least two characters before sending a reply. Your draft is preserved.");
       el("supportReplyBody").focus();
