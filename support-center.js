@@ -117,7 +117,7 @@
   const status = (id, message) => { el(id).textContent = message || ""; };
   const date = value => new Date(value).toLocaleString();
   const labels = {open:"Open",waiting_on_staff:"Waiting on support",waiting_on_user:"Waiting on collector",resolved:"Resolved"};
-  let userId = null, generation = 0, isStaff = false, staffView = false, staffSafetyOnly = false, ticketFilter = "all", ticketCategory = "all", feedbackQueueSubject = null, selected = null, tickets = [], ticketOffset = 0, ticketListRequest = 0, loadingTickets = false, moreTickets = false, replyOffset = 0, moreReplies = false, loadingReplies = false, replyRequest = 0, returnToFeedback = false, returnTopic = "feedback", feedbackMode = false, tradeConcernMode = false, listingReportId = null, pendingReportId = null, viewGeneration = 0;
+  let userId = null, generation = 0, isStaff = false, staffView = false, staffSafetyOnly = false, ticketFilter = "all", ticketCategory = "all", feedbackQueueSubject = null, selected = null, tickets = [], ticketOffset = 0, ticketListRequest = 0, loadingTickets = false, moreTickets = false, replyOffset = 0, moreReplies = false, loadingReplies = false, replyRequest = 0, returnToFeedback = false, returnTopic = "feedback", feedbackMode = false, tradeConcernMode = false, listingReportId = null, pendingReportId = null, viewGeneration = 0, createRequest = 0;
   // Drafts are tab-memory only, keyed by ticket and purged on account/view reset.
   const replyDrafts = new Map();
   const feedbackQueueSubjects = Object.freeze({empty:"[Idea] Improve marketplace search results",discovery:"[Idea] Improve listing discovery",contact:"[Idea] Improve listing contact experience"});
@@ -203,6 +203,8 @@
   // ticket-list refreshes, while still being discarded after account/view changes.
   const validWrite = (v,u) => v === viewGeneration && userId === u && modal.classList.contains("open");
   function clearPrivate() {
+    ++createRequest; // A stale request must never unlock another account's submit button.
+    el("supportNewForm").querySelector('button[type="submit"]').disabled = false;
     ++ticketListRequest; loadingTickets = false; moreTickets = false; ticketOffset = 0;
     el("supportLoadMore").hidden = true; el("supportLoadMore").disabled = false;
     selected = null; tickets = []; replyDrafts.clear(); isStaff = false; staffView = false; staffSafetyOnly = false; ticketFilter = "all"; ticketCategory = "all";
@@ -655,6 +657,13 @@
       status("supportCreateStatus","Enter a subject of at least 8 characters that fits the limit.");
       return;
     }
+    // Keep edits made while the request is in flight. A successful older draft
+    // must not silently erase a newer beta-feedback or support draft.
+    const draftState=()=>[el("supportSubject").value,el("supportDescription").value,
+      el("supportCategory").value,el("supportFeedbackKind").value,
+      el("supportTradeConcernKind").value,el("supportReportReason").value,
+      feedbackMode,tradeConcernMode,listingReportId];
+    const sentDraft=JSON.stringify(draftState()),request=++createRequest;
     button.disabled=true;status("supportCreateStatus","Submitting…");
     try{
       const {data,error}=await supabaseClient.rpc("create_support_ticket",{
@@ -663,14 +672,16 @@
       });
       if(error)throw error;
       if(!validWrite(v,u))return;
-      form.reset();setTradeConcernMode(false);setListingReportMode(null);updateFeedbackKind();staffView=false;selected=data;
+      const newerDraft=JSON.stringify(draftState())!==sentDraft;
+      if(!newerDraft){form.reset();setTradeConcernMode(false);setListingReportMode(null);updateFeedbackKind();}
+      staffView=false;selected=data;
       // A new open ticket must be visible even if the collector was filtering resolved history.
       ticketFilter="all";
       modal.querySelectorAll("[data-support-filter]").forEach(item => item.setAttribute("aria-pressed", String(item.dataset.supportFilter === "all")));
-      status("supportCreateStatus","Ticket created. You can follow replies below.");
+      status("supportCreateStatus",newerDraft?"Ticket created. Your newer draft is preserved.":"Ticket created. You can follow replies below.");
       await loadTickets();
     }catch(error){if(validWrite(v,u))status("supportCreateStatus",error.message||"Could not create ticket. Try again.")}
-    finally{button.disabled=false}
+    finally{if(request===createRequest)button.disabled=false}
   });
   el("supportReplyBody").addEventListener("input",event=>{
     if(selected && userId) replyDrafts.set(selected,event.target.value);
