@@ -53,3 +53,43 @@ test('Charles: guidance never asks for payment details; footer can return from M
   await expect(page.locator('#gettingStarted form')).toHaveCount(0);
   await expect(page.locator('#guideBuyerTab')).toHaveAttribute('aria-selected','true');
 });
+
+test('T5.4: keyboard users land on visible Marketplace content after leaving the guide',async({page})=>{
+  await page.getByRole('button',{name:'Explore marketplace →'}).focus();
+  await page.keyboard.press('Enter');
+  await expect(page.locator('body')).toHaveClass(/deckplay-market/);
+  await expect(page.locator('#market > h2')).toBeFocused();
+  await expect(page.locator('#gettingStarted')).toBeHidden();
+  // Tab moves forward through marketplace controls, not hidden guide controls.
+  await page.keyboard.press('Tab');
+  await expect(page.locator('#marketFilterToggle')).toBeFocused();
+});
+
+test('T5.4: footer guide shortcut returns keyboard focus to the visible guide heading',async({page})=>{
+  await page.getByRole('button',{name:'Explore marketplace →'}).click();
+  const footerLink=page.getByRole('button',{name:'Getting started: buyer and seller guide'});
+  await footerLink.focus();
+  await page.keyboard.press('Enter');
+  await expect(page.locator('body')).toHaveClass(/deckplay-home/);
+  await expect(page.locator('#guideTitle')).toBeFocused();
+  await page.keyboard.press('Tab');
+  await expect(page.locator('#guideBuyerTab')).toBeFocused();
+});
+
+test('T5.4: reduced-motion preference avoids animated guide navigation',async({page})=>{
+  await page.emulateMedia({reducedMotion:'reduce'});
+  await page.evaluate(()=>{
+    window.__guideScrolls=[];
+    window.__topScrolls=[];
+    window.scrollTo=function(options){window.__topScrolls.push(options?.behavior)};
+    Element.prototype.scrollIntoView=function(options) {
+      window.__guideScrolls.push({id:this.id,behavior:options?.behavior});
+    };
+  });
+  await page.getByRole('button',{name:'Explore marketplace →'}).click();
+  await expect.poll(()=>page.evaluate(()=>window.__guideScrolls.some(item=>item.id==='market'&&item.behavior==='auto'))).toBe(true);
+  await page.getByRole('button',{name:'Getting started: buyer and seller guide'}).click();
+  await expect.poll(()=>page.evaluate(()=>window.__guideScrolls.some(item=>item.id==='gettingStarted'&&item.behavior==='auto'))).toBe(true);
+  expect(await page.evaluate(()=>window.__topScrolls)).toEqual(expect.arrayContaining(['auto']));
+  expect(await page.evaluate(()=>window.__topScrolls.every(behavior=>behavior==='auto'))).toBe(true);
+});
