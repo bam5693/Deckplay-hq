@@ -53,6 +53,7 @@ test('account switch immediately clears prior saves despite a pending refresh an
 
 test('a saved-items refresh cannot erase an optimistic favorite while its write is pending',async({page})=>{
  await fixture(page);
+ await page.evaluate(()=>resetSavedListingsForAccount('first-buyer'));
  await page.locator('[data-heart]').click();
  await page.evaluate(()=>{
   supabaseClient.from=()=>({select:()=>({eq:()=>({})})});
@@ -70,6 +71,7 @@ test('a saved-items refresh cannot erase an optimistic favorite while its write 
 
 test('a stale saved-items read cannot undo a confirmed save after its write completes',async({page})=>{
  await fixture(page);
+ await page.evaluate(()=>resetSavedListingsForAccount('first-buyer'));
  await page.locator('[data-heart]').click();
  await page.evaluate(()=>{
   supabaseClient.from=()=>({select:()=>({eq:()=>({})})});
@@ -86,6 +88,7 @@ test('a stale saved-items read cannot undo a confirmed save after its write comp
 
 test('a saved-items refresh does not resurrect an item being unsaved',async({page})=>{
  await fixture(page,true);
+ await page.evaluate(()=>{resetSavedListingsForAccount('first-buyer');saved.add('favorite-item');render()});
  await page.locator('[data-heart]').click();
  await page.evaluate(()=>{
   supabaseClient.from=()=>({select:()=>({eq:()=>({})})});
