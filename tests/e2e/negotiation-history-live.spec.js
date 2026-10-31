@@ -194,8 +194,10 @@ test('T3.4 signed duplicate trade retries keep exactly one pending proposal acro
   expect(revised.error).toBeNull();
   expect(revised.id).not.toBe(first.id);
   // Declining a pending proposal allows the collector to submit those terms anew.
+  // Staging intentionally denies direct client UPDATE on trade_offers;
+  // closing a proposal must use the authorized server-side RPC.
   const close=await page.evaluate(async id=>{
-   const {error}=await supabaseClient.from('trade_offers').update({status:'declined'}).eq('id',id);
+   const {error}=await supabaseClient.rpc('respond_trade_offer',{p_offer:id,p_action:'declined'});
    return error?.message||null;
   },first.id);
   expect(close).toBeNull();
