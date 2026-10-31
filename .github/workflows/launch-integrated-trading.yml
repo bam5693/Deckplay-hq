@@ -1,5 +1,5 @@
 name: Execute one integrated price-and-bundle trade acceptance
-# Verify deployed buyer catalog recovery with one bounded seller-to-buyer trade journey.
+# Final bounded check after authentic buyer catalog bootstrap gained hard deadlines and fail-closed block rules.
 on:
   push:
     branches: [test/staging-reporting]
