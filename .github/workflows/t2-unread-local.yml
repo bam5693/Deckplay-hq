@@ -1,0 +1,19 @@
+name: T2 unread badge privacy unit checks
+on:
+  push:
+    branches: [test/staging-reporting]
+    paths:
+      - 'tests/reports/t2-unread-local-request.txt'
+permissions:
+  contents: read
+jobs:
+  unread-privacy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node scripts/check-inline-js.cjs
+      - run: node --test tests/security/t2-unread-badge-isolation.test.cjs
