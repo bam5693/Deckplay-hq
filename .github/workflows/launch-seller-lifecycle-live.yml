@@ -1,5 +1,5 @@
-name: Request one real seller lifecycle journey
-# One bounded rerun after the staging Playwright allowlist correction.
+name: Request one real seller paused-overview journey
+# One actual signed-in staging seller inventory pause/overview/resume readback after exact deployment.
 on:
   push:
     branches: [test/staging-reporting]
@@ -16,4 +16,4 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh api -X POST "repos/${{ github.repository }}/actions/workflows/private-staging.yml/dispatches" -f ref=test/staging-reporting -F 'inputs[focused_live_test]=seller-pause-live'
+          gh api -X POST "repos/${{ github.repository }}/actions/workflows/private-staging.yml/dispatches" -f ref=test/staging-reporting -F 'inputs[focused_live_test]=seller-overview-live'
