@@ -118,3 +118,5 @@ Focused verification request: validate staging startup and notification polling 
 2026-10-31 T3.4 real buyer-seller duplicate-trade proposal test, mixed game and sports-card listing, same-terms retry, changed-note proposal, decline and resubmit, guarded cleanup. Existing focused negotiation-history tests only; no staging deploy, production or full V1 sweep.
 
 2026-10-31 T3.4 focused trade retry follow-up: use actual authorized respond_trade_offer RPC to decline first pending seller proposal. New signed fixture must still reject identical different-ID duplicate, allow changed terms and reopening, clean exact markers. No broad sweep.
+
+2026-10-31 T3.4 one focused signed buyer/seller trade uncertainty test: real staging INSERT commits then synthetic response and lookup failure, browser retries same trade and confirms the original ID, exactly one row. No full sweep, destructive account changes, or production writes.
