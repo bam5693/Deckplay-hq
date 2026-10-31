@@ -13,6 +13,18 @@
     }
     for (const [name, panel] of Object.entries(panels)) panel.hidden = name !== role;
   }
+  // Navigate from a hidden guide without leaving keyboard focus behind.
+  // Programmatically focusable headings are not added to the normal Tab order.
+  function focusDestination(element) {
+    if (!element) return;
+    if (!element.hasAttribute("tabindex")) element.setAttribute("tabindex", "-1");
+    element.focus({preventScroll:true});
+  }
+  function scrollToDestination(element) {
+    if (!element) return;
+    const reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    element.scrollIntoView({behavior:reduceMotion ? "auto" : "smooth", block:"start"});
+  }
   guide.addEventListener("click", event => {
     if (!(event.target instanceof Element)) return;
     const tab = event.target.closest("[data-guide-tab]");
@@ -22,7 +34,9 @@
     if (action.dataset.guideAction === "sell") { openSell(); return; }
     if (action.dataset.guideAction === "browse") {
       showMainMarketplace();
-      document.getElementById("market")?.scrollIntoView({behavior:"smooth", block:"start"});
+      const market = document.getElementById("market");
+      scrollToDestination(market);
+      focusDestination(market?.querySelector("h2") || market);
     }
   });
   guide.addEventListener("keydown", event => {
@@ -54,7 +68,12 @@
     button.setAttribute("aria-label", "Getting started: buyer and seller guide");
     button.addEventListener("click", () => {
       showHomePage();
-      requestAnimationFrame(() => guide.scrollIntoView({behavior:"smooth", block:"start"}));
+      requestAnimationFrame(() => {
+        // A fast navigation away should not steal focus from the new screen.
+        if (!guide.getClientRects().length) return;
+        scrollToDestination(guide);
+        focusDestination(document.getElementById("guideTitle") || guide);
+      });
     });
     footer.append(button);
     // Feedback stays reachable from Marketplace, Inbox and Profile, not just Home.
