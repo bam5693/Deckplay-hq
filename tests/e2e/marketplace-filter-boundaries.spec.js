@@ -416,3 +416,16 @@ test('Saved Items outage shows retry without claiming favorites disappeared',asy
  await expect(page.locator('#grid [data-retry-marketplace]')).toBeVisible();
  await expect(page.locator('#grid')).not.toContainText('No saved items to show yet');
 });
+
+test('Clear filters resets detailed platform and hardware selections',async({page})=>{
+ await installFixture(page,[]);
+ await page.evaluate(()=>{
+  document.getElementById('marketPlatform').innerHTML='<option value="All">All platforms</option><option value="PS5">PS5</option>';
+  document.getElementById('marketHardwareType').innerHTML='<option value="All">All hardware</option><option value="Controllers">Controllers</option>';
+  document.getElementById('marketPlatform').value='PS5';
+  document.getElementById('marketHardwareType').value='Controllers';
+  document.getElementById('marketClearFilters').click();
+ });
+ await expect(page.locator('#marketPlatform')).toHaveValue('All');
+ await expect(page.locator('#marketHardwareType')).toHaveValue('All');
+});
