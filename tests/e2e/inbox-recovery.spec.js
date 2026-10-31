@@ -1308,3 +1308,66 @@ test('T2.3 Inbox refresh follows newest message only when reading near bottom',a
  expect(distance).toBeLessThanOrEqual(3);
  await expect(page.locator('.chat-jump-latest')).toBeHidden();
 });
+
+test('T2.3 empty recent Inbox can recover older offer-only conversation',async({page})=>{
+ await inbox(page);
+ await page.evaluate(async()=>{
+  inboxOlderMessages.clear();inboxOlderPriceOffers.clear();inboxOlderTradeOffers.clear();
+  inboxPriceCursor=null;inboxPriceExhausted=false;inboxTradeCursor=null;inboxTradeExhausted=false;
+  const original=supabaseClient.from,now=new Date().toISOString();
+  const recent=Array.from({length:200},(_,i)=>({id:'recent-'+String(i).padStart(4,'0'),
+   buyer_id:'fixture-seller',seller_id:'fixture-seller',amount:5,status:'pending',
+   updated_at:new Date(Date.now()-i*60000).toISOString()}));
+  window.__olderOffersLookups=0;
+  supabaseClient.from=table=>{
+   if(table==='collector_messages')return fake([]);
+   if(table==='price_offers'){
+    let older=false;
+    const q=fake(recent);
+    q.or=()=>{older=true;return q};
+    q.then=(resolve,reject)=>Promise.resolve({data:older?(window.__olderOffersLookups++,[{
+     id:'legacy-offer',buyer_id:'buyer-a',seller_id:'fixture-seller',amount:30,
+     status:'pending',last_actor_id:'buyer-a',updated_at:new Date(Date.now()-201*60000).toISOString()
+    }]):recent,error:null}).then(resolve,reject);
+    return q;
+   }
+   if(table==='profiles')return fake([{id:'buyer-a',username:'buyer-a'}]);
+   return fake([]);
+  };
+  function fake(data){
+   const q={then:(resolve,reject)=>Promise.resolve({data,error:null}).then(resolve,reject)};
+   for(const name of ['select','order','limit','eq','in','is','maybeSingle'])q[name]=()=>q;
+   return q;
+  }
+  await loadInbox();
+ });
+ await expect(page.locator('[data-inbox-more-activity]')).toBeVisible();
+ await expect(page.locator('.conversation-layout')).toHaveCount(0);
+ await expect(page.locator('.inbox-recovery')).toContainText('Older offers or trades may still be available');
+ await page.locator('[data-inbox-more-activity]').click();
+ await expect(page.locator('[data-conversation-id="buyer-a"]')).toBeVisible();
+ await expect(page.locator('[data-conversation-id="buyer-a"]')).toHaveAttribute('data-has-negotiation','true');
+ expect(await page.evaluate(()=>window.__olderOffersLookups)).toBe(1);
+});
+test('T2.3 older offer lookup failure on empty Inbox retains retry control',async({page})=>{
+ await inbox(page);
+ await page.evaluate(async()=>{
+  inboxOlderMessages.clear();inboxOlderPriceOffers.clear();inboxPriceCursor=null;inboxPriceExhausted=false;
+  const recent=Array.from({length:200},(_,i)=>({
+   id:'recent-'+i,buyer_id:'fixture-seller',seller_id:'fixture-seller',
+   updated_at:new Date(Date.now()-i*60000).toISOString(),amount:1
+  }));
+  supabaseClient.from=table=>{
+   let older=false;
+   const q={then:(resolve,reject)=>Promise.resolve(older?{data:null,error:{message:'offline'}}:{data:table==='price_offers'?recent:[],error:null}).then(resolve,reject)};
+   for(const name of ['select','order','limit','in','eq','is'])q[name]=()=>q;
+   q.or=()=>{older=true;return q};
+   return q;
+  };
+  await loadInbox();
+ });
+ await page.locator('[data-inbox-more-activity]').click();
+ await expect(page.locator('[data-inbox-activity-status]')).toContainText('Could not load older offers or trades');
+ await expect(page.locator('[data-inbox-more-activity]')).toBeEnabled();
+ await expect(page.locator('.inbox-recovery')).toBeVisible();
+});
