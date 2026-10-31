@@ -1,4 +1,4 @@
-const {test,expect}=require('@playwright/test');
+const {test,expect,devices}=require('@playwright/test');
 const {signIn,seedListing,cleanup,marker}=require('../helpers/staging.cjs');
 
 // Real staging-only auth + data test; no real shoppers or live payments.
@@ -124,6 +124,78 @@ test('T3.1 real price offer rejects invalid cents and respects accept, withdraw 
    }
   }
   await context.close();
+  if(primaryError)throw primaryError;
+ }
+});
+
+test('T3.1 mobile buyer and desktop seller negotiate through visible price-offer UI',async({page,browser})=>{
+ test.setTimeout(145000);
+ if(process.env.DECKPLAY_STAGING_URL!=='https://deckplay-hq-staging.cstivers56.workers.dev')throw Error('Refusing non-staging origin');
+ const title=marker();
+ let signedSeller=false,primaryError=null;
+ const buyerContext=await browser.newContext({
+  ...devices['Pixel 7'],
+  baseURL:process.env.DECKPLAY_STAGING_URL,
+  httpCredentials:{username:'deckplay',password:process.env.DECKPLAY_STAGING_ACCESS_PASSWORD},
+  ignoreHTTPSErrors:!!process.env.CODEX_NETWORK_PROXY_ACTIVE
+ });
+ const buyer=await buyerContext.newPage();
+ try{
+  await signIn(page,'SELLER');signedSeller=true;
+  const id=await seedListing(page,title,{description:'TEST ONLY BOT mobile price negotiation',category:'video_games'});
+  await signIn(buyer,'BUYER');
+  // Get live authorized listing data and expose it through the real detail modal.
+  await buyer.evaluate(async listingId=>{
+   const {data,error}=await supabaseClient.from('listings').select('*').eq('id',listingId).single();
+   if(error||!data)throw Error(error?.message||'Staging listing not found');
+   const item=marketplaceItemFromRow(data,{username:'synthetic_seller'});
+   items.unshift(item);
+   showDetails(item);
+  },id);
+  await expect(buyer.locator('#detailTitle')).toHaveText(title);
+  await buyer.locator('#detailContent [data-price-offer-id]').click();
+  await expect(buyer.locator('#priceOfferModal')).toHaveClass(/open/);
+  await buyer.locator('#priceOfferAmount').fill('20');
+  await buyer.locator('#priceOfferForm button[type="submit"]').click();
+  await expect(buyer.locator('#priceOfferModal')).not.toHaveClass(/open/,{timeout:15000});
+  const idOffer=await buyer.evaluate(async listingId=>{
+   const {data,error}=await supabaseClient.from('price_offers').select('id,amount,status').eq('listing_id',listingId).eq('buyer_id',currentUser.id).eq('status','pending').single();
+   if(error)throw Error(error.message);
+   return data;
+  },id);
+  expect(Number(idOffer.amount)).toBe(20);
+  await page.evaluate(async()=>{openModal('priceOffersModal');await loadPriceOffers()});
+  const sellerCard=page.locator('#priceOffersList .price-offer-card').filter({has:page.locator('[data-price-id="'+idOffer.id+'"]')});
+  await expect(sellerCard).toBeVisible();
+  await expect(sellerCard).toContainText('$20.00');
+  page.once('dialog',dialog=>dialog.accept('22.50'));
+  await sellerCard.locator('[data-price-action="counter"]').click();
+  await expect(sellerCard).toHaveCount(0,{timeout:20000});
+  await buyer.evaluate(async()=>{openModal('priceOffersModal');await loadPriceOffers()});
+  const buyerCard=buyer.locator('#priceOffersList .price-offer-card').filter({has:buyer.locator('[data-price-id="'+idOffer.id+'"]')});
+  await expect(buyerCard).toBeVisible();
+  await expect(buyerCard).toContainText('$22.50');
+  buyer.once('dialog',dialog=>dialog.accept());
+  await buyerCard.locator('[data-price-action="accept"]').click();
+  await expect(buyer.locator('#priceOffersList')).toContainText('Price agreed — item reserved.',{timeout:25000});
+  const saved=await page.evaluate(async({id,idOffer})=>{
+   const [item,offer]=await Promise.all([
+    supabaseClient.from('listings').select('status').eq('id',id).single(),
+    supabaseClient.from('price_offers').select('status,amount').eq('id',idOffer).single()
+   ]);
+   if(item.error||offer.error)throw Error(item.error?.message||offer.error?.message);
+   return {listingStatus:item.data.status,offerStatus:offer.data.status,amount:Number(offer.data.amount)};
+  },{id,idOffer:idOffer.id});
+  expect(saved).toEqual({listingStatus:'reserved',offerStatus:'accepted',amount:22.5});
+ }catch(error){primaryError=error;throw error}
+ finally{
+  if(signedSeller&&!page.isClosed()){
+   try{await cleanup(page,title)}catch(error){
+    console.error('Exact synthetic mobile price fixture cleanup failed: '+error.message);
+    if(!primaryError)primaryError=error;
+   }
+  }
+  await buyerContext.close();
   if(primaryError)throw primaryError;
  }
 });
