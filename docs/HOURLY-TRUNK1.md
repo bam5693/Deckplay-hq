@@ -15,8 +15,13 @@
 - Cheap JavaScript parse preflight PASS for changed JS and test, and deterministic metadata-priority example returns Lightly Played, Current Release, Alternate Art. **This is not a browser run or signed staging acceptance.**
 - Existing T1.3 buyer exact-condition UI on shared staging branch remains **not yet deployed** per manual G checkpoint. Do not duplicate existing 2/2 local buyer check.
 
+## DONE this session — branch-only fixes and focused evidence
+- **T1.3 candidate (NOT accepted):** prior stale metadata restoration fix remains intact; latest source includes `01f67ff` and era round-trip. [Focused run 41244141050](https://github.com/bam5693/Deckplay-hq/actions/runs/41244141050) passed. Signed deployed seller-to-buyer round-trip still needed.
+- **T1.4 candidate (NOT accepted):** seller deck edits previously permitted partial/unrecognized decklist lines to bypass declared card-count mismatch checking. [Code commit 3aa3041](https://github.com/bam5693/Deckplay-hq/commit/3aa3041b1b28157d1e341c1b65ff28d6e3534b5e) now blocks uncounted lines and mismatched declared totals **before any listing update**, with actionable correction messages. [Focused regression e46c20a](https://github.com/bam5693/Deckplay-hq/commit/e46c20af28b49ac3d8615c210b61f650132e308f) covers incomplete line, mismatch, and corrected save.
+- **Verification PASS:** [run 41248875465](https://github.com/bam5693/Deckplay-hq/actions/runs/41248875465) **4/4 local desktop/mobile-emulated browser cases**, two behaviors × two projects; JS syntax and inline source preflight passed. No signed staging test or deployment claimed.
+- **Integration:** [Draft PR #25](https://github.com/bam5693/Deckplay-hq/pull/25) now contains both scoped fixes and is reviewable; manual G owns protected staging integration.
+
 ## NEXT
-1. Inspect targeted run 41244008807; if red, fix actual issue and rerun only changed case once.
-2. Prepare reviewable draft PR to `test/staging-reporting` (do not merge). Manual G to coordinate one private staging deploy, asset parity and real signed seller metadata edit + buyer readback before accepting **T1.3**.
-3. Advance to earliest incomplete **T1.4** only after T1.3 code and focused test are ready, or if signed staging acceptance is blocked by integration lane. Preserve accepted T1.1/T1.2 evidence.
-4. No public production, billing, checkout, real users, shared staging database writes or unreviewed merges.
+1. Manual G integration lane: review PR #25, coordinate **one** protected staging deployment with exact served asset/private gate parity, then scoped signed seller edit + buyer readback for T1.3 and signed deck edit/buyer quantity readback for T1.4. Neither T1.3 nor T1.4 can be checked [x] on local mocks alone.
+2. This worker: if PR awaits integration, investigate earliest **T1.5** real gap and implement a distinct, focused mobile/desktop listing gallery, seller info, Saved/My listing or blocked-seller privacy improvement on this branch, avoiding already accepted T1.1/T1.2 checks. Do not duplicate T5 mobile navigation/physical Android tasks.
+3. No production/main, shared staging deploy/DB writes, billing, checkout, real users or unreviewed merge. No repeated broad test suites.
