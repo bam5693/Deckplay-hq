@@ -3456,13 +3456,13 @@ async function showCollectorPage(tab="listings"){
  content.innerHTML=listings.length?renderProfileInventory(listings):'<p class="muted">You haven’t posted any listings yet. Tap Sell an item to get started.</p>';
  if(listings.length)filterProfileInventory();
 }
-function renderProfileCards(rows,own){return '<div class="profile-card-grid">'+rows.map(l=>{const image=safeImageUrl(l.image_urls?.[0]);return `<article class="profile-item" data-inventory-status="${escapeHtml(l.status||"active")}" data-inventory-category="${escapeHtml(l.category||"other")}" data-inventory-search="${escapeHtml(l.title)}">${image?`<img class="profile-listing-image" src="${escapeHtml(image)}" alt="${escapeHtml(l.title)}">`:""}<h3>${escapeHtml(l.title)}</h3><strong>$${Number(l.price||0).toFixed(2)}</strong><p class="muted">${escapeHtml(l.status||"active")}</p><div class="profile-item-actions">${l.status==="active"?`<button type="button" class="ghost" data-profile-view="${escapeHtml(l.id)}">View listing</button>`:""}${own&&l.status==="active"?`<button type="button" class="ghost" data-profile-edit="${escapeHtml(l.id)}">Edit listing</button><button type="button" class="ghost" data-page-sold="${escapeHtml(l.id)}">Mark sold</button>`:""}${own&&l.status==="active"?`<button type="button" class="ghost" data-page-pause="${escapeHtml(l.id)}">Pause listing</button>`:""}${own&&l.status==="paused"?`<button type="button" class="ghost" data-page-resume="${escapeHtml(l.id)}">Resume listing</button>`:""}${own?`<button type="button" class="ghost" data-page-delete="${escapeHtml(l.id)}">Delete</button>`:""}</div></article>`}).join("")+'</div>'}
+function renderProfileCards(rows,own){return '<div class="profile-card-grid">'+rows.map(l=>{const image=safeImageUrl(l.image_urls?.[0]);return `<article class="profile-item" data-inventory-status="${escapeHtml(l.status||"active")}" data-inventory-category="${escapeHtml(l.category||"other")}" data-inventory-search="${escapeHtml(l.title)}">${image?`<img class="profile-listing-image" src="${escapeHtml(image)}" alt="${escapeHtml(l.title)}">`:""}<h3>${escapeHtml(l.title)}</h3><strong>$${Number(l.price||0).toFixed(2)}</strong><p class="muted">${escapeHtml(l.status||"active")}</p><div class="profile-item-actions">${l.status==="active"?`<button type="button" class="ghost" data-profile-view="${escapeHtml(l.id)}">View listing</button>`:""}${own&&l.status==="active"?`<button type="button" class="ghost" data-profile-edit="${escapeHtml(l.id)}">Edit listing</button><button type="button" class="ghost" data-page-sold="${escapeHtml(l.id)}">Mark sold</button>`:""}${own?`<button type="button" class="ghost" data-page-delete="${escapeHtml(l.id)}">Delete</button>`:""}</div></article>`}).join("")+'</div>'}
 
 
 function renderProfileInventory(rows){
  const labels={trading_cards:"Trading cards",video_games:"Video games",consoles:"Consoles",controllers:"Controllers",accessories:"Accessories",collectibles:"Collectibles",other:"Other collectibles"};
  const categories=[...new Set(rows.map(row=>row.category||"other"))].sort();
- return `<section class="inventory-tools" aria-label="Filter your inventory"><label for="inventorySearch">Search your listings<input type="search" id="inventorySearch" maxlength="120" placeholder="Item name" value="${escapeHtml(profileInventoryFilter.search)}"></label><label for="inventoryStatus">Listing status<select id="inventoryStatus">${[["all","All statuses"],["active","Active"],["paused","Paused"],["reserved","Reserved"],["sold","Sold"],["removed","Removed"]].map(([value,label])=>`<option value="${value}" ${profileInventoryFilter.status===value?"selected":""}>${label}</option>`).join("")}</select></label><label for="inventoryCategory">Category<select id="inventoryCategory"><option value="all">All categories</option>${categories.map(value=>`<option value="${escapeHtml(value)}" ${profileInventoryFilter.category===value?"selected":""}>${escapeHtml(labels[value]||value)}</option>`).join("")}</select></label><button type="button" class="ghost" data-inventory-clear>Clear filters</button><p data-inventory-summary role="status" aria-live="polite"></p></section>`+renderProfileCards(rows,true);
+ return `<section class="inventory-tools" aria-label="Filter your inventory"><label for="inventorySearch">Search your listings<input type="search" id="inventorySearch" maxlength="120" placeholder="Item name" value="${escapeHtml(profileInventoryFilter.search)}"></label><label for="inventoryStatus">Listing status<select id="inventoryStatus">${[["all","All statuses"],["active","Active"],["reserved","Reserved"],["sold","Sold"],["removed","Removed"]].map(([value,label])=>`<option value="${value}" ${profileInventoryFilter.status===value?"selected":""}>${label}</option>`).join("")}</select></label><label for="inventoryCategory">Category<select id="inventoryCategory"><option value="all">All categories</option>${categories.map(value=>`<option value="${escapeHtml(value)}" ${profileInventoryFilter.category===value?"selected":""}>${escapeHtml(labels[value]||value)}</option>`).join("")}</select></label><button type="button" class="ghost" data-inventory-clear>Clear filters</button><p data-inventory-summary role="status" aria-live="polite"></p></section>`+renderProfileCards(rows,true);
 }
 function filterProfileInventory(){
  const root=document.getElementById("profilePageContent"),search=root.querySelector("#inventorySearch"),status=root.querySelector("#inventoryStatus"),category=root.querySelector("#inventoryCategory");if(!search||!status||!category)return;
@@ -3488,20 +3488,16 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape")closeProfileActionMe
 document.getElementById("profileAddListing").addEventListener("click",openSell);
 document.getElementById("profileAddWanted").addEventListener("click",()=>{if(!currentUser){openModal("authModal");return}openModal("wantedModal")});
 document.querySelectorAll("[data-profile-tab]").forEach(b=>b.addEventListener("click",()=>showCollectorPage(b.dataset.profileTab)));
-// Owner-only, compare-and-swap listing lifecycle. Sold/reserved inventory can
-// never be resumed by this UI; the isolated staging DB also guards transitions.
+// Owner-only, compare-and-swap listing lifecycle. Production permits sold and
+// deleted changes; paused is excluded until the production schema supports it.
 document.getElementById("profilePageContent").addEventListener("click",async event=>{
- const button=event.target.closest("[data-page-sold],[data-page-delete],[data-page-pause],[data-page-resume]");
+ const button=event.target.closest("[data-page-sold],[data-page-delete]");
  if(!button||!currentUser||button.disabled)return;
- const mode=button.hasAttribute("data-page-pause")?"pause":
-  button.hasAttribute("data-page-resume")?"resume":
-  button.hasAttribute("data-page-sold")?"sold":"delete";
- const id=button.dataset.pagePause||button.dataset.pageResume||button.dataset.pageSold||button.dataset.pageDelete;
+ const mode=button.hasAttribute("data-page-sold")?"sold":"delete";
+ const id=button.dataset.pageSold||button.dataset.pageDelete;
  const owner=currentUser.id,epoch=listingAccountVersion;
  const visible=()=>currentUser?.id===owner&&listingAccountVersion===epoch;
  const prompts={
-  pause:"Pause this listing? Buyers won't see it or be able to start new offers. You can resume it later.",
-  resume:"Resume this listing? It will appear in the marketplace again.",
   sold:"Mark this listing as sold?",
   delete:"Permanently delete this listing?"
  };
@@ -3509,7 +3505,7 @@ document.getElementById("profilePageContent").addEventListener("click",async eve
  const controls=[...button.closest(".profile-item-actions").querySelectorAll("button")];
  controls.forEach(b=>b.disabled=true);
  try{
-  const changes={pause:["active","paused"],resume:["paused","active"],sold:["active","sold"]};
+  const changes={sold:["active","sold"]};
   let action;
   if(mode==="delete")action=supabaseClient.from("listings").delete().eq("id",id).eq("seller_id",owner);
   else {
@@ -3525,7 +3521,7 @@ document.getElementById("profilePageContent").addEventListener("click",async eve
   if(!visible())return;
   await showCollectorPage("listings");
   if(!visible())return;
-  toast(({pause:"Listing paused — hidden from buyers",resume:"Listing active again",sold:"Marked as sold",delete:"Listing deleted"})[mode]);
+  toast(({sold:"Marked as sold",delete:"Listing deleted"})[mode]);
  }catch(error){
   if(visible())toast(error.message||"Listing could not be updated. Refresh and retry.","error");
  }finally{if(visible())controls.forEach(b=>{if(b.isConnected)b.disabled=false})}
