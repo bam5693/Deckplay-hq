@@ -2603,7 +2603,16 @@ async function loadInbox(targetCollectorId=null){
  supabaseClient.from("trade_counteroffers").select("id,trade_offer_id,proposer_id,recipient_id,cash_amount,cash_direction,offer_note,status,created_at").order("created_at",{ascending:false}).limit(700)
  ]).catch(error=>Array.from({length:5},()=>({error})));
  if(requestId!==inboxLoadVersion||currentUser?.id!==userId)return;
- if(mr.error||pr.error||tr.error){el.innerHTML='<section role="alert" class="inbox-recovery"><p>Could not load conversations. Check your connection and try again.</p><button type="button" class="secondary" data-inbox-retry>Retry inbox</button></section>';return}
+ if(mr.error||pr.error||tr.error){
+  const retry='<section role="alert" class="inbox-recovery" data-inbox-refresh-error><p>Conversations could not refresh. The messages shown below may be out of date. Check your connection and retry.</p><button type="button" class="secondary" data-inbox-retry>Retry inbox</button></section>';
+  if(el.querySelector(".conversation-layout")){
+   // Keep already visible conversations and unsent drafts intact on a
+   // transient refresh failure; never suggest their contents are current.
+   el.querySelector("[data-inbox-refresh-error]")?.remove();
+   el.insertAdjacentHTML("afterbegin",retry);
+  }else el.innerHTML=retry;
+  return;
+ }
  if(!inboxConversationCursor){
   const oldest=(mr.data||[]).at(-1);
   if(oldest)inboxConversationCursor={date:oldest.created_at,id:oldest.id};
