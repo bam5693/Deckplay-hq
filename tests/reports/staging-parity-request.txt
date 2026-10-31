@@ -4,3 +4,5 @@
 2026-10-30 verify real private staging seller pause/resume deployed source; local 10/10 mobile desktop PASS 41137521658; deployment 41137595092; verify all assets, deny anonymous, preserve isolated Supabase only. No production.
 
 2026-10-30 buyer discovery source parity: validate deployed read timeout, immediate marketplace cards, optional profile enrichment, and search refresh; staging deploy 41151642598, 40 local mobile/desktop browser checks 41151553600. Verify private Basic Auth and exact served assets only, no production.
+
+2026-10-30 verify protected private staging deployment 41152021632 for bounded auth blocked-seller prerequisite, fail-closed private buyer catalog, timeout robust all adapters; accepted 44/44 focused desktop/mobile browser run 41151931553. Read-only static asset and gate parity; no production.
