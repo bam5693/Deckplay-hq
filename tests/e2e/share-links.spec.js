@@ -718,12 +718,12 @@ test('T7 owner profile Share button opens native mobile sheet with public collec
 
 test('T7 own public-profile preview opens the public collector view',async({page})=>{
  await ready(page);
- await page.evaluate(()=>{
-   currentUser={id:SELLER};
+ await page.evaluate(seller=>{
+   currentUser={id:seller};
    document.getElementById('collectorPage').hidden=false;
    window.previewedCollectorIds=[];
    window.showPublicProfile=async id=>{window.previewedCollectorIds.push(id)};
- });
+ },SELLER);
  await page.locator('#previewOwnPublicProfile').click();
  expect(await page.evaluate(()=>previewedCollectorIds)).toEqual([SELLER]);
 });
