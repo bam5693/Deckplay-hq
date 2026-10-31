@@ -1,0 +1,29 @@
+name: Inbox manual refresh focus regression
+on:
+  pull_request:
+    branches: [test/staging-reporting]
+    paths:
+      - index.html
+      - tests/e2e/inbox-recovery.spec.js
+      - .github/workflows/inbox-manual-refresh-focused.yml
+permissions:
+  contents: read
+jobs:
+  focused:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: node scripts/check-inline-js.cjs && node --check tests/e2e/inbox-recovery.spec.js
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: staging-playwright-${{ hashFiles('package-lock.json') }}
+      - run: npx playwright install chromium --only-shell
+      - name: Manual Inbox refresh keyboard regression
+        run: npx playwright test --config=playwright.local.config.js inbox-recovery.spec.js --grep 'T2.2 ' --retries=0 --max-failures=1 --timeout=20000
