@@ -150,3 +150,5 @@ Focused verification request: validate staging startup and notification polling 
 2026-10-31 T3.5 accepted deal expansion persists through Inbox refresh, exact deal ID checks in desktop seller and mobile buyer, scoped cleanup; no broad V1 sweep.
 
 2026-10-31 focused private staging deploy accepted-deal expanded-panel state persistence; guarded ordinary preflight + source parity only, then separate single signed Inbox journey. No full V1 sweep or production change.
+
+2026-10-31 one final targeted signed buyer/seller accepted deal Inbox state verification, after protected private Worker deployment 41203206237. Test exact trade progress card expanded across refresh. Stop if fails, record root-cause evidence; no repeated reruns or full suite.
