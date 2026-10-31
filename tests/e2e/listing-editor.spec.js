@@ -83,6 +83,35 @@ test('editing bundle quantities replaces structured contents and keeps seller di
  await page.evaluate(()=>finishEdit({data:{id:'edit-item'},error:null}));
 });
 
+test('T1.4 seller deck edits reject incomplete and mismatched card counts before writing',async({page})=>{
+ await fixture(page);
+ await page.evaluate(async()=>{
+  editRow={...editRow,category:'trading_cards',product_type:'deck',tcg_game:'one_piece',condition:'used',
+   description:'[Listing classification]\nCard condition: Lightly Played\nDeck: Captain\nCards: 5\nFull decklist:\n4x Card A\nCard B\n[End classification]\n\nSeller discloses edge wear.'};
+  await listingEditor.open('edit-item');
+ });
+ await page.locator('#editListingClassification summary').click();
+ await page.locator('#editClassificationEnabled').check();
+ await page.locator('#editAttribute_deckLeader').fill('Captain');
+ await page.locator('#editAttribute_deckCardCount').fill('5');
+ await page.locator('#editAttribute_deckList').fill('4x Card A\nCard B');
+ await page.locator('#saveListingEdits').click();
+ await expect(page.locator('#editListingStatus')).toContainText('Every decklist line needs a valid quantity');
+ expect(await page.evaluate(()=>editWrites.length)).toBe(0);
+ await page.locator('#editAttribute_deckList').fill('4x Card A\n2x Card B');
+ await page.locator('#saveListingEdits').click();
+ await expect(page.locator('#editListingStatus')).toContainText('Deck quantities total 6 cards but the stated total is 5');
+ expect(await page.evaluate(()=>editWrites.length)).toBe(0);
+ await page.locator('#editAttribute_deckList').fill('4x Card A\n1x Card B');
+ await page.locator('#saveListingEdits').click();
+ await expect.poll(()=>page.evaluate(()=>editWrites.length)).toBe(1);
+ const saved=await page.evaluate(()=>editWrites[0]);
+ expect(saved.description).toContain('Cards: 5');
+ expect(saved.description).toContain('4x Card A\n1x Card B');
+ expect(saved.description).toContain('Seller discloses edge wear.');
+ await page.evaluate(()=>finishEdit({data:{id:'edit-item'},error:null}));
+});
+
 test('T1.3 latest edited classification wins over stale legacy card condition, set and variant',async({page})=>{
  await fixture(page);
  await page.evaluate(async()=>{
