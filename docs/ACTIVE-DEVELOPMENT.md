@@ -57,3 +57,7 @@
 ### T5 Inbox accessibility fix — minimum font without capping enlarged text
 - `index.html` change `c9b6a13` changes mobile Inbox composer `font-size:16px` to `font-size:max(16px,1em)` so larger user-selected text remains usable while retaining minimum focus-zoom size. Regression assertion `1073eca`.
 - [Focused run 41241657617](https://github.com/bam5693/Deckplay-hq/actions/runs/41241657617) passed 9/9 Node security/accessibility checks plus inline JS validation. This is source-level verification only, not device or signed deployed staging acceptance. No production/main changes.
+
+### T5 mobile dock label readability
+- Updated bottom navigation captions from 10px to 11px in `index.html` (commit `b76daf3`) while preserving six-column layout; focused guard `fa978a7`.
+- [CI run 41242334256](https://github.com/bam5693/Deckplay-hq/actions/runs/41242334256) PASSED 10/10 cheap source-level regressions. Real device visual/layout validation remains pending; production unchanged. Next work should favor higher-impact beta readiness, not repetitive cosmetic tweaks.
