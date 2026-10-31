@@ -1363,8 +1363,8 @@ function listingBuyerSpecifics(item){
  const category=item.rawCategory||({ "Trading Cards":"trading_cards","Video Games":"video_games","Consoles & Controllers":"consoles" }[item.c]||"");
  const fields=category==="trading_cards"?
   (item.game==="sports_cards"?
-   [["Sport",["Sport"]],["Brand",["Sports brand","Brand"]],["Year",["Year"]],["Player",["Player"]],["Grader",["Grader"]],["Grade",["Grade"]],["Certification",["Certification"]]]:
-   [["Set",["Set"]],["Card number",["Card number"]],["Variant",["Variant"]],["Edition / printing",["Edition / printing"]],["Language",["Language"]],["Rarity",["Rarity"]],["Grader",["Grader"]],["Grade",["Grade"]],["Certification",["Certification"]]])
+   [["Card condition",["Card condition"]],["Sport",["Sport"]],["Brand",["Sports brand","Brand"]],["Year",["Year"]],["Player",["Player"]],["Grader",["Grader"]],["Grade",["Grade"]],["Certification",["Certification"]]]:
+   [["Card condition",["Card condition"]],["Set",["Set"]],["Card number",["Card number"]],["Variant",["Variant"]],["Edition / printing",["Edition / printing"]],["Language",["Language"]],["Rarity",["Rarity"]],["Grader",["Grader"]],["Grade",["Grade"]],["Certification",["Certification"]]])
   :category==="video_games"?[["Platform",["Platform"]]]
   :["consoles","controllers","accessories"].includes(category)?
    [["Hardware type",["Hardware type"]],["Brand",["Brand"]],["Model",["Model"]],["Storage / version",["Storage / version","Storage/version"]]]
@@ -1381,6 +1381,7 @@ function listingBuyerSpecifics(item){
    }
    if(value)break;
   }
+  if(!value&&label==="Card condition"&&!updated)value=description.match(/(?:^|\n)\[Card Condition\]\n([^\n]+)/)?.[1]||"";
   value=value.replace(/[\x00-\x1f\x7f]+/g," ").slice(0,120).trim();
   if(value)rows.push('<div style="display:flex;gap:8px;flex-wrap:wrap"><dt style="font-weight:700">'+escapeHtml(label)+':</dt><dd style="margin:0;overflow-wrap:anywhere">'+escapeHtml(value)+'</dd></div>');
  }
