@@ -1,15 +1,4 @@
-2026-10-30 T8.3 read-only post-deployment exact private staging asset parity. Verify all served files, anonymous 401 Basic Auth, staging Supabase only, source HEAD and no production writes. Deploy run 41026343950 succeeded. No extra deployment.
-2026-10-30: verify exact staging assets after passing 6 focused Android Back draft guards run 41134639804, private deploy 41134713003. Only read the protected staging site. Production unchanged.
-
-2026-10-30 verify real private staging seller pause/resume deployed source; local 10/10 mobile desktop PASS 41137521658; deployment 41137595092; verify all assets, deny anonymous, preserve isolated Supabase only. No production.
-
-2026-10-30 buyer discovery source parity: validate deployed read timeout, immediate marketplace cards, optional profile enrichment, and search refresh; staging deploy 41151642598, 40 local mobile/desktop browser checks 41151553600. Verify private Basic Auth and exact served assets only, no production.
-
-2026-10-30 verify protected private staging deployment 41152021632 for bounded auth blocked-seller prerequisite, fail-closed private buyer catalog, timeout robust all adapters; accepted 44/44 focused desktop/mobile browser run 41151931553. Read-only static asset and gate parity; no production.
-2026-10-30 exact served-asset parity for seller paused-stock overview: focused desktop/mobile 24/24 run 41154123855; private staging deploy 41154200337. Check protected Basic Auth 401, noindex, staging-only Supabase target and exact seller-overview.js bytes. No production, billing or customer data changes.
-
-2026-10-30 T8.3 staff status-save isolation exact private staging asset parity after protected deploy 41162669831 (HEAD 0855da547b58feb76a1bb4a7d570179e4b2052d2). Focused 22/22 mobile/desktop tests passed 41162574639. Check every served asset, anonymous Basic Auth denial and isolated staging Supabase only; read-only, never production.
-
-2026-10-30 T8.3 ticket history filter reset read-only post-deployment parity. Source 6186053b3e171cb1b86518f07afd72d204359c53, focused desktop/mobile 26/26 PASS 41164929344, protected private deploy PASS 41165008903. Verify exact served assets, Basic Auth denial and isolated staging Supabase only; no production.
-2026-10-31 T7.6 feedback drafts: focused desktop/mobile PASS 41173649703; protected isolated staging deploy PASS 41173686797. Verify all exact served assets, anonymous Basic Auth denial, isolated staging-only config. Read-only; no production.
-2026-10-31 T7.6 feedback area source ac46114279a6f7aa6e9d59a5137a1e146366aa48, 44 focused desktop/mobile PASS 41179560344; protected staging deployment 41179641279 PASS. Read-only exact asset parity, private Basic Auth and isolated Supabase verification; no production.
+2026-10-31 T7.6 private staging read-only asset parity after verified placeholder-answer fix.
+Tested source edc7e238a87a1ac73ed560176ed90b3d6f1150d,  focused mobile/desktop run 41182127346 PASS.
+Protected private staging deployment run 41182194487 PASS at request HEAD 7317e76ad6c6246ea53ee673c6ff2ee30f8ea76f.
+Compare exact served assets to current isolated staging branch, deny anonymous Basic Auth, verify noindex and isolated Supabase configuration. No staging DB writes, no production or billing changes.
