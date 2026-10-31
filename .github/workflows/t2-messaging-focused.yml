@@ -1,0 +1,47 @@
+name: T2 focused private messaging acceptance
+on:
+  push:
+    branches: [test/staging-reporting]
+    paths:
+      - 'tests/reports/t2-messaging-live-request.txt'
+permissions:
+  contents: read
+  id-token: write
+jobs:
+  signed-messaging:
+    name: Signed buyer/seller messaging and retry
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    environment: deckplay-staging
+    concurrency:
+      group: private-staging-transactions
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Cheap syntax and fixture-safety preflight
+        run: |
+          node --check tests/e2e/t2-buyer-seller-messaging-live.spec.js
+          node --test tests/security/staging-browser-config.test.cjs tests/security/fixture-cleanup.test.cjs
+      - name: Trusted staging-only credentials
+        run: node scripts/staging-ci-credentials.cjs
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: staging-playwright-${{ hashFiles('package-lock.json') }}
+      - run: npx playwright install chromium --only-shell
+      - name: Signed buyer seller acceptance
+        run: npx playwright test --config=playwright.staging.config.js t2-buyer-seller-messaging-live.spec.js --project=staging-desktop --retries=0 --max-failures=1 --timeout=120000
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: t2-messaging-diagnostic
+          path: |
+            test-results/staging-junit.xml
+            test-results/staging/
+          if-no-files-found: ignore
+          retention-days: 3
