@@ -264,7 +264,7 @@ jobs:
           SELECTED_TEST: ${{ github.event.inputs.focused_live_test }}
         run: |
           case "$SELECTED_TEST" in
-            trading|listing-drafts-live|seller-pause-live|community|seller-overview-live|discovery-alerts|staging-permissions) ;;
+            trading|listing-drafts-live|seller-pause-live|staging-catalog-auth-live|community|seller-overview-live|discovery-alerts|staging-permissions) ;;
             *) echo "Unsupported diagnostic selection"; exit 1;;
           esac
           if [ "$SELECTED_TEST" = "staging-permissions" ]; then
