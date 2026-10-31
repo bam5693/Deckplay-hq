@@ -365,3 +365,70 @@ test('T3.4 signed duplicate trade retries keep exactly one pending proposal acro
   if(!primaryError&&errors.length)throw errors[0];
  }
 });
+
+
+test('T3.3 repeated real signed price-versus-trade acceptance races reserve inventory once',async({page,browser})=>{
+ test.setTimeout(180000);
+ if(process.env.DECKPLAY_STAGING_URL!=='https://deckplay-hq-staging.cstivers56.workers.dev')throw Error('Staging only');
+ const title=marker(),context=await browser.newContext({
+  baseURL:process.env.DECKPLAY_STAGING_URL,
+  httpCredentials:{username:'deckplay',password:process.env.DECKPLAY_STAGING_ACCESS_PASSWORD},
+  ignoreHTTPSErrors:!!process.env.CODEX_NETWORK_PROXY_ACTIVE
+ });
+ const buyer=await context.newPage();let sellerSignedIn=false,buyerSignedIn=false,primaryFailure=null;
+ try{
+  await signIn(page,'SELLER');sellerSignedIn=true;
+  await signIn(buyer,'BUYER');buyerSignedIn=true;
+  const sellerId=await page.evaluate(()=>currentUser.id);
+  for(let round=0;round<3;round++){
+   const target=await seedListing(page,title,{description:'T3.3 race target round '+round,tcg_game:'sports_cards'});
+   const collateral=await seedListing(buyer,title,{description:'T3.3 race offered card round '+round,tcg_game:'one_piece'});
+   const priceId=await buyer.evaluate(async id=>{
+    const {data,error}=await supabaseClient.rpc('submit_price_offer',{p_listing_id:id,p_amount:20});
+    if(error)throw Error(error.message);
+    return data;
+   },target);
+   const tradeId=await buyer.evaluate(async args=>{
+    const {data,error}=await supabaseClient.from('trade_offers').insert({
+     listing_id:args.target,offered_listing_id:args.collateral,
+     sender_id:currentUser.id,recipient_id:args.sellerId,offer_note:args.note
+    }).select('id').single();
+    if(error)throw Error(error.message);
+    return data.id;
+   },{target,collateral,sellerId,note:title+' race '+round});
+   const attempts=await page.evaluate(async ({priceId,tradeId})=>{
+    // Independent HTTP requests overlap against the same real listing lock.
+    const [price,trade]=await Promise.all([
+     supabaseClient.rpc('respond_price_offer',{p_offer_id:priceId,p_action:'accept',p_amount:null}),
+     supabaseClient.rpc('respond_trade_offer',{p_offer:tradeId,p_action:'accepted'})
+    ]);
+    return {price:{error:price.error?.message||null},trade:{error:trade.error?.message||null}};
+   },{priceId,tradeId});
+   const result=await buyer.evaluate(async({target,collateral,priceId,tradeId})=>{
+    const [listings,prices,trades]=await Promise.all([
+     supabaseClient.from('listings').select('id,status').in('id',[target,collateral]),
+     supabaseClient.from('price_offers').select('id,status').eq('id',priceId).single(),
+     supabaseClient.from('trade_offers').select('id,status').eq('id',tradeId).single()
+    ]);
+    for(const r of [listings,prices,trades])if(r.error)throw Error(r.error.message);
+    return {listings:listings.data,price:prices.data.status,trade:trades.data.status};
+   },{target,collateral,priceId,tradeId});
+   const winnerCount=Number(result.price==='accepted')+Number(result.trade==='accepted');
+   expect(winnerCount,'Exactly one competing proposal wins round '+round).toBe(1);
+   expect(result.listings.find(x=>x.id===target)?.status).toBe('reserved');
+   expect(result.listings.find(x=>x.id===collateral)?.status).toBe(result.trade==='accepted'?'reserved':'active');
+   expect(Number(attempts.price.error===null)+Number(attempts.trade.error===null)).toBe(1);
+   expect(['declined','cancelled','pending'].includes(result.price)||result.price==='accepted').toBe(true);
+   expect(['declined','cancelled','pending'].includes(result.trade)||result.trade==='accepted').toBe(true);
+  }
+ }catch(e){primaryFailure=e;throw e}
+ finally{
+  const errors=[];
+  for(const [logged,tab,label] of [[buyerSignedIn,buyer,'buyer'],[sellerSignedIn,page,'seller']]){
+   if(!logged||tab.isClosed())continue;
+   try{await cleanup(tab,title)}catch(e){errors.push(e);console.error('T3.3 '+label+' fixture cleanup failed: '+e.message)}
+  }
+  await context.close();
+  if(!primaryFailure&&errors.length)throw errors[0];
+ }
+});
