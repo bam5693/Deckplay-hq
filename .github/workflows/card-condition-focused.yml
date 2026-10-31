@@ -1,0 +1,31 @@
+name: Card condition buyer details targeted verification
+on:
+  push:
+    branches: [test/staging-reporting]
+    paths:
+      - '.github/workflows/card-condition-focused.yml'
+      - 'tests/e2e/listing-description.spec.js'
+permissions:
+  contents: read
+jobs:
+  buyer-condition:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Check changed JS before browser
+        run: |
+          node scripts/check-inline-js.cjs
+          node --check tests/e2e/listing-description.spec.js
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: staging-playwright-${{ hashFiles('package-lock.json') }}
+      - run: npx playwright install chromium --only-shell
+      - name: Only buyer-visible legacy and edited card-condition details
+        run: npx playwright test --config=playwright.local.config.js listing-description.spec.js --grep 'buyer sees exact seller card condition' --retries=0 --timeout=20000
