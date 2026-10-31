@@ -37,3 +37,26 @@ test('a reserved listing cannot be overwritten by stale profile Mark sold',async
  await expect(page.locator('#profilePageContent')).toContainText('Nintendo game');
  await expect(page.locator('#toast')).toContainText('This listing changed or was reserved');
 });
+
+for(const action of ['sold','delete'])test('marketplace My Listings '+action+' rejects stale reserved inventory without false success',async({page})=>{
+ page.on('dialog',dialog=>dialog.accept());
+ await page.evaluate(()=>{
+  items=[{id:'synthetic-active-item',databaseId:'synthetic-active-item',sellerId:'inventory-owner',n:'TEST ONLY synthetic game',c:'Video Games',p:25,cond:'Used',s:'Test seller',imageUrls:[]}];
+  cat='All';filter='All';game='All';query='';onlyMyListings=true;onlySavedListings=false;listingSource='live';
+  window.marketplaceSellerWrites=[];
+  supabaseClient.from=()=>{const request={
+   delete:()=>{marketplaceSellerWrites.push('delete');return request},
+   update:changes=>{marketplaceSellerWrites.push(['update',changes]);return request},
+   eq:(key,value)=>{marketplaceSellerWrites.push(['eq',key,value]);return request},
+   select:()=>request,
+   maybeSingle:async()=>({data:null,error:null})
+  };return request};
+  showMainMarketplace();render();
+ });
+ const button=page.locator('#grid [data-'+(action==='delete'?'delete-listing':'sold')+'="synthetic-active-item"]');
+ await button.click();
+ await expect(page.locator('#toast')).toContainText('This listing changed, was reserved, or is no longer active');
+ await expect(button).toBeEnabled();
+ const filters=await page.evaluate(()=>marketplaceSellerWrites.filter(x=>Array.isArray(x)&&x[0]==='eq'));
+ expect(filters).toEqual(expect.arrayContaining([['eq','seller_id','inventory-owner'],['eq','status','active']]));
+});
