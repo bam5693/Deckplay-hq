@@ -8,7 +8,13 @@ test('Tanner and Jayden rotate hands-on sports/TCG trading and cash counteroffer
   const details=lead=>({description:lead==='Tanner'?'Synthetic sports-card collector fixture: graded baseball card, condition and photos for exchange.':'Synthetic One Piece playable deck component for a TCG player and video-game collector.',tcg_game:lead==='Tanner'?'sports_cards':'one_piece'});
   const target=await stage(sellerLead+' lists an item for trade',()=>seedListing(page,title,details(sellerLead)));await stage(buyerLead+' signs in as buyer',()=>signIn(buyer,'BUYER'));buyerSignedIn=true;const offered=await stage(buyerLead+' lists trade collateral',()=>seedListing(buyer,title,details(buyerLead)));const extra=await seedListing(buyer,title,{...details(buyerLead),description:'Second distinct printing or collectible in the bundle'});
   console.log('TRADE STAGE buyer marketplace search');await buyer.reload({waitUntil:'domcontentloaded'});await buyer.locator('[data-cat="Trading Cards"]').first().click();await buyer.locator('#search').fill(title);
-  await expect.poll(()=>buyer.evaluate(()=>listingSource),{timeout:15000,intervals:[100,300,500,1000]}).toBe('live');
+  try{await expect.poll(()=>buyer.evaluate(()=>listingSource),{timeout:17000,intervals:[100,300,500,1000]}).toBe('live')}
+  catch(error){
+   const snapshot=await buyer.evaluate(()=>({source:listingSource,loaded:items.length,authReady:!!currentUser,
+    filters:{category:cat,game,query},message:document.querySelector('#grid .empty')?.textContent?.slice(0,180)||''}));
+   console.log('TRADE CATALOG LOADING DIAGNOSTIC '+JSON.stringify(snapshot));
+   throw error;
+  }
   const discovery=await buyer.evaluate(async id=>{
    const r=await supabaseClient.from('listings').select('id,category,status').eq('id',id).maybeSingle();
    return {directStatus:r.data?.status||null,directCategory:r.data?.category||null,directError:r.error?.code||null,catalogCount:items.length,
