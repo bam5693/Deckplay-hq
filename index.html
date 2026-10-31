@@ -2869,6 +2869,8 @@ document.getElementById("messageInbox").addEventListener("click",e=>{if(e.target
 document.getElementById("messageInbox").addEventListener("submit",async e=>{
  const form=e.target.closest(".chat-composer");if(!form)return;e.preventDefault();if(!currentUser)return;
  const input=form.querySelector("textarea"),button=form.querySelector('button[type="submit"]'),status=form.querySelector(".chat-send-status"),body=input.value.trim(),recipient=form.dataset.chatRecipient,userId=currentUser.id,key=userId+":"+recipient,accountVersion=messageAccountVersion;
+ // Only return focus after delivery if the collector was actively composing.
+ const resumeComposerFocus=document.activeElement===input||document.activeElement===button;
  if((!body&&!window.privateMessagePhotos?.has(recipient))||!recipient||inboxSending.has(key))return;
  if(blockedCollectorIds.has(recipient)){toast("Unblock this collector in Settings before messaging.","error");return}
  inboxSending.add(key);button.disabled=true;input.readOnly=true;status.textContent="Sending…";
@@ -2882,7 +2884,21 @@ document.getElementById("messageInbox").addEventListener("submit",async e=>{
   window.privateMessagePhotos?.clear(recipient);inboxDrafts.delete(recipient);persistInboxDrafts();input.value="";resizeInboxComposer(input);status.textContent="";
   const active=document.querySelector("#messageInbox .chat-composer");
   if(active?.dataset.chatRecipient===recipient){const visible=active.querySelector("textarea");visible.value="";resizeInboxComposer(visible)};
-  if(selectedInboxCollector===recipient&&!document.getElementById("inboxPage").hidden){try{await loadInbox(recipient)}catch{toast("Message sent. Refresh the inbox to see it.")}}
+  if(selectedInboxCollector===recipient&&!document.getElementById("inboxPage").hidden){
+   try{
+    await loadInbox(recipient);
+    // loadInbox recreates the textarea. Keep continuous keyboard messaging usable,
+    // but never steal focus after the user switches accounts, threads or controls.
+    const activeFocus=document.activeElement;
+    const focusVacant=activeFocus===document.body||activeFocus===document.documentElement||activeFocus===input||activeFocus===button||!activeFocus?.isConnected;
+    const visibleForm=document.querySelector("#messageInbox .chat-composer");
+    if(resumeComposerFocus&&focusVacant&&currentUser?.id===userId&&messageAccountVersion===accountVersion&&
+       selectedInboxCollector===recipient&&visibleForm?.dataset.chatRecipient===recipient&&
+       !document.getElementById("inboxPage").hidden&&!visibleForm.hidden){
+     visibleForm.querySelector("textarea")?.focus({preventScroll:true});
+    }
+   }catch{toast("Message sent. Refresh the inbox to see it.")}
+  }
   void sendCollectorEmailForSource(data?.id);
  }catch(error){
   const message="Could not send: "+(error.message||"Please try again.");status.textContent=message;
