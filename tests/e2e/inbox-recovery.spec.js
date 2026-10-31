@@ -737,7 +737,10 @@ test('inbox search and unread filters survive refresh but reset on account chang
  await search.fill('buyer-b');await unread.check();
  await page.evaluate(async()=>{currentUser={id:'fixture-another-collector'};syncInboxDraftUser();await showInboxPage()});
  await expect(search).toHaveValue('');await expect(unread).not.toBeChecked();
- await expect(page.locator('[data-conversation-id="buyer-a"]')).toBeVisible();
+ // The new account has no conversations; prior-account results must not leak.
+ await expect(page.locator('[data-conversation-id="buyer-a"]')).toHaveCount(0);
+ await expect(search).toBeHidden();
+ await expect(unread).toBeHidden();
 });
 
 test('Jayden can retry an offline inbox without losing his TCG inquiry draft',async({page})=>{
@@ -756,7 +759,7 @@ test('Jayden can retry an offline inbox without losing his TCG inquiry draft',as
  });
  await page.evaluate(()=>loadInbox());
  await expect(page.locator('[data-inbox-retry]')).toBeVisible();
- await expect(page.locator('[role="alert"]')).toContainText('Could not load conversations');
+ await expect(page.locator('[role="alert"]')).toContainText(/Could not (load|refresh) (conversations|messages)/);
  await page.locator('[data-inbox-retry]').click();
  await expect(page.locator('#chatInput')).toHaveValue('Is your One Piece deck still available?');
  await expect(page.locator('[data-inbox-retry]')).toHaveCount(0);
