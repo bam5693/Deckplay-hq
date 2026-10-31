@@ -57,6 +57,9 @@ test('signed buyer browses live categories and recovers from empty search',async
  const categories=['Trading Cards','Video Games','Consoles & Controllers','Collectibles'];
  for(const category of categories){
   await page.locator('#marketCategory').selectOption(category);
+  // Session initialization/background refresh can temporarily replace a live
+  // catalog with its loading state. Check the settled state, not a transient frame.
+  await expect.poll(()=>page.evaluate(()=>listingSource),{timeout:20000,intervals:[250,500,1000]}).toBe('live');
   const state=await page.evaluate(()=>({
    selected:cat,
    displayed:[...document.querySelectorAll('#grid [data-view]')].map(node=>node.dataset.view).sort(),
