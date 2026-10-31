@@ -1130,6 +1130,8 @@ test('T2.2 Inbox normalized search still obeys unread-only and clear filters',as
  await expect(page.locator('[data-conversation-id="buyer-a"]')).toBeVisible();
  await page.locator('[data-conversation-id="buyer-a"]').click();
  await expect(page.locator('[data-conversation-id="buyer-a"]')).toBeHidden();
+ // Return to list before using Clear on mobile single-thread navigation.
+ await page.locator('#inboxThreadBack').click();
  await page.locator('[data-conversation-clear]').click();
  await expect(search).toHaveValue('');
  await expect(page.locator('[data-conversation-unread]')).not.toBeChecked();
