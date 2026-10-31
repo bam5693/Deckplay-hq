@@ -1,5 +1,5 @@
 name: Run one read-only signed-in buyer catalog diagnostic
-# Diagnose swallowed session bootstrap exception by checking each UI initializer.
+# Capture initial account-reset state before any manual initializer diagnostics.
 on:
   push:
     branches: [test/staging-reporting]
