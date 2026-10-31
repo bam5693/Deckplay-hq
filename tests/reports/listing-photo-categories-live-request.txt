@@ -1,0 +1,4 @@
+T1.1 2026-10-31 — ONE seven-category seller photo/edit & signed buyer acceptance.
+Single previously authored scenario in tests/e2e/listing-editor-live.spec.js, grep 'representative categories publish real photos'; do NOT run the separate previously accepted seller stale/delete or photo retry tests.
+Private staging exact source from deployment 41217869999, parity run 41217936502 SUCCESS. A real two-photo seller upload failure/rollback/retry, signed buyer, and fixture cleanup just passed in 41217991566; not repeated.
+Run seller and buyer disposable staging identities only, real photo create/edit/replace/reorder/remove and category transitions across representative 7 categories. Concurrency group private-staging-transactions, exact TEST ONLY BOT fixture cleanup. No main/production, payments, shipping, billing, purchases, broad suites, or staging migrations.
