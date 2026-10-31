@@ -1,5 +1,5 @@
 name: Run one read-only signed-in buyer catalog diagnostic
-# Diagnose exact sanitized synchronous startup error against isolated staging; no fixture writes.
+# Verify signed-in buyer reload after fixing missing deferred sellerOverview reset method; no fixture writes.
 on:
   push:
     branches: [test/staging-reporting]
