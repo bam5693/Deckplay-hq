@@ -955,3 +955,43 @@ test('T7.5: feedback drill-down is staff-only and never survives account changes
  await expect(page.locator('#supportTicketCategory')).toBeEnabled();
  await expect(page.locator('#supportTicketList')).not.toContainText('Improve listing discovery');
 });
+
+
+test('T7.6: newer feedback draft survives a delayed successful send and can be submitted separately',async({page})=>{
+ await boot(page);await signIn(page,'buyer');
+ await page.evaluate(()=>{
+  const original=window.supabaseClient.rpc;
+  let delayFirst=true;
+  window.__releaseFirstFeedback=null;
+  window.supabaseClient.rpc=(name,args)=>{
+   if(name==='create_support_ticket'&&delayFirst){
+    delayFirst=false;
+    const result=original(name,args);
+    return new Promise(resolve=>{window.__releaseFirstFeedback=()=>resolve(result)});
+   }
+   return original(name,args);
+  };
+  document.dispatchEvent(new Event('deckplay:open-feedback'));
+ });
+ await page.locator('#supportFeedbackKind').selectOption('idea');
+ await page.locator('#supportSubject').fill('Improve video game search');
+ await page.locator('#supportDescription').fill('The first suggestion is about video game and console search.');
+ await page.getByRole('button',{name:'Send private feedback'}).click();
+ await page.waitForFunction(()=>typeof window.__releaseFirstFeedback==='function');
+ await expect(page.getByRole('button',{name:'Send private feedback'})).toBeDisabled();
+ await page.locator('#supportSubject').fill('Add console accessory filters');
+ await page.locator('#supportDescription').fill('The newer suggestion is about finding console controllers and accessories.');
+ await page.evaluate(()=>window.__releaseFirstFeedback());
+ await expect(page.locator('#supportCreateStatus')).toHaveText('Ticket created. Your newer draft is preserved.');
+ await expect(page.locator('#supportTicketTitle')).toHaveText('[Idea] Improve video game search');
+ await expect(page.locator('#supportSubject')).toHaveValue('Add console accessory filters');
+ await expect(page.locator('#supportDescription')).toHaveValue('The newer suggestion is about finding console controllers and accessories.');
+ await expect(page.getByRole('button',{name:'Send private feedback'})).toBeEnabled();
+ await page.getByRole('button',{name:'Send private feedback'}).click();
+ await expect(page.locator('#supportTicketTitle')).toHaveText('[Idea] Add console accessory filters');
+ await expect(page.locator('#supportSubject')).toBeEmpty();
+ const calls=await page.evaluate(()=>window.__db.calls.filter(call=>call.name==='create_support_ticket'));
+ expect(calls).toHaveLength(2);
+ expect(calls.map(call=>call.args.p_subject)).toEqual(['[Idea] Improve video game search','[Idea] Add console accessory filters']);
+ expect(calls.every(call=>call.args.p_category==='other')).toBe(true);
+});
