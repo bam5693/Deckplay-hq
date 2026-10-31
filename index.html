@@ -268,6 +268,14 @@ footer{margin-top:16px!important;padding:18px 5%!important}
 #reportModal .dialog{max-width:510px;border-radius:22px}
 @media(max-width:480px){#publicProfileModal .dialog{padding:17px}#publicProfileContent .collector-avatar{width:72px;height:72px;min-width:72px;max-width:72px;min-height:72px;max-height:72px;flex-basis:72px;line-height:66px}#publicProfileContent .collector-summary{padding:13px;gap:12px}#publicProfileContent .collector-actions .primary{min-width:145px}#publicProfileContent .profile-listing-image{height:170px}}
 
+/* Trade proposals retain a white paper surface in dark mode. Explicit text ink
+   prevents light-on-white content in the Trade offers dialog. */
+#tradesModal .trade-offer-card{background:#fff!important;color:#243047!important}
+#tradesModal .trade-offer-card :is(p,strong,summary,.trade-snapshot-item,.chat-trade-items){color:#243047!important}
+#tradesModal .trade-offer-card :is(small,.muted,.trade-compare-item span){color:#526174!important}
+#tradesModal .trade-offer-card .kind{color:#23685e!important}
+#tradesModal .trade-offer-card .ghost{background:#283a52!important;color:#fff!important;border-color:#576c80!important}
+
 /* Saved appearance preference: all main surfaces and overlays */
 :root{color-scheme:light}
 html[data-theme="dark"]{color-scheme:dark}
