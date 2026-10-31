@@ -61,3 +61,8 @@
 ### T5 mobile dock label readability
 - Updated bottom navigation captions from 10px to 11px in `index.html` (commit `b76daf3`) while preserving six-column layout; focused guard `fa978a7`.
 - [CI run 41242334256](https://github.com/bam5693/Deckplay-hq/actions/runs/41242334256) PASSED 10/10 cheap source-level regressions. Real device visual/layout validation remains pending; production unchanged. Next work should favor higher-impact beta readiness, not repetitive cosmetic tweaks.
+
+### T8 beta support report reliability — passed
+- Added defensive client-side effective body length validation to `support-center.js` (commit `4b59184`), before writing private support tickets. Existing UI limits listing report descriptions to 2700 characters; this new guard covers unexpected oversized composed reports without sending or discarding a draft.
+- Focused simulated oversized-input regression added in `tests/e2e/support-center.spec.js` (`f4a8816`) and the existing search-feedback workflow. First run failed because the browser correctly enforced the existing 2700 UI limit; corrected test to explicitly simulate an out-of-contract overlong field. [Final run 41244015461](https://github.com/bam5693/Deckplay-hq/actions/runs/41244015461) **PASS 50/50 desktop/mobile local browser tests**; no real database operations, staging Worker deployment or production updates.
+- Manual G is free to continue T5/T6/T8 beta gates, focusing substantive customer-facing reliability rather than repeated cosmetic or already-passing checks. Trunk 1 and Trunk 4 remain hourly-worker owned.
