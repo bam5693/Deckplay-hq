@@ -4,7 +4,7 @@ const {signIn,seedListing,cleanup,marker}=require('../helpers/staging.cjs');
 // T2.1: real signed collector-to-seller text delivery, not a mocked API test.
 // Dedicated synthetic staging accounts and marker-scoped cleanup only.
 test('T2.1 signed buyer and seller exchange real Inbox messages',async({browser})=>{
- test.setTimeout(120000);
+ test.setTimeout(180000);
  if(process.env.DECKPLAY_STAGING_URL!=='https://deckplay-hq-staging.cstivers56.workers.dev')throw Error('Staging-only test');
  const context=await browser.newContext({
   baseURL:process.env.DECKPLAY_STAGING_URL,
@@ -194,6 +194,28 @@ test('T2.1 signed buyer and seller exchange real Inbox messages',async({browser}
   });
   expect(isolation.error).toBeNull();
   expect(isolation.html).toBe('NEW ACCOUNT INBOX');
+  // Real same-browser session switch: unsent buyer draft and unread UI must not
+  // be displayed after signing in as the seller. No mocked auth state.
+  const privateDraft=title+' unsent buyer-private draft';
+  await buyer.locator('#chatInput').fill(privateDraft);
+  await buyer.locator('#chatInput').dispatchEvent('input');
+  await buyer.locator('#accountButton').click();
+  await buyer.locator('#signOutButton').click();
+  await expect.poll(()=>buyer.evaluate(()=>currentUser?.id||null),{timeout:15000}).toBeNull();
+  await expect(buyer.locator('#headerUnread')).toBeHidden();
+  await expect(buyer.locator('#menuUnread')).toBeHidden();
+  await signIn(buyer,'SELLER');
+  await expect.poll(()=>buyer.evaluate(()=>currentUser?.id),{timeout:12000}).toBe(sellerId);
+  await buyer.evaluate(id=>showInboxPage(id),buyerId);
+  await expect(buyer.locator('.chat-composer[data-chat-recipient="'+buyerId+'"]')).toBeVisible({timeout:20000});
+  await expect(buyer.locator('#chatInput')).not.toHaveValue(privateDraft);
+  await expect(buyer.locator('#messageInbox')).not.toContainText(privateDraft);
+  // Restore the original buyer identity before its marker-scoped cleanup.
+  await buyer.locator('#accountButton').click();
+  await buyer.locator('#signOutButton').click();
+  await expect.poll(()=>buyer.evaluate(()=>currentUser?.id||null),{timeout:15000}).toBeNull();
+  await signIn(buyer,'BUYER');
+  await expect.poll(()=>buyer.evaluate(()=>currentUser?.id),{timeout:12000}).toBe(buyerId);
   // Sender and recipient must each see only one persisted copy.
   for(const [page,body] of [[buyer,buyerMessage],[seller,reply]]){
    const count=await page.evaluate(async body=>{
