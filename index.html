@@ -2181,6 +2181,7 @@ async function navigateDeckplayNotification(kind,actorId,sourceId){
   }catch(error){
    if(!current())return;
    toast("Could not locate that offer. Open your offers list to retry.");
+   return;
   }
  }
  if(!current())return;
