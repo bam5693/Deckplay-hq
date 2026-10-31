@@ -5,3 +5,5 @@ Feature: dbe4840e2f800b3c98d7a8a612acd50119198910
 Regression: edc7e238a87a1ac73ed560176ed90b3d6f1150d9
 Focused desktop/mobile support checks and cheap preflight PASSED: https://github.com/bam5693/Deckplay-hq/actions/runs/41182127346
 Only target private Worker deckplay-hq-staging and isolated Supabase prrrzeelltmyugssqnzk. Keep Basic Auth, OIDC, secrets and RLS; verify exact deployed assets after deployment. No main, public production, PR merge, real customer data, live payments/shipping, or spending.
+
+2026-10-31 04:00 Central — PWA offline update-refresh safety from f17129d, regression 10bf00d, focused CI gate 41186833013 PASSED desktop/mobile. Deploy ONLY current isolated test/staging-reporting source with immutable Basic Auth/noindex/staging Supabase and existing secrets. Confirm anonymous 401; no production, no billing, no real payments/shipping, no PR merge. Follow with strict served asset parity readback.
