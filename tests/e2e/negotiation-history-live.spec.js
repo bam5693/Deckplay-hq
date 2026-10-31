@@ -142,6 +142,8 @@ test('real buyer and seller recover their price and trade counter history in Inb
   const sellerOlder=page.locator('[data-inbox-older-negotiations]');
   if(await sellerOlder.isVisible())await sellerOlder.click();
   await expect(page.locator('.conversation-bubbles')).toContainText('Synthetic counter',{timeout:18000});
+  await expect(page.locator('.chat-deal-panel > summary')).toBeVisible({timeout:18000});
+  await page.locator('.chat-deal-panel > summary').click();
   await expect(page.locator('.transaction-next-steps')).toBeVisible({timeout:18000});
   await expect(page.locator('.transaction-next-steps')).toContainText('Progress is self-reported');
   await expect(page.locator('.transaction-next-steps')).toContainText('DeckPlay does not verify payments or shipping');
@@ -161,6 +163,8 @@ test('real buyer and seller recover their price and trade counter history in Inb
   if(await mobileOlder.isVisible())await mobileOlder.click();
   await expect(mobileBuyer.locator('.conversation-bubbles')).toContainText('Synthetic counter',{timeout:18000});
   await expect(mobileBuyer.locator('.conversation-bubbles')).toContainText('22.00',{timeout:18000});
+  await expect(mobileBuyer.locator('.chat-deal-panel > summary')).toBeVisible({timeout:18000});
+  await mobileBuyer.locator('.chat-deal-panel > summary').click();
   await expect(mobileBuyer.locator('.transaction-next-steps')).toBeVisible({timeout:18000});
   await expect(mobileBuyer.locator('.transaction-next-steps')).toContainText('Progress is self-reported');
   await expect(mobileBuyer.locator('.transaction-next-steps')).toContainText('DeckPlay does not verify payments or shipping');
