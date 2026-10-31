@@ -158,7 +158,7 @@ jobs:
           echo 'Result: ${{ job.status }}. Charles checks API transactions and authorization; Kyle checks deployed mobile/desktop browser journeys. Tanner and Jayden rotate seller/buyer roles in complete-deck and sports/TCG trade browser simulations using the same two disposable accounts. These are deterministic actions; AI inference is verified separately by the manual lead-review workflow. Reports contain persona annotations and named steps. Payment/shipping remain previews.' >> "$GITHUB_STEP_SUMMARY"
 
   staging-auth-smoke:
-    if: ${{ (github.event_name == 'push' || github.event.inputs.auth_smoke_only == 'true' || github.event.inputs.account_readonly_only == 'true') && github.ref == 'refs/heads/test/staging-reporting' && !startsWith(github.event.head_commit.message, '[release-preview]') && !startsWith(github.event.head_commit.message, '[seller-grid-live]') && !startsWith(github.event.head_commit.message, '[photo-retry-live]') && !startsWith(github.event.head_commit.message, '[photo-categories-live]') }}
+    if: ${{ (github.event_name == 'push' || github.event.inputs.auth_smoke_only == 'true' || github.event.inputs.account_readonly_only == 'true') && github.ref == 'refs/heads/test/staging-reporting' && !startsWith(github.event.head_commit.message, '[release-preview]') && !startsWith(github.event.head_commit.message, '[seller-grid-live]') && !startsWith(github.event.head_commit.message, '[photo-retry-live]') && !startsWith(github.event.head_commit.message, '[photo-categories-live]') && !startsWith(github.event.head_commit.message, '[t7-catalog-readonly]') }}
     name: Focused beta preflight and private staging acceptance
     concurrency:
       group: deckplay-staging-deploy
@@ -292,6 +292,53 @@ jobs:
             test-results/
             playwright-report/
           retention-days: 3
+
+  t7-catalog-readonly:
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/test/staging-reporting' && startsWith(github.event.head_commit.message, '[t7-catalog-readonly]') }}
+    name: One signed buyer mobile catalog recovery check
+    concurrency:
+      group: deckplay-t7-catalog-readonly
+      cancel-in-progress: false
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    environment: deckplay-staging
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Trusted staging-only runner identity
+        run: node scripts/staging-ci-credentials.cjs
+      - run: npm ci
+      - name: Scoped browser and fixture preflight
+        run: |
+          node --check tests/e2e/staging-account-readonly.spec.js
+          node --test tests/security/staging-browser-config.test.cjs
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: staging-playwright-${{ hashFiles('package-lock.json') }}
+      - run: npx playwright install chromium --only-shell
+      - name: Signed mobile catalog category and empty-search acceptance
+        run: >-
+          npx playwright test --config=playwright.staging.config.js
+          staging-account-readonly.spec.js
+          --project=staging-mobile
+          --grep "signed buyer browses live categories and recovers from empty search"
+          --workers=1 --retries=0 --timeout=60000
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: t7-signed-buyer-mobile-retry-failure
+          path: |
+            test-results/staging/
+            test-results/staging-junit.xml
+          retention-days: 3
+          if-no-files-found: ignore
 
   photo-categories-live:
     if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/test/staging-reporting' && startsWith(github.event.head_commit.message, '[photo-categories-live]') }}
