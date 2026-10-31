@@ -1028,7 +1028,7 @@ document.addEventListener("keydown",event=>{
 });
 function databaseCategory(value){if(value==="trading_cards")return "Trading Cards";if(value==="collectibles"||value==="other")return "Collectibles";if(value==="video_games")return "Video Games";return "Consoles & Controllers"}
 function databaseCondition(value){return ({new:"New / sealed",like_new:"Like new",used:"Used",damaged:"Damaged",graded:"Graded"})[value]||"Used"}
-function databaseEmoji(value){if(value==="trading_cards"||value==="collectibles")return "🃏";if(value==="video_games")return "🕹️";return "🎮"}
+function databaseEmoji(value){if(value==="trading_cards")return "🃏";if(value==="collectibles"||value==="other")return "📦";if(value==="video_games")return "🕹️";return "🎮"}
 function itemArtwork(item){const image=safeImageUrl(item.imageUrls?.[0]);return image?`<img src="${escapeHtml(image)}" alt="${escapeHtml(item.n)}" loading="lazy">`:`<span>${escapeHtml(item.e)}</span>`}
 let passwordResetPending=false;
 let onlyMyListings=false,onlySavedListings=false;
