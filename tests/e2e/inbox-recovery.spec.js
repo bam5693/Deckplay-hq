@@ -1360,7 +1360,7 @@ test('T2.3 older offer lookup failure on empty Inbox retains retry control',asyn
   supabaseClient.from=table=>{
    let older=false;
    const q={then:(resolve,reject)=>Promise.resolve(older?{data:null,error:{message:'offline'}}:{data:table==='price_offers'?recent:[],error:null}).then(resolve,reject)};
-   for(const name of ['select','order','limit','in','eq','is'])q[name]=()=>q;
+   for(const name of ['select','order','limit','in','eq','is','maybeSingle'])q[name]=()=>q;
    q.or=()=>{older=true;return q};
    return q;
   };
