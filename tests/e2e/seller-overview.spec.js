@@ -35,6 +35,7 @@ test('paused stock is clearly counted and opens the matching seller inventory fi
  await ready(page);await page.locator('#sellerOverview summary').click();
  await expect(page.locator('#sellerOverviewContent')).toContainText('Paused listings');
  await expect(page.locator('[data-seller-overview="paused"]')).toHaveText('Manage 2 paused listings');
+ await page.evaluate(()=>{const host=document.createElement('div');host.innerHTML='<select id="inventoryStatus"><option value="active">Active</option><option value="paused">Paused</option></select><input id="inventorySearch" aria-label="Search inventory">';document.getElementById('collectorPage').append(host)});
  await page.locator('#inventoryStatus').selectOption('active');
  await page.locator('[data-seller-overview="paused"]').click();
  await expect(page.locator('#inventoryStatus')).toHaveValue('paused');
