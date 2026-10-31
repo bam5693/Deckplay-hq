@@ -35,3 +35,36 @@ for(const [device,viewport] of [['desktop',{width:1280,height:800}],['mobile',{w
   });
  });
 }
+
+for(const [device,viewport] of [['desktop',{width:1280,height:800}],['mobile',{width:390,height:844}]]){
+ test.describe('T4.3 stale discovery alert recovery — '+device,()=>{
+  test.use({viewport});
+  test('expired listing alert opens an unblocked seller storefront but never a blocked seller',async({page})=>{
+   await page.route('https://challenges.cloudflare.com/**',route=>route.abort());
+   await page.route('https://*.supabase.co/**',route=>route.fulfill({status:200,contentType:'application/json',body:'[]'}));
+   await page.goto('/');
+   const result=await page.evaluate(async()=>{
+    currentUser={id:'stale-alert-buyer'};
+    blockedCollectorIds.clear();
+    const visited=[],notices=[];
+    const originalFrom=supabaseClient.from,originalProfile=showPublicProfile,originalToast=toast;
+    try{
+     supabaseClient.from=()=>({select(){return this},eq(){return this},maybeSingle:async()=>({data:null,error:null})});
+     showPublicProfile=async id=>{visited.push(id);return 'ready'};
+     toast=message=>notices.push(message);
+     await navigateDeckplayNotification('favorite_price_drop','seller-with-current-stock','removed-listing');
+     blockedCollectorIds.add('blocked-seller');
+     await navigateDeckplayNotification('wanted_match','blocked-seller','removed-listing');
+     return {visited,notices};
+    }finally{
+     supabaseClient.from=originalFrom;showPublicProfile=originalProfile;toast=originalToast;
+     blockedCollectorIds.clear();
+    }
+   });
+   expect(result.visited).toEqual(['seller-with-current-stock']);
+   expect(result.notices).toHaveLength(2);
+   expect(result.notices[0]).toContain("Showing the seller's current listings");
+   expect(result.notices[1]).toContain('no longer available');
+  });
+ });
+}
