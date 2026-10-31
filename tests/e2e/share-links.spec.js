@@ -702,3 +702,15 @@ test('T7.1 Charles: cancelled native share never copies or opens manual fallback
  await expect.poll(()=>page.evaluate(()=>window.cancelledShareCopies.length)).toBe(0);
  await expect(page.locator('#deckplayShareFallback')).toHaveCount(0);
 });
+
+test('T7 owner profile Share button opens native mobile sheet with public collector URL',async({page})=>{
+ await ready(page);
+ await page.evaluate(()=>{
+   currentUser={id:'22222222-2222-4222-8222-222222222222'};
+   window.ownerShareCalls=[];
+   Object.defineProperty(navigator,'share',{configurable:true,value:async value=>{window.ownerShareCalls.push(value)}});
+ });
+ await page.locator('#shareOwnProfileLink').click();
+ await expect.poll(()=>page.evaluate(()=>ownerShareCalls.length)).toBe(1);
+ expect(await page.evaluate(()=>ownerShareCalls[0].url)).toContain('collector=22222222-2222-4222-8222-222222222222');
+});
