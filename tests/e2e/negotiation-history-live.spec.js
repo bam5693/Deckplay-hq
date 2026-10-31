@@ -119,7 +119,7 @@ test('real buyer and seller recover their price and trade counter history in Inb
    const {error}=await supabaseClient.rpc('respond_trade_counter',{p_counter:id,p_accept:true});
    if(error)throw Error('Valid signed trade-counter acceptance failed: '+error.message);
   },counterId);
-  const accepted=await buyer.evaluate(async ({tradeId,target,offered})=>{
+  const accepted=await buyer.evaluate(async ({tradeId,target,offered,bundleGame})=>{
    const {data:trade,error}=await supabaseClient.from('trade_offers')
     .select('status,cash_amount,cash_direction,offer_note,initial_terms,offered_listing_ids,item_snapshots').eq('id',tradeId).single();
    if(error)throw Error(error.message);
