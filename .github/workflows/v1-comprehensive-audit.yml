@@ -1,0 +1,65 @@
+name: V1 comprehensive isolated marketplace audit
+on:
+  push:
+    branches: [test/staging-reporting]
+    paths:
+      - '.github/workflows/v1-comprehensive-audit.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: deckplay-v1-local-audit
+  cancel-in-progress: false
+jobs:
+  security-and-build:
+    name: Security, fixture isolation and staging asset checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Execute all local security boundary regressions
+        run: node --test tests/security/*test.*
+      - name: Syntax, source validation and isolated staging build
+        env:
+          DECKPLAY_STAGING_SUPABASE_URL: https://prrrzeelltmyugssqnzk.supabase.co
+          DECKPLAY_STAGING_SUPABASE_KEY: sb_publishable_0omvNnv_ZOvXrZ-LHPMyIQ_a9zxD-yh
+        run: |
+          node scripts/check-inline-js.cjs
+          node --check scripts/build-staging.cjs
+          node --check scripts/build-staging-worker.cjs
+          node --check tests/e2e/price-lifecycle-live.spec.js
+          node scripts/build-staging.cjs
+          test -s dist-staging/index.html
+  desktop-and-mobile:
+    name: Every whitelisted local desktop and mobile Playwright case
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: staging-playwright-${{ hashFiles('package-lock.json') }}
+      - run: npx playwright install chromium --only-shell
+      - name: Full supported-category, marketplace, offer/trade, Inbox, mobile, PWA and safety regression
+        run: npx playwright test --config=playwright.local.config.js --workers=2 --retries=0 --timeout=30000
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: deckplay-v1-full-local-browser-evidence
+          path: |
+            test-results/local-junit.xml
+            test-results/local/
+            playwright-report/local/
+          if-no-files-found: ignore
+          retention-days: 7
