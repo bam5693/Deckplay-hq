@@ -2798,9 +2798,9 @@ if(tradeById.size){
  const openThread=async (id,preserveDistanceFromBottom=null,focusHistory=false)=>{
  rememberInboxDraft();
  const sameThread=document.getElementById("inboxPage").classList.contains("thread-open")&&selectedInboxCollector===id;
- const entries=groups.get(id)||[],unread=entries.filter(x=>x.type==="message"&&x.recipient_id===currentUser.id&&!x.read_at).map(x=>x.id);
- selectedInboxCollector=id;
  if(requestId!==inboxLoadVersion||currentUser?.id!==userId)return;
+ const entries=groups.get(id)||[],unread=entries.filter(x=>x.type==="message"&&x.recipient_id===userId&&x.sender_id===id&&!x.read_at).map(x=>x.id);
+ selectedInboxCollector=id;
  document.getElementById("inboxPage").classList.add("thread-open");
  if(!sameThread)document.getElementById("inboxThreadBack").focus({preventScroll:true});
  el.querySelectorAll("[data-conversation-id]").forEach(b=>{const active=b.dataset.conversationId===id;b.classList.toggle("active",active);b.setAttribute("aria-pressed",String(active))});
@@ -2971,7 +2971,7 @@ if(tradeById.size){
    readStatus.replaceChildren();
    const readAt=new Date().toISOString();
    let error;
-   try{({error}=await supabaseClient.from("collector_messages").update({read_at:readAt}).in("id",unread).eq("recipient_id",userId))}
+   try{({error}=await supabaseClient.from("collector_messages").update({read_at:readAt}).in("id",unread).eq("recipient_id",userId).eq("sender_id",id).is("read_at",null))}
    catch(cause){error=cause}
    readBusy=false;
    if(!stillShowingThread())return;
