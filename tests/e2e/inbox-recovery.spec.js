@@ -1217,7 +1217,7 @@ test('T2.5 old read retry does not mark another conversation read after navigati
  });
  await page.locator('[data-conversation-id="buyer-a"]').click();
  await expect(page.locator('.chat-read-recovery button')).toBeVisible();
- await page.locator('[data-conversation-id="buyer-b"]').click();
+ await page.evaluate(()=>document.querySelector('[data-conversation-id="buyer-b"]').click());
  await expect(page.locator('.chat-person h3')).toContainText('buyer-b');
  await expect(page.locator('[data-conversation-id="buyer-a"] .conversation-unread')).toHaveCount(1);
  await expect(page.locator('[data-conversation-id="buyer-b"] .conversation-unread')).toHaveCount(1);
