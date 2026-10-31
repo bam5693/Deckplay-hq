@@ -3511,12 +3511,16 @@ async function refreshTradeAlerts(){if(!currentUser)return;const userId=currentU
 
 let unreadCountLoadVersion=0;
 async function refreshUnreadCount(){
- const requestId=++unreadCountLoadVersion;
- if(!currentUser)return;
- const userId=currentUser.id;
- const {count,error}=await supabaseClient.from("collector_messages").select("id",{count:"exact",head:true}).eq("recipient_id",currentUser.id).is("read_at",null);
+ const requestId=++unreadCountLoadVersion,userId=currentUser?.id||null;
+ // Never retain a previous account's unread badge after sign-out.
+ if(!userId){
+  for(const id of ["headerUnread","menuUnread"]){const el=document.getElementById(id);if(!el)continue;el.hidden=true;el.textContent=""}
+  return;
+ }
+ const {count,error}=await supabaseClient.from("collector_messages").select("id",{count:"exact",head:true}).eq("recipient_id",userId).is("read_at",null);
+ // An older collector's count must never overwrite a newer collector's badge.
  if(requestId!==unreadCountLoadVersion||currentUser?.id!==userId||error)return;
- for(const id of ["headerUnread","menuUnread"]){const el=document.getElementById(id);el.hidden=!count;el.textContent=count>99?"99+":String(count||0)}
+ for(const id of ["headerUnread","menuUnread"]){const el=document.getElementById(id);if(!el)continue;el.hidden=!count;el.textContent=count>99?"99+":String(count||0)}
 }
 let liveInboxTimer=null,liveInboxBusy=false;
 function scheduleLiveInboxRefresh(){if(document.hidden||document.getElementById("inboxPage").hidden||liveInboxTimer)return;liveInboxTimer=setTimeout(async()=>{liveInboxTimer=null;if(liveInboxBusy||document.getElementById("inboxPage").hidden)return;const inbox=document.getElementById("inboxPage"),thread=inbox.classList.contains("thread-open"),selected=document.querySelector("#messageInbox .conversation-contact.active")?.dataset.conversationId;if(thread&&!selected)return;const composer=document.querySelector("#messageInbox .chat-composer textarea");if(composer&&(document.activeElement===composer||composer.value.trim()))return;const conversationSearch=document.querySelector("#messageInbox [data-conversation-search]");if(conversationSearch&&document.activeElement===conversationSearch)return;liveInboxBusy=true;try{await loadInbox(thread?selected:null)}finally{liveInboxBusy=false}},500)}
