@@ -1026,3 +1026,25 @@ test('T2.2: completed message never steals focus from another active control',as
  await expect(page.locator('#chatInput')).toBeEmpty();
  await expect(page.locator('#inboxThreadBack')).toBeFocused();
 });
+
+test('T2.2 focused draft keeps keyboard focus and caret after a manual Inbox refresh',async({page})=>{
+ await inbox(page);
+ const input=page.locator('#chatInput');
+ await input.fill('My Charizard card back question');
+ await input.evaluate(el=>{el.focus();el.setSelectionRange(3,8)});
+ await page.evaluate(()=>loadInbox('buyer-a'));
+ await expect(input).toHaveValue('My Charizard card back question');
+ await expect(input).toBeFocused();
+ expect(await input.evaluate(el=>[el.selectionStart,el.selectionEnd])).toEqual([3,8]);
+ await page.keyboard.type('New');
+ await expect(input).toHaveValue('My Newzard card back question');
+});
+
+test('T2.2 Inbox refresh does not redirect keyboard focus away from Back to all messages',async({page})=>{
+ await inbox(page);
+ await page.locator('#chatInput').fill('Unsent Zoro photo request');
+ await page.locator('#inboxThreadBack').focus();
+ await page.evaluate(()=>loadInbox('buyer-a'));
+ await expect(page.locator('#inboxThreadBack')).toBeFocused();
+ await expect(page.locator('#chatInput')).toHaveValue('Unsent Zoro photo request');
+});
