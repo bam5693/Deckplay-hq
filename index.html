@@ -1849,7 +1849,31 @@ void supabaseClient.auth.getSession().then(({data,error})=>{
 }).catch(error=>console.warn("Could not restore this browser session",error));
 
 let wantedLoadVersion=0;
-async function loadWanted(){const request=++wantedLoadVersion,owner=currentUser?.id||null,epoch=listingAccountVersion,active=()=>request===wantedLoadVersion&&currentUser?.id===owner&&listingAccountVersion===epoch;const grid=document.getElementById("wantedGrid");grid.textContent="Loading wanted posts…";const {data,error}=await supabaseClient.from("wanted_posts").select("id,user_id,title,game,details,offer_type,budget,created_at").order("created_at",{ascending:false}).limit(50);if(!active())return;if(error){grid.textContent="Wanted posts couldn't load. Please try again later.";return}const visiblePosts=(data||[]).filter(p=>!blockedCollectorIds.has(p.user_id));if(!visiblePosts.length){grid.innerHTML='<p class="muted">No wanted posts yet. Be the first to post what you are looking for!</p>';return}const ids=[...new Set(visiblePosts.map(p=>p.user_id))];const {data:people}=await supabaseClient.from("profiles").select("id,username,display_name").in("id",ids);if(!active())return;const names=new Map((people||[]).map(p=>[p.id,p.username?"@"+p.username:p.display_name]));grid.innerHTML=visiblePosts.map(p=>`<article class="wanted-card"><div class="kind">${escapeHtml(tcgNames[p.game]||[...document.getElementById("wantedGame").options].find(o=>o.value===p.game)?.textContent||p.game||"Collectibles")} · ${escapeHtml(p.offer_type==="either"?"Buy or trade":p.offer_type==="buy"?"Looking to buy":"Looking to trade")}</div><h3>${escapeHtml(p.title)}</h3><p>${escapeHtml((p.details||"").split("[DeckPlay match: ")[0].trim()||"No additional details")}</p>${(()=>{const matches=exactWantedMatches(p);return matches.length?`<div class="wanted-matches"><strong>${matches.length} matching listing${matches.length===1?"":"s"}</strong>${matches.map(m=>`<p><button type="button" class="ghost" data-wanted-match="${escapeHtml(m.id)}">View ${escapeHtml(m.n)} · ${Number(m.p).toFixed(2)}</button></p>`).join("")}<small>Exact card-number matches; verify condition and photos before buying.</small></div>`:""})()}<div class="wanted-bottom"><span>${escapeHtml(names.get(p.user_id)||"DeckPlay member")}${p.budget!=null?" · Budget $"+Number(p.budget).toFixed(2):""}</span>${p.user_id===currentUser?.id?`<button type="button" class="ghost" data-delete-wanted="${escapeHtml(p.id)}">Delete</button>`:""}</div></article>`).join("")}
+async function loadWanted(){
+ const request=++wantedLoadVersion,owner=currentUser?.id||null,epoch=listingAccountVersion;
+ const active=()=>request===wantedLoadVersion&&currentUser?.id===owner&&listingAccountVersion===epoch;
+ const grid=document.getElementById("wantedGrid");
+ grid.textContent="Loading wanted posts…";
+ let data,error;
+ try{
+  ({data,error}=await readMarketplaceRequest(supabaseClient.from("wanted_posts").select("id,user_id,title,game,details,offer_type,budget,created_at").order("created_at",{ascending:false}).limit(50),12000));
+ }catch(cause){error=cause}
+ if(!active())return;
+ if(error){grid.innerHTML='<p role="status" class="muted">Wanted posts could not load. <button type="button" class="ghost" data-retry-wanted>Retry wanted posts</button></p>';return}
+ const visiblePosts=(data||[]).filter(p=>!blockedCollectorIds.has(p.user_id));
+ if(!visiblePosts.length){grid.innerHTML='<p class="muted">No wanted posts yet. Be the first to post what you are looking for!</p>';return}
+ const ids=[...new Set(visiblePosts.map(p=>p.user_id))];
+ // Profile enrichment is optional: a missing/slow public name must not hide wanted posts.
+ let people=[];
+ try{
+  const result=await readMarketplaceRequest(supabaseClient.from("profiles").select("id,username,display_name").in("id",ids),5000);
+  if(!active())return;
+  if(!result.error)people=result.data||[];
+ }catch(cause){if(!active())return}
+ const names=new Map(people.map(p=>[p.id,p.username?"@"+p.username:p.display_name]));
+ if(!active())return;
+ grid.innerHTML=visiblePosts.map(p=>`<article class="wanted-card"><div class="kind">${escapeHtml(tcgNames[p.game]||[...document.getElementById("wantedGame").options].find(o=>o.value===p.game)?.textContent||p.game||"Collectibles")} · ${escapeHtml(p.offer_type==="either"?"Buy or trade":p.offer_type==="buy"?"Looking to buy":"Looking to trade")}</div><h3>${escapeHtml(p.title)}</h3><p>${escapeHtml((p.details||"").split("[DeckPlay match: ")[0].trim()||"No additional details")}</p>${(()=>{const matches=exactWantedMatches(p);return matches.length?`<div class="wanted-matches"><strong>${matches.length} matching listing${matches.length===1?"":"s"}</strong>${matches.map(m=>`<p><button type="button" class="ghost" data-wanted-match="${escapeHtml(m.id)}">View ${escapeHtml(m.n)} · $${Number(m.p).toFixed(2)}</button></p>`).join("")}<small>Exact card-number matches; verify condition and photos before buying.</small></div>`:""})()}<div class="wanted-bottom"><span>${escapeHtml(names.get(p.user_id)||"DeckPlay member")}${p.budget!=null?" · Budget $"+Number(p.budget).toFixed(2):""}</span>${p.user_id===currentUser?.id?`<button type="button" class="ghost" data-delete-wanted="${escapeHtml(p.id)}">Delete</button>`:""}</div></article>`).join("");
+}
 function toggleWanted(open){const panel=document.getElementById("wantedSection"),tab=document.getElementById("wantedNav"),backdrop=document.getElementById("wantedBackdrop");panel.classList.toggle("is-open",open);panel.setAttribute("aria-hidden",String(!open));tab.setAttribute("aria-expanded",String(open));backdrop.hidden=!open;document.body.classList.toggle("wanted-open",open);if(open)loadWanted()}
 document.getElementById("wantedNav").addEventListener("click",()=>toggleWanted(!document.getElementById("wantedSection").classList.contains("is-open")));
 document.getElementById("closeWanted").addEventListener("click",()=>toggleWanted(false));document.getElementById("wantedBackdrop").addEventListener("click",()=>toggleWanted(false));document.addEventListener("keydown",e=>{if(e.key==="Escape")toggleWanted(false)});
@@ -1910,7 +1934,7 @@ document.getElementById("wantedForm").addEventListener("submit",async e=>{
  }catch(error){if(valid())status.textContent=error.message||"Could not publish. Try again."}
  finally{if(valid()){wantedPublishBusy=false;button.disabled=false;form.removeAttribute("aria-busy")}}
 });
-document.getElementById("wantedGrid").addEventListener("click",async e=>{const match=e.target.closest("[data-wanted-match]");if(match){const item=items.find(x=>String(x.id)===match.dataset.wantedMatch);if(!item||blockedCollectorIds.has(item.sellerId)){toast("This listing is no longer available. Refresh wanted posts.");return}toggleWanted(false);showDetails(item);return}const button=e.target.closest("[data-delete-wanted]");if(!button||!currentUser)return;if(!confirm("Delete this wanted post?"))return;const {error}=await supabaseClient.from("wanted_posts").delete().eq("id",button.dataset.deleteWanted).eq("user_id",currentUser.id);if(error){toast(error.message);return}await loadWanted()});
+document.getElementById("wantedGrid").addEventListener("click",async e=>{if(e.target.closest("[data-retry-wanted]")){await loadWanted();return}const match=e.target.closest("[data-wanted-match]");if(match){const item=items.find(x=>String(x.id)===match.dataset.wantedMatch);if(!item||blockedCollectorIds.has(item.sellerId)){toast("This listing is no longer available. Refresh wanted posts.");return}toggleWanted(false);showDetails(item);return}const button=e.target.closest("[data-delete-wanted]");if(!button||!currentUser)return;if(!confirm("Delete this wanted post?"))return;const {error}=await supabaseClient.from("wanted_posts").delete().eq("id",button.dataset.deleteWanted).eq("user_id",currentUser.id);if(error){toast(error.message);return}await loadWanted()});
 let savedListingsLoadVersion=0,savedListingsOwnerId=null;
 function resetSavedListingsForAccount(userId){
  const owner=userId||null;
