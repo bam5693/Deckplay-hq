@@ -47,6 +47,9 @@ test('existing PWA with waiting update shows prompt and never reloads without us
   await page.goto('/');
   await expect(page.locator('#deckplayAppUpdate')).toBeVisible();
   await page.locator('#search').fill('unsaved collector search');
+  // On mobile the update prompt defers while typing; leave the field to reopen it.
+  await page.locator('#search').blur();
+  await expect(page.locator('#deckplayAppUpdate')).toBeVisible();
   page.once('dialog', dialog => dialog.dismiss());
   await page.locator('#deckplayAppUpdate button:has-text("Refresh")').click();
   await expect(page.locator('#deckplayAppUpdate')).toBeVisible();
@@ -58,6 +61,9 @@ test('offline refresh leaves unsent work on screen instead of opening the PWA of
   await page.goto('/');
   await expect(page.locator('#deckplayAppUpdate')).toBeVisible();
   await page.locator('#search').fill('unfinished seller search');
+  // Keep the offline draft, then restore the update controls after focus leaves.
+  await page.locator('#search').blur();
+  await expect(page.locator('#deckplayAppUpdate')).toBeVisible();
   await page.evaluate(() => {
     Object.defineProperty(navigator, 'onLine', { configurable: true, value: false });
   });
