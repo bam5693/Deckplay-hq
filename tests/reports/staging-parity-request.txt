@@ -11,3 +11,4 @@
 2026-10-30 T8.3 staff status-save isolation exact private staging asset parity after protected deploy 41162669831 (HEAD 0855da547b58feb76a1bb4a7d570179e4b2052d2). Focused 22/22 mobile/desktop tests passed 41162574639. Check every served asset, anonymous Basic Auth denial and isolated staging Supabase only; read-only, never production.
 
 2026-10-30 T8.3 ticket history filter reset read-only post-deployment parity. Source 6186053b3e171cb1b86518f07afd72d204359c53, focused desktop/mobile 26/26 PASS 41164929344, protected private deploy PASS 41165008903. Verify exact served assets, Basic Auth denial and isolated staging Supabase only; no production.
+2026-10-31 T7.6 feedback drafts: focused desktop/mobile PASS 41173649703; protected isolated staging deploy PASS 41173686797. Verify all exact served assets, anonymous Basic Auth denial, isolated staging-only config. Read-only; no production.
