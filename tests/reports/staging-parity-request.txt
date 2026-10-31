@@ -7,3 +7,5 @@
 
 2026-10-30 verify protected private staging deployment 41152021632 for bounded auth blocked-seller prerequisite, fail-closed private buyer catalog, timeout robust all adapters; accepted 44/44 focused desktop/mobile browser run 41151931553. Read-only static asset and gate parity; no production.
 2026-10-30 exact served-asset parity for seller paused-stock overview: focused desktop/mobile 24/24 run 41154123855; private staging deploy 41154200337. Check protected Basic Auth 401, noindex, staging-only Supabase target and exact seller-overview.js bytes. No production, billing or customer data changes.
+
+2026-10-30 T8.3 staff status-save isolation exact private staging asset parity after protected deploy 41162669831 (HEAD 0855da547b58feb76a1bb4a7d570179e4b2052d2). Focused 22/22 mobile/desktop tests passed 41162574639. Check every served asset, anonymous Basic Auth denial and isolated staging Supabase only; read-only, never production.
