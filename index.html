@@ -1829,7 +1829,8 @@ supabaseClient.auth.onAuthStateChange((event,session)=>{
  setTimeout(()=>{
   try{applyDeckplayAuthSession(event,session)}
   catch(error){
-   console.warn("Signed-in interface setup stopped before marketplace initialization",error?.name||"Error");
+   const message=String(error?.message||error?.name||"Error").replace(/https?:\/\/\S+/g,"[URL]").slice(0,150);
+   console.warn("Signed-in interface setup stopped before marketplace initialization:",message);
    // Never show a former collector's private profile/messages after a bad reset.
    document.querySelectorAll("#profilePageContent,#messageInbox,#tradeOffersList,#priceOffersList,#notificationList")
     .forEach(el=>el.replaceChildren());
