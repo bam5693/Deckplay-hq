@@ -112,3 +112,5 @@ Focused verification request: validate staging startup and notification polling 
 
 2026-10-31 focused T3.1 MOBILE BUYER/desktop seller real UI offer counter acceptance + existing T3.1 signed RPC rejection and cleanup. No broad suite or staging deployment. Also verifies no invalid seller Withdraw after a seller counter.\n
 2026-10-31 deploy verified staging-only seller action authorization and mobile buyer UI price acceptance fixture. Use normal cheap preflight + private Worker --keep-vars + served asset parity and read-only synthetic checks. No production, payment, or full V1 audit.
+
+2026-10-31 focused mobile buyer vs desktop seller real-price UI acceptance AFTER exact staging deployment and store-catalog refresh race fix. Two buyer/seller real browser journeys, scoped synthetic cleanup; no broad V1 audit.
