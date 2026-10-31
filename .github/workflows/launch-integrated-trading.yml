@@ -1,4 +1,5 @@
 name: Execute one integrated price-and-bundle trade acceptance
+# Diagnostic retry: bounded UI stages and owner-scoped synthetic fixture cleanup.
 on:
   push:
     branches: [test/staging-reporting]
