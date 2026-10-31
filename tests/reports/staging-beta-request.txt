@@ -148,3 +148,5 @@ Focused verification request: validate staging startup and notification polling 
 2026-10-31 private staging accepted-deal expanded-state preservation across Inbox re-renders, exact source parity, no public prod. Preflight and deploy only.
 
 2026-10-31 T3.5 accepted deal expansion persists through Inbox refresh, exact deal ID checks in desktop seller and mobile buyer, scoped cleanup; no broad V1 sweep.
+
+2026-10-31 focused private staging deploy accepted-deal expanded-panel state persistence; guarded ordinary preflight + source parity only, then separate single signed Inbox journey. No full V1 sweep or production change.
