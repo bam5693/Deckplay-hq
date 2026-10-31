@@ -660,6 +660,7 @@ test('T7.1: failed Android-style native share keeps the collector link copyable'
  await ready(page);
  await page.evaluate(({listing,seller})=>{
   Object.defineProperty(navigator,'share',{configurable:true,value:async()=>{throw new DOMException('Sharing denied','NotAllowedError')}});
+  Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async()=>{throw new DOMException('Clipboard denied','NotAllowedError')}}});
   showDetails({databaseId:listing,n:'Synthetic video game',p:35,c:'Video Games',sellerId:seller,s:'@collector',imageUrls:[]});
   document.querySelector('#detailContent [data-share-kind="listing"]').click();
  },{listing:LISTING,seller:SELLER});
@@ -669,4 +670,35 @@ test('T7.1: failed Android-style native share keeps the collector link copyable'
  expect(new URL(link).searchParams.has('collector')).toBe(false);
  await page.locator('#deckplayShareFallback').getByRole('button',{name:'Close'}).click();
  await expect(page.locator('#deckplayShareFallback')).not.toBeVisible();
+});
+
+
+test('T7.1 Kyle: rejected native share copies public listing URL when clipboard is available',async({page})=>{
+ await ready(page);
+ await page.evaluate(({listing,seller})=>{
+  window.copiedFallbackLinks=[];
+  Object.defineProperty(navigator,'share',{configurable:true,value:async()=>{throw new DOMException('Share unavailable','NotAllowedError')}});
+  Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async url=>{window.copiedFallbackLinks.push(url)}}});
+  showDetails({databaseId:listing,n:'Synthetic mixed collectible',p:25,c:'Other',sellerId:seller,s:'@collector',imageUrls:[]});
+  document.querySelector('#detailContent [data-share-kind="listing"]').click();
+ },{listing:LISTING,seller:SELLER});
+ await expect.poll(()=>page.evaluate(()=>window.copiedFallbackLinks.length)).toBe(1);
+ const copied=await page.evaluate(()=>window.copiedFallbackLinks[0]);
+ expect(new URL(copied).searchParams.get('listing')).toBe(LISTING);
+ expect(new URL(copied).searchParams.size).toBe(1);
+ await expect(page.locator('#toast')).toContainText('Link copied');
+ await expect(page.locator('#deckplayShareFallback')).toHaveCount(0);
+});
+
+test('T7.1 Charles: cancelled native share never copies or opens manual fallback',async({page})=>{
+ await ready(page);
+ await page.evaluate(({listing,seller})=>{
+  window.cancelledShareCopies=[];
+  Object.defineProperty(navigator,'share',{configurable:true,value:async()=>{throw new DOMException('User cancelled','AbortError')}});
+  Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async url=>window.cancelledShareCopies.push(url)}});
+  showDetails({databaseId:listing,n:'Synthetic sports collectible',p:30,c:'Collectibles',sellerId:seller,s:'@collector',imageUrls:[]});
+  document.querySelector('#detailContent [data-share-kind="listing"]').click();
+ },{listing:LISTING,seller:SELLER});
+ await expect.poll(()=>page.evaluate(()=>window.cancelledShareCopies.length)).toBe(0);
+ await expect(page.locator('#deckplayShareFallback')).toHaveCount(0);
 });
