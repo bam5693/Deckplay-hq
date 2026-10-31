@@ -1,2 +1,4 @@
-T2.1/T2.4 focused signed staging buyer/seller message delivery, preserved-draft retry, and duplicate recovery acceptance.
-Source: test/staging-reporting. Dedicated bot accounts and marker-scoped cleanup only. No staging deployment, no production, no broad suite.
+T2 signed private messaging focused verification through existing trusted private-staging.yml OIDC workflow.
+Includes T2.1 buyer-to-seller-to-buyer conversation and T2.4 failed-send retry / duplicate-message checks.
+Private staging only; no deployment, no broad suite, disposable bot users and marker-scoped cleanup.
+Request 2026-10-31 trusted-workflow retry after workflow_ref authorization failure.
