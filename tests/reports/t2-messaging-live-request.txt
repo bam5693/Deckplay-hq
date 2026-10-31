@@ -1,0 +1,2 @@
+T2.1/T2.4 focused signed staging buyer/seller message delivery, preserved-draft retry, and duplicate recovery acceptance.
+Source: test/staging-reporting. Dedicated bot accounts and marker-scoped cleanup only. No staging deployment, no production, no broad suite.
