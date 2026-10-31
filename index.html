@@ -2284,6 +2284,7 @@ document.getElementById("messageInbox").addEventListener("click",async e=>{const
 
 // Drafts stay in memory, scoped to the signed-in collector and conversation.
 const inboxDrafts=new Map(),inboxSending=new Set(),messageSendAttempts=new Map(),tradeSendAttempts=new Map(),inboxOlderMessages=new Map(),inboxOlderExhausted=new Set(),inboxNegotiationPages=new Map();
+const dealPanelExpanded=new Set();
 // Text-only Inbox drafts survive a reload in this tab, but are deleted on account change.
 // Never persist private photos, credentials or message delivery state with these drafts.
 const inboxDraftStorageKey=id=>"deckplay-inbox-drafts-v1:"+id;
@@ -2639,7 +2640,10 @@ if(tradeById.size){
  if(!sameThread)document.getElementById("inboxThreadBack").focus({preventScroll:true});
  el.querySelectorAll("[data-conversation-id]").forEach(b=>{const active=b.dataset.conversationId===id;b.classList.toggle("active",active);b.setAttribute("aria-pressed",String(active))});
  const person=names.get(id),thread=document.getElementById("conversationThread");
- const wasDealOpen=thread.querySelector('.chat-deal-panel')?.open===true;
+ // Remember expanded state across async Inbox rebuilds, not just the current DOM.
+ // A stale load can replace an expanded panel with a new collapsed element.
+ const dealPanelKey=userId+":"+id;
+ const wasDealOpen=dealPanelExpanded.has(dealPanelKey)||thread.querySelector('.chat-deal-panel')?.open===true;
  thread.innerHTML=`<div class="chat-person"><span class="chat-avatar">${escapeHtml((person?.username||"C")[0].toUpperCase())}</span><div><h3>@${escapeHtml(person?.username||"collector")}</h3><p class="muted">${entries.length} conversation updates</p></div></div>${entries.some(x=>(x.type==="price"&&x.currentOffer?.status==="accepted")||(x.type==="trade"&&x.status==="accepted"))?`<details class="chat-deal-panel" ${wasDealOpen?"open":""}><summary>✓ Accepted deal <span>View progress & details</span></summary><div data-deal-details>Open to view transaction progress.</div><details class="deal-guidance"><summary>Exchange tips <span>Safety & shipping</span></summary><div class="deal-guidance-body"><p>DeckPlay does not process payments, issue shipping labels, or verify delivery yet.</p><ol><li>Agree on the item, price and shipping method.</li><li>Share tracking details in messages.</li><li>Confirm completion only when your part is finished.</li></ol><p>Never share passwords or verification codes.</p></div></details></details>`:""}${inboxOlderExhausted.has(id)?`<p class="muted" role="status">Beginning of conversation</p>`:(mr.data||[]).length>=500?`<div class="conversation-history-tools"><button type="button" class="ghost" data-inbox-older="${escapeHtml(id)}">Load earlier messages</button><span class="muted" data-inbox-older-status role="status" aria-live="polite"></span></div>`:""}${inboxNegotiationPages.get(id)?.priceDone&&inboxNegotiationPages.get(id)?.tradeDone?'<p class="muted" role="status">All available negotiation history loaded.</p>':`<div class="conversation-history-tools"><button type="button" class="ghost" data-inbox-older-negotiations>${entries.some(x=>["price","trade","trade_counter"].includes(x.type))?"Load earlier offer &amp; trade updates":"Check earlier offers &amp; trades"}</button><span class="muted" data-inbox-negotiation-status role="status" aria-live="polite"></span></div>`}<div class="conversation-bubbles" role="log" tabindex="-1" aria-label="Conversation history">${!entries.length?'<p class="muted">No messages yet. Introduce yourself or ask about a collectible.</p>':entries.map((x,i)=>inboxDaySeparator(x,entries[i-1])+(x.type==="message"?`<div class="message-bubble chat-text ${x.sender_id===currentUser.id?"mine":"theirs"}"><p>${escapeHtml(x.body)}</p>${window.privateMessagePhotos?.messageHtml(x)||""}<small>${new Date(x.date).toLocaleString([], {hour:"numeric",minute:"2-digit"})}</small></div>`:x.type==="price"?`<div class="message-bubble inbox-offer chat-event ${x.actor_id===currentUser.id?"inbox-mine":""}"><strong>${x.action==="offered"?"💵 Offer made":x.action==="countered"?"↩️ Counteroffer":x.action==="accepted"?"✓ Offer accepted":x.action==="declined"?"✕ Offer declined":x.action==="withdrawn"?"↩ Offer withdrawn":"💵 Offer update"} · $${Number(x.amount).toFixed(2)}</strong><p>${x.actor_id===currentUser.id?"You":"@"+escapeHtml(person?.username||"collector")} · ${escapeHtml(x.action)}</p><small>${new Date(x.date).toLocaleString()}</small>${x.isLatest&&["pending","countered"].includes(x.currentOffer.status)?`<p class="price-offer-actions">${x.currentOffer.last_actor_id!==currentUser.id?`<button type="button" class="primary" data-inbox-price="accept" data-offer="${escapeHtml(x.offer_id)}" data-current-amount="${Number(x.currentOffer.amount).toFixed(2)}">Accept</button><button type="button" class="ghost" data-inbox-price="counter" data-offer="${escapeHtml(x.offer_id)}" data-current-amount="${Number(x.currentOffer.amount).toFixed(2)}">Counter</button><button type="button" class="ghost" data-inbox-price="decline" data-offer="${escapeHtml(x.offer_id)}">Decline</button>`:`<span class="muted">Waiting for their reply</span><button type="button" class="ghost" data-inbox-price="withdraw" data-offer="${escapeHtml(x.offer_id)}">Withdraw offer</button>`}</p>`:""}</div>`:x.type==="trade_counter"?inboxTradeCounterHtml(x,userId):inboxTradeHtml(x,tradeListings,allTradeCounters,cr.error))).join("")}</div><form class="chat-composer" data-chat-recipient="${escapeHtml(id)}"><label class="sr-only" for="chatInput">Message</label><textarea id="chatInput" name="message" rows="1" maxlength="2000" required placeholder="Message @${escapeHtml(person?.username||"collector")}…" aria-label="Write a message"></textarea><button class="primary" type="submit" aria-label="Send message" disabled>Send ➤</button><span class="chat-length-hint" aria-live="polite" hidden></span><p class="chat-send-status" aria-live="polite"></p></form>`;
  const blockedConversation=blockedCollectorIds.has(id);
  const composer=thread.querySelector(".chat-composer"),input=composer.querySelector("textarea"),sending=inboxSending.has(userId+":"+id);
@@ -2753,8 +2757,19 @@ if(tradeById.size){
    };
    // A collector may click the summary before a deferred toggle event fires.
    // Load immediately on click, with toggle as a keyboard/programmatic fallback.
-   panel.querySelector(':scope > summary')?.addEventListener('click',()=>{void renderDealDetails()});
-   panel.addEventListener('toggle',()=>{if(panel.open)void renderDealDetails()});
+   panel.querySelector(':scope > summary')?.addEventListener('click',()=>{
+    // Details toggle fires after click; store the intended state immediately so
+    // a simultaneous Inbox refresh cannot discard the collector's choice.
+    if(panel.open)dealPanelExpanded.delete(dealPanelKey);
+    else dealPanelExpanded.add(dealPanelKey);
+    void renderDealDetails();
+   });
+   panel.addEventListener('toggle',()=>{
+    // Ignore async toggle events on replaced/obsolete panels.
+    if(!panel.isConnected||document.getElementById("conversationThread")!==thread||thread.querySelector('.chat-deal-panel')!==panel)return;
+    if(panel.open){dealPanelExpanded.add(dealPanelKey);void renderDealDetails()}
+    else dealPanelExpanded.delete(dealPanelKey);
+   });
    // Accepted deal progress must survive background Inbox DOM re-renders.
    // Eagerly load into each new panel rather than relying solely on toggle events.
    void renderDealDetails();
