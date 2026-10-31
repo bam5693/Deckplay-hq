@@ -1,1 +1,1 @@
-Verify T2 signed-out unread clearing and account-switch response isolation. Node unit only, no secrets, no real user accounts, no staging deploy, no browser.
+T2 read-receipt current-user current-sender and stale-thread selection guards plus signed-out unread badge isolation. Run Node-only gate, no browser, staging deploy, or production changes.
