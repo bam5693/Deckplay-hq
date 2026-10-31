@@ -999,3 +999,27 @@ test('switching accounts purges uncertain text delivery references',async({page}
  });
  expect(result).toEqual({before:1,after:null});
 });
+
+test('T2.2: keyboard composer focus resumes after an accepted message refresh',async({page})=>{
+ await inbox(page);
+ const input=page.locator('#chatInput');
+ await input.fill('First card-condition question');
+ await input.press('Enter');
+ await expect.poll(()=>page.evaluate(()=>typeof finishFixtureSend)).toBe('function');
+ await page.evaluate(()=>finishFixtureSend({data:{id:'sent-focus'},error:null}));
+ await expect(page.locator('#chatInput')).toBeEmpty();
+ await expect(page.locator('#chatInput')).toBeFocused();
+ await page.keyboard.type('Second question without tapping');
+ await expect(page.locator('#chatInput')).toHaveValue('Second question without tapping');
+});
+
+test('T2.2: completed message never steals focus from another active control',async({page})=>{
+ await inbox(page);
+ await page.locator('#chatInput').fill('My last question');
+ await page.locator('#chatInput').press('Enter');
+ await expect.poll(()=>page.evaluate(()=>typeof finishFixtureSend)).toBe('function');
+ await page.locator('#refreshInbox').focus();
+ await page.evaluate(()=>finishFixtureSend({data:{id:'sent-no-steal'},error:null}));
+ await expect(page.locator('#chatInput')).toBeEmpty();
+ await expect(page.locator('#refreshInbox')).toBeFocused();
+});
