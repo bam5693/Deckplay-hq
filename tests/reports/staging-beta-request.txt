@@ -126,3 +126,5 @@ Focused verification request: validate staging startup and notification polling 
 2026-10-31 focused T3.5 authenticated Inbox accepted deal progress; exercise the actual collapsed View progress & details disclosure before asserting seller and Pixel7 mobile-buyer transaction next-step panel. No broad V1 sweep, staging-only synthetic records and guarded cleanup.
 
 2026-10-31 stage ONLY accepted-deal Inbox participant-scoped RPC wiring and validate current deployed source parity, authorization and signed buyer/seller read-only behavior. No production, broad test, PR merge, or payments.
+
+2026-10-31 focus T3.5 real accepted trade progress after staging deployment; desktop seller and mobile buyer independently expand accepted deal panel, read scoped transaction guidance, dedicated synthetic data cleanup. No full sweep or production.
