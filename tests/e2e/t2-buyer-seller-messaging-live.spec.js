@@ -43,6 +43,11 @@ test('T2.1 signed buyer and seller exchange real Inbox messages',async({browser}
   },buyerMessage),{timeout:18000}).toBe(1);
   await seller.evaluate(id=>showInboxPage(id),buyerId);
   await expect(seller.locator('.conversation-bubbles')).toContainText(buyerMessage,{timeout:20000});
+  // Real database read receipt is owned by the recipient of this message.
+  await expect.poll(()=>seller.evaluate(async({senderId,body})=>{
+   const {data,error}=await supabaseClient.from('collector_messages').select('read_at').eq('sender_id',senderId).eq('recipient_id',currentUser.id).eq('body',body).single();
+   if(error)throw Error(error.message);return !!data.read_at;
+  },{senderId:buyerId,body:buyerMessage}),{timeout:18000}).toBe(true);
   await seller.locator('#chatInput').fill(reply);
   await seller.locator('[aria-label="Send message"]').click();
   await expect.poll(async()=>seller.evaluate(async body=>{
@@ -51,6 +56,10 @@ test('T2.1 signed buyer and seller exchange real Inbox messages',async({browser}
   },reply),{timeout:18000}).toBe(1);
   await buyer.evaluate(id=>showInboxPage(id),sellerId);
   await expect(buyer.locator('.conversation-bubbles')).toContainText(reply,{timeout:20000});
+  await expect.poll(()=>buyer.evaluate(async({senderId,body})=>{
+   const {data,error}=await supabaseClient.from('collector_messages').select('read_at').eq('sender_id',senderId).eq('recipient_id',currentUser.id).eq('body',body).single();
+   if(error)throw Error(error.message);return !!data.read_at;
+  },{senderId:sellerId,body:reply}),{timeout:18000}).toBe(true);
   // T2.4 visible send error: rejection must not discard the draft.
   const failedDraft=title+' failed draft';
   await buyer.locator('#chatInput').fill(failedDraft);
