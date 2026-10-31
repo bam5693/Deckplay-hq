@@ -227,3 +227,80 @@ test('Wanted Board offers a working retry after a posts request failure',async({
  await expect(retry).toHaveCount(0);
  expect(await page.evaluate(()=>wantedAttempts)).toBe(2);
 });
+
+
+test('Wanted non-card exact matching requires a category-specific detail',async({page})=>{
+ await page.goto('/');await page.waitForLoadState('networkidle');
+ await page.evaluate(()=>openModal('wantedModal'));
+ await page.locator('#wantedGame').selectOption('video_games');
+ await expect(page.locator('#wantedNonCardFields')).toBeVisible();
+ await page.locator('#wantedExactNonCard').check();
+ await expect(page.locator('#wantedNonCardPlatformWrap')).toBeVisible();
+ await expect(page.locator('#wantedNonCardPlatform')).toHaveAttribute('required','');
+ await page.locator('#wantedGame').selectOption('consoles');
+ await expect(page.locator('#wantedExactNonCard')).not.toBeChecked();
+ await page.locator('#wantedExactNonCard').check();
+ await expect(page.locator('#wantedNonCardHardwareWrap')).toBeVisible();
+ await expect(page.locator('#wantedNonCardHardwareType')).toHaveAttribute('required','');
+ await expect(page.locator('#wantedNonCardModel')).toHaveAttribute('required','');
+ await page.locator('#wantedGame').selectOption('collectibles');
+ await page.locator('#wantedExactNonCard').check();
+ await expect(page.locator('#wantedNonCardCollectibleWrap')).toBeVisible();
+ await expect(page.locator('#wantedNonCardCollectibleType')).toHaveAttribute('required','');
+ await page.locator('#wantedGame').selectOption('pokemon');
+ await expect(page.locator('#wantedNonCardFields')).toBeHidden();
+ await expect(page.locator('#wantedCardFields')).toBeVisible();
+});
+test('non-card Wanted matching rejects near misses, self, blocked, inactive and over-budget listings',async({page})=>{
+ await page.goto('/');await page.waitForLoadState('networkidle');
+ const actual=await page.evaluate(()=>{
+  const previous=items;
+  items=[
+   {id:'game',sellerId:'seller',rawCategory:'video_games',n:'Super Mario Odyssey',description:'Platform: Nintendo Switch',p:35},
+   {id:'platform-mismatch',sellerId:'seller',rawCategory:'video_games',n:'Super Mario Odyssey',description:'Platform: Switch 2',p:35},
+   {id:'title-mismatch',sellerId:'seller',rawCategory:'video_games',n:'Super Mario Odyssey Deluxe',description:'Platform: Nintendo Switch',p:35},
+   {id:'self',sellerId:'buyer',rawCategory:'video_games',n:'Super Mario Odyssey',description:'Platform: Nintendo Switch',p:35},
+   {id:'blocked',sellerId:'blocked-seller',rawCategory:'video_games',n:'Super Mario Odyssey',description:'Platform: Nintendo Switch',p:35},
+   {id:'inactive',sellerId:'seller',rawCategory:'video_games',n:'Super Mario Odyssey',description:'Platform: Nintendo Switch',status:'paused',p:35},
+   {id:'console',sellerId:'seller',rawCategory:'consoles',n:'Nintendo Switch OLED',description:'Model: OLED Model',p:250},
+   {id:'controller',sellerId:'seller',rawCategory:'controllers',n:'Nintendo Switch OLED',description:'Model: OLED Model',p:50},
+   {id:'jersey',sellerId:'seller',rawCategory:'collectibles',collectibleSubcategory:'sports_memorabilia',n:'Signed Jersey',p:95},
+   {id:'wrong-type',sellerId:'seller',rawCategory:'collectibles',collectibleSubcategory:'anime_manga',n:'Signed Jersey',p:50}
+  ];
+  blockedCollectorIds.add('blocked-seller');
+  const find=(game,title,meta,budget)=>exactWantedMatches({game,title,user_id:'buyer',budget,details:'[DeckPlay match: '+JSON.stringify(meta)+']'}).map(item=>item.id);
+  const result={
+   game:find('video_games','Super Mario Odyssey',{nonCardExact:true,platform:'Nintendo Switch'},50),
+   noOptIn:find('video_games','Super Mario Odyssey',{platform:'Nintendo Switch'},50),
+   noPlatform:find('video_games','Super Mario Odyssey',{nonCardExact:true},50),
+   budget:find('video_games','Super Mario Odyssey',{nonCardExact:true,platform:'Nintendo Switch'},20),
+   console:find('consoles','Nintendo Switch OLED',{nonCardExact:true,hardwareType:'consoles',model:'OLED Model'},300),
+   memorabilia:find('collectibles','Signed Jersey',{nonCardExact:true,subcategory:'sports_memorabilia'},100)
+  };
+  blockedCollectorIds.delete('blocked-seller');items=previous;return result;
+ });
+ expect(actual).toEqual({game:['game'],noOptIn:[],noPlatform:[],budget:[],console:['console'],memorabilia:['jersey']});
+});
+test('Wanted post stores opt-in non-card precision without a real database write',async({page})=>{
+ await page.goto('/');await page.waitForLoadState('networkidle');
+ await page.evaluate(()=>{
+  currentUser={id:'synthetic-wanted-buyer'};syncInboxDraftUser();
+  window.wantedPayloads=[];
+  const original=supabaseClient.from.bind(supabaseClient);
+  supabaseClient.from=table=>table==='wanted_posts'?{
+   insert:payload=>{wantedPayloads.push(payload);return Promise.resolve({error:null})},
+   select:()=>({order:()=>({limit:()=>Promise.resolve({data:[],error:null})})})
+  }:original(table);
+  openModal('wantedModal');
+ });
+ await page.locator('#wantedItem').fill('Super Mario Odyssey');
+ await page.locator('#wantedGame').selectOption('video_games');
+ await page.locator('#wantedExactNonCard').check();
+ await page.locator('#wantedNonCardPlatform').fill('Nintendo Switch');
+ await page.locator('#wantedForm button[type="submit"]').click();
+ await expect.poll(()=>page.evaluate(()=>wantedPayloads.length)).toBe(1);
+ const payload=await page.evaluate(()=>wantedPayloads[0]);
+ expect(payload.game).toBe('video_games');
+ expect(payload.details).toContain('"nonCardExact":true');
+ expect(payload.details).toContain('"platform":"Nintendo Switch"');
+});
