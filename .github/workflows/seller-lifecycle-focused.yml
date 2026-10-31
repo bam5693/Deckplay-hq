@@ -22,6 +22,9 @@ jobs:
           node scripts/check-inline-js.cjs
           node --check tests/e2e/seller-pause.spec.js
           node --check tests/e2e/seller-inventory.spec.js
+          node --check tests/e2e/seller-overview.spec.js
+          node --check tests/e2e/seller-overview-live.spec.js
+          node --check seller-overview.js
           node --check scripts/build-staging.cjs
           grep -q "paused" supabase/staging/seller-listing-pause.sql
       - run: npm ci
@@ -30,8 +33,8 @@ jobs:
           path: ~/.cache/ms-playwright
           key: staging-playwright-${{ hashFiles('package-lock.json') }}
       - run: npx playwright install chromium --only-shell
-      - name: Seller lifecycle across 7 catalog sections, seller account boundaries and stale reservations
-        run: npx playwright test --config=playwright.local.config.js seller-pause.spec.js seller-inventory.spec.js --retries=0 --max-failures=1 --timeout=20000
+      - name: Seller lifecycle plus paused-stock summary and direct inventory navigation on desktop and mobile
+        run: npx playwright test --config=playwright.local.config.js seller-pause.spec.js seller-inventory.spec.js seller-overview.spec.js --retries=0 --max-failures=1 --timeout=20000
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
