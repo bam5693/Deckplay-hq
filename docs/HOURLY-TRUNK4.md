@@ -1,16 +1,16 @@
-# DeckPlay HQ — hourly Trunk 4 checkpoint
+# DeckPlay HQ — Hourly Trunk 4 continuity
+**Owner:** dev/hourly-autonomous only; draft PR #10 into manual-owned staging. No shared staging/main/production/DB writes, merges or deployments. Retired lease unused.
 
-**Lane:** `dev/hourly-autonomous` only. Manual G owns shared staging. No retired lease, shared staging edits/deployments, stateful DB tests, production changes or PR merges. Review-only [draft PR #10](https://github.com/bam5693/Deckplay-hq/pull/10) targets staging.
+## DONE — reviewable code (NOT acceptance)
+- **T4.1 Favorites:** Account/offline saved-listing recovery inherited from staging `ac6b5a9`; pending save/remove race fix `a56f40f`, `962e32a` with four modeled passes. Browser + deployed acceptance missing.
+- **T4.2 Wanted:** Account/stale-load isolation `ed1c054`, retry/profile fallback `74dc82d`, precise cross-category matching `e53a2fb`, seller-edited classification precedence `b27f92f`; seven modeled non-card fixtures and syntax checks passed. Browser + deployed acceptance missing.
+- **T4.3 Alerts:** Prior private staging stale-alert recovery `f2d1d7f`, protected run 41209070078. Still candidate: signed alert destination and privacy/event matrix missing.
+- **T4.4 Collection privacy:** `e030bcb` now refuses to render a blocked collector's profile, storefront or external collection links when `user_blocks` confirms a block; on block-lookup failure it shows a retry instead of treating the collector as unblocked. `5b7d713` adds two focused browser regressions in `tests/e2e/collection-sharing.spec.js`. Five inline index scripts and the test file parsed; three extracted real-code privacy-boundary logic checks (blocked, lookup error, clear) passed. **Playwright/browser and staging tests NOT run.**
 
-**DONE — code prepared, NOT V1 accepted:**
-- **T4.1 Favorites:** Offline/account-scoped saved-listing recovery from staging `ac6b5a9`, plus pending save/remove race repair `a56f40f` / `962e32a`. Existing four modeled race checks passed; Playwright and deployed acceptance still missing. Preserve previously accepted evidence.
-- **T4.2 Wanted Board:** Older-account/stale-response isolation `ed1c054`, failure Retry and optional seller-profile fallback `74dc82d`, plus focused regression definitions `df2a202`. **New exact non-card matching** in [`e53a2fb`](https://github.com/bam5693/Deckplay-hq/commit/e53a2fbcebbb3645fb988a5d588fbf09b519c14b): buyers may opt in to exact title matches for video games (platform), consoles/controllers/accessories (hardware type + model), sports memorabilia and other collectibles (subcategory), and uncategorized other items (raw category). Wrong category, variant/type, budget, inactive listing, self and blocked seller are excluded. Broad Wanted posts remain available. Current seller-edited classification wins over stale creation notes in [`b27f92f`](https://github.com/bam5693/Deckplay-hq/commit/b27f92f5b8faab79a851a6614c0935619e104869).
-- Targeted browser regression definitions [`ae663dd`](https://github.com/bam5693/Deckplay-hq/commit/ae663dddf6bfc60b29eab9881d6aca9e81d75764) and [`283f80f`](https://github.com/bam5693/Deckplay-hq/commit/283f80fcf24c077a5fc151f42c88ec7f023b6c9f). Inline scripts and test-file JavaScript parsed; seven non-card match fixtures and seller-edited platform/model precedence passed as local logic preflights. **Browser tests NOT executed; no staging deploy, signed buyer/seller or device evidence.**
+## IN PROGRESS
+**T4.4 remains OPEN/CANDIDATE, not accepted.** The hourly scoreboard T4.1–T4.6 remains unchecked. Preserve all historical accepted evidence in staging. PR #10 includes T4.1/T4.2/T4.4 for manual review. Shared `index.html` must be reconciled against independently advanced staging HEAD; never overwrite/rebase/merge automatically. CI read-only PR jobs auto-triggered by code commits; no CI dispatch performed.
 
-**ACCEPTANCE:** Hourly-branch T4.1–T4.6 scoreboard remains unchecked; do not mark code-only candidates accepted. T4.3 stale-alert storefront recovery is a staging candidate with prior protected run 41209070078, not full acceptance. T3.1/T3.2 historical acceptance stays intact.
-
-**IN PROGRESS:** Review the exact non-card matching slice and integrate only through the separately reviewed staging PR process. `index.html` is shared with manual G; staging HEAD has advanced independently. Do not reset/rebase/merge/force-push.
-
-**SINGLE NEXT ACTION:** If a genuinely safe, local/read-only Playwright runner becomes available, execute ONLY the four new cases in `tests/e2e/wanted-matches.spec.js` (non-card UI, precision, submission and edited classification) plus affected Favorites cases; fix observed failures. Otherwise do not retry unavailable browser execution: advance to a separate unfinished T4.3 alert-context or T4.4 collection-privacy customer feature on this branch, without touching shared staging.
-
-**BLOCKER:** No authenticated local browser runner was available in this session; source parsing and modeled fixtures are not browser or deployed acceptance. Repository Actions running on a different Inbox PR are unrelated read-only jobs. PR #10 requires owner/manual review before staging integration.
+## NEXT
+1. When a focused safe browser runner is available, run only new T4.4 blocked/error profile tests and affected T4.1/T4.2 cases, then request reviewed integration; no stateful staging tests from this branch.
+2. If browser runner unavailable, build the next independent unfinished T4.5 collection consent feature on hourly branch, preserving existing server-side opt-in rules.
+**Blockers:** no verified local Playwright execution or signed staging acceptance; manual staging owner must review PR #10. No V1 T4 item was newly accepted this run.
