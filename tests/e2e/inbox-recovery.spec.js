@@ -1048,3 +1048,52 @@ test('T2.2 Inbox refresh does not redirect keyboard focus away from Back to all 
  await expect(page.locator('#inboxThreadBack')).toBeFocused();
  await expect(page.locator('#chatInput')).toHaveValue('Unsent Zoro photo request');
 });
+
+test('T2.4 offline refresh keeps visible private conversation and draft with retry',async({page})=>{
+ await inbox(page);
+ await page.locator('#chatInput').fill('Keep my Luffy condition question');
+ await page.locator('#chatInput').focus();
+ await page.evaluate(async()=>{
+  window.__savedInboxFrom=supabaseClient.from;
+  supabaseClient.from=table=>{
+   if(table!=='collector_messages')return window.__savedInboxFrom(table);
+   const q={};for(const method of ['select','order','limit'])q[method]=()=>q;
+   q.then=(resolve,reject)=>Promise.resolve({data:null,error:{message:'offline'}}).then(resolve,reject);
+   return q;
+  };
+  await loadInbox('buyer-a');
+ });
+ await expect(page.locator('[data-inbox-refresh-error]')).toBeVisible();
+ await expect(page.locator('[data-inbox-refresh-error]')).toContainText('out of date');
+ await expect(page.locator('.conversation-bubbles')).toContainText('Hello buyer-a');
+ await expect(page.locator('#chatInput')).toHaveValue('Keep my Luffy condition question');
+ await expect(page.locator('#chatInput')).toBeFocused();
+ // Multiple failed refreshes must not stack duplicate error banners.
+ await page.evaluate(()=>loadInbox('buyer-a'));
+ await expect(page.locator('[data-inbox-refresh-error]')).toHaveCount(1);
+ await page.evaluate(()=>{supabaseClient.from=window.__savedInboxFrom});
+ await page.locator('[data-inbox-retry]').click();
+ await expect(page.locator('[data-inbox-refresh-error]')).toHaveCount(0);
+ await expect(page.locator('#chatInput')).toHaveValue('Keep my Luffy condition question');
+});
+
+test('T2.4 first load failure still provides a usable Inbox retry',async({page})=>{
+ await inbox(page);
+ await page.evaluate(async()=>{
+  document.querySelector('#messageInbox').replaceChildren();
+  window.__savedInboxFrom=supabaseClient.from;
+  supabaseClient.from=table=>{
+   if(table!=='collector_messages')return window.__savedInboxFrom(table);
+   const q={};for(const method of ['select','order','limit'])q[method]=()=>q;
+   q.then=(resolve,reject)=>Promise.resolve({data:null,error:{message:'offline'}}).then(resolve,reject);
+   return q;
+  };
+  await loadInbox();
+ });
+ await expect(page.locator('[data-inbox-retry]')).toBeVisible();
+ await expect(page.locator('.conversation-layout')).toHaveCount(0);
+ await page.evaluate(()=>{supabaseClient.from=window.__savedInboxFrom});
+ await page.locator('[data-inbox-retry]').click();
+ await expect(page.locator('.conversation-layout')).toBeVisible();
+ await expect(page.locator('[data-inbox-refresh-error]')).toHaveCount(0);
+});
