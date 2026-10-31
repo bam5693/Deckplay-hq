@@ -178,6 +178,15 @@
     inbox:"Inbox and messages",trades:"Offers and trades",
     profile:"Collector profiles",account:"Sign-in and account"
   });
+  // Search/contact feedback starts as a prefilled template. Require an actual
+  // collector answer rather than creating a ticket from placeholder text alone.
+  // Ordinary hand-written feedback is unaffected.
+  function feedbackTemplateNeedsAnswer(value) {
+    const text=String(value||"").trim();
+    return /^(?:Marketplace search feedback \(optional, private\)|Listing contact feedback \(optional, private\))\n/.test(text)
+      && /(?:What I hoped to find|What would help me contact the seller):\s*$/.test(text);
+  }
+
   function updateFeedbackKind() {
     if (!feedbackMode) return;
     const kind = feedbackKinds[el("supportFeedbackKind").value] || feedbackKinds.other;
@@ -753,6 +762,11 @@
       : el("supportDescription").value.trim();
     if(rawSubject.length<8||subject.length>120){
       status("supportCreateStatus","Enter a subject of at least 8 characters that fits the limit.");
+      return;
+    }
+    if(feedbackMode && feedbackTemplateNeedsAnswer(el("supportDescription").value)){
+      status("supportCreateStatus","Add what you hoped to find or what would help you contact the seller before sending.");
+      el("supportDescription").focus();
       return;
     }
     // Keep edits made while the request is in flight. A successful older draft
