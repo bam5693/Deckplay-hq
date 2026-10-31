@@ -1331,3 +1331,14 @@ test('T7.6: listing contact feedback cannot send an unanswered template',async({
  await expect(page.locator('#supportCreateStatus')).toContainText('Ticket created.');
  expect(await page.evaluate(()=>window.__db.calls.filter(c=>c.name==='create_support_ticket').length)).toBe(1);
 });
+
+test('T8.4: oversized listing report retains draft and does not submit',async({page})=>{
+ await boot(page);await signIn(page,'buyer');
+ await openSyntheticListingReport(page);
+ await page.locator('#supportReportReason').selectOption('counterfeit');
+ await page.locator('#supportDescription').fill('x'.repeat(3000));
+ await page.getByRole('button',{name:'Send listing report'}).click();
+ await expect(page.locator('#supportCreateStatus')).toContainText('too long');
+ await expect(page.locator('#supportDescription')).toHaveValue('x'.repeat(3000));
+ expect(await page.evaluate(()=>window.__db.calls.filter(c=>c.name==='create_support_ticket').length)).toBe(0);
+});
