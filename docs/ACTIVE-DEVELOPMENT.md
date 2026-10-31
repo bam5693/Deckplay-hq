@@ -27,3 +27,9 @@
 - Manual G moved to **Trunk 5** mobile usability: `3b4575c` sets the Inbox message composer to minimum 16px on small viewports to prevent mobile Safari input focus zoom. **Code only, not yet browser or physical device accepted**.
 - NEXT: one inexpensive focused mobile CSS/layout regression for composer size and focus at Pixel viewport, then inspect mobile keyboard/Android Back behavior. If browser test is unavailable, do cheap source/static preflight and continue independent mobile work, without claiming device acceptance.
 - No production/main merge, staging deployment or customer data changes from this T5 batch.
+
+### T5 safe continuation — mobile editable fields
+- T5 focus-zoom scope expanded from Inbox to editable login/search/listing form inputs, selects and textareas via `index.html` commit `d942ea6`, using `font-size:max(16px,1em)` at <=700px to preserve larger accessibility text settings. Excludes non-editable buttons and file/range controls.
+- `tests/security/t5-mobile-composer.test.cjs` gained the scoped form rule assertions in `a0a214d`. [Cheap CI run 41239724763](https://github.com/bam5693/Deckplay-hq/actions/runs/41239724763) **passed 9/9 Node checks**, including current T2 privacy regressions and five inline scripts. This is source-level validation, not a mobile browser/device test or staging deployment.
+- Mobile browser focus/composer/Android Back verification remains tracked in [issue #24](https://github.com/bam5693/Deckplay-hq/issues/24); the rejected edit to the signed messaging spec was not resubmitted or bypassed.
+- Continue Trunk 5 without changing production or duplicating Trunk 1/4 worker branches.
