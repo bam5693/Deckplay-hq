@@ -31,10 +31,16 @@ window.createListingEditorClassification=(container,status)=>{
   enabled.checked=false;container.querySelector('details').open=false;busy=false;
   set('category',row.category||'trading_cards');set('listingType',row.product_type||allowed[get('category')]?.[0]||'single');set('tcgGame',row.tcg_game);sets();set('collectibleSubcategory',row.collectible_subcategory);set('condition',row.condition||'used');
   const contents=readListingContents(row.description);set('listingIncludedQuantity',contents.quantity);set('listingQuantityUnit',contents.unit);set('listingContentsList',contents.contents);
-  const description=String(row.description||''),line=label=>description.match(new RegExp('(?:^|\\n)'+label+': ([^\\n]*)'))?.[1]||'';
+  const description=String(row.description||'');
+  // The latest edited classification is authoritative; old seller disclosures can
+  // still contain the original Set, Variant or Card condition values.
+  const latest=description.match(/\[Listing classification\]\n([\s\S]*?)\n\[End classification\]/)?.[1]||'';
+  const line=label=>{const pattern=new RegExp('(?:^|\\n)'+label+': ([^\\n]*)');return latest.match(pattern)?.[1]||description.match(pattern)?.[1]||''};
   for(const [id,label]of [['gamePlatform','Platform'],['consoleItemType','Hardware type'],['consoleBrand','Brand'],['consoleModel','Model'],['consoleStorage','Storage / version'],['sportsSport','Sport'],['sportsBrand','Sports brand'],['sportsYear','Year'],['sportsPlayer','Player'],['gradingCompany','Grader'],['gradingScore','Grade'],['gradingCert','Certification'],['tcgCustomSet','Set'],['tcgCardNumber','Card number'],['tcgCustomVariant','Variant'],['tcgRarity','Rarity'],['tcgEdition','Edition / printing'],['tcgLanguage','Language'],['deckLeader','Deck'],['deckCardCount','Cards']])set(id,line(label));
   if(get('tcgGame')==='sports_cards'&&!get('sportsBrand'))set('sportsBrand',line('Brand'));
-  const conditionLine=line('Card condition');const option=[...controls.get('cardCondition').options].find(o=>o.textContent.trim()===conditionLine||description.includes('[Card Condition]\n'+o.textContent.trim()));
+  const conditionLine=line('Card condition'),options=[...controls.get('cardCondition').options];
+  // Never let a legacy [Card Condition] override the latest edited value.
+  const option=options.find(o=>o.textContent.trim()===conditionLine)||options.find(o=>description.includes('[Card Condition]\n'+o.textContent.trim()));
   if(option)set('cardCondition',option.value);else if(row.condition==='graded')set('cardCondition','graded');else if(row.condition==='new')set('cardCondition','sealed');
   set('deckList',description.match(/Full decklist:\n([\s\S]*?)(?:\n\[End classification\]|\n\n|$)/)?.[1]||'');
   if(!get('consoleItemType'))set('consoleItemType',{consoles:'Console',controllers:'Controller',accessories:'Accessory'}[get('category')]);sync();
