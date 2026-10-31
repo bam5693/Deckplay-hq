@@ -2,10 +2,10 @@
   "version": 1,
   "project": "DeckPlay HQ",
   "scope": "test/staging-reporting",
-  "holder": null,
-  "token": null,
-  "focus": null,
-  "acquired_at": null,
-  "expires_at": null,
-  "updated_at": "2026-10-31T14:47:25.065Z"
+  "holder": "manual-g",
+  "token": "manual-g-t41-1793458080790",
+  "focus": "T4.1 favorites recovery focused verification",
+  "acquired_at": "2026-10-31T14:48:00.790Z",
+  "expires_at": "2026-10-31T15:33:00.790Z",
+  "updated_at": "2026-10-31T14:48:00.790Z"
 }
