@@ -444,3 +444,16 @@ test('hidden category-specific filters do not masquerade as active search restri
  await expect(page.locator('#grid')).toContainText('No listings are available yet');
  await expect(page.locator('#grid')).not.toContainText('No listings match your search and filters');
 });
+
+test('Clear filters resets visual quick-filter selection along with query state',async({page})=>{
+ await installFixture(page,[]);
+ await page.evaluate(()=>{
+  cat='Trading Cards';filter='Under $50';game='pokemon';
+  for(const group of ['cat','filter','game'])document.querySelectorAll('[data-'+group+']').forEach(button=>button.classList.toggle('active',button.dataset[group]===(group==='cat'?'Trading Cards':group==='filter'?'Under $50':'pokemon')));
+  document.getElementById('marketClearFilters').click();
+ });
+ for(const group of ['cat','filter','game']){
+  await expect(page.locator('[data-'+group+'].active')).toHaveCount(1);
+  await expect(page.locator('[data-'+group+'].active')).toHaveAttribute('data-'+group,'All');
+ }
+});
