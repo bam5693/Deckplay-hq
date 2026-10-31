@@ -50,3 +50,50 @@ test('account switch immediately clears prior saves despite a pending refresh an
  await page.evaluate(()=>savedReadQueue.shift()({data:[{listing_id:'favorite-item'}],error:null}));
  await expect.poll(()=>page.evaluate(()=>[...saved])).toEqual([]);
 });
+
+test('a saved-items refresh cannot erase an optimistic favorite while its write is pending',async({page})=>{
+ await fixture(page);
+ await page.locator('[data-heart]').click();
+ await page.evaluate(()=>{
+  window.savedReadQueue=[];readMarketplaceRequest=()=>new Promise(resolve=>savedReadQueue.push(resolve));
+  window.savedRefreshDone=false;loadSavedListings().then(()=>savedRefreshDone=true);
+ });
+ await expect.poll(()=>page.evaluate(()=>savedReadQueue.length)).toBe(1);
+ await page.evaluate(()=>savedReadQueue.shift()({data:[],error:null}));
+ await expect.poll(()=>page.evaluate(()=>savedRefreshDone)).toBe(true);
+ await expect(page.locator('[data-heart]')).toHaveText('♥');
+ await page.evaluate(()=>finishFavorite({error:null}));
+ await expect(page.locator('[data-heart]')).toBeEnabled();
+ await expect(page.locator('[data-heart]')).toHaveText('♥');
+});
+
+test('a stale saved-items read cannot undo a confirmed save after its write completes',async({page})=>{
+ await fixture(page);
+ await page.locator('[data-heart]').click();
+ await page.evaluate(()=>{
+  window.savedReadQueue=[];readMarketplaceRequest=()=>new Promise(resolve=>savedReadQueue.push(resolve));
+  window.savedRefreshDone=false;loadSavedListings().then(()=>savedRefreshDone=true);
+ });
+ await expect.poll(()=>page.evaluate(()=>savedReadQueue.length)).toBe(1);
+ await page.evaluate(()=>finishFavorite({error:null}));
+ await expect(page.locator('[data-heart]')).toBeEnabled();
+ await page.evaluate(()=>savedReadQueue.shift()({data:[],error:null}));
+ await expect.poll(()=>page.evaluate(()=>savedRefreshDone)).toBe(true);
+ await expect(page.locator('[data-heart]')).toHaveText('♥');
+});
+
+test('a saved-items refresh does not resurrect an item being unsaved',async({page})=>{
+ await fixture(page,true);
+ await page.locator('[data-heart]').click();
+ await page.evaluate(()=>{
+  window.savedReadQueue=[];readMarketplaceRequest=()=>new Promise(resolve=>savedReadQueue.push(resolve));
+  window.savedRefreshDone=false;loadSavedListings().then(()=>savedRefreshDone=true);
+ });
+ await expect.poll(()=>page.evaluate(()=>savedReadQueue.length)).toBe(1);
+ await page.evaluate(()=>savedReadQueue.shift()({data:[{listing_id:'favorite-item'}],error:null}));
+ await expect.poll(()=>page.evaluate(()=>savedRefreshDone)).toBe(true);
+ await expect(page.locator('[data-heart]')).toHaveText('♡');
+ await page.evaluate(()=>finishFavorite({error:null}));
+ await expect(page.locator('[data-heart]')).toBeEnabled();
+ await expect(page.locator('[data-heart]')).toHaveText('♡');
+});
