@@ -13,7 +13,8 @@ test('login validation recovers without an unrelated listing-button error',async
 test('built page is isolated and scripts initialize all late handlers',async({page})=>{
  const errors=[],production=[];page.on('pageerror',e=>errors.push(e.message));page.on('request',r=>{if(r.url().includes('yffruutknztvdyioovmp'))production.push(r.url())});
  await page.goto('/');
- await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content','noindex,nofollow');
+ await expect(page.locator('meta[name="robots"]')).toHaveCount(1);
+ await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content',/noindex.*nofollow/);
  expect(await page.evaluate(()=>!!supabaseClient)).toBe(true);
  expect(errors).toEqual([]);expect(production).toEqual([]);
 });
@@ -86,15 +87,20 @@ test('notification bell counts discovery alerts without counting inbox negotiati
  expect(result.hidden).toBe(false);
 });
 
-test('discovery notification opens an available listing rather than redirecting to inbox',async({page})=>{
+test('discovery notification resolves the active listing before opening details, not Inbox',async({page})=>{
  await page.goto('/');
  const result=await page.evaluate(async()=>{
-  const previous=items;
-  items=[{id:'fixture-listing',databaseId:'fixture-listing',n:'Fixture collectible',p:12,c:'Trading Cards',imageUrls:[],trades:false}];
+  const previous=supabaseClient.from;
+  const row={id:'fixture-listing',title:'Fixture collectible',seller_id:'fixture-seller',price:12,category:'trading_cards',tcg_game:'one_piece',description:'Synthetic listing',condition:'used',image_urls:[],status:'active',accepts_price_offers:true,accepts_trades:false,created_at:new Date().toISOString()};
+  supabaseClient.from=table=>{
+   if(table!=='listings'&&table!=='profiles')return previous(table);
+   const q={select:()=>q,eq:()=>q,maybeSingle:async()=>({data:table==='listings'?row:{username:'fixture_seller'},error:null})};
+   return q;
+  };
   try{
    await navigateDeckplayNotification('wanted_match','fixture-seller','fixture-listing');
    return {title:document.getElementById('detailTitle')?.textContent,modal:document.getElementById('detailModal')?.classList.contains('open'),inbox:document.getElementById('inboxPage')?.classList.contains('active')};
-  }finally{items=previous}
+  }finally{supabaseClient.from=previous}
  });
  expect(result.title).toBe('Fixture collectible');
  expect(result.modal).toBe(true);
