@@ -16,4 +16,4 @@ jobs:
         with:
           node-version: '22'
       - run: node scripts/check-inline-js.cjs
-      - run: node --test tests/security/t2-unread-badge-isolation.test.cjs
+      - run: node --test tests/security/t2-unread-badge-isolation.test.cjs tests/security/t2-read-receipt-boundaries.test.cjs
