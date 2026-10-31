@@ -1,0 +1,48 @@
+name: Focused PWA refresh safety
+on:
+  workflow_dispatch:
+  push:
+    branches: [test/staging-reporting]
+    paths:
+      - 'pwa-update-notice.js'
+      - 'tests/e2e/pwa-update-notice.spec.js'
+      - '.github/workflows/pwa-update-focused.yml'
+permissions:
+  contents: read
+concurrency:
+  group: deckplay-pwa-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  pwa-local:
+    if: github.ref == 'refs/heads/test/staging-reporting'
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Cheap PWA and inline script syntax
+        run: |
+          node --check pwa-update-notice.js
+          node --check sw.js
+          node --check tests/e2e/pwa-update-notice.spec.js
+          node scripts/check-inline-js.cjs
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: staging-playwright-${{ hashFiles('package-lock.json') }}
+      - run: npx playwright install chromium --only-shell
+      - name: Verify update notice and offline draft preservation on mobile and desktop
+        run: npx playwright test --config=playwright.local.config.js pwa-update-notice.spec.js --project=local-desktop --project=local-mobile --retries=0 --max-failures=1 --timeout=20000
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: pwa-refresh-failure
+          path: |
+            test-results/
+            playwright-report/
+          if-no-files-found: ignore
+          retention-days: 3
