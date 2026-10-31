@@ -1930,6 +1930,8 @@ async function loadSavedListings(){
   if(!current())return;
   if(error)throw error;
   saved.clear();(data||[]).forEach(row=>saved.add(row.listing_id));
+  // A saved-list refresh may overlap an optimistic save/remove. Preserve the pending choice.
+  for(const change of window.favoriteActions?.pendingDesired?.()||[]){if(change.save)saved.add(change.id);else saved.delete(change.id)}
   render();
  }catch(error){
   if(!current())return;
