@@ -1590,7 +1590,7 @@ document.getElementById("category").addEventListener("change",syncGradedConditio
 syncGradedCondition();
 document.getElementById("listingType").addEventListener("change",()=>{const type=document.getElementById("listingType").value,category=document.getElementById("category");const map={single:"trading_cards",deck:"trading_cards",lot:"trading_cards",sealed:"trading_cards",game:"video_games",console:"consoles",figure:"collectibles",other:"other"};if(map[type])category.value=map[type];if(type==="console")document.getElementById("consoleItemType").value="Console";toggleTcgField();syncCategoryFields();syncGradedCondition();updateListingQuickSummary()});toggleTcgField();
 document.getElementById("search").addEventListener("input",event=>{rememberInboxDraft();query=event.target.value;if(["deckplay-home","inbox-focus","profile-focus"].some(name=>document.body.classList.contains(name)))showMainMarketplace();render()});
-grid.addEventListener("click",async event=>{const retry=event.target.closest("[data-retry-marketplace]");if(retry){retry.disabled=true;const ok=await loadBlockedCollectors();if(ok)await loadListings();else{items=[];listingSource="error";render()}return}const refresh=event.target.closest("[data-refresh-marketplace]");if(refresh){refresh.disabled=true;const ok=await loadBlockedCollectors();if(ok)await loadListings();else{items=[];listingSource="error";render()}return}const profile=event.target.closest("[data-card-profile]");if(profile){await showPublicProfile(profile.dataset.cardProfile);return}const manage=event.target.closest("[data-sold],[data-delete-listing]");if(manage){if(!currentUser)return;const item=items.find(x=>String(x.id)===String(manage.dataset.sold||manage.dataset.deleteListing));if(!item||item.sellerId!==currentUser.id||!item.databaseId)return;const deleting=manage.hasAttribute("data-delete-listing");if(!confirm(deleting?"Permanently delete this listing?":"Mark this listing as sold and remove it from the marketplace?"))return;manage.disabled=true;const request=supabaseClient.from("listings");const {error}=deleting?await request.delete().eq("id",item.databaseId).eq("seller_id",currentUser.id):await request.update({status:"sold"}).eq("id",item.databaseId).eq("seller_id",currentUser.id);if(error){toast(error.message);manage.disabled=false;return}toast(deleting?"Listing deleted":"Listing marked sold");await loadListings();return}const heart=event.target.closest("[data-heart]");if(heart){await window.favoriteActions.toggle(heart.dataset.heart);return}const view=event.target.closest("[data-view]");if(view){const item=items.find(candidate=>String(candidate.id)===view.dataset.view);if(item)showDetails(item)}});
+grid.addEventListener("click",async event=>{const retry=event.target.closest("[data-retry-marketplace]");if(retry){retry.disabled=true;const ok=await loadBlockedCollectors();if(ok)await loadListings();else{items=[];listingSource="error";render()}return}const refresh=event.target.closest("[data-refresh-marketplace]");if(refresh){refresh.disabled=true;const ok=await loadBlockedCollectors();if(ok)await Promise.all([loadSavedListings(),loadListings()]);else{items=[];listingSource="error";render()}return}const profile=event.target.closest("[data-card-profile]");if(profile){await showPublicProfile(profile.dataset.cardProfile);return}const manage=event.target.closest("[data-sold],[data-delete-listing]");if(manage){if(!currentUser)return;const item=items.find(x=>String(x.id)===String(manage.dataset.sold||manage.dataset.deleteListing));if(!item||item.sellerId!==currentUser.id||!item.databaseId)return;const deleting=manage.hasAttribute("data-delete-listing");if(!confirm(deleting?"Permanently delete this listing?":"Mark this listing as sold and remove it from the marketplace?"))return;manage.disabled=true;const request=supabaseClient.from("listings");const {error}=deleting?await request.delete().eq("id",item.databaseId).eq("seller_id",currentUser.id):await request.update({status:"sold"}).eq("id",item.databaseId).eq("seller_id",currentUser.id);if(error){toast(error.message);manage.disabled=false;return}toast(deleting?"Listing deleted":"Listing marked sold");await loadListings();return}const heart=event.target.closest("[data-heart]");if(heart){await window.favoriteActions.toggle(heart.dataset.heart);return}const view=event.target.closest("[data-view]");if(view){const item=items.find(candidate=>String(candidate.id)===view.dataset.view);if(item)showDetails(item)}});
 document.getElementById("accountMenuPortal").appendChild(document.getElementById("accountMenu"));
 document.getElementById("accountButton").addEventListener("click",()=>{if(!currentUser){setAuthMode("signin");openModal("authModal");return}const menu=document.getElementById("accountMenu");menu.hidden=!menu.hidden;document.getElementById("accountButton").setAttribute("aria-expanded",String(!menu.hidden))});
 document.addEventListener("click",event=>{if(!event.target.closest(".account-wrap")&&!event.target.closest("#accountMenu"))document.getElementById("accountMenu").hidden=true});
@@ -1810,6 +1810,8 @@ function applyDeckplayAuthSession(event,session){
  // A late empty INITIAL_SESSION must not erase a newer, verified UI session.
  if(event==="INITIAL_SESSION"&&!session?.user&&currentUser?.id)return;
  currentUser=session?.user||null;
+ // Clear the previous account's saved state before asynchronous block-list checks.
+ resetSavedListingsForAccount(currentUser?.id||null);
  syncInboxDraftUser();updateAccountUI();startMessageUpdates();startNotificationUpdates();
  const expectedUserId=currentUser?.id||null;
  loadBlockedCollectors().then(ready=>{
@@ -1908,8 +1910,35 @@ document.getElementById("wantedForm").addEventListener("submit",async e=>{
  finally{if(valid()){wantedPublishBusy=false;button.disabled=false;form.removeAttribute("aria-busy")}}
 });
 document.getElementById("wantedGrid").addEventListener("click",async e=>{const match=e.target.closest("[data-wanted-match]");if(match){const item=items.find(x=>String(x.id)===match.dataset.wantedMatch);if(!item||blockedCollectorIds.has(item.sellerId)){toast("This listing is no longer available. Refresh wanted posts.");return}toggleWanted(false);showDetails(item);return}const button=e.target.closest("[data-delete-wanted]");if(!button||!currentUser)return;if(!confirm("Delete this wanted post?"))return;const {error}=await supabaseClient.from("wanted_posts").delete().eq("id",button.dataset.deleteWanted).eq("user_id",currentUser.id);if(error){toast(error.message);return}await loadWanted()});
-let savedListingsLoadVersion=0;
-async function loadSavedListings(){const version=++savedListingsLoadVersion,userId=currentUser?.id;saved.clear();if(!userId)return;const {data,error}=await supabaseClient.from("saved_listings").select("listing_id").eq("user_id",userId);if(version!==savedListingsLoadVersion||currentUser?.id!==userId)return;if(error){console.warn("Saved items unavailable",error);return}(data||[]).forEach(x=>saved.add(x.listing_id))}
+let savedListingsLoadVersion=0,savedListingsOwnerId=null;
+function resetSavedListingsForAccount(userId){
+ const owner=userId||null;
+ if(savedListingsOwnerId===owner)return;
+ savedListingsOwnerId=owner;
+ ++savedListingsLoadVersion; // A late response from the previous account must never restore its saves.
+ saved.clear();
+}
+async function loadSavedListings(){
+ const userId=currentUser?.id||null;
+ resetSavedListingsForAccount(userId);
+ const version=++savedListingsLoadVersion;
+ if(!userId)return;
+ const current=()=>version===savedListingsLoadVersion&&currentUser?.id===userId&&savedListingsOwnerId===userId;
+ try{
+  const request=supabaseClient.from("saved_listings").select("listing_id").eq("user_id",userId);
+  const {data,error}=await readMarketplaceRequest(request,8000);
+  if(!current())return;
+  if(error)throw error;
+  saved.clear();(data||[]).forEach(row=>saved.add(row.listing_id));
+  render();
+ }catch(error){
+  if(!current())return;
+  // A temporary refresh failure must not erase a confirmed favorite for this account.
+  console.warn("Saved items unavailable",error);
+  toast(saved.size?"Saved items couldn't refresh. Showing your previous saves.":"Saved items couldn't load. Refresh the marketplace to retry.");
+  render();
+ }
+}
 
 let reportTargetUser=null,reportTargetListing=null,reportTargetBlocked=false,reportDialogVersion=0;
 const reportSending=new Set();

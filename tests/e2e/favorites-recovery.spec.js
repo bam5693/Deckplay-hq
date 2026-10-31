@@ -15,3 +15,38 @@ test('a rejected favorite removal from the previous account cannot populate the 
 test('transport failure preserves the earlier favorite state and permits a safe retry',async({page})=>{
  await fixture(page);await page.locator('[data-heart]').click();await page.evaluate(()=>failFavorite(Error('Network unavailable')));await expect(page.locator('[data-heart]')).toBeEnabled();await expect(page.locator('[data-heart]')).toHaveText('♡');await page.locator('[data-heart]').click();await expect.poll(()=>page.evaluate(()=>favoriteWrites.length)).toBe(2);await page.evaluate(()=>finishFavorite({error:{code:'23505',message:'Already saved'}}));await expect(page.locator('[data-heart]')).toHaveText('♥');
 });
+
+test('saved-item refresh keeps the same account favorites on failure and reconciles on retry',async({page})=>{
+ await fixture(page,true);
+ await page.evaluate(()=>{
+  resetSavedListingsForAccount('first-buyer');saved.add('favorite-item');
+  window.savedReadQueue=[];
+  supabaseClient.from=()=>({select:()=>({eq:()=>({})})});
+  readMarketplaceRequest=()=>new Promise(resolve=>savedReadQueue.push(resolve));
+  window.savedRefreshDone=false;loadSavedListings().then(()=>savedRefreshDone=true);
+ });
+ await expect.poll(()=>page.evaluate(()=>savedReadQueue.length)).toBe(1);
+ await page.evaluate(()=>savedReadQueue.shift()({error:{message:'Offline'}}));
+ await expect.poll(()=>page.evaluate(()=>savedRefreshDone)).toBe(true);
+ expect(await page.evaluate(()=>[...saved])).toEqual(['favorite-item']);
+ await page.evaluate(()=>{window.savedRetryDone=false;loadSavedListings().then(()=>savedRetryDone=true)});
+ await expect.poll(()=>page.evaluate(()=>savedReadQueue.length)).toBe(1);
+ await page.evaluate(()=>savedReadQueue.shift()({data:[{listing_id:'other-saved-item'}],error:null}));
+ await expect.poll(()=>page.evaluate(()=>savedRetryDone)).toBe(true);
+ expect(await page.evaluate(()=>[...saved])).toEqual(['other-saved-item']);
+});
+test('account switch immediately clears prior saves despite a pending refresh and slow block lookup',async({page})=>{
+ await fixture(page,true);
+ await page.evaluate(()=>{
+  resetSavedListingsForAccount('first-buyer');saved.add('favorite-item');
+  window.savedReadQueue=[];
+  supabaseClient.from=()=>({select:()=>({eq:()=>({})})});
+  readMarketplaceRequest=()=>new Promise(resolve=>savedReadQueue.push(resolve));
+  window.oldSavedRefresh=loadSavedListings();
+  loadBlockedCollectors=()=>new Promise(()=>{}); // Simulate delayed privacy preflight.
+  applyDeckplayAuthSession('SIGNED_IN',{user:{id:'second-buyer',user_metadata:{}}});
+ });
+ expect(await page.evaluate(()=>[...saved])).toEqual([]);
+ await page.evaluate(()=>savedReadQueue.shift()({data:[{listing_id:'favorite-item'}],error:null}));
+ await expect.poll(()=>page.evaluate(()=>[...saved])).toEqual([]);
+});
