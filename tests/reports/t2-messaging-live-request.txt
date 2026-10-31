@@ -1,3 +1,2 @@
-Private T2 focused deployment-and-acceptance retry after run 41231923771 found unserved UI source.
-Use trusted existing GitHub OIDC workflow; cheap preflight, private staging-only Worker build/deploy with --keep-vars, exact asset/auth verification, one signed buyer/seller journey, scoped disposable fixture cleanup.
-No production, no main merge, no broad stateful suite.
+T2.1 next vertical slice: actual signed buyer starts from saved video-game listing Message seller action with no prior conversation, sends through compose form, enters direct seller Inbox thread; seller replies, buyer receives. T2.4 error and duplicate checks remain in same focused acceptance.
+Use existing trusted private staging, exact build and parity, disposable scoped fixtures only. Never production.
