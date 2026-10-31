@@ -1,1 +1,1 @@
-Focused signed T2.1 first-contact retry after failed run 41232243001. Close listing detail overlay before showing Inbox; verify actual listing contact -> conversation -> reply -> retry. Private staging only, source parity, no production or broad tests.
+Focused T2.1 regression after runs 41232243001 and 41232725521: existing-listing Message seller -> compose send -> visible Inbox; guard against prior async page render. Includes T2.4 persisted message retry checks, private staging only, one test and scoped fixtures.
