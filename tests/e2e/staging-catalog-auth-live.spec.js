@@ -12,6 +12,16 @@ test('signed-in buyer reload starts catalog and resolves auth privacy preflight'
  // The Supabase auth callback may swallow synchronous exceptions, so verify
  // each private UI bootstrap stage without exposing credentials or user data.
  await page.waitForTimeout(400);
+ const before=await page.evaluate(()=>({
+  account:!!currentUser,
+  inboxDraftMatched:!!currentUser&&inboxDraftUser===currentUser.id,
+  messageVersion:messageAccountVersion,
+  blockVersion:blockedCollectorsLoadVersion,
+  listingVersion:listingsLoadVersion,
+  authVersion:authSessionGeneration,
+  source:listingSource
+ }));
+ console.log('AUTH INITIAL SNAPSHOT '+JSON.stringify(before));
  const startup=await page.evaluate(()=>{
   const steps=[];
   for(const [name,fn] of [
