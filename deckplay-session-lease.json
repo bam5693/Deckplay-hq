@@ -2,10 +2,10 @@
   "version": 1,
   "project": "DeckPlay HQ",
   "scope": "test/staging-reporting",
-  "holder": "manual-g",
-  "token": "manual-g-20261031T092911048Z-8ydm56gi",
-  "focus": "T3.4 server-side duplicate offer prevention",
-  "acquired_at": "2026-10-31T09:29:11.048Z",
-  "expires_at": "2026-10-31T10:14:11.048Z",
-  "updated_at": "2026-10-31T09:29:11.048Z"
+  "holder": null,
+  "token": null,
+  "focus": null,
+  "acquired_at": null,
+  "expires_at": null,
+  "updated_at": "2026-10-31T09:32:12.875Z"
 }
