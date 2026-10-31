@@ -736,11 +736,15 @@ test('inbox search and unread filters survive refresh but reset on account chang
  await expect(page.locator('[data-conversation-id="buyer-a"]')).toBeVisible();
  await search.fill('buyer-b');await unread.check();
  await page.evaluate(async()=>{currentUser={id:'fixture-another-collector'};syncInboxDraftUser();await showInboxPage()});
- await expect(search).toHaveValue('');await expect(unread).not.toBeChecked();
- // The new account has no conversations; prior-account results must not leak.
+ // No conversations belong to the new collector, so the Inbox removes its filters.
+ // Assert isolation before returning to the original fixture account.
  await expect(page.locator('[data-conversation-id="buyer-a"]')).toHaveCount(0);
- await expect(search).toBeHidden();
- await expect(unread).toBeHidden();
+ await expect(search).toHaveCount(0);
+ await expect(unread).toHaveCount(0);
+ await page.evaluate(async()=>{currentUser={id:'fixture-seller'};syncInboxDraftUser();await showInboxPage()});
+ await expect(search).toHaveValue('');
+ await expect(unread).not.toBeChecked();
+ await expect(page.locator('[data-conversation-id="buyer-a"]')).toBeVisible();
 });
 
 test('Jayden can retry an offline inbox without losing his TCG inquiry draft',async({page})=>{
