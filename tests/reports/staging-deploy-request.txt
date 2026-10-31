@@ -15,3 +15,5 @@ No production deploy, PR merge, payments, shipping, or spend.
 2026-10-30 buyer catalog auth preflight protection: hard-deadline blocked-collector lookup and all buyer catalog/profile requests, failed block policy lookup fails closed instead of exposing blocked sellers, retry re-verifies privacy first. 44/44 mobile/desktop focused suite successful run 41151931553. Deploy private isolated staging only; production and billing untouched.
 
 2026-10-30 signed-in catalog startup recovery: defer Supabase Auth callback UI account reset until script ready and outside auth lock; fail closed on rejected initialization; preserve session/user boundaries. 94/94 focused account-switch/auth/buyer filters tests PASS run 41152674949. Deploy isolated Basic Auth staging only, do not touch production.
+
+2026-10-30 isolated staging Auth startup error diagnosis: log sanitized exception string on caught deferred UI initialization; read-only buyer diagnostic captures safe console warning. No credentials, no production, Basic Auth remains enabled.
