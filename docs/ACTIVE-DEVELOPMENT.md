@@ -53,3 +53,7 @@
 ### T5 mobile keyboard focus and Android Back — local acceptance
 - Extended existing cheap workflow in `86694e9` to cover caret/keyboard focus retention on a manual Inbox refresh, plus the two previously accepted Android Back navigation scenarios. Tests reuse existing `tests/e2e/inbox-recovery.spec.js` cases and make no edits to the previously blocked signed messaging test.
 - [Run 41241142978](https://github.com/bam5693/Deckplay-hq/actions/runs/41241142978) **PASS 4/4 mobile-emulated Playwright tests**, with source/inline-JS preflight. These cover draft/caret restoration and not stealing focus from the Back control. Does not establish real Android keyboard behavior, signed staging, or public production readiness. See Issue #24 for remaining gates.
+
+### T5 Inbox accessibility fix — minimum font without capping enlarged text
+- `index.html` change `c9b6a13` changes mobile Inbox composer `font-size:16px` to `font-size:max(16px,1em)` so larger user-selected text remains usable while retaining minimum focus-zoom size. Regression assertion `1073eca`.
+- [Focused run 41241657617](https://github.com/bam5693/Deckplay-hq/actions/runs/41241657617) passed 9/9 Node security/accessibility checks plus inline JS validation. This is source-level verification only, not device or signed deployed staging acceptance. No production/main changes.
