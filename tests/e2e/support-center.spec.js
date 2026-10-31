@@ -1106,3 +1106,44 @@ test('T8.3: switching tickets unlocks the new composer but not an older pending 
  await expect(page.locator('#supportReplies')).toContainText('Question about a game console.');
  await expect(page.getByRole('button',{name:'Send reply'})).toBeEnabled();
 });
+
+test('T8.3: delayed staff status failure cannot unlock or overwrite another ticket save',async({page})=>{
+  await boot(page);
+  await page.evaluate(()=>{
+    const now=new Date().toISOString();
+    window.__db.tickets=[
+      {id:'card-status',owner_id:'buyer',category:'listing',subject:'Sports card status question',body:'A sports collectible',status:'open',created_at:now,updated_at:now},
+      {id:'game-status',owner_id:'other',category:'listing',subject:'Console status question',body:'A video game collectible',status:'open',created_at:now,updated_at:now}
+    ];
+    const original=window.supabaseClient.rpc;
+    window.__statusReleases=[];
+    window.supabaseClient.rpc=(name,args)=>{
+      if(name!=='set_support_ticket_status')return original(name,args);
+      const result=window.__statusReleases.length===0
+        ? {error:{message:'Earlier status save failed'}} : original(name,args);
+      return new Promise(resolve=>window.__statusReleases.push(()=>Promise.resolve(result).then(resolve)));
+    };
+  });
+  await signIn(page,'staff');
+  await page.getByRole('button',{name:'Help & support'}).last().click();
+  await page.locator('#supportStaff').click();
+  await page.locator('#supportTicketList button').filter({hasText:'Sports card status question'}).click();
+  await page.locator('#supportStatusSelect').selectOption('resolved');
+  await page.locator('#supportSetStatus').click();
+  await page.waitForFunction(()=>window.__statusReleases.length===1);
+  await expect(page.locator('#supportSetStatus')).toBeDisabled();
+  await page.locator('#supportTicketList button').filter({hasText:'Console status question'}).click();
+  await expect(page.locator('#supportSetStatus')).toBeEnabled();
+  await page.locator('#supportStatusSelect').selectOption('waiting_on_user');
+  await page.locator('#supportSetStatus').click();
+  await page.waitForFunction(()=>window.__statusReleases.length===2);
+  await page.evaluate(()=>window.__statusReleases[0]());
+  await expect(page.locator('#supportSetStatus')).toBeDisabled();
+  await expect(page.locator('#supportTicketTitle')).toHaveText('Console status question');
+  await expect(page.locator('#supportReplyStatus')).not.toContainText('Earlier status save failed');
+  await page.evaluate(()=>window.__statusReleases[1]());
+  await expect(page.locator('#supportSetStatus')).toBeEnabled();
+  await expect(page.locator('#supportReplyStatus')).toHaveText('Ticket status updated.');
+  await expect(page.locator('#supportTicketState')).toContainText('Waiting on collector');
+  await page.evaluate(()=>{if(window.__db.tickets.find(t=>t.id==='card-status').status!=='open')throw Error('Old failed save changed the card ticket');});
+});

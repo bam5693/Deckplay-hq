@@ -117,7 +117,7 @@
   const status = (id, message) => { el(id).textContent = message || ""; };
   const date = value => new Date(value).toLocaleString();
   const labels = {open:"Open",waiting_on_staff:"Waiting on support",waiting_on_user:"Waiting on collector",resolved:"Resolved"};
-  let userId = null, generation = 0, isStaff = false, staffView = false, staffSafetyOnly = false, ticketFilter = "all", ticketCategory = "all", feedbackQueueSubject = null, selected = null, tickets = [], ticketOffset = 0, ticketListRequest = 0, loadingTickets = false, moreTickets = false, replyOffset = 0, moreReplies = false, loadingReplies = false, replyRequest = 0, returnToFeedback = false, returnTopic = "feedback", feedbackMode = false, tradeConcernMode = false, listingReportId = null, pendingReportId = null, viewGeneration = 0, createRequest = 0, replySubmitRequest = 0;
+  let userId = null, generation = 0, isStaff = false, staffView = false, staffSafetyOnly = false, ticketFilter = "all", ticketCategory = "all", feedbackQueueSubject = null, selected = null, tickets = [], ticketOffset = 0, ticketListRequest = 0, loadingTickets = false, moreTickets = false, replyOffset = 0, moreReplies = false, loadingReplies = false, replyRequest = 0, returnToFeedback = false, returnTopic = "feedback", feedbackMode = false, tradeConcernMode = false, listingReportId = null, pendingReportId = null, viewGeneration = 0, createRequest = 0, replySubmitRequest = 0, statusSubmitRequest = 0;
   // Drafts are tab-memory only, keyed by ticket and purged on account/view reset.
   const replyDrafts = new Map();
   const feedbackQueueSubjects = Object.freeze({empty:"[Idea] Improve marketplace search results",discovery:"[Idea] Improve listing discovery",contact:"[Idea] Improve listing contact experience"});
@@ -207,6 +207,8 @@
     el("supportNewForm").querySelector('button[type="submit"]').disabled = false;
     ++replySubmitRequest; // Invalidate any previous account's pending reply.
     el("supportReplyForm").querySelector('button[type="submit"]').disabled = false;
+    ++statusSubmitRequest; // Never unlock a different account's pending staff status save.
+    el("supportSetStatus").disabled = false;
     ++ticketListRequest; loadingTickets = false; moreTickets = false; ticketOffset = 0;
     el("supportLoadMore").hidden = true; el("supportLoadMore").disabled = false;
     selected = null; tickets = []; replyDrafts.clear(); isStaff = false; staffView = false; staffSafetyOnly = false; ticketFilter = "all"; ticketCategory = "all";
@@ -516,6 +518,8 @@
     if(selected!==id){
       ++replySubmitRequest;
       el("supportReplyForm").querySelector('button[type="submit"]').disabled=false;
+      ++statusSubmitRequest;
+      el("supportSetStatus").disabled=false;
     }
     selected=id;
     el("supportReplyBody").value=replyDrafts.get(id)||"";
@@ -722,13 +726,27 @@
     if(!isStaff||!selected||!userId)return;
     const button=e.currentTarget,id=selected,u=userId,v=viewGeneration;
     if(button.disabled)return;
+    const request=++statusSubmitRequest, nextStatus=el("supportStatusSelect").value;
+    // Status updates are tied to the original ticket and account, not the
+    // shared button. A delayed response must not unlock another pending save.
     button.disabled=true;
+    status("supportReplyStatus","Saving ticket status…");
     try{
-      const {error}=await supabaseClient.rpc("set_support_ticket_status",{p_ticket_id:id,p_status:el("supportStatusSelect").value});
+      const {error}=await supabaseClient.rpc("set_support_ticket_status",{p_ticket_id:id,p_status:nextStatus});
       if(error)throw error;
-      if(validWrite(v,u)&&selected===id){await loadTickets(); if(isStaff)void refreshStaffOverview()}
-    }catch(error){if(validWrite(v,u))status("supportReplyStatus",error.message||"Could not update ticket status.")}
-    finally{button.disabled=false}
+      if(validWrite(v,u)&&selected===id&&request===statusSubmitRequest){
+        await loadTickets();
+        if(validWrite(v,u)&&selected===id&&request===statusSubmitRequest){
+          status("supportReplyStatus","Ticket status updated.");
+          if(isStaff)void refreshStaffOverview();
+        }
+      }
+    }catch(error){
+      if(validWrite(v,u)&&selected===id&&request===statusSubmitRequest)
+        status("supportReplyStatus",error.message||"Could not update ticket status.");
+    }finally{
+      if(request===statusSubmitRequest)button.disabled=false;
+    }
   });
   supabaseClient.auth.onAuthStateChange((_event,session)=>{
     const next=session?.user?.id||null;
