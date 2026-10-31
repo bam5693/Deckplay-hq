@@ -144,3 +144,5 @@ Focused verification request: validate staging startup and notification polling 
 2026-10-31 focused T3.5 accepted deal progress after eager-load protected staging deployment; signed seller and mobile buyer actual Inbox tracking, marker cleanup; no broad audit or production.
 
 2026-10-31 T3.5 exact accepted-trade deal ID scoped seller/mobile buyer Inbox progress assertion, no broad sweep; existing live signed test fixtures with cleanup.
+
+2026-10-31 private staging accepted-deal expanded-state preservation across Inbox re-renders, exact source parity, no public prod. Preflight and deploy only.
