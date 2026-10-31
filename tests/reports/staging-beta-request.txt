@@ -107,3 +107,5 @@ Focused verification request: validate staging startup and notification polling 
 2026-10-31 04:15 Central — ONE isolated real private-staging seller-to-visitor listing deep-link acceptance using only a synthetic seller owned marked video-game listing. Exact marker-scoped cleanup via existing signed fixture RPC is mandatory and no real customer data can be touched. Trigger trusted OIDC focused signed staging-desktop test share-links-live.spec.js ONLY. Skip deployment, photo, broad E2E and transaction suites. Validate copy URL contains one listing ID, opened active listing shows seller-provided title/price without email disclosure, and sold link fails closed. Public site untouched.
 
 2026-10-31 manual G V1 broad staging security, mocked market UI, deployed asset and authenticated read-only sweep; no production deployment.
+
+2026-10-31 T3.1/T3.4 signed isolated REAL staging buyer/seller price lifecycle, duplicate retry, invalid cents, counter/withdraw/decline. Exact test-only listing cleanup; no deployments, public changes, payments or broad test suites.
