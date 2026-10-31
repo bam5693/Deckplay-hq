@@ -1100,6 +1100,7 @@ test('T2.4 first load failure still provides a usable Inbox retry',async({page})
 
 test('T2.2 Inbox finds Pokémon and accented collector names without exact diacritics',async({page})=>{
  await inbox(page);
+ await page.locator('#inboxThreadBack').click();
  await page.evaluate(()=>{
   const contact=document.querySelector('[data-conversation-id="buyer-a"]');
   contact.querySelector('strong').textContent='@JoséCards';
