@@ -1,14 +1,14 @@
 const {test,expect}=require('@playwright/test');
-async function fixture(page,mode='off'){
+async function fixture(page,mode='off',blockState='clear'){
  await page.route('https://challenges.cloudflare.com/**',r=>r.abort());await page.route('https://prrrzeelltmyugssqnzk.supabase.co/**',r=>r.fulfill({json:[]}));
  await page.goto('/');await page.waitForLoadState('networkidle');
- await page.evaluate(async mode=>{
+ await page.evaluate(async ({mode,blockState})=>{
   await supabaseClient.auth.getSession();currentUser={id:'jayden'};syncInboxDraftUser();
   const profile={id:'tanner',username:'Tanner',collection_links:[{label:'Sports collection',url:'https://collectr.com/tanner'}],collection_inquiry_mode:mode};
-  supabaseClient.from=table=>{const q={then:(a,b)=>Promise.resolve({data:[],error:null}).then(a,b)};for(const k of ['select','eq','order','limit'])q[k]=()=>q;q.maybeSingle=async()=>({data:table==='profiles'?profile:null,error:null});return q};
+  supabaseClient.from=table=>{const q={then:(a,b)=>Promise.resolve({data:[],error:null}).then(a,b)};for(const k of ['select','eq','order','limit'])q[k]=()=>q;q.maybeSingle=async()=>({data:table==='profiles'?profile:table==='user_blocks'&&blockState==='blocked'?{blocked_id:'tanner'}:null,error:table==='user_blocks'&&blockState==='error'?{message:'Block check unavailable'}:null});return q};
   window.inquiryWrites=[];supabaseClient.rpc=(name,args)=>new Promise(resolve=>{inquiryWrites.push({name,args});window.finishInquiry=resolve});
   await showPublicProfile('tanner');
- },mode);
+ },{mode,blockState});
 }
 test('a collector without listings shares external links with inquiries off by default',async({page})=>{
  await fixture(page);
@@ -36,4 +36,17 @@ test('account switch clears the private collection inquiry draft',async({page})=
  await page.evaluate(()=>{currentUser={id:'another'};syncInboxDraftUser()});
  await expect(page.locator('#collectionInquiryModal')).not.toHaveClass(/open/);
  await expect(page.locator('#collectionInquiryBody')).toHaveValue('');
+});
+
+test('blocked collector profile does not reveal external collection links or storefront',async({page})=>{
+ await fixture(page,'buy_trade','blocked');
+ await expect(page.locator('#publicProfileContent')).toContainText('This collector is blocked');
+ await expect(page.locator('.public-collections a')).toHaveCount(0);
+ await expect(page.locator('[data-collection-inquiry],[data-follow-profile],[data-public-listing]')).toHaveCount(0);
+});
+test('failed block lookup never treats private collection links as unblocked',async({page})=>{
+ await fixture(page,'buy_trade','error');
+ await expect(page.locator('#publicProfileContent')).toContainText('Could not verify blocked collectors');
+ await expect(page.locator('.public-collections a')).toHaveCount(0);
+ await expect(page.locator('[data-collection-inquiry],[data-follow-profile],[data-public-listing]')).toHaveCount(0);
 });
