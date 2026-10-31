@@ -1,1 +1,1 @@
-T2 read-receipt current-user current-sender and stale-thread selection guards plus signed-out unread badge isolation. Run Node-only gate, no browser, staging deploy, or production changes.
+Run one Node-only T2 regression for pending private photo URL account-switch isolation, read receipts, and unread badge isolation. No Storage writes, staging deploy, browser test or production changes.
