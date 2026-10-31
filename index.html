@@ -3053,7 +3053,7 @@ document.getElementById("messageInbox").addEventListener("submit",async e=>{
   }
   void sendCollectorEmailForSource(data?.id);
  }catch(error){
-  const message="Could not send: "+(error.message||"Please try again.");status.textContent=message;
+  const message="Could not send: "+(error.message||"Please try again.")+" Your message is still here. Tap Send to retry; DeckPlay checks for an earlier delivery first.";status.textContent=message;
   const active=document.querySelector("#messageInbox .chat-composer");
   if(currentUser?.id===userId&&messageAccountVersion===accountVersion&&active?.dataset.chatRecipient===recipient)active.querySelector(".chat-send-status").textContent=message;
  }
