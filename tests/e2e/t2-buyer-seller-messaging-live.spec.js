@@ -149,6 +149,51 @@ test('T2.1 signed buyer and seller exchange real Inbox messages',async({browser}
   expect(retryResult.retryId).toBe(retryResult.committedId);
   expect(retryResult.count).toBe(1);
   expect(retryResult.onlyId).toBe(retryResult.committedId);
+  // T2 account-switch privacy: an obsolete inbox response from buyer A must
+  // never repaint A's messages or unread badges after the session changes.
+  const isolation=await buyer.evaluate(async()=>{
+   const oldUser=currentUser,oldVersion=inboxLoadVersion;
+   const previousHtml=document.getElementById('messageInbox').innerHTML;
+   const realFrom=supabaseClient.from.bind(supabaseClient);
+   let resolveLate,blocked=false;
+   const late=new Promise(resolve=>{resolveLate=resolve});
+   supabaseClient.from=table=>{
+    const query=realFrom(table);
+    if(table==='collector_messages'&&!blocked){
+     blocked=true;
+     const realSelect=query.select.bind(query);
+     query.select=(...args)=>{
+      const result=realSelect(...args);
+      const realOrder=result.order.bind(result);
+      let ordered=0;
+      result.order=(...args)=>{ordered++;const chained=realOrder(...args);
+       if(ordered===2){
+        const realLimit=chained.limit.bind(chained);
+        chained.limit=(n)=>({then:(resolve,reject)=>late.then(()=>realLimit(n)).then(resolve,reject)});
+       }
+       return chained;
+      };
+      return result;
+     };
+    }
+    return query;
+   };
+   const stale=loadInbox();
+   await Promise.resolve();
+   // Simulate the actual account-change invalidation boundary, without
+   // changing Supabase authentication or touching another account.
+   inboxLoadVersion++;currentUser={...oldUser,id:'synthetic-switched-account'};
+   document.getElementById('messageInbox').textContent='NEW ACCOUNT INBOX';
+   resolveLate();
+   let error=null;
+   try{await stale}catch(cause){error=cause.message}
+   const result={error,html:document.getElementById('messageInbox').textContent,oldVersion,newVersion:inboxLoadVersion};
+   currentUser=oldUser;supabaseClient.from=realFrom;
+   await loadInbox();
+   return result;
+  });
+  expect(isolation.error).toBeNull();
+  expect(isolation.html).toBe('NEW ACCOUNT INBOX');
   // Sender and recipient must each see only one persisted copy.
   for(const [page,body] of [[buyer,buyerMessage],[seller,reply]]){
    const count=await page.evaluate(async body=>{
