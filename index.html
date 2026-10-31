@@ -1822,7 +1822,22 @@ function applyDeckplayAuthSession(event,session){
   return Promise.all([loadSavedListings(),loadListings(),loadWanted()]);
  });
 }
-supabaseClient.auth.onAuthStateChange((event,session)=>applyDeckplayAuthSession(event,session));
+// Supabase warns against making asynchronous client requests within the auth
+// callback lock. Defer all UI reset and first catalog fetch until the full
+// document script is initialized, avoiding a half-reset signed-in marketplace.
+supabaseClient.auth.onAuthStateChange((event,session)=>{
+ setTimeout(()=>{
+  try{applyDeckplayAuthSession(event,session)}
+  catch(error){
+   console.warn("Signed-in interface setup stopped before marketplace initialization",error?.name||"Error");
+   // Never show a former collector's private profile/messages after a bad reset.
+   document.querySelectorAll("#profilePageContent,#messageInbox,#tradeOffersList,#priceOffersList,#notificationList")
+    .forEach(el=>el.replaceChildren());
+   items=[];listingSource="error";render();
+   if(!document.getElementById("inboxPage").hidden||!document.getElementById("collectorPage").hidden)showMainMarketplace();
+  }
+ },0);
+});
 const authStartupGeneration=authSessionGeneration;
 void supabaseClient.auth.getSession().then(({data,error})=>{
  if(error||!data?.session?.user||currentUser||authSessionGeneration!==authStartupGeneration)return;
