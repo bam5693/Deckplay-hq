@@ -68,13 +68,19 @@ test('T2.1 signed buyer and seller exchange real Inbox messages',async({browser}
   }finally{
    await buyer.evaluate(()=>{supabaseClient.from=window.__t2FromOriginal;delete window.__t2FromOriginal});
   }
-  // Correcting the draft and retrying must use the real backend.
-  await buyer.locator('#chatInput').fill(title+' recovered draft');
+  // Retry the exact draft after the simulated failure, not a different message.
+  const rejected=await buyer.evaluate(async text=>{
+   const {data,error}=await supabaseClient.from('collector_messages').select('id').eq('body',text).eq('sender_id',currentUser.id);
+   if(error)throw Error(error.message);
+   return data.length;
+  },failedDraft);
+  expect(rejected).toBe(0);
   await buyer.locator('[aria-label="Send message"]').click();
-  await expect.poll(()=>buyer.evaluate(async body=>{
-   const {data,error}=await supabaseClient.from('collector_messages').select('id').eq('body',body).eq('sender_id',currentUser.id);
-   if(error)throw Error(error.message);return data.length;
-  },title+' recovered draft'),{timeout:18000}).toBe(1);
+  await expect.poll(()=>buyer.evaluate(async text=>{
+   const {data,error}=await supabaseClient.from('collector_messages').select('id').eq('body',text).eq('sender_id',currentUser.id);
+   if(error)throw Error(error.message);
+   return data.length;
+  },failedDraft),{timeout:18000}).toBe(1);
   // T2.4: the database commits, but the first HTTP success is lost and the
   // confirmation read fails. The next retry must reuse its message UUID.
   const retryResult=await buyer.evaluate(async({sellerId,body})=>{
