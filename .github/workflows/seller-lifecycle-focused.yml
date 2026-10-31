@@ -1,5 +1,5 @@
 name: Seller lifecycle acceptance preflight
-# Preserve previous Mark sold behavior while verifying new pause and resume paths.
+# Preserve seller Mark sold behavior; cover paused inventory count and the corrected direct-filter fixture.
 on:
   push:
     branches: [test/staging-reporting]
