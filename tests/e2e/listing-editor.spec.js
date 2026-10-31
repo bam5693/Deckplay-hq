@@ -87,12 +87,13 @@ test('T1.3 latest edited classification wins over stale legacy card condition, s
  await fixture(page);
  await page.evaluate(async()=>{
   editRow={...editRow,category:'trading_cards',product_type:'single',tcg_game:'one_piece',condition:'used',
-   description:'[Card Condition]\nNear Mint\n\nSet: Old Release\nVariant: Original Art\n\n[Listing classification]\nCard condition: Lightly Played\nSet: Current Release\nVariant: Alternate Art\nCard number: 007\nEdition / printing: Second printing\n[End classification]\n\nTiny surface scratch disclosed.'};
+   description:'[Card Condition]\nNear Mint\n\nSet: Old Release\nVariant: Original Art\n\n[Listing classification]\nCard condition: Lightly Played\nEra: Main booster sets\nSet: Current Release\nVariant: Alternate Art\nCard number: 007\nEdition / printing: Second printing\n[End classification]\n\nTiny surface scratch disclosed.'};
   await listingEditor.open('edit-item');
  });
  await page.locator('#editListingClassification summary').click();
  await page.locator('#editClassificationEnabled').check();
  await expect(page.locator('#editAttribute_cardCondition')).toHaveValue('lightly_played');
+ await expect(page.locator('#editAttribute_tcgEra')).toHaveValue('Main booster sets');
  await expect(page.locator('#editAttribute_tcgCustomSet')).toHaveValue('Current Release');
  await expect(page.locator('#editAttribute_tcgCustomVariant')).toHaveValue('Alternate Art');
  await expect(page.locator('#editAttribute_tcgCardNumber')).toHaveValue('007');
@@ -103,6 +104,7 @@ test('T1.3 latest edited classification wins over stale legacy card condition, s
  expect(changes.condition).toBe('used');
  const block=changes.description.match(/\[Listing classification\]\n([\s\S]*?)\n\[End classification\]/)?.[1];
  expect(block).toContain('Card condition: Lightly Played');
+ expect(block).toContain('Era: Main booster sets');
  expect(block).toContain('Set: Current Release');
  expect(block).toContain('Variant: Alternate Art');
  expect(block).toContain('Card number: 008');
