@@ -1018,8 +1018,11 @@ test('T2.2: completed message never steals focus from another active control',as
  await page.locator('#chatInput').fill('My last question');
  await page.locator('#chatInput').press('Enter');
  await expect.poll(()=>page.evaluate(()=>typeof finishFixtureSend)).toBe('function');
- await page.locator('#refreshInbox').focus();
+ // Refresh is hidden in a single-thread view. The visible Back control is
+ // the actual keyboard navigation destination while a conversation is open.
+ await page.locator('#inboxThreadBack').focus();
+ await expect(page.locator('#inboxThreadBack')).toBeFocused();
  await page.evaluate(()=>finishFixtureSend({data:{id:'sent-no-steal'},error:null}));
  await expect(page.locator('#chatInput')).toBeEmpty();
- await expect(page.locator('#refreshInbox')).toBeFocused();
+ await expect(page.locator('#inboxThreadBack')).toBeFocused();
 });
