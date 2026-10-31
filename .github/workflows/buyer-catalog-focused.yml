@@ -1,5 +1,5 @@
 name: Buyer catalog load and discovery acceptance
-# Focused rerun for bounded blocked-collector lookup and safe retry path.
+# Focused account-switch privacy and buyer catalog startup regression acceptance.
 on:
   push:
     branches: [test/staging-reporting]
@@ -28,7 +28,7 @@ jobs:
           key: staging-playwright-${{ hashFiles('package-lock.json') }}
       - run: npx playwright install chromium --only-shell
       - name: Buyer discovery and search against slow or missing profile metadata
-        run: npx playwright test --config=playwright.local.config.js marketplace-load-recovery.spec.js marketplace-filter-boundaries.spec.js --retries=0 --max-failures=1 --timeout=20000
+        run: npx playwright test --config=playwright.local.config.js marketplace-load-recovery.spec.js marketplace-filter-boundaries.spec.js account-boundaries.spec.js auth-recovery.spec.js --retries=0 --max-failures=1 --timeout=20000
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
