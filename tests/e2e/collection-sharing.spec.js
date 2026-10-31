@@ -127,3 +127,36 @@ test('blocked first contact cannot use the inbox recovery shortcut',async({page}
  await expect(page.locator('#collectionInquiryContinue')).toBeHidden();
  await expect(page.locator('#collectionInquiryBody')).toHaveValue('Could we discuss a trade?');
 });
+
+test('old inquiry completion cannot close or clear a newly opened collection inquiry',async({page})=>{
+ await fixture(page,'buy_trade');
+ await page.locator('[data-collection-inquiry]').click();
+ await page.locator('#collectionInquiryItem').fill('First console');
+ await page.locator('#collectionInquiryBody').fill('First draft to send');
+ await page.locator('#collectionInquiryForm button[type="submit"]').click();
+ await page.evaluate(()=>{window.oldInquiryResolve=finishInquiry;window.inboxOpens=[];showInboxPage=async target=>inboxOpens.push(target)});
+ await page.evaluate(async()=>{await showPublicProfile('tanner');document.querySelector('[data-collection-inquiry]').click()});
+ await expect(page.locator('#collectionInquiryForm button[type="submit"]')).toBeEnabled();
+ await page.locator('#collectionInquiryItem').fill('New console');
+ await page.locator('#collectionInquiryBody').fill('New draft stays intact');
+ await page.evaluate(()=>oldInquiryResolve({data:'old-message-id',error:null}));
+ await expect(page.locator('#collectionInquiryModal')).toHaveClass(/open/);
+ await expect(page.locator('#collectionInquiryItem')).toHaveValue('New console');
+ await expect(page.locator('#collectionInquiryBody')).toHaveValue('New draft stays intact');
+ await expect(page.locator('#collectionInquiryForm button[type="submit"]')).toBeEnabled();
+ expect(await page.evaluate(()=>inboxOpens)).toEqual([]);
+});
+
+test('trades-only inquiry stays trades-only after a failed send',async({page})=>{
+ await fixture(page,'trades');
+ await page.locator('[data-collection-inquiry]').click();
+ await page.locator('#collectionInquiryItem').fill('Vintage controller');
+ await page.locator('#collectionInquiryBody').fill('Would you consider a trade?');
+ await page.locator('#collectionInquiryForm button[type="submit"]').click();
+ await page.evaluate(()=>finishInquiry({error:{message:'Network unavailable'}}));
+ await expect(page.locator('#collectionInquiryStatus')).toContainText('draft is preserved');
+ await expect(page.locator('#collectionInquiryIntent option[value="buy"]')).toBeDisabled();
+ await expect(page.locator('#collectionInquiryIntent')).toHaveValue('trade');
+ await expect(page.locator('#collectionInquiryForm button[type="submit"]')).toBeEnabled();
+ await expect(page.locator('#collectionInquiryBody')).toHaveValue('Would you consider a trade?');
+});
