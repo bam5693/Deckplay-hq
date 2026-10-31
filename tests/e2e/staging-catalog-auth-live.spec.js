@@ -9,6 +9,23 @@ test('signed-in buyer reload starts catalog and resolves auth privacy preflight'
  page.on('pageerror',error=>pageErrors.push(String(error.message||error).slice(0,220)));
  await signIn(page,'BUYER');
  await page.reload({waitUntil:'domcontentloaded'});
+ // The Supabase auth callback may swallow synchronous exceptions, so verify
+ // each private UI bootstrap stage without exposing credentials or user data.
+ await page.waitForTimeout(400);
+ const startup=await page.evaluate(()=>{
+  const steps=[];
+  for(const [name,fn] of [
+   ['syncInboxDraftUser',()=>syncInboxDraftUser()],
+   ['updateAccountUI',()=>updateAccountUI()],
+   ['startMessageUpdates',()=>startMessageUpdates()],
+   ['startNotificationUpdates',()=>startNotificationUpdates()]
+  ]){
+   try{fn();steps.push([name,'ok'])}
+   catch(error){steps.push([name,String(error?.message||'error').slice(0,160)]);break}
+  }
+  return steps;
+ });
+ console.log('AUTH BOOTSTRAP STAGES '+JSON.stringify(startup));
  const check=()=>page.evaluate(()=>({
   hasAccount:!!currentUser,
   source:listingSource,
