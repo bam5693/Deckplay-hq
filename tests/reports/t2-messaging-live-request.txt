@@ -1,1 +1,1 @@
-One private staging buyer/seller browser test with T2.1/T2.4 already accepted journeys plus new in-flight Inbox response account-switch isolation assertion. Preserve trusted OIDC and scoped fixture cleanup. No production, no broad suite.
+One focused signed private-staging test for T2 real browser auth sign-out and seller sign-in after buyer unsent draft, then restore buyer for safe fixture cleanup. Existing signed messaging, read receipts and retry assertions included. No production or broad suite.
