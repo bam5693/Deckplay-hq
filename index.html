@@ -1447,7 +1447,7 @@ syncMobileDock();
 document.getElementById("marketBackHome").addEventListener("click",showHomePage);
 document.body.classList.add("deckplay-home");
 document.querySelectorAll("[data-auth-mode]").forEach(button=>button.addEventListener("click",()=>setAuthMode(button.dataset.authMode)));setAuthMode("signin");
-document.querySelectorAll("[data-cat]").forEach(button=>button.addEventListener("click",()=>{showMainMarketplace();onlyMyListings=false;onlySavedListings=false;cat=button.dataset.cat;filter="All";game="All";document.querySelectorAll("[data-game]").forEach(b=>b.classList.toggle("active",b.dataset.game==="All"));document.querySelectorAll("[data-cat]").forEach(item=>item.classList.toggle("active",item===button));document.querySelectorAll("[data-filter]").forEach(item=>item.classList.toggle("active",item.dataset.filter==="All"));document.getElementById("marketCategory").value=cat;document.getElementById("marketGame").value="All";syncCollectibleFilter();render();window.scrollTo({top:0,behavior:"smooth"})}));
+document.querySelectorAll("[data-cat]").forEach(button=>button.addEventListener("click",()=>{showMainMarketplace();onlyMyListings=false;onlySavedListings=false;cat=button.dataset.cat;filter="All";game="All";document.querySelectorAll("[data-game]").forEach(b=>b.classList.toggle("active",b.dataset.game==="All"));document.querySelectorAll("[data-cat]").forEach(item=>item.classList.toggle("active",item===button));document.querySelectorAll("[data-filter]").forEach(item=>item.classList.toggle("active",item.dataset.filter==="All"));document.getElementById("marketCategory").value=cat;document.getElementById("marketGame").value="All";syncCollectibleFilter();render();window.scrollTo({top:0,behavior:window.matchMedia?.("(prefers-reduced-motion: reduce)").matches?"auto":"smooth"})}));
 document.getElementById("marketFilterToggle").addEventListener("click",()=>{const panel=document.getElementById("marketFilterPanel");panel.hidden=!panel.hidden;document.getElementById("marketFilterToggle").setAttribute("aria-expanded",String(!panel.hidden))});
 document.getElementById("marketSort").addEventListener("change",render);
 function syncCollectibleFilter(){document.getElementById("marketSportsBranch").hidden=!(cat==="Trading Cards"&&game==="sports_cards");document.getElementById("marketGameWrap").hidden=cat!=="Trading Cards";document.getElementById("marketCollectibleWrap").hidden=cat!=="Collectibles";if(cat!=="Collectibles")document.getElementById("marketCollectibleSubcategory").value="All";for(const [wrap,id,category]of [["marketPlatformWrap","marketPlatform","Video Games"],["marketHardwareWrap","marketHardwareType","Consoles & Controllers"]]){document.getElementById(wrap).hidden=cat!==category;if(cat!==category)document.getElementById(id).value="All"}}
@@ -2338,7 +2338,7 @@ async function showInboxPage(targetCollectorId=null){
  document.getElementById("inboxPage").hidden=false;
  document.body.classList.remove("deckplay-home","deckplay-market","profile-focus");
  document.body.classList.add("inbox-focus");
- window.scrollTo({top:0,behavior:"smooth"});
+ window.scrollTo({top:0,behavior:window.matchMedia?.("(prefers-reduced-motion: reduce)").matches?"auto":"smooth"});
  selectInboxMessages();
  selectedInboxCollector=targetCollectorId;document.getElementById("inboxPage").classList.remove("thread-open");
  await loadInbox(targetCollectorId);
@@ -3238,15 +3238,15 @@ document.getElementById("counterForm").addEventListener("submit",async e=>{
 
 
 let profileTab="listings",profileInventoryFilter={search:"",status:"all",category:"all"};
-function showHomePage(){showMainMarketplace();document.body.classList.remove("deckplay-market");document.body.classList.add("deckplay-home");window.scrollTo({top:0,behavior:"smooth"})}
-function showMainMarketplace(){document.body.classList.remove("deckplay-home");document.body.classList.add("deckplay-market");document.body.classList.remove("inbox-focus","profile-focus");document.getElementById("inboxPage").hidden=true;document.getElementById("collectorPage").hidden=true;document.querySelectorAll("main > section,main > aside").forEach(el=>{el.hidden=(el.id==="collectorPage"||el.id==="inboxPage")});window.scrollTo({top:0,behavior:"smooth"})}
+function showHomePage(){showMainMarketplace();document.body.classList.remove("deckplay-market");document.body.classList.add("deckplay-home");window.scrollTo({top:0,behavior:window.matchMedia?.("(prefers-reduced-motion: reduce)").matches?"auto":"smooth"})}
+function showMainMarketplace(){document.body.classList.remove("deckplay-home");document.body.classList.add("deckplay-market");document.body.classList.remove("inbox-focus","profile-focus");document.getElementById("inboxPage").hidden=true;document.getElementById("collectorPage").hidden=true;document.querySelectorAll("main > section,main > aside").forEach(el=>{el.hidden=(el.id==="collectorPage"||el.id==="inboxPage")});window.scrollTo({top:0,behavior:window.matchMedia?.("(prefers-reduced-motion: reduce)").matches?"auto":"smooth"})}
 let profileLoadVersion=0;
 async function showCollectorPage(tab="listings"){
  if(!currentUser){openModal("authModal");return}
  window.sellerOverview?.refresh?.();
  const userId=currentUser.id,request=++profileLoadVersion,current=()=>request===profileLoadVersion&&currentUser?.id===userId;
  profileTab=tab;document.body.classList.remove("inbox-focus","deckplay-home","deckplay-market");document.body.classList.add("profile-focus");document.getElementById("inboxPage").hidden=true;document.querySelectorAll("main > section,main > aside").forEach(el=>{if(el.id!=="collectorPage")el.hidden=true});document.getElementById("collectorPage").hidden=false;
- window.scrollTo({top:0,behavior:"smooth"});document.getElementById("profilePageContent").innerHTML='<p class="muted">Loading your collection…</p>';
+ window.scrollTo({top:0,behavior:window.matchMedia?.("(prefers-reduced-motion: reduce)").matches?"auto":"smooth"});document.getElementById("profilePageContent").innerHTML='<p class="muted">Loading your collection…</p>';
  const [profileResult,listingsResult,wantedResult]=await Promise.all([supabaseClient.from("profiles").select("username,bio,favorite_tcg,location_label,avatar_url").eq("id",userId).maybeSingle(),supabaseClient.from("listings").select("id,title,price,status,category,image_urls,created_at").eq("seller_id",userId).order("created_at",{ascending:false}),supabaseClient.from("wanted_posts").select("id,title,details,game,budget,created_at").eq("user_id",userId).order("created_at",{ascending:false})]);
  if(!current())return;
  const profile=profileResult.data||{},listings=listingsResult.data||[],wanted=wantedResult.data||[],avatar=safeImageUrl(profile.avatar_url),username=profile.username||currentUser.user_metadata?.username||"collector";
