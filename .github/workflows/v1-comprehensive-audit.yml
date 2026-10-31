@@ -63,3 +63,4 @@ jobs:
             playwright-report/local/
           if-no-files-found: ignore
           retention-days: 7
+# one-time 2026-10-31 final V1 audit marker; source staging head b4ca5b318427d4a32aef43c2856be8e043c6b329; no workflow logic changed
