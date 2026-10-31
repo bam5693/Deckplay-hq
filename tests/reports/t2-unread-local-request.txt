@@ -1,0 +1,1 @@
+Verify T2 signed-out unread clearing and account-switch response isolation. Node unit only, no secrets, no real user accounts, no staging deploy, no browser.
