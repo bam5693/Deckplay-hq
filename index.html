@@ -1116,7 +1116,7 @@ function render(){
  if(Number.isFinite(maxPrice)&&maxPrice>0)list=list.filter(item=>Number(item.p)<=maxPrice);
  const sort=document.getElementById("marketSort")?.value||"newest";
  list.sort((a,b)=>sort==="low"?Number(a.p)-Number(b.p):sort==="high"?Number(b.p)-Number(a.p):sort==="az"?String(a.n).localeCompare(String(b.n)):sort==="oldest"?new Date(a.created_at||a.createdAt||0)-new Date(b.created_at||b.createdAt||0):new Date(b.created_at||b.createdAt||0)-new Date(a.created_at||a.createdAt||0));
- const hasSearchFilters=terms.length||cat!=="All"||filter!=="All"||game!=="All"||(Number.isFinite(minPrice)&&minPrice>0)||(Number.isFinite(maxPrice)&&maxPrice>0);
+ const hasSearchFilters=terms.length||cat!=="All"||filter!=="All"||game!=="All"||(Number.isFinite(minPrice)&&minPrice>0)||(Number.isFinite(maxPrice)&&maxPrice>0)||Boolean(sport||brand||document.getElementById("marketSportsYear")?.value?.trim()||document.getElementById("marketSportsPlayer")?.value?.trim())||collectibleSub!=="All"||platform!=="All"||hardware!=="All";
  renderActiveMarketFilters();
  const feedbackButton=document.getElementById("marketSearchFeedback");
  if(feedbackButton){const visible=listingSource==="live"&&list.length>0&&!onlyMyListings&&!onlySavedListings;feedbackButton.hidden=!visible;feedbackButton.style.display=visible?"inline-flex":"none";}
