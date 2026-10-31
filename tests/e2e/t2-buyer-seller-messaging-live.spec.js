@@ -19,12 +19,22 @@ test('T2.1 signed buyer and seller exchange real Inbox messages',async({browser}
  try{
   await signIn(seller,'SELLER');sellerReady=true;
   const sellerId=await seller.evaluate(()=>currentUser.id);
-  await seedListing(seller,title,{category:'video_games',description:'T2.1 synthetic messaging fixture'});
+  const listingId=await seedListing(seller,title,{category:'video_games',description:'T2.1 synthetic messaging fixture'});
   await signIn(buyer,'BUYER');buyerReady=true;
   const buyerId=await buyer.evaluate(()=>currentUser.id);
-  // Establish a real participant-scoped thread; the actions below exercise the rendered composer.
-  await buyer.evaluate(async({sellerId,title})=>{const {error}=await supabaseClient.from('collector_messages').insert({sender_id:currentUser.id,recipient_id:sellerId,body:title+' opener'});if(error)throw Error(error.message)},{sellerId,title});
-  await buyer.evaluate(id=>showInboxPage(id),sellerId);
+  // First contact: render the actual saved video-game listing details, click its
+  // Message seller action, send through the real compose form, and require Inbox navigation.
+  await buyer.evaluate(async id=>{
+   const {data,error}=await supabaseClient.from('listings').select('*').eq('id',id).single();
+   if(error)throw Error(error.message);
+   showDetails(marketplaceItemFromRow(data,{username:'staging-seller'}));
+  },listingId);
+  await buyer.locator('#detailContent [data-contact-id="'+sellerId+'"]').click();
+  await expect(buyer.locator('#composeModal')).toHaveClass(/open/);
+  await buyer.locator('#composeBody').fill(title+' opener');
+  await buyer.locator('#composeForm button[type="submit"]').click();
+  await expect(buyer.locator('#inboxPage')).toBeVisible({timeout:20000});
+  await expect(buyer.locator('.chat-composer[data-chat-recipient="'+sellerId+'"]')).toBeVisible({timeout:20000});
   await expect(buyer.locator('.chat-composer[data-chat-recipient="'+sellerId+'"]')).toBeVisible({timeout:20000});
   await buyer.locator('#chatInput').fill(buyerMessage);
   await buyer.locator('[aria-label="Send message"]').click();
