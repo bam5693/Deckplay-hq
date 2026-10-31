@@ -26,8 +26,8 @@ for (const name of files) {
       replaced = replaced.replace(/<body([^>]*)>/i, '<body$1><div role="status" style="padding:10px;text-align:center;background:#e5bd67;color:#172033;font-weight:700">Private staging · Synthetic test data only · Payments and shipping disabled</div>');
       // The source already contains a stronger noindex/noarchive meta tag.
       // Avoid injecting a second robots tag; duplicate metadata is ambiguous.
-      if (!/<meta\\b[^>]*\\bname\\s*=\\s*["']robots["']/i.test(replaced)) {
-        replaced = replaced.replace(/<head>/i, '<head>\\n<meta name="robots" content="noindex,nofollow,noarchive">');
+      if (!/<meta\b[^>]*\bname\s*=\s*["']robots["']/i.test(replaced)) {
+        replaced = replaced.replace(/<head>/i, '<head>\n<meta name="robots" content="noindex,nofollow,noarchive">');
       }
       replaced = replaced.replaceAll('0x4AAAAAAFlCX5HPx9tk7uO6','1x00000000000000000000AA');
       replaced = replaced.replaceAll('redirectTo:"https://deckplayhq.com"', 'redirectTo:window.location.origin');
