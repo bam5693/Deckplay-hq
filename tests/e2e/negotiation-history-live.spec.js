@@ -1,4 +1,4 @@
-const {test,expect}=require('@playwright/test');
+const {test,expect,devices}=require('@playwright/test');
 const {signIn,seedListing,cleanup,marker}=require('../helpers/staging.cjs');
 
 // Real, signed buyer/seller staging acceptance. No service-role key or live customer writes.
@@ -8,6 +8,7 @@ test('real buyer and seller recover their price and trade counter history in Inb
  test.setTimeout(160000);
  const title=marker();
  let sellerSignedIn=false,buyerSignedIn=false,primaryFailure=null;
+ let mobileContext=null;
  const context=await browser.newContext({
   baseURL:process.env.DECKPLAY_STAGING_URL,
   httpCredentials:{username:'deckplay',password:process.env.DECKPLAY_STAGING_ACCESS_PASSWORD},
@@ -133,6 +134,37 @@ test('real buyer and seller recover their price and trade counter history in Inb
   expect(accepted.trade.initial_terms.note).toBe(title);
   expect(accepted.listings).toHaveLength(2);
   expect(accepted.listings.every(x=>x.status==='reserved')).toBe(true);
+
+  // The listing owner must be able to open the actual Inbox and see the
+  // accepted deal next steps; the server creates an isolated progress row
+  // only when the seller views this accepted bot transaction.
+  await page.evaluate(async id=>showInboxPage(id),buyerId);
+  const sellerOlder=page.locator('[data-inbox-older-negotiations]');
+  if(await sellerOlder.isVisible())await sellerOlder.click();
+  await expect(page.locator('.conversation-bubbles')).toContainText('Synthetic counter',{timeout:18000});
+  await expect(page.locator('.transaction-next-steps')).toBeVisible({timeout:18000});
+  await expect(page.locator('.transaction-next-steps')).toContainText('Progress is self-reported');
+  await expect(page.locator('.transaction-next-steps')).toContainText('DeckPlay does not verify payments or shipping');
+  const sellerCanTrack=await page.locator('.transaction-next-steps [data-deal-status]').count();
+  expect(sellerCanTrack).toBeGreaterThan(0);
+  // A second signed-in, mobile-emulated buyer independently reads the same
+  // participant-scoped history and sees the seller-created progress record.
+  mobileContext=await browser.newContext({
+   ...devices['Pixel 7'],baseURL:process.env.DECKPLAY_STAGING_URL,
+   httpCredentials:{username:'deckplay',password:process.env.DECKPLAY_STAGING_ACCESS_PASSWORD},
+   ignoreHTTPSErrors:!!process.env.CODEX_NETWORK_PROXY_ACTIVE
+  });
+  const mobileBuyer=await mobileContext.newPage();
+  await signIn(mobileBuyer,'BUYER');
+  await mobileBuyer.evaluate(async id=>showInboxPage(id),sellerId);
+  const mobileOlder=mobileBuyer.locator('[data-inbox-older-negotiations]');
+  if(await mobileOlder.isVisible())await mobileOlder.click();
+  await expect(mobileBuyer.locator('.conversation-bubbles')).toContainText('Synthetic counter',{timeout:18000});
+  await expect(mobileBuyer.locator('.conversation-bubbles')).toContainText('22.00',{timeout:18000});
+  await expect(mobileBuyer.locator('.transaction-next-steps')).toBeVisible({timeout:18000});
+  await expect(mobileBuyer.locator('.transaction-next-steps')).toContainText('Progress is self-reported');
+  await expect(mobileBuyer.locator('.transaction-next-steps')).toContainText('DeckPlay does not verify payments or shipping');
+  expect(await mobileBuyer.locator('.transaction-next-steps [data-confirm-deal]').count()).toBeGreaterThan(0);
  }catch(error){primaryFailure=error;throw error}
  finally{
   const errors=[];
@@ -143,6 +175,7 @@ test('real buyer and seller recover their price and trade counter history in Inb
     console.error('Dedicated '+label+' fixture cleanup failed: '+error.message);
    }
   }
+  if(mobileContext)await mobileContext.close();
   await context.close();
   if(!primaryFailure&&errors.length)throw errors[0];
  }
