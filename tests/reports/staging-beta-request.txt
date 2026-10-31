@@ -160,3 +160,5 @@ Focused verification request: validate staging startup and notification polling 
 2026-10-31 T3.2 focused signed real three-item multi-category bundle snapshot acceptance, seller desktop and mobile buyer; counter cash sender-pays and all inventory reserved; exact fixture cleanup. No broad suite.
 
 2026-10-31 T3.2 corrected fixture destructuring after fast ReferenceError. One focused signed cross-category bundle verification recheck; stop on further substantive failure, do not launch broad suites.
+
+2026-10-31 T3.3 focused signed staging price-versus-trade competing acceptance, three independent same-listing rounds, inventory one-winner assertions and guarded fixture cleanup. No broad V1 suite.
