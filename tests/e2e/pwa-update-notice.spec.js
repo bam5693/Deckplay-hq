@@ -98,3 +98,22 @@ test('foreground-only update checks are throttled and do not run while offline',
   });
   await expect.poll(() => page.evaluate(() => __pwaFakeRegistration.updates)).toBe(2);
 });
+
+test('mobile PWA update prompt defers during editing and restores after blur', async ({ page }, testInfo) => {
+  await mockWorker(page, { controlled: true, waiting: true });
+  await page.goto('/');
+  const prompt = page.locator('#deckplayAppUpdate');
+  const search = page.locator('#search');
+  await expect(prompt).toBeVisible();
+  await search.focus();
+  if (testInfo.project.name === 'local-mobile') {
+    await expect(prompt).toBeHidden();
+  } else {
+    await expect(prompt).toBeVisible();
+  }
+  await search.fill('unsent collection search');
+  await expect(search).toHaveValue('unsent collection search');
+  await search.blur();
+  await expect(prompt).toBeVisible();
+  await expect(search).toHaveValue('unsent collection search');
+});
