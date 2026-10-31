@@ -1,0 +1,1 @@
+One staging-mobile Pixel 7 browser-emulated signed buyer and seller first contact, read receipts, error/retry acceptance. Reuse previously verified private staging Worker; trusted OIDC and scoped fixture cleanup, no production or desktop duplication.
