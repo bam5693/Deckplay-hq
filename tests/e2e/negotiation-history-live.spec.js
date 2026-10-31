@@ -180,36 +180,31 @@ test('real buyer and seller recover their price and trade counter history in Inb
   await expect(mobileProgress).toContainText('Progress is self-reported');
   await expect(mobileProgress).toContainText('DeckPlay does not verify payments or shipping');
   await expect(mobileProgress.locator('[data-confirm-deal]')).toHaveCount(1);
-  // Exercise REAL participant-authenticated progress writes, not merely a
-  // visible button or mocked service. Direct table changes remain prohibited.
-  const updateProgress=async(tab,action,status=null)=>tab.evaluate(async({deal,action,status})=>{
-   const {data,error}=await supabaseClient.rpc('set_deal_progress',{
-    p_deal_id:deal,p_action:action,p_status:status
-   });
-   return {row:data?{status:data.status,buyer:!!data.buyer_confirmed_at,seller:!!data.seller_confirmed_at}:null,error:error?.message||null};
-  },{deal:progressProbe.id,action,status});
-  const arrangement=await updateProgress(page,'status','arranging');
-  expect(arrangement.error).toBeNull();
-  expect(arrangement.row).toEqual({status:'arranging',buyer:false,seller:false});
-  const illegal=await mobileBuyer.evaluate(async deal=>{
-   const {data,error}=await supabaseClient.from('deal_progress').update({status:'completed'}).eq('id',deal).select('id');
-   return {rejected:!!error||!(data||[]).length};
-  },progressProbe.id);
-  expect(illegal.rejected,'Direct progress UPDATE remains denied').toBe(true);
-  const buyerConfirmed=await updateProgress(mobileBuyer,'confirm');
-  expect(buyerConfirmed.error).toBeNull();
-  expect(buyerConfirmed.row).toEqual({status:'arranging',buyer:true,seller:false});
-  const sellerConfirmed=await updateProgress(page,'confirm');
-  expect(sellerConfirmed.error).toBeNull();
-  expect(sellerConfirmed.row).toEqual({status:'completed',buyer:true,seller:true});
-  const crossDevice=await mobileBuyer.evaluate(async deal=>{
+  // Complete this accepted trade via REAL rendered controls. Observe database
+  // results independently from a different signed-in collector session.
+  const readProgress=async(tab)=>tab.evaluate(async deal=>{
    const {data,error}=await supabaseClient.from('deal_progress').select('status,buyer_confirmed_at,seller_confirmed_at').eq('id',deal).single();
    if(error)throw Error(error.message);
    return {status:data.status,buyer:!!data.buyer_confirmed_at,seller:!!data.seller_confirmed_at};
   },progressProbe.id);
-  expect(crossDevice).toEqual({status:'completed',buyer:true,seller:true});
-  const closed=await updateProgress(page,'status','arranging');
-  expect(closed.error).toMatch(/Deal is closed/i);
+  await sellerProgress.locator('[data-deal-status]').selectOption('arranging');
+  await expect.poll(()=>readProgress(mobileBuyer),{timeout:15000}).toEqual({status:'arranging',buyer:false,seller:false});
+  const illegal=await mobileBuyer.evaluate(async deal=>{
+   const {data,error}=await supabaseClient.from('deal_progress').update({status:'completed'}).eq('id',deal).select('id');
+   return {rejected:!!error||!(data||[]).length};
+  },progressProbe.id);
+  expect(illegal.rejected,'Direct table edit must remain denied').toBe(true);
+  mobileBuyer.once('dialog',dialog=>dialog.accept());
+  await mobileProgress.locator('[data-confirm-deal]').click();
+  await expect.poll(()=>readProgress(page),{timeout:15000}).toEqual({status:'arranging',buyer:true,seller:false});
+  page.once('dialog',dialog=>dialog.accept());
+  await sellerProgress.locator('[data-confirm-deal]').click();
+  await expect.poll(()=>readProgress(mobileBuyer),{timeout:15000}).toEqual({status:'completed',buyer:true,seller:true});
+  const closed=await page.evaluate(async deal=>{
+   const {error}=await supabaseClient.rpc('set_deal_progress',{p_deal_id:deal,p_action:'status',p_status:'arranging'});
+   return error?.message||null;
+  },progressProbe.id);
+  expect(closed).toMatch(/Deal is closed/i);
 
  }catch(error){primaryFailure=error;throw error}
  finally{
