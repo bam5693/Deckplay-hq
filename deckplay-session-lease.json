@@ -2,10 +2,10 @@
   "version": 1,
   "project": "DeckPlay HQ",
   "scope": "test/staging-reporting",
-  "holder": "manual-g",
-  "token": "manual-g-20261031T120357041Z-pvbufjf7",
-  "focus": "Finish T3.5 accepted-deal Inbox progress secure RPC integration and signed verification",
-  "acquired_at": "2026-10-31T12:03:57.041Z",
-  "expires_at": "2026-10-31T12:48:57.041Z",
-  "updated_at": "2026-10-31T12:03:57.041Z"
+  "holder": null,
+  "token": null,
+  "focus": null,
+  "acquired_at": null,
+  "expires_at": null,
+  "updated_at": "2026-10-31T12:31:07.114Z"
 }
