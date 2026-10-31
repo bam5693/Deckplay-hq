@@ -4,20 +4,57 @@ window.listingEditor=(()=>{
  const modal=document.getElementById('editListingModal'),form=document.getElementById('editListingForm'),status=document.getElementById('editListingStatus');
  const classification=createListingEditorClassification(document.getElementById('editListingClassification'),status);
  const photos=createListingEditorPhotos(document.getElementById('editListingPhotos'),status);
- let version=0,record=null,busy=false;
+ let version=0,record=null,busy=false,cleanSnapshot="";
+ // FormData omits nameless controls, so compare all actual seller-edit fields.
+ // Photo changes live in a separate stateful editor and must be checked too.
+ const formSnapshot=()=>JSON.stringify([...form.elements].filter(el=>el.id&&
+  !['button','submit','file'].includes(el.type)).map(el=>[
+   el.id,el.type==='checkbox'||el.type==='radio'?el.checked:el.value
+  ]));
+ const hasUnsavedChanges=()=>!!record&&(formSnapshot()!==cleanSnapshot||photos.dirty());
+ function requestClose(){
+  if(busy&&record)return;
+  if(!busy&&hasUnsavedChanges()&&!window.confirm('Discard your unsaved listing changes?'))return;
+  reset();
+ }
+ const discardEditorState=()=>{
+  version++;record=null;cleanSnapshot='';form.reset();
+  photos.reset();classification.reset();status.textContent='';lock(false);
+ };
+ // The central page history handler must call this BEFORE closing the
+ // modal; a separate popstate listener is too late on Android/PWA.
+ function confirmHistoryClose(){
+  if(busy&&record)return false;
+  if(hasUnsavedChanges()&&!window.confirm('Discard your unsaved listing changes?'))return false;
+  discardEditorState();
+  return true;
+ }
  const lock=value=>{busy=value;for(const el of form.elements)el.disabled=value;document.getElementById('saveListingEdits').textContent=value?'Saving…':'Save changes';photos.setBusy(value);classification.setBusy(value)};
- function reset(){version++;record=null;form.reset();photos.reset();classification.reset();status.textContent='';lock(false);closeModal('editListingModal')}
+ function reset(){discardEditorState();closeModal('editListingModal')}
  async function open(id){
   if(!currentUser)return;const owner=currentUser.id,epoch=listingAccountVersion,request=++version;
   const valid=()=>currentUser?.id===owner&&listingAccountVersion===epoch&&version===request;
-  record=null;form.reset();photos.reset();classification.reset();lock(true);status.textContent='Loading current listing…';openModal('editListingModal');
+  record=null;form.reset();photos.reset();classification.reset();lock(true);status.textContent='Loading current listing…';openModal('editListingModal')
   try{
    const {data,error}=await supabaseClient.from('listings').select('id,seller_id,title,description,price,accepts_trades,accepts_price_offers,updated_at,status,image_urls,category,tcg_game,collectible_subcategory,product_type,condition').eq('id',id).eq('seller_id',owner).eq('status','active').maybeSingle();
    if(!valid())return;if(error)throw error;if(!data||data.seller_id!==owner||data.status!=='active'||!data.updated_at)throw Error('This listing is no longer available to edit. Refresh your listings.');
-   record={...data,owner,epoch};photos.reset(data.image_urls||[]);classification.reset(data);document.getElementById('editListingTitle').value=data.title;document.getElementById('editListingDescription').value=classification.strip(data.description);document.getElementById('editListingPrice').value=Number(data.price).toFixed(2);document.getElementById('editListingOffers').checked=data.accepts_price_offers!==false;document.getElementById('editListingTrades').checked=!!data.accepts_trades;status.textContent='';lock(false);document.getElementById('editListingTitle').focus();
+   record={...data,owner,epoch};photos.reset(data.image_urls||[]);classification.reset(data);document.getElementById('editListingTitle').value=data.title;document.getElementById('editListingDescription').value=classification.strip(data.description);document.getElementById('editListingPrice').value=Number(data.price).toFixed(2);document.getElementById('editListingOffers').checked=data.accepts_price_offers!==false;document.getElementById('editListingTrades').checked=!!data.accepts_trades;status.textContent='';lock(false);cleanSnapshot=formSnapshot();document.getElementById('editListingTitle').focus();
   }catch(error){if(valid()){status.textContent=error.message||'Could not load this listing. Close and try again.';document.querySelectorAll('[data-close-editor]').forEach(el=>el.disabled=false)}}
  }
- modal.addEventListener('click',e=>{if(e.target.closest('[data-close-editor]')||e.target===modal){if(!busy||!record)reset()}});
+ // Capture first so the global backdrop handler cannot silently close this editor.
+ modal.addEventListener('click',e=>{
+  if(e.target.closest('[data-close-editor]')||e.target===modal){
+   e.preventDefault();e.stopImmediatePropagation();requestClose();
+  }
+ },true);
+ // Global Escape handling is registered on the base page. Intercept only when
+ // this editor is the topmost open dialog; never trap Escape for nested dialogs.
+ document.addEventListener('keydown',e=>{
+  if(e.key!=='Escape'||!modal.classList.contains('open'))return;
+  const opened=[...document.querySelectorAll('.modal.open')];
+  if(opened.at(-1)!==modal)return;
+  e.preventDefault();e.stopImmediatePropagation();requestClose();
+ },true);
  document.getElementById('grid').addEventListener('click',e=>{const edit=e.target.closest('[data-edit-listing]');if(edit){const item=items.find(x=>x.id===edit.dataset.editListing);if(item?.sellerId===currentUser?.id&&item.databaseId)void open(item.databaseId)}});
  form.addEventListener('submit',async e=>{
   e.preventDefault();if(busy||!record||!currentUser)return;
@@ -40,5 +77,5 @@ window.listingEditor=(()=>{
   }catch(error){if(valid())status.textContent=error.message||'Save could not be confirmed. Your edits are kept. Reopen the listing before trying again.'}
   finally{if(valid())lock(false)}
  });
- return {open,reset};
+ return {open,reset,confirmHistoryClose};
 })();
