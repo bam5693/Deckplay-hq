@@ -1,7 +1,7 @@
-DeckPlay HQ isolated private staging deployment request — 2026-10-31.
-Verified app source HEAD: ef6205f6160b93ca6d9725bea50f25b070969087
-T7.6 same-account tab-memory beta feedback drafts; protect user-edited drafts from opt-in search template overwrites, allow discard, purge on account switch.
-Focused mobile/desktop support and search-feedback checks PASSED: https://github.com/bam5693/Deckplay-hq/actions/runs/41173649703
-Target: deckplay-hq-staging Worker and isolated Supabase prrrzeelltmyugssqnzk ONLY.
-Use existing protected staging gate; preserve Basic Auth, OIDC, secrets, RLS, and account isolation.
-Do not merge PRs, modify main/production, publish publicly, or enable payments/shipping.
+DeckPlay HQ protected isolated staging deployment request — 2026-10-31.
+Verified T7.6 feedback area source: 8060e51315335349913fdb67be3f5f45f7184944
+Focused regression correction: ac46114279a6f7aa6e9d59a5137a1e146366aa48
+Focused desktop/mobile feedback and support tests PASSED: https://github.com/bam5693/Deckplay-hq/actions/runs/41179560344 (44 checks).
+Buyer/seller change: optional fixed-area feedback selector for all supported collectible categories and core app surfaces; owner-scoped tab drafts and private support ticket RPC remain unchanged.
+Target ONLY private deckplay-hq-staging Worker with Supabase prrrzeelltmyugssqnzk. Preserve Basic Auth/OIDC/secrets/RLS and verify exact deployed assets.
+No main, production, customer data, PR merges, live payments, shipping, or spending.
