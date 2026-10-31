@@ -2154,10 +2154,39 @@ async function navigateDeckplayNotification(kind,actorId,sourceId){
   }catch(error){if(current())toast("Could not open this listing. Please try again.");return}
  }
  document.querySelectorAll("[data-back-alerts]").forEach(button=>button.hidden=true);
- if(kind==="message"&&actorId){await showInboxPage(actorId);return}
- if(kind&&kind.startsWith("price_")){if(actorId){await showInboxPage(actorId);return}document.querySelector("#priceOffersModal [data-back-alerts]").hidden=false;openModal("priceOffersModal");await loadPriceOffers();return}
- if(["trade_offer","trade_update","counteroffer"].includes(kind)&&actorId){await showInboxPage(actorId);return}
- if(["trade_offer","counteroffer","trade_update"].includes(kind)){document.querySelector("#tradesModal [data-back-alerts]").hidden=false;openModal("tradesModal");await loadTradeOffers();return}
+ if(kind==="message"&&actorId){if(current())await showInboxPage(actorId);return}
+ const priceAlert=kind&&kind.startsWith("price_"),tradeAlert=["trade_offer","trade_update","counteroffer"].includes(kind);
+ if((priceAlert||tradeAlert)&&sourceId){
+  // Old notification actor IDs are not a reliable conversation locator after
+  // counters, withdrawals or account changes. Resolve the actual offer owner
+  // from a participant-scoped row before opening any private conversation.
+  const table=priceAlert?"price_offers":"trade_offers",columns=priceAlert?"id,buyer_id,seller_id":"id,sender_id,recipient_id";
+  try{
+   const {data:offer,error}=await supabaseClient.from(table).select(columns).eq("id",sourceId).maybeSingle();
+   if(!current())return;
+   if(error)throw error;
+   if(offer){
+    const first=priceAlert?offer.buyer_id:offer.sender_id,second=priceAlert?offer.seller_id:offer.recipient_id;
+    if(first===userId||second===userId){
+     const other=first===userId?second:first;
+     if(other&&!blockedCollectorIds.has(other)){await showInboxPage(other);return}
+     toast("This conversation is blocked. Unblock the collector in Settings to reopen it.");
+     return;
+    }
+    toast("This offer is not part of your conversations.");
+    return;
+   }
+   toast("This offer is no longer available.");
+   return;
+  }catch(error){
+   if(!current())return;
+   toast("Could not locate that offer. Open your offers list to retry.");
+   return;
+  }
+ }
+ if(!current())return;
+ if(priceAlert){if(actorId&&!blockedCollectorIds.has(actorId)){await showInboxPage(actorId);return}document.querySelector("#priceOffersModal [data-back-alerts]").hidden=false;openModal("priceOffersModal");await loadPriceOffers();return}
+ if(tradeAlert){if(actorId&&!blockedCollectorIds.has(actorId)){await showInboxPage(actorId);return}document.querySelector("#tradesModal [data-back-alerts]").hidden=false;openModal("tradesModal");await loadTradeOffers();return}
  if(actorId){await showInboxPage(actorId);return}
  await showInboxPage();
 }
