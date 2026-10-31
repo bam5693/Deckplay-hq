@@ -8,7 +8,7 @@ test('seller overview reflects own active inventory and marked-sold state withou
   await expect(page.locator('#profilePageContent .profile-item:visible')).toHaveCount(1);
   await page.locator('[data-profile-edit="'+id+'"]').click();await expect(page.locator('#editListingTitle')).toHaveValue(title);
   await page.locator('#editListingPrice').fill('26.00');await page.locator('#saveListingEdits').click();await expect(page.locator('#editListingModal')).not.toHaveClass(/open/);
-  await expect(page.locator('#inventorySearch')).toHaveValue(title);await expect(page.locator('#profilePageContent .profile-item:visible strong')).toHaveText('26.00');
+  await expect(page.locator('#inventorySearch')).toHaveValue(title);await expect(page.locator('#profilePageContent .profile-item:visible strong')).toHaveText('$26.00');
   const pausedBefore=await page.evaluate(async()=>{const r=await supabaseClient.from('listings').select('id',{head:true,count:'exact'}).eq('seller_id',currentUser.id).eq('status','paused');if(r.error)throw Error(r.error.message);return r.count});
   page.once('dialog',d=>d.accept());await page.locator('[data-page-pause="'+id+'"]').click();
   await expect(page.locator('#profilePageContent .profile-item:visible')).toHaveCount(0);
