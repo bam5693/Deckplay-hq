@@ -1371,3 +1371,55 @@ test('T2.3 older offer lookup failure on empty Inbox retains retry control',asyn
  await expect(page.locator('[data-inbox-more-activity]')).toBeEnabled();
  await expect(page.locator('.inbox-recovery')).toBeVisible();
 });
+
+test('T2.1 Inbox rejects out-of-account message, price and trade rows',async({page})=>{
+ await inbox(page);
+ await page.evaluate(async()=>{
+  inboxOlderMessages.clear();inboxOlderPriceOffers.clear();inboxOlderTradeOffers.clear();
+  const time=new Date().toISOString();
+  const rows={
+   collector_messages:[
+    {id:'mine-message',sender_id:'buyer-a',recipient_id:'fixture-seller',body:'Our Charizard trade',created_at:time,read_at:time},
+    {id:'private-message',sender_id:'outsider-x',recipient_id:'outsider-y',body:'PRIVATE MESSAGE MUST NEVER SHOW',created_at:time,read_at:time}
+   ],
+   price_offers:[
+    {id:'mine-price',buyer_id:'buyer-a',seller_id:'fixture-seller',amount:22,status:'pending',last_actor_id:'buyer-a',updated_at:time},
+    {id:'private-price',buyer_id:'outsider-x',seller_id:'outsider-y',amount:99,status:'pending',last_actor_id:'outsider-x',updated_at:time}
+   ],
+   trade_offers:[
+    {id:'mine-trade',sender_id:'buyer-a',recipient_id:'fixture-seller',item_snapshots:[],offered_listing_ids:[],status:'pending',offer_note:'Our trade',created_at:time},
+    {id:'private-trade',sender_id:'outsider-x',recipient_id:'outsider-y',item_snapshots:[],offered_listing_ids:[],status:'pending',offer_note:'PRIVATE TRADE MUST NEVER SHOW',created_at:time}
+   ],
+   profiles:[{id:'buyer-a',username:'buyer-a'},{id:'outsider-x',username:'outsider-x'},{id:'outsider-y',username:'outsider-y'}]
+  };
+  const original=supabaseClient.from;
+  supabaseClient.from=table=>{
+   if(!Object.hasOwn(rows,table))return original(table);
+   const q={then:(resolve,reject)=>Promise.resolve({data:rows[table],error:null}).then(resolve,reject)};
+   for(const method of ['select','order','limit','in','eq','is','maybeSingle'])q[method]=()=>q;
+   return q;
+  };
+  await loadInbox();
+ });
+ await expect(page.locator('[data-conversation-id="buyer-a"]')).toHaveCount(1);
+ await expect(page.locator('[data-conversation-id="outsider-x"]')).toHaveCount(0);
+ await expect(page.locator('[data-conversation-id="outsider-y"]')).toHaveCount(0);
+ await expect(page.locator('#messageInbox')).not.toContainText('PRIVATE MESSAGE MUST NEVER SHOW');
+ await expect(page.locator('#messageInbox')).not.toContainText('PRIVATE TRADE MUST NEVER SHOW');
+ await page.evaluate(()=>document.querySelector('[data-conversation-id="buyer-a"]').click());
+ await expect(page.locator('.conversation-bubbles')).toContainText('Our Charizard trade');
+});
+
+test('T2.1 stale cached messages cannot be shown in a different collector thread',async({page})=>{
+ await inbox(page);
+ await page.evaluate(async()=>{
+  const time=new Date().toISOString();
+  inboxOlderMessages.set('buyer-a',[
+   {id:'wrong-cache',sender_id:'outsider-x',recipient_id:'outsider-y',body:'CACHED PRIVATE OFFER SECRET',created_at:time,read_at:time},
+   {id:'correct-cache',sender_id:'buyer-a',recipient_id:'fixture-seller',body:'My valid earlier inquiry',created_at:time,read_at:time}
+  ]);
+  await loadInbox('buyer-a');
+ });
+ await expect(page.locator('.conversation-bubbles')).toContainText('My valid earlier inquiry');
+ await expect(page.locator('.conversation-bubbles')).not.toContainText('CACHED PRIVATE OFFER SECRET');
+});
