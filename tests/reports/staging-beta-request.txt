@@ -109,3 +109,5 @@ Focused verification request: validate staging startup and notification polling 
 2026-10-31 manual G V1 broad staging security, mocked market UI, deployed asset and authenticated read-only sweep; no production deployment.
 
 2026-10-31 T3.1/T3.4 signed isolated REAL staging buyer/seller price lifecycle, duplicate retry, invalid cents, counter/withdraw/decline. Exact test-only listing cleanup; no deployments, public changes, payments or broad test suites.
+
+2026-10-31 focused T3.1 MOBILE BUYER/desktop seller real UI offer counter acceptance + existing T3.1 signed RPC rejection and cleanup. No broad suite or staging deployment. Also verifies no invalid seller Withdraw after a seller counter.\n
