@@ -2060,7 +2060,16 @@ async function navigateDeckplayNotification(kind,actorId,sourceId){
    // Resolve the current active record: cached cards can have old prices or sold status.
    const {data,error}=await supabaseClient.from("listings").select("id,title,description,category,tcg_game,collectible_subcategory,price,condition,accepts_trades,accepts_price_offers,image_urls,created_at,seller_id").eq("id",sourceId).eq("status","active").maybeSingle();
    if(!current())return;if(error)throw error;
-   if(!data||blockedCollectorIds.has(data.seller_id)){toast("This listing is no longer available.");return}
+   if(!data){
+    // An expired discovery match should not strand the collector in a closed alert.
+    // Only use the notification's seller identity when that collector is not blocked.
+    if(actorId&&!blockedCollectorIds.has(actorId)){
+     toast("That listing is no longer available. Showing the seller's current listings.");
+     await showPublicProfile(actorId);
+    }else toast("This listing is no longer available.");
+    return;
+   }
+   if(blockedCollectorIds.has(data.seller_id)){toast("This listing is no longer available.");return}
    const {data:profile}=await supabaseClient.from("profiles").select("username,display_name").eq("id",data.seller_id).maybeSingle();
    if(!current())return;
    const listing=marketplaceItemFromRow(data,profile),index=items.findIndex(x=>String(x.databaseId||x.id)===String(sourceId));
