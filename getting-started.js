@@ -14,6 +14,7 @@
     for (const [name, panel] of Object.entries(panels)) panel.hidden = name !== role;
   }
   guide.addEventListener("click", event => {
+    if (!(event.target instanceof Element)) return;
     const tab = event.target.closest("[data-guide-tab]");
     if (tab && guide.contains(tab)) { selectGuide(tab.dataset.guideTab); return; }
     const action = event.target.closest("[data-guide-action]");
@@ -25,6 +26,7 @@
     }
   });
   guide.addEventListener("keydown", event => {
+    if (!(event.target instanceof Element)) return;
     const tab = event.target.closest("[data-guide-tab]");
     if (!tab || !guide.contains(tab) || !["ArrowLeft","ArrowRight","Home","End"].includes(event.key)) return;
     event.preventDefault();
@@ -66,5 +68,6 @@
     });
     footer.append(feedbackFooter);
   }
-  selectGuide("buyer");
+  // Keep the guide usable if markup changes or one panel is unavailable.
+  if (panels.buyer && panels.seller && tabs.length) selectGuide("buyer");
 })();
