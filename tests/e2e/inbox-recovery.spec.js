@@ -759,7 +759,7 @@ test('Jayden can retry an offline inbox without losing his TCG inquiry draft',as
  });
  await page.evaluate(()=>loadInbox());
  await expect(page.locator('[data-inbox-retry]')).toBeVisible();
- await expect(page.locator('[role="alert"]')).toContainText(/Could not (load|refresh) (conversations|messages)/);
+ await expect(page.locator('[data-inbox-refresh-error]')).toContainText('Conversations could not refresh.');
  await page.locator('[data-inbox-retry]').click();
  await expect(page.locator('#chatInput')).toHaveValue('Is your One Piece deck still available?');
  await expect(page.locator('[data-inbox-retry]')).toHaveCount(0);
