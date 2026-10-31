@@ -147,3 +147,44 @@ test('blocked sellers stay out of wanted matches and stale match buttons cannot 
  await expect(page.locator('#detailModal')).not.toHaveClass(/open/);
  expect(await page.evaluate(()=>blockedWantedToasts)).toEqual(['This listing is no longer available. Refresh wanted posts.']);
 });
+
+test('a delayed Wanted Board load cannot render the previous account view',async({page})=>{
+ await page.goto('/');await page.waitForLoadState('networkidle');
+ await page.evaluate(()=>{
+  currentUser={id:'wanted-buyer-a'};
+  window.wantedReadQueue=[];
+  const original=supabaseClient.from.bind(supabaseClient);
+  supabaseClient.from=table=>table==='wanted_posts'?(()=>{
+   const q={select:()=>q,order:()=>q,limit:()=>new Promise(resolve=>wantedReadQueue.push(resolve))};return q;
+  })():original(table);
+  window.oldWantedDone=loadWanted();
+  currentUser={id:'wanted-buyer-b'};
+ });
+ await expect.poll(()=>page.evaluate(()=>wantedReadQueue.length)).toBe(1);
+ await page.evaluate(()=>wantedReadQueue.shift()({data:[{id:'old-post',user_id:'old-seller',game:'one_piece',title:'Old account post',offer_type:'buy',details:''}],error:null}));
+ await page.evaluate(()=>oldWantedDone);
+ await expect(page.locator('#wantedGrid')).not.toContainText('Old account post');
+});
+
+test('an older Wanted Board refresh cannot overwrite the newest results',async({page})=>{
+ await page.goto('/');await page.waitForLoadState('networkidle');
+ await page.evaluate(()=>{
+  currentUser={id:'wanted-buyer'};
+  window.wantedReadQueue=[];
+  const original=supabaseClient.from.bind(supabaseClient);
+  supabaseClient.from=table=>table==='wanted_posts'?(()=>{
+   const q={select:()=>q,order:()=>q,limit:()=>new Promise(resolve=>wantedReadQueue.push(resolve))};return q;
+  })():table==='profiles'?(()=>{
+   const q={select:()=>q,in:()=>Promise.resolve({data:[],error:null})};return q;
+  })():original(table);
+  window.firstWantedDone=loadWanted();window.secondWantedDone=loadWanted();
+ });
+ await expect.poll(()=>page.evaluate(()=>wantedReadQueue.length)).toBe(2);
+ await page.evaluate(()=>wantedReadQueue[1]({data:[{id:'new-post',user_id:'seller',game:'one_piece',title:'Current wanted post',offer_type:'buy',details:''}],error:null}));
+ await page.evaluate(()=>secondWantedDone);
+ await expect(page.locator('#wantedGrid')).toContainText('Current wanted post');
+ await page.evaluate(()=>wantedReadQueue[0]({data:[{id:'old-post',user_id:'seller',game:'one_piece',title:'Outdated wanted post',offer_type:'buy',details:''}],error:null}));
+ await page.evaluate(()=>firstWantedDone);
+ await expect(page.locator('#wantedGrid')).toContainText('Current wanted post');
+ await expect(page.locator('#wantedGrid')).not.toContainText('Outdated wanted post');
+});
