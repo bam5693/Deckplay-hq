@@ -20,3 +20,9 @@
 4. Trunk 2 remains **not fully signed off** until photo evidence currency and acceptance criteria are reconciled; do not rerun accepted text flows or broad suites without a material change.
 
 All work on private staging, PR #2 draft, no production deploy or main merge.
+
+## Final T2 evidence reconciliation — 2026-10-31
+- New account-switch private photo URL regression [41236949855](https://github.com/bam5693/Deckplay-hq/actions/runs/41236949855) **PASS**: 6/6 cheap Node tests and five inline scripts. Uses actual `private-message-photos.js` loader with a delayed signed-URL result, resets on account change and proves no old-account photo is appended. No new storage writes or deployment.
+- Current photo loader is generation/account/node guarded; account change invokes `window.privateMessagePhotos.reset()` from `syncInboxDraftUser()`. The direct photo sharing and cross-user authorization tests have earlier signed staging evidence [40770394971](https://github.com/bam5693/Deckplay-hq/actions/runs/40770394971). These are **separate complementary tests**, not a fresh full combined photo exchange on the latest staging source.
+- Latest text, read receipt, real sign-out/sign-in, and synthetic mobile browser evidence is listed above; no material new photo-loader code change was identified in this review.
+- **T2 scoped automated acceptance: complete with caveats.** Do not re-run broad suites or duplicate historical private-photo uploads absent a relevant regression. Real-device Android/PWA ergonomics belong to T5, overall production integration and shipping belong to release management. No production deployment or main merge is implied.
