@@ -2720,6 +2720,9 @@ if(tradeById.size){
   (el.querySelector("[data-inbox-more-activity]")||el.querySelector("[data-conversation-search]"))?.focus({preventScroll:true});
  }
  if(!groups.size){
+  // An empty result must leave the old mobile single-thread mode behind.
+  selectedInboxCollector=null;
+  document.getElementById("inboxPage").classList.remove("thread-open");
   const canFindOlderOffers=!inboxPriceExhausted||!inboxTradeExhausted;
   el.innerHTML='<section class="inbox-recovery"><p class="muted">'+(canFindOlderOffers?'No recent conversations found. Older offers or trades may still be available.':'Your inbox is empty. Messages and offers will appear here together.')+'</p><button type="button" class="secondary" data-inbox-retry>Refresh inbox</button>'+(canFindOlderOffers?'<div class="conversation-history-tools"><button type="button" class="ghost" data-inbox-more-activity>Find older offers and trades</button><span class="muted" data-inbox-activity-status role="status" aria-live="polite"></span></div>':'')+'</section>';
   el.querySelector("[data-inbox-more-activity]")?.addEventListener("click",loadOlderInboxActivity);
