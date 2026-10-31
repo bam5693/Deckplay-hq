@@ -39,6 +39,7 @@ on:
       - 'tests/reports/seller-grid-live-request.txt'
       - 'tests/reports/listing-photo-retry-live-request.txt'
       - 'tests/reports/listing-photo-categories-live-request.txt'
+      - 'tests/reports/t2-messaging-live-request.txt'
 permissions:
   contents: read
   id-token: write
@@ -177,7 +178,7 @@ jobs:
           key: staging-playwright-${{ hashFiles('package-lock.json') }}
       - run: npx playwright install chromium --only-shell
       - name: Cheap local preflight before deployment or signed sessions
-        if: github.event_name == 'push' && !startsWith(github.event.head_commit.message, '[focused-history]') && !startsWith(github.event.head_commit.message, '[feedback-live]') && !startsWith(github.event.head_commit.message, '[share-live]') && !startsWith(github.event.head_commit.message, '[price-live]')
+        if: github.event_name == 'push' && !startsWith(github.event.head_commit.message, '[focused-history]') && !startsWith(github.event.head_commit.message, '[feedback-live]') && !startsWith(github.event.head_commit.message, '[share-live]') && !startsWith(github.event.head_commit.message, '[price-live]') && !startsWith(github.event.head_commit.message, '[t2-live]') && !startsWith(github.event.head_commit.message, '[t2-live]') && !startsWith(github.event.head_commit.message, '[t2-live]')
         run: |
           node scripts/check-inline-js.cjs
           node --check support-center.js
@@ -213,7 +214,7 @@ jobs:
         if: github.event.inputs.auth_smoke_only == 'true'
         run: npx playwright test --config=playwright.staging.config.js staging-auth-smoke.spec.js --project=staging-desktop --retries=0 --timeout=20000
       - name: Read-only deployed buyer and seller desktop and mobile acceptance
-        if: success() && github.event.inputs.acceptance_scope != 'seller_desktop' && !(github.event_name == 'push' && (startsWith(github.event.head_commit.message, '[focused-history]') || startsWith(github.event.head_commit.message, '[feedback-live]') || startsWith(github.event.head_commit.message, '[share-live]') || startsWith(github.event.head_commit.message, '[price-live]')))
+        if: success() && github.event.inputs.acceptance_scope != 'seller_desktop' && !(github.event_name == 'push' && (startsWith(github.event.head_commit.message, '[focused-history]') || startsWith(github.event.head_commit.message, '[feedback-live]') || startsWith(github.event.head_commit.message, '[share-live]') || startsWith(github.event.head_commit.message, '[price-live]') || startsWith(github.event.head_commit.message, '[t2-live]')))
         run: npx playwright test --config=playwright.staging.config.js staging-account-readonly.spec.js --retries=0 --timeout=40000
       - name: Seller desktop only after diagnosed transport reset
         if: success() && github.event.inputs.acceptance_scope == 'seller_desktop'
@@ -250,6 +251,15 @@ jobs:
       - name: Verify one real signed-in negotiation history journey with exact fixture cleanup
         if: ${{ success() && github.event_name == 'push' && startsWith(github.event.head_commit.message, '[focused-history]') }}
         run: npx playwright test --config=playwright.staging.config.js negotiation-history-live.spec.js --project=staging-desktop --retries=0 --max-failures=1 --timeout=45000
+      - name: T2 minimal signed-message and fixture preflight
+        if: ${{ github.event_name == 'push' && startsWith(github.event.head_commit.message, '[t2-live]') }}
+        run: |
+          node --check tests/e2e/t2-buyer-seller-messaging-live.spec.js
+          node scripts/check-inline-js.cjs
+          node --test tests/security/staging-browser-config.test.cjs tests/security/fixture-cleanup.test.cjs
+      - name: T2 signed buyer-seller messaging and delivery recovery
+        if: ${{ success() && github.event_name == 'push' && startsWith(github.event.head_commit.message, '[t2-live]') }}
+        run: npx playwright test --config=playwright.staging.config.js t2-buyer-seller-messaging-live.spec.js --project=staging-desktop --retries=0 --max-failures=1 --timeout=120000
       - uses: actions/upload-artifact@v4
         if: always()
         with:
