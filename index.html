@@ -2664,13 +2664,17 @@ async function loadInbox(targetCollectorId=null){
  // Keep older pages across refreshes; the newest copy wins when an offer status changes.
  if(!inboxPriceCursor){const oldest=(pr.data||[]).at(-1);if(oldest)inboxPriceCursor={date:oldest.updated_at,id:oldest.id};inboxPriceExhausted=(pr.data||[]).length<200}
  if(!inboxTradeCursor){const oldest=(tr.data||[]).at(-1);if(oldest)inboxTradeCursor={date:oldest.created_at,id:oldest.id};inboxTradeExhausted=(tr.data||[]).length<200}
- const priceRows=[...new Map([...inboxOlderPriceOffers.values(),...(pr.data||[])].map(row=>[row.id,row])).values()];
- const tradeRows=[...new Map([...inboxOlderTradeOffers.values(),...(tr.data||[])].map(row=>[row.id,row])).values()];
+ // Treat returned rows as untrusted even when RLS is expected to enforce
+ // visibility. A stale account response or broken fixture must not create a
+ // foreign collector thread or expose another person's negotiation.
+ const belongsToInbox=(row,first,second)=>row&&[row[first],row[second]].includes(userId);
+ const priceRows=[...new Map([...inboxOlderPriceOffers.values(),...(pr.data||[])].filter(row=>belongsToInbox(row,"buyer_id","seller_id")).map(row=>[row.id,row])).values()];
+ const tradeRows=[...new Map([...inboxOlderTradeOffers.values(),...(tr.data||[])].filter(row=>belongsToInbox(row,"sender_id","recipient_id")).map(row=>[row.id,row])).values()];
  const groups=new Map();
  function add(other,item){if(!other||other===currentUser.id)return;if(!groups.has(other))groups.set(other,[]);groups.get(other).push(item)}
- for(const m of mr.data||[])add(m.sender_id===currentUser.id?m.recipient_id:m.sender_id,{type:"message",date:m.created_at,...m});
+ for(const m of mr.data||[])if(belongsToInbox(m,"sender_id","recipient_id"))add(m.sender_id===userId?m.recipient_id:m.sender_id,{type:"message",date:m.created_at,...m});
  const recentMessageIds=new Set((mr.data||[]).map(m=>m.id));
- for(const [other,rows] of inboxOlderMessages)for(const m of rows)if(!recentMessageIds.has(m.id)){add(other,{type:"message",date:m.created_at,...m});recentMessageIds.add(m.id)}
+ for(const [other,rows] of inboxOlderMessages)for(const m of rows)if(!recentMessageIds.has(m.id)&&belongsToInbox(m,"sender_id","recipient_id")&&(m.sender_id===userId?m.recipient_id:m.sender_id)===other){add(other,{type:"message",date:m.created_at,...m});recentMessageIds.add(m.id)}
  const offers=new Map(priceRows.map(o=>[o.id,o]));const historyOffers=new Set();
  // Private, conversation-scoped history pages extend the bounded global preview.
  const allPriceHistory=[...new Map([[...inboxNegotiationPages.values()].flatMap(page=>page.prices||[]),hr.data||[]].flat().map(h=>[h.id,h])).values()];
