@@ -823,6 +823,11 @@
     // Never erase a newer draft just because an older version was accepted.
     const submittedRaw=el("supportReplyBody").value;
     const submittedBody=submittedRaw.trim();
+    if(submittedBody.length<2){
+      status("supportReplyStatus","Write at least two characters before sending a reply. Your draft is preserved.");
+      el("supportReplyBody").focus();
+      return;
+    }
     button.disabled=true;status("supportReplyStatus","Sending…");
     try{
       const {error}=await supabaseClient.rpc("reply_support_ticket",{p_ticket_id:id,p_body:submittedBody});
