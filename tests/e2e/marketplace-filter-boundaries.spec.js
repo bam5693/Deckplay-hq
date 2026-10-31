@@ -452,8 +452,9 @@ test('Clear filters resets visual quick-filter selection along with query state'
   for(const group of ['cat','filter','game'])document.querySelectorAll('[data-'+group+']').forEach(button=>button.classList.toggle('active',button.dataset[group]===(group==='cat'?'Trading Cards':group==='filter'?'Under $50':'pokemon')));
   document.getElementById('marketClearFilters').click();
  });
- for(const group of ['cat','filter','game']){
-  await expect(page.locator('[data-'+group+'].active')).toHaveCount(1);
-  await expect(page.locator('[data-'+group+'].active')).toHaveAttribute('data-'+group,'All');
- }
+ await expect(page.locator('[data-cat].active')).toHaveCount(1);
+ await expect(page.locator('[data-cat="All"]')).toHaveClass(/active/);
+ await expect(page.locator('#marketCategory')).toHaveValue('All');
+ await expect(page.locator('#marketGame')).toHaveValue('All');
+ await expect.poll(()=>page.evaluate(()=>({cat,filter,game}))).toEqual({cat:'All',filter:'All',game:'All'});
 });
