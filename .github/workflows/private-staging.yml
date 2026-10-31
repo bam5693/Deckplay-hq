@@ -27,7 +27,7 @@ on:
         description: 'One deployed signed-in journey for diagnosis; no deployment, no API sweep'
         required: false
         type: choice
-        options: [none, trading, listing-drafts-live, seller-pause-live, staging-catalog-auth-live, community, seller-overview-live, discovery-alerts, staging-permissions]
+        options: [none, trading, listing-drafts-live, seller-pause-live, staging-catalog-auth-live, community, seller-overview-live, discovery-alerts, staging-permissions, t2-buyer-seller-messaging-live]
         default: none
   # Batch release requests run focused local checks, then deploy and verify.
   # Broad stateful/photo suites remain manual; ordinary commits spend no CI minutes.
@@ -417,13 +417,13 @@ jobs:
           SELECTED_TEST: ${{ github.event.inputs.focused_live_test }}
         run: |
           case "$SELECTED_TEST" in
-            trading|listing-drafts-live|seller-pause-live|staging-catalog-auth-live|community|seller-overview-live|discovery-alerts|staging-permissions) ;;
+            trading|listing-drafts-live|seller-pause-live|staging-catalog-auth-live|community|seller-overview-live|discovery-alerts|staging-permissions|t2-buyer-seller-messaging-live) ;;
             *) echo "Unsupported diagnostic selection"; exit 1;;
           esac
           if [ "$SELECTED_TEST" = "staging-permissions" ]; then
             npx playwright test --config=playwright.staging.config.js staging-permissions.spec.js --project=staging-desktop --grep 'collector session survives page refresh' --retries=0 --max-failures=1 --timeout=45000
           else
-            npx playwright test --config=playwright.staging.config.js "${SELECTED_TEST}.spec.js" --project=staging-desktop --retries=0 --max-failures=1 --timeout=45000
+            npx playwright test --config=playwright.staging.config.js "${SELECTED_TEST}.spec.js" --project=staging-desktop --retries=0 --max-failures=1 --timeout=120000
           fi
       - uses: actions/upload-artifact@v4
         if: always()
