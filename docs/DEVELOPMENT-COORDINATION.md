@@ -17,3 +17,12 @@ This rule applies to BOTH interactive `G` development sessions and the scheduled
 **Important limitation:** GitHub does not expose reliable live ChatGPT chat activity. A manual session that has not claimed the shared lease is invisible until it writes or launches CI. All `G` conversations must follow this protocol; a recent-commit/CI check is a conservative fallback, not an exact session detector.
 
 **No other boundaries change:** private staging only; no `main` or production changes, merges, payments, shipping, customer data, secrets, destructive SQL or spending without their own explicit approval. Release-candidate preparation also honors this one-writer lease.
+
+## Authoritative active Actions check — mandatory for every G and hourly run
+
+Use the connected GitHub **general fetch** action (not the limited fetch_commit_workflow_runs action) for these exact repository-wide REST URLs:
+
+- `https://api.github.com/repos/bam5693/Deckplay-hq/actions/runs?status=in_progress&per_page=100`
+- `https://api.github.com/repos/bam5693/Deckplay-hq/actions/runs?status=queued&per_page=100`
+
+Parse `total_count` and `workflow_runs`. If both are zero, the Actions check is CLEAR; do not invent uncertainty or block the manual G. If nonzero, inspect the run's workflow, head_branch and purpose: only staging writes/deployments/migrations or conflicting tests require yielding. Ignore unrelated read-only or production/manual-only checks when they cannot overlap staging (but do not modify production). If a page is full (100) or total_count exceeds returned items, paginate before claiming clear. If fetch errors, malformed responses or permission errors occur, fail closed on conflicting staging writes and state the exact error; do not repeatedly claim the API is unavailable. Also verify the shared lease separately and acquire/confirm ownership using SHA compare-and-swap before writing. Continue the latest unfinished customer feature after clearing these two gates; do not rerun accepted V1 items without a demonstrated impact.
