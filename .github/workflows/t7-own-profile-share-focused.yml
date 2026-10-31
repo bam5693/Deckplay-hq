@@ -1,0 +1,22 @@
+name: T7 own profile sharing
+on:
+  workflow_dispatch:
+  push:
+    branches: [test/staging-reporting]
+    paths:
+      - .github/workflows/t7-own-profile-share-focused.yml
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: node --check share-links.js
+      - run: npm ci
+      - run: npx playwright install chromium --only-shell
+      - run: npx playwright test --config=playwright.local.config.js share-links.spec.js --grep 'T7 owner profile Share button' --project=local-mobile
