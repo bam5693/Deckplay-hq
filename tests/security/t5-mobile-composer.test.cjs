@@ -22,3 +22,10 @@ test('editable mobile fields avoid iOS focus zoom and preserve enlarged user tex
  assert.match(rule[1],/textarea,select\{font-size:max\(16px,1em\)\}/);
  assert.doesNotMatch(rule[1],/\[type=(checkbox|radio|file|range|hidden|submit|reset|button)\]/);
 });
+
+test('mobile dock navigation captions remain readable within six-column layout',()=>{
+ const rule=html.match(/#mobileDock>button>small\{([^}]*)\}/);
+ assert.ok(rule,'Mobile dock label rule exists');
+ assert.match(rule[1],/font-size:11px!important/);
+ assert.match(html,/#mobileDock\{grid-template-columns:repeat\(6,minmax\(0,1fr\)\)!important/);
+});
