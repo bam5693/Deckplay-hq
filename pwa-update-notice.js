@@ -14,6 +14,19 @@
     notice = null;
   }
 
+  // A fixed update prompt can cover the mobile keyboard and the active field.
+  // Keep the notice pending, but defer displaying it while somebody is typing.
+  function editingOnSmallScreen() {
+    if (window.innerWidth > 700) return false;
+    const field = document.activeElement;
+    return Boolean(field && (field.isContentEditable || field.matches?.(
+      'input:not([type=hidden]):not([type=checkbox]):not([type=radio]):not([type=file]):not([type=button]):not([type=submit]):not([type=reset]):not([readonly]),textarea:not([readonly]),select'
+    )));
+  }
+  function syncNoticeVisibility() {
+    if (notice) notice.style.display = editingOnSmallScreen() ? 'none' : 'flex';
+  }
+
   function showUpdateNotice() {
     if (notice || !document.body) return;
     const panel = document.createElement('section');
@@ -53,6 +66,7 @@
     panel.append(message, controls);
     document.body.append(panel);
     notice = panel;
+    syncNoticeVisibility();
   }
 
   worker.addEventListener('controllerchange', () => {
@@ -82,6 +96,9 @@
     }
   }
 
+  document.addEventListener('focusin', syncNoticeVisibility);
+  document.addEventListener('focusout', () => queueMicrotask(syncNoticeVisibility));
+  window.addEventListener('resize', syncNoticeVisibility);
   document.addEventListener('visibilitychange', () => { if (!document.hidden) void checkForUpdate(); });
   window.addEventListener('pageshow', () => { void checkForUpdate(); });
   if (document.readyState === 'complete') void start();
