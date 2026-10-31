@@ -42,6 +42,56 @@ test('T2.1 signed buyer and seller exchange real Inbox messages',async({browser}
   },reply),{timeout:18000}).toBe(1);
   await buyer.evaluate(id=>showInboxPage(id),sellerId);
   await expect(buyer.locator('.conversation-bubbles')).toContainText(reply,{timeout:20000});
+  // T2.4: the database commits, but the first HTTP success is lost and the
+  // confirmation read fails. The next retry must reuse its message UUID.
+  const retryResult=await buyer.evaluate(async({sellerId,body})=>{
+   const realFrom=supabaseClient.from.bind(supabaseClient);
+   let lost=false,offline=false,insertCount=0,committedId=null;
+   const payload={sender_id:currentUser.id,recipient_id:sellerId,body};
+   supabaseClient.from=table=>{
+    const q=realFrom(table);
+    if(table!=='collector_messages')return q;
+    const realInsert=q.insert.bind(q),realSelect=q.select.bind(q);
+    q.insert=row=>{
+     insertCount++;
+     const chain=realInsert(row),select=chain.select.bind(chain);
+     chain.select=fields=>{
+      const result=select(fields),single=result.single.bind(result);
+      result.single=async()=>{
+       const response=await single();
+       if(!lost&&!response.error&&response.data?.id){
+        lost=true;committedId=response.data.id;
+        throw Error('T2.4 simulated lost success after commit');
+       }
+       return response;
+      };
+      return result;
+     };
+     return chain;
+    };
+    q.select=fields=>{
+     const result=realSelect(fields),maybeSingle=result.maybeSingle.bind(result);
+     result.maybeSingle=async()=>{
+      if(!offline){offline=true;throw Error('T2.4 temporary confirmation outage')}
+      return maybeSingle();
+     };
+     return result;
+    };
+    return q;
+   };
+   let firstFailure=null;
+   try{await sendCollectorMessageOnce(payload)}catch(error){firstFailure=error.message}
+   finally{supabaseClient.from=realFrom}
+   const retry=await sendCollectorMessageOnce(payload);
+   const {data,error}=await supabaseClient.from('collector_messages').select('id').eq('body',body).eq('sender_id',currentUser.id);
+   if(error)throw Error(error.message);
+   return {firstFailure,committedId,retryId:retry.data?.id,insertCount,count:data.length,onlyId:data[0]?.id};
+  },{sellerId,body:title+' uncertain delivery'});
+  expect(retryResult.firstFailure).toMatch(/temporary confirmation outage|lost success after commit/);
+  expect(retryResult.insertCount).toBe(1);
+  expect(retryResult.retryId).toBe(retryResult.committedId);
+  expect(retryResult.count).toBe(1);
+  expect(retryResult.onlyId).toBe(retryResult.committedId);
   // Sender and recipient must each see only one persisted copy.
   for(const [page,body] of [[buyer,buyerMessage],[seller,reply]]){
    const count=await page.evaluate(async body=>{
