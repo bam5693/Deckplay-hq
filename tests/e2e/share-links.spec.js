@@ -707,6 +707,7 @@ test('T7 owner profile Share button opens native mobile sheet with public collec
  await ready(page);
  await page.evaluate(()=>{
    currentUser={id:'22222222-2222-4222-8222-222222222222'};
+   document.getElementById('collectorPage').hidden=false;
    window.ownerShareCalls=[];
    Object.defineProperty(navigator,'share',{configurable:true,value:async value=>{window.ownerShareCalls.push(value)}});
  });
