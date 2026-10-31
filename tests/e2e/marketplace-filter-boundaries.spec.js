@@ -402,3 +402,17 @@ test('profile Saved items hides blocked sellers across every database category a
  await expect(page.locator('#profilePageContent strong')).toHaveText(Array(7).fill('$12.50'));
 });
 
+
+// Regression: a temporary catalog outage must not tell users their saved list is empty.
+test('Saved Items outage shows retry without claiming favorites disappeared',async({page})=>{
+ await installFixture(page,[]);
+ await page.evaluate(()=>{
+  onlySavedListings=true;
+  listingSource='error';
+  render();
+ });
+ await expect(page.locator('#market h2')).toHaveText('Saved items');
+ await expect(page.locator('#grid')).toContainText('Saved listings cannot be checked right now');
+ await expect(page.locator('#grid [data-retry-marketplace]')).toBeVisible();
+ await expect(page.locator('#grid')).not.toContainText('No saved items to show yet');
+});
