@@ -2379,6 +2379,11 @@ async function showInboxPage(targetCollectorId=null){
  selectInboxMessages();
  selectedInboxCollector=targetCollectorId;document.getElementById("inboxPage").classList.remove("thread-open");
  await loadInbox(targetCollectorId);
+ // A prior marketplace/profile render may resolve while the thread is loading.
+ // Restore only if this Inbox navigation is still the active user intent.
+ if(currentUser&&selectedInboxCollector===targetCollectorId&&document.body.classList.contains("inbox-focus")){
+  document.getElementById("inboxPage").hidden=false;
+ }
 }
 
 async function dealProgressHtml(entries){
