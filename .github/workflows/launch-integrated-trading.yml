@@ -1,5 +1,5 @@
 name: Execute one integrated price-and-bundle trade acceptance
-# Diagnose live listing discovery with a direct buyer read and rendered-catalog comparison.
+# Verify deployed buyer catalog recovery with one bounded seller-to-buyer trade journey.
 on:
   push:
     branches: [test/staging-reporting]
