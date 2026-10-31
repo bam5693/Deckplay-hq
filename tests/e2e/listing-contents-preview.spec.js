@@ -78,3 +78,19 @@ test('T1.4: unusual unit disclosures remain escaped as text, never injected into
  await expect(page.locator('.detail-price-scope img')).toHaveCount(0);
  await expect(page.locator('.detail-price-scope')).toContainText('Not a per-unit price');
 });
+
+test('T5 narrow phone listing preview stacks cover above long title without horizontal overflow',async({page})=>{
+ await page.setViewportSize({width:375,height:812});
+ await page.locator('#item').fill('Collector edition console bundle with exceptionally long variant and accessories details');
+ const card=page.locator('#listingPreviewCard');
+ await expect(card).toBeVisible();
+ const measured=await card.evaluate(el=>{
+  const photo=el.querySelector('.listing-preview-image').getBoundingClientRect();
+  const info=el.querySelector('.listing-preview-info').getBoundingClientRect();
+  const box=el.getBoundingClientRect();
+  return {photoBottom:photo.bottom,infoTop:info.top,cardWidth:box.width,infoWidth:info.width,scrollWidth:el.scrollWidth,clientWidth:el.clientWidth};
+ });
+ expect(measured.infoTop).toBeGreaterThanOrEqual(measured.photoBottom);
+ expect(measured.infoWidth).toBeGreaterThan(measured.cardWidth*0.8);
+ expect(measured.scrollWidth).toBeLessThanOrEqual(measured.clientWidth+1);
+});
