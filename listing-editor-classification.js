@@ -37,6 +37,9 @@ window.createListingEditorClassification=(container,status)=>{
   const latest=description.match(/\[Listing classification\]\n([\s\S]*?)\n\[End classification\]/)?.[1]||'';
   const line=label=>{const pattern=new RegExp('(?:^|\\n)'+label+': ([^\\n]*)');return latest.match(pattern)?.[1]||description.match(pattern)?.[1]||''};
   for(const [id,label]of [['gamePlatform','Platform'],['consoleItemType','Hardware type'],['consoleBrand','Brand'],['consoleModel','Model'],['consoleStorage','Storage / version'],['sportsSport','Sport'],['sportsBrand','Sports brand'],['sportsYear','Year'],['sportsPlayer','Player'],['gradingCompany','Grader'],['gradingScore','Grade'],['gradingCert','Certification'],['tcgCustomSet','Set'],['tcgCardNumber','Card number'],['tcgCustomVariant','Variant'],['tcgRarity','Rarity'],['tcgEdition','Edition / printing'],['tcgLanguage','Language'],['deckLeader','Deck'],['deckCardCount','Cards']])set(id,line(label));
+  // Restore optional set era before reloading its dependent set choices.
+  set('tcgEra',line('Era'));
+  deckplayFillOptions(controls.get('tcgSet'),deckplaySets[get('tcgGame')]?.[get('tcgEra')]||[],'Not specified');
   if(get('tcgGame')==='sports_cards'&&!get('sportsBrand'))set('sportsBrand',line('Brand'));
   const conditionLine=line('Card condition'),options=[...controls.get('cardCondition').options];
   // Never let a legacy [Card Condition] override the latest edited value.
@@ -52,7 +55,7 @@ window.createListingEditorClassification=(container,status)=>{
   if(type==='deck'){const q=deckQuantitySummary(get('deckList'));if(q.invalid||(q.complete&&q.total!==Number(get('deckCardCount'))))throw Error('Deck quantities must match the declared card count.')}
   if(type==='lot'&&!strip(description).trim())throw Error('Describe every item, quantity and condition included in the lot.');
   const lines=['Category: '+controls.get('category').selectedOptions[0].textContent,'Listing type: '+controls.get('listingType').selectedOptions[0].textContent];
-  const labels={gamePlatform:'Platform',consoleItemType:'Hardware type',consoleBrand:'Brand',consoleModel:'Model',consoleStorage:'Storage / version',sportsSport:'Sport',sportsBrand:'Sports brand',sportsYear:'Year',sportsPlayer:'Player',gradingCompany:'Grader',gradingScore:'Grade',gradingCert:'Certification',tcgCardNumber:'Card number',tcgRarity:'Rarity',tcgEdition:'Edition / printing',tcgLanguage:'Language',deckLeader:'Deck',deckCardCount:'Cards',deckList:'Full decklist'};
+  const labels={tcgEra:'Era',gamePlatform:'Platform',consoleItemType:'Hardware type',consoleBrand:'Brand',consoleModel:'Model',consoleStorage:'Storage / version',sportsSport:'Sport',sportsBrand:'Sports brand',sportsYear:'Year',sportsPlayer:'Player',gradingCompany:'Grader',gradingScore:'Grade',gradingCert:'Certification',tcgCardNumber:'Card number',tcgRarity:'Rarity',tcgEdition:'Edition / printing',tcgLanguage:'Language',deckLeader:'Deck',deckCardCount:'Cards',deckList:'Full decklist'};
   if(cards)lines.push('Card condition: '+controls.get('cardCondition').selectedOptions[0].textContent);
   for(const [id,label]of Object.entries(labels))if(!controls.get(id).disabled&&get(id).trim())lines.push(label+(id==='deckList'?':\n':': ')+get(id).trim());
   if(cards){const setName=get('tcgCustomSet').trim()||get('tcgSet'),variant=get('tcgCustomVariant').trim()||get('tcgVariant');if(setName)lines.push('Set: '+setName);if(variant)lines.push('Variant: '+variant)}
