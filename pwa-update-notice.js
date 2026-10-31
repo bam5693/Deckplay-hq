@@ -114,6 +114,9 @@
   window.addEventListener('resize', syncNoticeVisibility);
   document.addEventListener('visibilitychange', () => { if (!document.hidden) void checkForUpdate(); });
   window.addEventListener('pageshow', () => { void checkForUpdate(); });
+  // An uninterrupted, visible PWA session must discover newly deployed updates too.
+  // checkForUpdate skips hidden/offline sessions and throttles requests to 10 minutes.
+  window.setInterval(() => { void checkForUpdate(); }, CHECK_INTERVAL_MS);
   if (document.readyState === 'complete') void start();
   else window.addEventListener('load', () => { void start(); }, { once: true });
 })();
