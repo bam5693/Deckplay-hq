@@ -1301,3 +1301,33 @@ test('T7.6: selected feedback area is submitted privately and survives same-acco
  await expect(page.locator('#supportDescription')).toBeEmpty();
  await expect(page.locator('#supportTicketList')).not.toContainText('Sports card condition feedback');
 });
+
+test('T7.6: search feedback requires a collector answer before creating a private ticket',async({page})=>{
+ await boot(page);await signIn(page,'buyer');
+ await page.evaluate(()=>document.dispatchEvent(new CustomEvent('deckplay:search-feedback',{
+  detail:{outcome:'empty',category:'Trading Cards',hasText:true,hasFilters:true}
+ })));
+ await expect(page.locator('#supportDescription')).toHaveValue(/What I hoped to find:/);
+ await page.getByRole('button',{name:'Send private feedback'}).click();
+ await expect(page.locator('#supportCreateStatus')).toContainText('Add what you hoped to find');
+ expect(await page.evaluate(()=>window.__db.calls.filter(c=>c.name==='create_support_ticket').length)).toBe(0);
+ await expect(page.locator('#supportDescription')).toHaveValue(/What I hoped to find:/);
+ await page.locator('#supportDescription').fill((await page.locator('#supportDescription').inputValue())+' Vintage sports card singles');
+ await page.getByRole('button',{name:'Send private feedback'}).click();
+ await expect(page.locator('#supportCreateStatus')).toContainText('Ticket created.');
+ expect(await page.evaluate(()=>window.__db.calls.filter(c=>c.name==='create_support_ticket').length)).toBe(1);
+});
+
+test('T7.6: listing contact feedback cannot send an unanswered template',async({page})=>{
+ await boot(page);await signIn(page,'seller');
+ await page.evaluate(()=>document.dispatchEvent(new CustomEvent('deckplay:search-feedback',{
+  detail:{outcome:'detail',category:'Collectibles'}
+ })));
+ await page.getByRole('button',{name:'Send private feedback'}).click();
+ await expect(page.locator('#supportCreateStatus')).toContainText('what would help you contact the seller');
+ expect(await page.evaluate(()=>window.__db.calls.filter(c=>c.name==='create_support_ticket').length)).toBe(0);
+ await page.locator('#supportDescription').fill((await page.locator('#supportDescription').inputValue())+' Clearer photos of the collectible');
+ await page.getByRole('button',{name:'Send private feedback'}).click();
+ await expect(page.locator('#supportCreateStatus')).toContainText('Ticket created.');
+ expect(await page.evaluate(()=>window.__db.calls.filter(c=>c.name==='create_support_ticket').length)).toBe(1);
+});
