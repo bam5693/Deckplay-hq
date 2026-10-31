@@ -6,6 +6,7 @@ on:
       - '.github/workflows/owner-preview-navigation-focused.yml'
       - 'tests/e2e/owner-preview-navigation.spec.js'
       - 'playwright.owner-preview.config.cjs'
+      - 'index.html'
   workflow_dispatch:
 permissions:
   contents: read
