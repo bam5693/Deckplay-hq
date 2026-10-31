@@ -2666,6 +2666,13 @@ if(tradeById.size){
  const dealStatusByUser=new Map();const {data:dealRows}=await supabaseClient.from("deal_progress").select("buyer_id,seller_id,status,updated_at").order("updated_at",{ascending:false}).limit(300);for(const d of dealRows||[]){const other=d.buyer_id===currentUser.id?d.seller_id:d.buyer_id;if(!dealStatusByUser.has(other))dealStatusByUser.set(other,d.status)}
  if(requestId!==inboxLoadVersion||currentUser?.id!==userId)return;
  const preview=x=>!x?"Start a conversation":x.type==="message"?"✉ "+x.body:x.type==="price"?"💰 Offer · $"+Number(x.amount).toFixed(2)+" · "+x.action:x.type==="trade_counter"?"↩ Trade counteroffer · "+x.status:"⇄ Trade · "+x.status;
+ // Preserve an actively edited message across a manual Inbox refresh.
+ // Capture focus immediately before replacement: the collector may move to
+ // another control while network requests are still pending.
+ const priorComposer=el.querySelector(".chat-composer textarea");
+ const restoreComposerFocus=!!priorComposer&&document.activeElement===priorComposer;
+ const priorComposerRecipient=priorComposer?.closest("[data-chat-recipient]")?.dataset.chatRecipient;
+ const composerCaret=restoreComposerFocus?{start:priorComposer.selectionStart,end:priorComposer.selectionEnd}:null;
  // Keep an in-progress conversation search focused through a completed refresh.
  const oldSearchInput=el.querySelector("[data-conversation-search]");
  const restoreSearchFocus=document.activeElement===oldSearchInput;
@@ -2864,6 +2871,20 @@ if(tradeById.size){
  el.querySelectorAll("[data-conversation-id]").forEach(b=>b.addEventListener("click",()=>openThread(b.dataset.conversationId)));
  if(requestedTarget&&groups.has(requestedTarget))await openThread(requestedTarget);
  else document.getElementById("inboxPage").classList.remove("thread-open");
+ // The thread render replaces the composer node. Restore a focused draft only
+ // when this exact request, account and thread still own the visible Inbox,
+ // and no other control gained focus during the async refresh.
+ const activeFocus=document.activeElement;
+ if(restoreComposerFocus&&composerCaret&&requestId===inboxLoadVersion&&currentUser?.id===userId&&
+    selectedInboxCollector===priorComposerRecipient&&requestedTarget===priorComposerRecipient&&
+    !document.getElementById("inboxPage").hidden&&
+    (activeFocus===document.body||activeFocus===document.documentElement||activeFocus===priorComposer)){
+  const input=el.querySelector(".chat-composer textarea");
+  if(input?.closest("[data-chat-recipient]")?.dataset.chatRecipient===priorComposerRecipient&&!input.readOnly&&!input.disabled){
+   input.focus({preventScroll:true});
+   input.setSelectionRange(Math.min(composerCaret.start,input.value.length),Math.min(composerCaret.end,input.value.length));
+  }
+ }
 }
 document.getElementById("messageInbox").addEventListener("click",e=>{if(e.target.closest("[data-inbox-retry]"))void loadInbox(selectedInboxCollector)});
 document.getElementById("messageInbox").addEventListener("submit",async e=>{
