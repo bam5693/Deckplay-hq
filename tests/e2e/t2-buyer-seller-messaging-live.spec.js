@@ -5,13 +5,15 @@ const {signIn,seedListing,cleanup,marker}=require('../helpers/staging.cjs');
 // Dedicated synthetic staging accounts and marker-scoped cleanup only.
 test('T2.1 signed buyer and seller exchange real Inbox messages',async({browser})=>{
  test.setTimeout(120000);
- if(process.env.DECKPLAY_STAGING_URL!=='https://deckplay-hq-staging.cstivers.dev' && process.env.DECKPLAY_STAGING_URL!=='https://deckplay-hq-staging.cstivers56.workers.dev')throw Error('Staging-only test');
+ if(process.env.DECKPLAY_STAGING_URL!=='https://deckplay-hq-staging.cstivers56.workers.dev')throw Error('Staging-only test');
  const context=await browser.newContext({
   baseURL:process.env.DECKPLAY_STAGING_URL,
   httpCredentials:{username:'deckplay',password:process.env.DECKPLAY_STAGING_ACCESS_PASSWORD},
   ignoreHTTPSErrors:!!process.env.CODEX_NETWORK_PROXY_ACTIVE
  });
- const buyer=await context.newPage(),seller=await context.newPage();
+ const seller=await context.newPage();
+ const buyerContext=await browser.newContext({baseURL:process.env.DECKPLAY_STAGING_URL,httpCredentials:{username:'deckplay',password:process.env.DECKPLAY_STAGING_ACCESS_PASSWORD},ignoreHTTPSErrors:!!process.env.CODEX_NETWORK_PROXY_ACTIVE});
+ const buyer=await buyerContext.newPage();
  const title=marker(),reply=title+' seller reply';
  let buyerReady=false,sellerReady=false,failed=null;
  try{
@@ -53,6 +55,7 @@ test('T2.1 signed buyer and seller exchange real Inbox messages',async({browser}
    if(!ready)continue;
    try{await cleanup(page,title)}catch(error){errors.push(error)}
   }
+  await buyerContext.close();
   await context.close();
   if(!failed&&errors.length)throw errors[0];
  }
