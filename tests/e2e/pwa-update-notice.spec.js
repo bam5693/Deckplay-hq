@@ -53,6 +53,24 @@ test('existing PWA with waiting update shows prompt and never reloads without us
   await expect(page.locator('#search')).toHaveValue('unsaved collector search');
 });
 
+test('offline refresh leaves unsent work on screen instead of opening the PWA offline fallback', async ({ page }) => {
+  await mockWorker(page, { controlled: true, waiting: true });
+  await page.goto('/');
+  await expect(page.locator('#deckplayAppUpdate')).toBeVisible();
+  await page.locator('#search').fill('unfinished seller search');
+  await page.evaluate(() => {
+    Object.defineProperty(navigator, 'onLine', { configurable: true, value: false });
+  });
+  let confirmations = 0;
+  page.on('dialog', async dialog => { confirmations++; await dialog.dismiss(); });
+  const initialUrl = page.url();
+  await page.locator('#deckplayAppUpdate button:has-text("Refresh")').click();
+  await expect(page.locator('#deckplayAppUpdate')).toContainText('You are offline. Reconnect before refreshing');
+  await expect(page.locator('#search')).toHaveValue('unfinished seller search');
+  expect(page.url()).toBe(initialUrl);
+  expect(confirmations).toBe(0);
+});
+
 test('foreground-only update checks are throttled and do not run while offline', async ({ page }) => {
   await mockWorker(page, { controlled: true });
   await page.addInitScript(() => {
