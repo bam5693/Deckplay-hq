@@ -82,3 +82,7 @@
 ### T5 already-installing PWA updates — verified
 - `pwa-update-notice.js` `9c86781` now observes a service worker that was already installing at registration, handles the installed-state race, and offers an explicit user-initiated refresh without automatic reload. Browser test `14a83e6` validates the scenario.
 - [Focused run 41246278812](https://github.com/bam5693/Deckplay-hq/actions/runs/41246278812) **PASS 16/16 local desktop/mobile-emulated cases**, with syntax preflight. No production/staging deploy; real Android/PWA acceptance still required. Avoid rerunning same accepted tests without regressions.
+
+### T5 narrow phone listing preview — source validation complete
+- `index.html` commit `eb6903b` stacks seller listing-preview cover image above info below 420px, makes image full width and wraps long variants/details; source-level regression `783c3f9` added.
+- [Focused 41246977356](https://github.com/bam5693/Deckplay-hq/actions/runs/41246977356) PASS 11/11 Node checks, including retained privacy checks; pre-existing listing editor Android Back workflow also passed 41246948289 on changed source. This does not constitute screenshot review, signed deployed staging or physical Android acceptance. Next: focused narrow-viewport visual browser check, private staging integration, real phone sign-off once an owner test account exists. No production change.
