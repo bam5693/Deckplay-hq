@@ -304,3 +304,23 @@ test('Wanted post stores opt-in non-card precision without a real database write
  expect(payload.details).toContain('"nonCardExact":true');
  expect(payload.details).toContain('"platform":"Nintendo Switch"');
 });
+
+
+test('Wanted exact matching prefers seller-edited classification over stale creation notes',async({page})=>{
+ await page.goto('/');await page.waitForLoadState('networkidle');
+ const result=await page.evaluate(()=>{
+  const before=items;
+  items=[
+   {id:'current-game',sellerId:'seller',rawCategory:'video_games',n:'Super Mario Odyssey',p:25,description:'Platform: Switch 2\\n[Listing classification]\\nPlatform: Nintendo Switch\\n[End classification]'},
+   {id:'stale-game',sellerId:'seller',rawCategory:'video_games',n:'Super Mario Odyssey',p:25,description:'Platform: Nintendo Switch\\n[Listing classification]\\nPlatform: Switch 2\\n[End classification]'},
+   {id:'current-console',sellerId:'seller',rawCategory:'consoles',n:'Switch OLED',p:150,description:'Model: Original\\n[Listing classification]\\nModel: OLED Model\\n[End classification]'}
+  ];
+  const find=(game,title,meta)=>exactWantedMatches({game,title,user_id:'buyer',details:'[DeckPlay match: '+JSON.stringify(meta)+']'}).map(x=>x.id);
+  const result={
+   games:find('video_games','Super Mario Odyssey',{nonCardExact:true,platform:'Nintendo Switch'}),
+   consoles:find('consoles','Switch OLED',{nonCardExact:true,hardwareType:'consoles',model:'OLED Model'})
+  };
+  items=before;return result;
+ });
+ expect(result).toEqual({games:['current-game'],consoles:['current-console']});
+});
