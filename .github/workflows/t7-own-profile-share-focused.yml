@@ -1,4 +1,4 @@
-name: T7 own profile sharing
+name: T7 own profile sharing regression
 on:
   workflow_dispatch:
   push:
