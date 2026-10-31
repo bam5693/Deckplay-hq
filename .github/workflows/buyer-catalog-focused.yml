@@ -1,4 +1,5 @@
 name: Buyer catalog load and discovery acceptance
+# Focused rerun for bounded blocked-collector lookup and safe retry path.
 on:
   push:
     branches: [test/staging-reporting]
