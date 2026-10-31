@@ -122,3 +122,5 @@ Focused verification request: validate staging startup and notification polling 
 2026-10-31 T3.4 one focused signed buyer/seller trade uncertainty test: real staging INSERT commits then synthetic response and lookup failure, browser retries same trade and confirms the original ID, exactly one row. No full sweep, destructive account changes, or production writes.
 
 2026-10-31 T3.5 focused authenticated buyer/seller Inbox follow-up after trade counter acceptance: desktop seller and Pixel 7 mobile buyer see accepted trade status, real history, transaction next-step tracking and disclosure of unverified payment/shipping. Existing synthetic offer/trade fixture cleanup remains scoped. No broad sweep or prod deployment.
+
+2026-10-31 focused T3.5 authenticated Inbox accepted deal progress; exercise the actual collapsed View progress & details disclosure before asserting seller and Pixel7 mobile-buyer transaction next-step panel. No broad V1 sweep, staging-only synthetic records and guarded cleanup.
