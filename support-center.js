@@ -764,6 +764,11 @@
       status("supportCreateStatus","Enter a subject of at least 8 characters that fits the limit.");
       return;
     }
+    if(body.length>3000){
+      status("supportCreateStatus","This ticket is too long once the report details are included. Shorten the description and retry; your draft is saved here.");
+      el("supportDescription").focus();
+      return;
+    }
     if(feedbackMode && feedbackTemplateNeedsAnswer(el("supportDescription").value)){
       status("supportCreateStatus","Add what you hoped to find or what would help you contact the seller before sending.");
       el("supportDescription").focus();
