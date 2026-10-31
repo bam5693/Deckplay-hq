@@ -237,7 +237,7 @@ test('T7.6: same-account beta feedback draft survives closing support and can be
  await page.evaluate(()=>document.dispatchEvent(new Event('deckplay:open-feedback')));
  await expect(page.locator('#supportFeedbackKind')).toHaveValue('category');
  await expect(page.locator('#supportSubject')).toHaveValue('Please add model kits');
- await expect(page.locator('#supportDescription')).toContainText('Gundam models');
+ await expect(page.locator('#supportDescription')).toHaveValue(/Gundam models/);
  await page.locator('#supportFeedbackDiscard').click();
  await expect(page.locator('#supportSubject')).toBeEmpty();
  await expect(page.locator('#supportDescription')).toBeEmpty();
@@ -263,7 +263,7 @@ test('T7.6: search feedback cannot overwrite an unsent draft or expose it after 
   outcome:'empty',category:'Video Games',hasFilters:true
  }})));
  await expect(page.locator('#supportSubject')).toHaveValue('Improve sports memorabilia search');
- await expect(page.locator('#supportDescription')).toContainText('signed jerseys');
+ await expect(page.locator('#supportDescription')).toHaveValue(/signed jerseys/);
  await expect(page.locator('#supportCreateStatus')).toContainText('Discard it before starting');
  await page.evaluate(()=>{window.currentUser={id:'other'};window.__authCallback('SIGNED_IN',{user:{id:'other'}})});
  await page.evaluate(()=>document.dispatchEvent(new Event('deckplay:open-feedback')));
