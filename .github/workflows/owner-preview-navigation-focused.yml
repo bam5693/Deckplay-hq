@@ -1,0 +1,38 @@
+name: Owner preview release browser acceptance
+on:
+  push:
+    branches: [release/owner-preview-v1-2026-10-31]
+    paths:
+      - '.github/workflows/owner-preview-navigation-focused.yml'
+      - 'tests/e2e/owner-preview-navigation.spec.js'
+      - 'playwright.owner-preview.config.cjs'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: owner-preview-navigation-focused
+  cancel-in-progress: false
+jobs:
+  browser:
+    name: Verify actual production assets on mobile and desktop
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Cheap syntax and release-build preflight
+        run: |
+          node --check tests/e2e/owner-preview-navigation.spec.js
+          node --check playwright.owner-preview.config.cjs
+          node scripts/release-preflight.cjs
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: staging-playwright-${{ hashFiles('package-lock.json') }}
+      - run: npx playwright install chromium --only-shell
+      - name: Test exact production assets without deploying or credentials
+        run: npx playwright test --config=playwright.owner-preview.config.cjs --workers=2 --retries=0
