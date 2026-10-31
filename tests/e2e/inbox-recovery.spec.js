@@ -1223,3 +1223,32 @@ test('T2.5 old read retry does not mark another conversation read after navigati
  await expect(page.locator('[data-conversation-id="buyer-b"] .conversation-unread')).toHaveCount(1);
  await expect(page.locator('.chat-read-recovery button')).toHaveCount(1);
 });
+
+test('T2.3 Jump to latest restores newest Inbox update after browsing long history',async({page})=>{
+ await inbox(page);
+ const bubbles=page.locator('.conversation-bubbles'),jump=page.locator('.chat-jump-latest');
+ await expect(jump).toBeHidden();
+ await page.evaluate(()=>{
+  const log=document.querySelector('.conversation-bubbles');
+  for(let i=0;i<70;i++){const row=document.createElement('p');row.textContent='Earlier negotiation '+i;log.prepend(row)}
+  log.scrollTop=0;log.dispatchEvent(new Event('scroll'));
+ });
+ await expect(jump).toBeVisible();
+ await jump.focus();await page.keyboard.press('Enter');
+ await expect(jump).toBeHidden();
+ await expect(bubbles).toBeFocused();
+ const distance=await bubbles.evaluate(el=>el.scrollHeight-el.clientHeight-el.scrollTop);
+ expect(distance).toBeLessThanOrEqual(2);
+});
+test('T2.3 Jump to latest is scoped to the current conversation and hides for short history',async({page})=>{
+ await inbox(page);
+ await page.evaluate(()=>{
+  const log=document.querySelector('.conversation-bubbles');
+  for(let i=0;i<60;i++){const row=document.createElement('p');row.textContent='Old trade message '+i;log.prepend(row)}
+  log.scrollTop=0;log.dispatchEvent(new Event('scroll'));
+ });
+ await expect(page.locator('.chat-jump-latest')).toBeVisible();
+ await page.evaluate(()=>document.querySelector('[data-conversation-id="buyer-b"]').click());
+ await expect(page.locator('.chat-jump-latest')).toBeHidden();
+ await expect(page.locator('.chat-person h3')).toContainText('buyer-b');
+});
