@@ -1,0 +1,39 @@
+name: Buyer catalog load and discovery acceptance
+on:
+  push:
+    branches: [test/staging-reporting]
+    paths:
+      - '.github/workflows/buyer-catalog-focused.yml'
+permissions:
+  contents: read
+jobs:
+  buyer-catalog:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Lowest-cost JS integrity and staging safety
+        run: |
+          node scripts/check-inline-js.cjs
+          node --check tests/e2e/marketplace-load-recovery.spec.js
+      - run: npm ci
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: staging-playwright-${{ hashFiles('package-lock.json') }}
+      - run: npx playwright install chromium --only-shell
+      - name: Buyer discovery and search against slow or missing profile metadata
+        run: npx playwright test --config=playwright.local.config.js marketplace-load-recovery.spec.js marketplace-filter-boundaries.spec.js --retries=0 --max-failures=1 --timeout=20000
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: buyer-catalog-focused-failure
+          path: |
+            test-results/
+            playwright-report/
+          if-no-files-found: ignore
+          retention-days: 3
