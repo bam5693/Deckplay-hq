@@ -5,7 +5,7 @@ const html=fs.readFileSync('index.html','utf8');
 test('small-screen Inbox composer has 16px minimum font to prevent focus zoom',()=>{
  const style=html.match(/@media\(max-width:700px\)\{#inboxPage \.chat-composer textarea\{([^}]*)\}\}/);
  assert.ok(style,'Expected scoped mobile Inbox composer rule');
- assert.match(style[1],/font-size:\s*16px\s*;/);
+ assert.match(style[1],/font-size:\s*max\(16px,1em\)\s*;/);
  assert.match(style[1],/touch-action:\s*manipulation/);
 });
 test('mobile conversation remains compatible with bottom-dock safe area',()=>{
