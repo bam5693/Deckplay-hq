@@ -152,6 +152,9 @@ test('real buyer and seller recover their price and trade counter history in Inb
   await expect(page.locator('.conversation-bubbles')).toContainText('Synthetic counter',{timeout:18000});
   await expect(page.locator('.chat-deal-panel > summary')).toBeVisible({timeout:18000});
   await page.locator('.chat-deal-panel > summary').click();
+  await expect.poll(async()=>page.locator('.chat-deal-panel [data-deal-details]').textContent(),{timeout:15000}).not.toBe('Open to view transaction progress.');
+  const sellerDetailText=await page.locator('.chat-deal-panel [data-deal-details]').textContent();
+  expect(sellerDetailText,'Seller expanded deal details should contain transaction controls').toContain('Transaction:');
   await expect(page.locator('.transaction-next-steps')).toBeVisible({timeout:18000});
   await expect(page.locator('.transaction-next-steps')).toContainText('Progress is self-reported');
   await expect(page.locator('.transaction-next-steps')).toContainText('DeckPlay does not verify payments or shipping');
