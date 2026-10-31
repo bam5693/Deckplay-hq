@@ -37,6 +37,7 @@ on:
       - 'tests/reports/staging-beta-request.txt'
       - 'tests/reports/release-preview-request.json'
       - 'tests/reports/seller-grid-live-request.txt'
+      - 'tests/reports/listing-photo-retry-live-request.txt'
 permissions:
   contents: read
   id-token: write
@@ -154,7 +155,7 @@ jobs:
           echo 'Result: ${{ job.status }}. Charles checks API transactions and authorization; Kyle checks deployed mobile/desktop browser journeys. Tanner and Jayden rotate seller/buyer roles in complete-deck and sports/TCG trade browser simulations using the same two disposable accounts. These are deterministic actions; AI inference is verified separately by the manual lead-review workflow. Reports contain persona annotations and named steps. Payment/shipping remain previews.' >> "$GITHUB_STEP_SUMMARY"
 
   staging-auth-smoke:
-    if: ${{ (github.event_name == 'push' || github.event.inputs.auth_smoke_only == 'true' || github.event.inputs.account_readonly_only == 'true') && github.ref == 'refs/heads/test/staging-reporting' && !startsWith(github.event.head_commit.message, '[release-preview]') && !startsWith(github.event.head_commit.message, '[seller-grid-live]') }}
+    if: ${{ (github.event_name == 'push' || github.event.inputs.auth_smoke_only == 'true' || github.event.inputs.account_readonly_only == 'true') && github.ref == 'refs/heads/test/staging-reporting' && !startsWith(github.event.head_commit.message, '[release-preview]') && !startsWith(github.event.head_commit.message, '[seller-grid-live]') && !startsWith(github.event.head_commit.message, '[photo-retry-live]') }}
     name: Focused beta preflight and private staging acceptance
     concurrency:
       group: deckplay-staging-deploy
@@ -255,6 +256,48 @@ jobs:
           path: |
             test-results/
             playwright-report/
+          retention-days: 3
+
+  photo-retry-live:
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/test/staging-reporting' && startsWith(github.event.head_commit.message, '[photo-retry-live]') }}
+    name: One real signed listing photo upload, rollback and retry
+    concurrency:
+      group: private-staging-transactions
+      cancel-in-progress: false
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    environment: deckplay-staging
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Use existing trusted private staging identity
+        run: node scripts/staging-ci-credentials.cjs
+      - run: npm ci
+      - name: Verify signed browser test and scoped cleanup safety
+        run: |
+          node --check tests/e2e/listing-photo-retry-live.spec.js
+          node --test tests/security/fixture-cleanup.test.cjs tests/security/staging-browser-config.test.cjs
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: staging-playwright-${{ hashFiles('package-lock.json') }}
+      - run: npx playwright install chromium --only-shell
+      - name: One seller upload-failure and retry plus signed buyer, with exact fixture cleanup
+        run: npx playwright test --config=playwright.staging.config.js listing-photo-retry-live.spec.js --project=staging-desktop --retries=0 --max-failures=1 --timeout=150000
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: listing-photo-retry-live-failure
+          path: |
+            test-results/staging/
+            test-results/staging-junit.xml
+          if-no-files-found: ignore
           retention-days: 3
 
   seller-grid-live:
