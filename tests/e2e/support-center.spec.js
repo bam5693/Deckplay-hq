@@ -1357,3 +1357,17 @@ test('T8.3: whitespace-only support replies never reach RPC and preserve draft',
  const replies=await page.evaluate(()=>window.__db.calls.filter(x=>x.name==='reply_support_ticket').length);
  expect(replies).toBe(0);
 });
+
+test('T8.3: oversized support reply never reaches RPC and preserves draft',async({page})=>{
+ await boot(page);await signIn(page,'buyer');
+ await page.getByRole('button',{name:'Help & support'}).last().click();
+ await page.locator('#supportSubject').fill('Long reply validation');
+ await page.locator('#supportDescription').fill('Synthetic ticket checking the oversized reply protection.');
+ await page.getByRole('button',{name:'Create private ticket'}).click();
+ await page.locator('#supportReplyBody').evaluate(el=>{el.maxLength=4000});
+ await page.locator('#supportReplyBody').fill('x'.repeat(3001));
+ await page.getByRole('button',{name:'Send reply'}).click();
+ await expect(page.locator('#supportReplyStatus')).toContainText('too long');
+ await expect(page.locator('#supportReplyBody')).toHaveValue('x'.repeat(3001));
+ expect(await page.evaluate(()=>window.__db.calls.filter(x=>x.name==='reply_support_ticket').length)).toBe(0);
+});
