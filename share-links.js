@@ -97,6 +97,11 @@ async function shareLink(kind,id,nativeShare){
   toast('Could not share the link. Please retry from your browser.');
  }
 }
+document.getElementById('previewOwnPublicProfile')?.addEventListener('click',()=>{
+ const id=currentUser?.id;
+ if(!id){toast('Sign in to preview your public collector profile.');return}
+ void showPublicProfile(id);
+});
 document.addEventListener('click',event=>{
  const button=event.target.closest('[data-copy-kind],[data-share-kind],#copyOwnProfileLink,#shareOwnProfileLink');
  if(!button)return;
