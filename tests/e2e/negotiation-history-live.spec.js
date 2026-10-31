@@ -147,3 +147,74 @@ test('real buyer and seller recover their price and trade counter history in Inb
   if(!primaryFailure&&errors.length)throw errors[0];
  }
 });
+
+
+test('T3.4 signed duplicate trade retries keep exactly one pending proposal across categories',async({page,browser})=>{
+ test.setTimeout(140000);
+ if(process.env.DECKPLAY_STAGING_URL!=='https://deckplay-hq-staging.cstivers56.workers.dev')throw Error('Refusing non-staging target');
+ const title=marker();
+ let sellerSignedIn=false,buyerSignedIn=false,primaryError=null;
+ const context=await browser.newContext({
+  baseURL:process.env.DECKPLAY_STAGING_URL,
+  httpCredentials:{username:'deckplay',password:process.env.DECKPLAY_STAGING_ACCESS_PASSWORD},
+  ignoreHTTPSErrors:!!process.env.CODEX_NETWORK_PROXY_ACTIVE
+ });
+ const buyer=await context.newPage();
+ try{
+  await signIn(page,'SELLER');sellerSignedIn=true;
+  const sellerId=await page.evaluate(()=>currentUser.id);
+  const target=await seedListing(page,title,{category:'video_games',description:'TEST ONLY BOT cross-category target'});
+  await signIn(buyer,'BUYER');buyerSignedIn=true;
+  const offered=await seedListing(buyer,title,{category:'trading_cards',tcg_game:'sports_cards',description:'TEST ONLY BOT sports card collateral'});
+  const create=async(note)=>buyer.evaluate(async({target,offered,sellerId,note})=>{
+   const payload={id:crypto.randomUUID(),listing_id:target,sender_id:currentUser.id,recipient_id:sellerId,
+    offered_listing_id:offered,offered_listing_ids:[offered],offer_note:note,cash_amount:0,cash_direction:'none'};
+   const {data,error}=await supabaseClient.from('trade_offers').insert(payload).select('id,status').single();
+   return {id:data?.id||null,status:data?.status||null,error:error?.message||null};
+  },{target,offered,sellerId,note});
+  const first=await create(title);
+  expect(first.error).toBeNull();
+  expect(first.status).toBe('pending');
+  expect(first.id).toMatch(/^[a-f0-9-]{36}$/);
+  const duplicate=await create(title);
+  expect(duplicate.id).toBeNull();
+  expect(duplicate.error).toMatch(/identical pending trade proposal already exists/i);
+  const pendingCount=await buyer.evaluate(async target=>{
+   const {data,error}=await supabaseClient.from('trade_offers').select('id').eq('listing_id',target).eq('sender_id',currentUser.id).eq('status','pending');
+   if(error)throw Error(error.message);return data.length;
+  },target);
+  expect(pendingCount).toBe(1);
+  const sellerCanSee=await page.evaluate(async id=>{
+   const {data,error}=await supabaseClient.from('trade_offers').select('id,status').eq('id',id).single();
+   if(error)throw Error(error.message);return data.status;
+  },first.id);
+  expect(sellerCanSee).toBe('pending');
+  // A deliberately changed note is a separate proposal and must not be blocked.
+  const revised=await create(title+' revised');
+  expect(revised.error).toBeNull();
+  expect(revised.id).not.toBe(first.id);
+  // Declining a pending proposal allows the collector to submit those terms anew.
+  const close=await page.evaluate(async id=>{
+   const {error}=await supabaseClient.from('trade_offers').update({status:'declined'}).eq('id',id);
+   return error?.message||null;
+  },first.id);
+  expect(close).toBeNull();
+  const reopened=await create(title);
+  expect(reopened.error).toBeNull();
+  expect(reopened.id).not.toBe(first.id);
+  const repeatAgain=await create(title);
+  expect(repeatAgain.error).toMatch(/identical pending trade proposal already exists/i);
+ }catch(error){primaryError=error;throw error}
+ finally{
+  const errors=[];
+  for(const [signedIn,tab,label] of [[buyerSignedIn,buyer,'buyer'],[sellerSignedIn,page,'seller']]){
+   if(!signedIn||tab.isClosed())continue;
+   try{await cleanup(tab,title)}catch(error){
+    errors.push(error);
+    console.error('Exact '+label+' synthetic trade retry cleanup failed: '+error.message);
+   }
+  }
+  await context.close();
+  if(!primaryError&&errors.length)throw errors[0];
+ }
+});
