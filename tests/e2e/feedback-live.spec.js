@@ -37,7 +37,7 @@ test('T7.6 signed buyer submits private category feedback; seller and anonymous 
   expect(row.owner_id).toBe(buyer.id);
   expect(row.category).toBe('other');
   expect(row.subject).toBe('[Idea] '+title);
-  expect(row.body).toBe('Area: Sports cards\\nDetails: '+description);
+  expect(row.body).toBe('Area: Sports cards\nDetails: '+description);
   expect(row.status).toBe('open');
   console.log('T7.6 synthetic ticket UUID for exact cleanup: '+row.id);
   await expect(page.locator('#supportTicketList')).toContainText(title);
