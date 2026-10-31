@@ -24,6 +24,7 @@ test('T7.1 signed seller shares an active video game listing with a fresh visito
   const button=page.locator('#detailContent [data-copy-kind="listing"]');
   await expect(button).toBeVisible();
   expect(await button.getAttribute('data-copy-id')).toBe(id);
+  await page.context().grantPermissions(['clipboard-read','clipboard-write'],{origin:process.env.DECKPLAY_STAGING_URL});
   await button.click();
   const url=await page.evaluate(async()=>{
    const fallback=document.getElementById('deckplayShareFallbackInput');
