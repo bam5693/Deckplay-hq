@@ -1097,3 +1097,44 @@ test('T2.4 first load failure still provides a usable Inbox retry',async({page})
  await expect(page.locator('.conversation-layout')).toBeVisible();
  await expect(page.locator('[data-inbox-refresh-error]')).toHaveCount(0);
 });
+
+test('T2.2 Inbox finds Pokémon and accented collector names without exact diacritics',async({page})=>{
+ await inbox(page);
+ await page.locator('#inboxThreadBack').click();
+ await page.evaluate(()=>{
+  const contact=document.querySelector('[data-conversation-id="buyer-a"]');
+  contact.querySelector('strong').textContent='@JoséCards';
+  contact.querySelector('.conversation-preview').textContent='Pokémon Scarlet booster bundle';
+  const other=document.querySelector('[data-conversation-id="buyer-b"]');
+  other.querySelector('.conversation-preview').textContent='Dragon Ball singles';
+ });
+ const search=page.locator('[data-conversation-search]');
+ await search.fill('  POKEMON    SCARLET ');
+ await expect(page.locator('[data-conversation-id="buyer-a"]')).toBeVisible();
+ await expect(page.locator('[data-conversation-id="buyer-b"]')).toBeHidden();
+ await search.fill('JoseCards');
+ await expect(page.locator('[data-conversation-id="buyer-a"]')).toBeVisible();
+ await expect(page.locator('[data-conversation-id="buyer-b"]')).toBeHidden();
+ await expect(search).toHaveValue('JoseCards');
+});
+test('T2.2 Inbox normalized search still obeys unread-only and clear filters',async({page})=>{
+ await inbox(page,true);
+ await page.evaluate(()=>{
+  document.querySelector('[data-conversation-id="buyer-a"] .conversation-preview').textContent='One Pièce cards';
+  document.querySelector('[data-conversation-id="buyer-b"] .conversation-preview').textContent='Console trade';
+ });
+ const search=page.locator('[data-conversation-search]');
+ await search.fill('one piece');
+ await expect(page.locator('[data-conversation-id="buyer-a"]')).toBeVisible();
+ await expect(page.locator('[data-conversation-id="buyer-b"]')).toBeHidden();
+ await page.locator('[data-conversation-unread]').check();
+ await expect(page.locator('[data-conversation-id="buyer-a"]')).toBeVisible();
+ await page.locator('[data-conversation-id="buyer-a"]').click();
+ await expect(page.locator('[data-conversation-id="buyer-a"]')).toBeHidden();
+ // Return to list before using Clear on mobile single-thread navigation.
+ await page.locator('#inboxThreadBack').click();
+ await page.locator('[data-conversation-clear]').click();
+ await expect(search).toHaveValue('');
+ await expect(page.locator('[data-conversation-unread]')).not.toBeChecked();
+ await expect(page.locator('[data-conversation-id="buyer-a"]')).toBeVisible();
+});
