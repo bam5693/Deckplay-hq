@@ -1,0 +1,38 @@
+name: V1 final six targeted browser checks
+on:
+  push:
+    branches: [test/staging-reporting]
+    paths: ['.github/workflows/v1-final-six-focused.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: deckplay-v1-final-six
+  cancel-in-progress: false
+jobs:
+  final-six:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Cheap source syntax
+        run: |
+          node scripts/check-inline-js.cjs
+          node --check tests/e2e/inbox-recovery.spec.js
+          node --check tests/e2e/share-links.spec.js
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: staging-playwright-${{ hashFiles('package-lock.json') }}
+      - run: npx playwright install chromium --only-shell
+      - name: Only final three failing scenarios on desktop and mobile
+        run: >-
+          npx playwright test --config=playwright.local.config.js
+          inbox-recovery.spec.js share-links.spec.js
+          --grep "inbox search and unread filters survive refresh but reset on account change|Jayden can retry an offline inbox without losing his TCG inquiry draft|T7 owner profile Share button opens native mobile sheet"
+          --project=local-desktop --project=local-mobile --workers=2 --retries=0 --timeout=30000
