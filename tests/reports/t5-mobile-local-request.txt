@@ -1,1 +1,1 @@
-Verify T5 Inbox composer max(16px,1em) preserves larger text accessibility settings, alongside existing mobile editable fields and T2 privacy regressions. Node-only preflight, no deployment.
+T5 mobile dock label readability increase 10px to 11px without altering six-tab layout; run cheap source checks and existing privacy tests, no deploy.
