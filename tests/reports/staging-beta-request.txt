@@ -132,3 +132,5 @@ Focused verification request: validate staging startup and notification polling 
 2026-10-31 T3.5 diagnostic only: signed accepted trade ensures deal progress RPC and expands actual Inbox panel; isolate server error; exact fixtures cleared; no full sweep.
 
 2026-10-31 T3.5 private staging exact deal-details diagnostic, return non-sensitive panel UI status in failed assertion; protect fixture cleanup, no broad sweep.
+
+2026-10-31 staging ONLY accepted-deal panel click/retry reliability, secure progress RPCs, normal private gate and asset parity, no public production/broad sweep.
