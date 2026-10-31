@@ -1179,3 +1179,47 @@ test('T2.5 direct conversation navigation resets active negotiation-only filter'
  await expect(page.locator('#chatInput')).toBeVisible();
  await expect(page.locator('.chat-composer')).toHaveAttribute('data-chat-recipient','buyer-b');
 });
+
+test('T2.5 failed read receipt keeps unread badge until inline retry succeeds',async({page})=>{
+ await inbox(page,true);
+ await page.evaluate(()=>{
+  window.__readAttempts=0;
+  const original=supabaseClient.from;
+  supabaseClient.from=table=>{
+   if(table!=='collector_messages')return original(table);
+   let update=false;
+   const q={then:(resolve,reject)=>update?Promise.resolve({data:null,error:++window.__readAttempts===1?{message:'offline'}:null}).then(resolve,reject):original(table).then(resolve,reject)};
+   for(const name of ['select','order','limit','in','eq','is','maybeSingle'])q[name]=()=>q;
+   q.update=()=>{update=true;return q};
+   return q;
+  };
+ });
+ await page.locator('[data-conversation-id="buyer-a"]').click();
+ await expect(page.locator('.chat-read-recovery')).toContainText('Messages are still unread');
+ await expect(page.locator('[data-conversation-id="buyer-a"] .conversation-unread')).toHaveCount(1);
+ await page.locator('.chat-read-recovery button').click();
+ await expect(page.locator('.chat-read-recovery')).toHaveCount(0);
+ await expect(page.locator('[data-conversation-id="buyer-a"] .conversation-unread')).toHaveCount(0);
+ expect(await page.evaluate(()=>window.__readAttempts)).toBe(2);
+});
+test('T2.5 old read retry does not mark another conversation read after navigation',async({page})=>{
+ await inbox(page,true);
+ await page.evaluate(()=>{
+  const original=supabaseClient.from;
+  supabaseClient.from=table=>{
+   if(table!=='collector_messages')return original(table);
+   let update=false;
+   const q={then:(resolve,reject)=>update?Promise.resolve({data:null,error:{message:'offline'}}).then(resolve,reject):original(table).then(resolve,reject)};
+   for(const name of ['select','order','limit','in','eq','is','maybeSingle'])q[name]=()=>q;
+   q.update=()=>{update=true;return q};
+   return q;
+  };
+ });
+ await page.locator('[data-conversation-id="buyer-a"]').click();
+ await expect(page.locator('.chat-read-recovery button')).toBeVisible();
+ await page.locator('[data-conversation-id="buyer-b"]').click();
+ await expect(page.locator('.chat-person h3')).toContainText('buyer-b');
+ await expect(page.locator('[data-conversation-id="buyer-a"] .conversation-unread')).toHaveCount(1);
+ await expect(page.locator('[data-conversation-id="buyer-b"] .conversation-unread')).toHaveCount(1);
+ await expect(page.locator('.chat-read-recovery button')).toHaveCount(1);
+});
