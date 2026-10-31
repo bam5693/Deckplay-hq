@@ -117,7 +117,7 @@
   const status = (id, message) => { el(id).textContent = message || ""; };
   const date = value => new Date(value).toLocaleString();
   const labels = {open:"Open",waiting_on_staff:"Waiting on support",waiting_on_user:"Waiting on collector",resolved:"Resolved"};
-  let userId = null, generation = 0, isStaff = false, staffView = false, staffSafetyOnly = false, ticketFilter = "all", ticketCategory = "all", feedbackQueueSubject = null, selected = null, tickets = [], ticketOffset = 0, ticketListRequest = 0, loadingTickets = false, moreTickets = false, replyOffset = 0, moreReplies = false, loadingReplies = false, replyRequest = 0, returnToFeedback = false, returnTopic = "feedback", feedbackMode = false, tradeConcernMode = false, listingReportId = null, pendingReportId = null, viewGeneration = 0, createRequest = 0;
+  let userId = null, generation = 0, isStaff = false, staffView = false, staffSafetyOnly = false, ticketFilter = "all", ticketCategory = "all", feedbackQueueSubject = null, selected = null, tickets = [], ticketOffset = 0, ticketListRequest = 0, loadingTickets = false, moreTickets = false, replyOffset = 0, moreReplies = false, loadingReplies = false, replyRequest = 0, returnToFeedback = false, returnTopic = "feedback", feedbackMode = false, tradeConcernMode = false, listingReportId = null, pendingReportId = null, viewGeneration = 0, createRequest = 0, replySubmitRequest = 0;
   // Drafts are tab-memory only, keyed by ticket and purged on account/view reset.
   const replyDrafts = new Map();
   const feedbackQueueSubjects = Object.freeze({empty:"[Idea] Improve marketplace search results",discovery:"[Idea] Improve listing discovery",contact:"[Idea] Improve listing contact experience"});
@@ -205,6 +205,8 @@
   function clearPrivate() {
     ++createRequest; // A stale request must never unlock another account's submit button.
     el("supportNewForm").querySelector('button[type="submit"]').disabled = false;
+    ++replySubmitRequest; // Invalidate any previous account's pending reply.
+    el("supportReplyForm").querySelector('button[type="submit"]').disabled = false;
     ++ticketListRequest; loadingTickets = false; moreTickets = false; ticketOffset = 0;
     el("supportLoadMore").hidden = true; el("supportLoadMore").disabled = false;
     selected = null; tickets = []; replyDrafts.clear(); isStaff = false; staffView = false; staffSafetyOnly = false; ticketFilter = "all"; ticketCategory = "all";
@@ -509,6 +511,12 @@
   async function showTicket(id){
     const ticket=tickets.find(t=>t.id===id);
     if(!ticket)return;
+    // A pending reply belongs to its original ticket. Switching tickets must
+    // unlock the new composer without allowing the old response to unlock it.
+    if(selected!==id){
+      ++replySubmitRequest;
+      el("supportReplyForm").querySelector('button[type="submit"]').disabled=false;
+    }
     selected=id;
     el("supportReplyBody").value=replyDrafts.get(id)||"";
     const v=++generation,u=userId;
@@ -691,7 +699,7 @@
     if(!selected||!userId)return;
     const form=e.currentTarget,button=form.querySelector('button[type="submit"]');
     if(button.disabled)return;
-    const id=selected,u=userId,v=viewGeneration;
+    const id=selected,u=userId,v=viewGeneration,request=++replySubmitRequest;
     // Snapshot the submitted text. Collectors may keep typing while the RPC is in flight.
     // Never erase a newer draft just because an older version was accepted.
     const submittedRaw=el("supportReplyBody").value;
@@ -708,7 +716,7 @@
       await loadTickets(); // Refresh reopens the ticket and clears the previous status line.
       if(validWrite(v,u)&&selected===id)status("supportReplyStatus",newerDraftSaved?"Reply sent. Your newer draft is saved.":"Reply sent.");
     }catch(error){if(validWrite(v,u)&&selected===id)status("supportReplyStatus",error.message||"Reply failed. Your text is preserved.")}
-    finally{button.disabled=false}
+    finally{if(request===replySubmitRequest)button.disabled=false}
   });
   el("supportSetStatus").addEventListener("click",async e=>{
     if(!isStaff||!selected||!userId)return;
