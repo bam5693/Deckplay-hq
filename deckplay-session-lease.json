@@ -2,10 +2,10 @@
   "version": 1,
   "project": "DeckPlay HQ",
   "scope": "test/staging-reporting",
-  "holder": null,
-  "token": null,
-  "focus": null,
-  "acquired_at": null,
-  "expires_at": null,
-  "updated_at": "2026-10-31T10:00:14.248Z"
+  "holder": "manual-g",
+  "token": "manual-g-20261031T105954998Z-zsz1ysxw",
+  "focus": "T3.4 transaction idempotency and existing V1 regression repairs",
+  "acquired_at": "2026-10-31T10:59:54.998Z",
+  "expires_at": "2026-10-31T11:44:54.998Z",
+  "updated_at": "2026-10-31T10:59:54.998Z"
 }
