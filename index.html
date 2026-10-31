@@ -2731,7 +2731,30 @@ if(tradeById.size){
    if(updated)updated.scrollTop=Math.max(0,updated.scrollHeight-updated.clientHeight-distance);
   });
   const panel=thread.querySelector('.chat-deal-panel');
- panel?.addEventListener('toggle',async()=>{if(!panel.open||panel.dataset.loaded)return;panel.dataset.loaded='true';const content=panel.querySelector('[data-deal-details]');try{const html=await dealProgressHtml(entries);if(content.isConnected)content.innerHTML=html}catch{if(content.isConnected)content.textContent='Transaction details could not load. Try refreshing.'}});
+  if(panel){
+   const renderDealDetails=async()=>{
+    if(panel.dataset.loading==='true'||panel.dataset.loaded==='true')return;
+    const content=panel.querySelector('[data-deal-details]');
+    if(!content)return;
+    panel.dataset.loading='true';
+    content.textContent='Loading transaction progress…';
+    try{
+     const html=await dealProgressHtml(entries);
+     if(content.isConnected&&panel.isConnected){
+      content.innerHTML=html||'<p class="muted">Accepted deal details are temporarily unavailable. Retry opening the panel.</p>';
+      if(html)panel.dataset.loaded='true';
+     }
+    }catch(error){
+     if(content.isConnected)content.textContent='Transaction details could not load. Close and reopen to retry.';
+    }finally{
+     delete panel.dataset.loading;
+    }
+   };
+   // A collector may click the summary before a deferred toggle event fires.
+   // Load immediately on click, with toggle as a keyboard/programmatic fallback.
+   panel.querySelector(':scope > summary')?.addEventListener('click',()=>{void renderDealDetails()});
+   panel.addEventListener('toggle',()=>{if(panel.open)void renderDealDetails()});
+  }
  if(unread.length){const {error}=await supabaseClient.from("collector_messages").update({read_at:new Date().toISOString()}).in("id",unread).eq("recipient_id",currentUser.id);if(!error&&requestId===inboxLoadVersion&&currentUser?.id===userId){const readAt=new Date().toISOString(),readIds=new Set(unread);entries.forEach(x=>{if(readIds.has(x.id))x.read_at=readAt});for(const row of inboxOlderMessages.get(id)||[])if(readIds.has(row.id))row.read_at=readAt;el.querySelectorAll("[data-conversation-id]").forEach(contact=>{if(contact.dataset.conversationId===id)contact.querySelector(".conversation-unread")?.remove()});filterInboxConversations();refreshUnreadCount()}}
  };
  el.querySelectorAll("[data-conversation-id]").forEach(b=>b.addEventListener("click",()=>openThread(b.dataset.conversationId)));
