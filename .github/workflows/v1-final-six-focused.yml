@@ -31,6 +31,7 @@ jobs:
           key: staging-playwright-${{ hashFiles('package-lock.json') }}
       - run: npx playwright install chromium --only-shell
       # Run against the corrected 2026-10-31 Inbox assertions and T7 profile setup.
+      # Targeted correction: account-switch controls reset after empty account and restore.
       - name: Only final three failing scenarios on desktop and mobile
         run: >-
           npx playwright test --config=playwright.local.config.js
