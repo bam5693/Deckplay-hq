@@ -134,3 +134,5 @@ Focused verification request: validate staging startup and notification polling 
 2026-10-31 T3.5 private staging exact deal-details diagnostic, return non-sensitive panel UI status in failed assertion; protect fixture cleanup, no broad sweep.
 
 2026-10-31 staging ONLY accepted-deal panel click/retry reliability, secure progress RPCs, normal private gate and asset parity, no public production/broad sweep.
+
+2026-10-31 final focused T3.5 after verified click-loading staging deployment; signed seller and mobile buyer accepted deal progress, bot cleanup. No broad tests or production.
