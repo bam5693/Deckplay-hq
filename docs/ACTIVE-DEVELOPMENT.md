@@ -78,3 +78,7 @@
 ### T5 PWA already-open tab update detection — verified
 - `pwa-update-notice.js` commit `b1ef0cc` listens for service-worker `updatefound` and installed waiting replacement, offering explicit refresh on existing tabs without automatic reload or draft loss. Browser regression `3db3376` covers both local-mobile and desktop.
 - [Focused run 41245694160](https://github.com/bam5693/Deckplay-hq/actions/runs/41245694160) **PASS 14/14** with syntax preflight; no production or staging deploy, still needs actual Android/PWA acceptance before public beta.
+
+### T5 already-installing PWA updates — verified
+- `pwa-update-notice.js` `9c86781` now observes a service worker that was already installing at registration, handles the installed-state race, and offers an explicit user-initiated refresh without automatic reload. Browser test `14a83e6` validates the scenario.
+- [Focused run 41246278812](https://github.com/bam5693/Deckplay-hq/actions/runs/41246278812) **PASS 16/16 local desktop/mobile-emulated cases**, with syntax preflight. No production/staging deploy; real Android/PWA acceptance still required. Avoid rerunning same accepted tests without regressions.
