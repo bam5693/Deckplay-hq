@@ -1186,3 +1186,40 @@ test('T8.3: ticket topic filters clear staff feedback drill-down after creating 
   await expect(page.locator('#supportStaffSafety')).toHaveAttribute('aria-pressed','false');
   await expect(page.locator('#supportTicketList')).toContainText('Staff account help request');
 });
+
+test('T8.3: collector tickets load while optional staff authorization is pending',async({page})=>{
+ await boot(page);
+ await page.evaluate(()=>{
+  const now=new Date().toISOString();
+  window.__db.tickets.push({id:'pending-role-ticket',owner_id:'buyer',category:'listing',
+   subject:'Vintage console listing help',body:'Private buyer-only request',
+   status:'open',created_at:now,updated_at:now});
+  const original=window.supabaseClient.rpc.bind(window.supabaseClient);
+  window.__releaseStaffRole=[];
+  window.supabaseClient.rpc=(name,args)=>{
+   if(name==='is_deckplay_moderator')
+    return new Promise(resolve=>window.__releaseStaffRole.push(()=>original(name,args).then(resolve)));
+   return original(name,args);
+  };
+ });
+ await signIn(page,'buyer');
+ await page.getByRole('button',{name:'Help & support'}).last().click();
+ await page.waitForFunction(()=>window.__releaseStaffRole.length===1);
+ // The collector must be able to read/reply even if staff MFA is slow or offline.
+ await expect(page.locator('#supportTicketList')).toContainText('Vintage console listing help');
+ await page.locator('#supportTicketList button').first().click();
+ await expect(page.locator('#supportTicketBody')).toHaveText('Private buyer-only request');
+ await expect(page.locator('#supportStaff')).toBeHidden();
+ await page.locator('#supportReplyBody').fill('Please check the game console photos.');
+ await page.getByRole('button',{name:'Send reply'}).click();
+ await expect(page.locator('#supportReplies')).toContainText('Please check the game console photos.');
+ await page.evaluate(()=>window.__releaseStaffRole[0]());
+ await expect(page.locator('#supportStaff')).toBeHidden();
+ // A stale role response cannot expose staff controls after an account switch.
+ await page.evaluate(()=>{window.currentUser={id:'other'};window.__authCallback('SIGNED_IN',{user:{id:'other'}})});
+ await page.getByRole('button',{name:'Help & support'}).last().click();
+ await page.waitForFunction(()=>window.__releaseStaffRole.length===2);
+ await expect(page.locator('#supportTicketList')).not.toContainText('Vintage console listing help');
+ await page.evaluate(()=>window.__releaseStaffRole[1]());
+ await expect(page.locator('#supportStaff')).toBeHidden();
+});

@@ -374,17 +374,21 @@
     el("supportSignIn").hidden = !!userId;
     openModal(modal.id);
     if(!userId)return;
-    const v=++generation,u=userId;
+    // Ticket history is collector-owned and must not wait for the optional
+    // staff/MFA role lookup. RLS and the owner_id filter still protect it.
+    // Keep the role response tied to this account and modal visit, not the
+    // read-generation counter that the independent list request advances.
+    const v=viewGeneration,u=userId;
+    void loadTickets();
     try{
       const {data,error}=await supabaseClient.rpc("is_deckplay_moderator");
       if(error)throw error;
-      if(!valid(v,u))return;
+      if(!validWrite(v,u))return;
       isStaff=data===true;
       el("supportStaff").hidden=!isStaff;
       el("supportStaffSafety").hidden=!isStaff;
       if(isStaff)void refreshStaffOverview();
-    }catch(error){if(valid(v,u))console.warn("Staff support access unavailable",error)}
-    await loadTickets();
+    }catch(error){if(validWrite(v,u))console.warn("Staff support access unavailable",error)}
   }
   // This is a privileged, read-only count query. RLS and the existing MFA-aware
   // is_deckplay_moderator RPC both guard the staff overview. Never infer counts
