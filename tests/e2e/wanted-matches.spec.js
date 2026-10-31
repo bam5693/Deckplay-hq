@@ -188,3 +188,42 @@ test('an older Wanted Board refresh cannot overwrite the newest results',async({
  await expect(page.locator('#wantedGrid')).toContainText('Current wanted post');
  await expect(page.locator('#wantedGrid')).not.toContainText('Outdated wanted post');
 });
+
+test('Wanted Board still shows posts when optional profile lookup fails',async({page})=>{
+ await page.goto('/');await page.waitForLoadState('networkidle');
+ await page.evaluate(()=>{
+  const original=supabaseClient.from.bind(supabaseClient);
+  supabaseClient.from=table=>table==='wanted_posts'?(()=>{
+   const q={select:()=>q,order:()=>q,limit:()=>Promise.resolve({data:[{id:'wanted-no-profile',user_id:'seller-1',game:'video_games',title:'Nintendo Switch game',offer_type:'buy',details:''}],error:null})};return q;
+  })():table==='profiles'?(()=>{
+   const q={select:()=>q,in:()=>Promise.reject(Error('Profile network failed'))};return q;
+  })():original(table);
+  toggleWanted(true);
+ });
+ await expect(page.locator('#wantedGrid')).toContainText('Nintendo Switch game');
+ await expect(page.locator('#wantedGrid')).toContainText('DeckPlay member');
+ await expect(page.locator('#wantedGrid')).not.toContainText('Loading wanted posts');
+});
+
+test('Wanted Board offers a working retry after a posts request failure',async({page})=>{
+ await page.goto('/');await page.waitForLoadState('networkidle');
+ await page.evaluate(()=>{
+  window.wantedAttempts=0;
+  const original=supabaseClient.from.bind(supabaseClient);
+  supabaseClient.from=table=>table==='wanted_posts'?(()=>{
+   const q={select:()=>q,order:()=>q,limit:()=>{
+    wantedAttempts++;
+    return wantedAttempts===1?Promise.reject(Error('Offline')):Promise.resolve({data:[{id:'wanted-recovered',user_id:'seller-2',game:'consoles',title:'Switch 2 console',offer_type:'buy',details:''}],error:null});
+   }};return q;
+  })():table==='profiles'?(()=>{
+   const q={select:()=>q,in:()=>Promise.resolve({data:[],error:null})};return q;
+  })():original(table);
+  toggleWanted(true);
+ });
+ const retry=page.locator('#wantedGrid [data-retry-wanted]');
+ await expect(retry).toBeVisible();
+ await retry.click();
+ await expect(page.locator('#wantedGrid')).toContainText('Switch 2 console');
+ await expect(retry).toHaveCount(0);
+ expect(await page.evaluate(()=>wantedAttempts)).toBe(2);
+});
