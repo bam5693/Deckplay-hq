@@ -48,10 +48,27 @@ test('T3.1 real price offer rejects invalid cents and respects accept, withdraw 
   const offerId=placed.data;
   expect(offerId).toMatch(/^[a-f0-9-]{36}$/);
 
+  // Server-side idempotency: connection retry must reuse the original open offer
+  // without appending a duplicate negotiation event.
+  const retry=await rpc(buyer,'submit_price_offer',{p_listing_id:acceptedListing,p_amount:20});
+  expect(retry.error).toBeNull();
+  expect(retry.data).toBe(offerId);
+  const differentAmount=await rpc(buyer,'submit_price_offer',{p_listing_id:acceptedListing,p_amount:21});
+  expect(differentAmount.error?.message).toMatch(/An open offer already exists/i);
+  const one=await buyer.evaluate(async id=>{
+   const {data,error}=await supabaseClient.from('price_offers').select('id').eq('listing_id',id).eq('buyer_id',currentUser.id).in('status',['pending','countered']);
+   if(error)throw Error(error.message);
+   return data.length;
+  },acceptedListing);
+  expect(one).toBe(1);
+  expect((await read(buyer,offerId)).history.map(x=>x.action)).toEqual(['submitted']);
+
   const fractionalCounter=await rpc(page,'respond_price_offer',{p_offer_id:offerId,p_action:'counter',p_amount:22.999});
   expect(fractionalCounter.error?.message).toMatch(/Invalid counteroffer amount/i);
   const counter=await rpc(page,'respond_price_offer',{p_offer_id:offerId,p_action:'counter',p_amount:22.5});
   expect(counter.error).toBeNull();
+  const counteredDuplicate=await rpc(buyer,'submit_price_offer',{p_listing_id:acceptedListing,p_amount:20});
+  expect(counteredDuplicate.error?.message).toMatch(/An open offer already exists/i);
   const staleSeller=await rpc(page,'respond_price_offer',{p_offer_id:offerId,p_action:'accept',p_amount:null});
   expect(staleSeller.error?.message).toMatch(/Wait for the other collector/i);
   const accepted=await rpc(buyer,'respond_price_offer',{p_offer_id:offerId,p_action:'accept',p_amount:null});
@@ -78,6 +95,9 @@ test('T3.1 real price offer rejects invalid cents and respects accept, withdraw 
   const withdraw=await rpc(buyer,'respond_price_offer',{p_offer_id:withdrawn.data,p_action:'withdraw',p_amount:null});
   expect(withdraw.error).toBeNull();
   expect((await read(buyer,withdrawn.data)).offer.status).toBe('withdrawn');
+  const renewed=await rpc(buyer,'submit_price_offer',{p_listing_id:withdrawnListing,p_amount:19});
+  expect(renewed.error).toBeNull();
+  expect(renewed.data).not.toBe(withdrawn.data);
   const closedCounter=await rpc(page,'respond_price_offer',{p_offer_id:withdrawn.data,p_action:'counter',p_amount:19});
   expect(closedCounter.error?.message).toMatch(/closed/i);
 
