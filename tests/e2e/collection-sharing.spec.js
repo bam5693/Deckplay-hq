@@ -50,3 +50,44 @@ test('failed block lookup never treats private collection links as unblocked',as
  await expect(page.locator('.public-collections a')).toHaveCount(0);
  await expect(page.locator('[data-collection-inquiry],[data-follow-profile],[data-public-listing]')).toHaveCount(0);
 });
+
+test('failed profile load cannot silently replace saved collection links or inquiry consent',async({page})=>{
+ await fixture(page);
+ await page.evaluate(()=>{
+  const original=supabaseClient.from;window.collectionProfileWrites=[];
+  supabaseClient.from=table=>{
+   const q=original(table);
+   if(table==='profiles'){
+    q.maybeSingle=async()=>({data:null,error:{message:'Network unavailable'}});
+    q.upsert=async payload=>{collectionProfileWrites.push(payload);return {error:null}};
+   }
+   return q;
+  };
+  document.getElementById('profileEdit').click();
+ });
+ await expect(page.locator('#profileStatus')).toContainText('Could not load your saved collection settings');
+ await expect(page.locator('#profileForm button[type="submit"]')).toBeDisabled();
+ await page.locator('#profileForm').dispatchEvent('submit');
+ expect(await page.evaluate(()=>collectionProfileWrites.length)).toBe(0);
+});
+
+test('collection inquiry opt-in requires a shared public link',async({page})=>{
+ await fixture(page);
+ await page.evaluate(()=>{
+  const original=supabaseClient.from;window.collectionProfileWrites=[];
+  supabaseClient.from=table=>{
+   const q=original(table);
+   if(table==='profiles'){
+    q.maybeSingle=async()=>({data:{username:'jayden',collection_links:[],collection_inquiry_mode:'off'},error:null});
+    q.upsert=async payload=>{collectionProfileWrites.push(payload);return {error:null}};
+   }
+   return q;
+  };
+  document.getElementById('profileEdit').click();
+ });
+ await expect(page.locator('#profileForm button[type="submit"]')).toBeEnabled();
+ await page.locator('#collectionInquiryMode').selectOption('buy_trade');
+ await page.locator('#profileForm').dispatchEvent('submit');
+ await expect(page.locator('#profileStatus')).toContainText('Add a public collection link');
+ expect(await page.evaluate(()=>collectionProfileWrites.length)).toBe(0);
+});
