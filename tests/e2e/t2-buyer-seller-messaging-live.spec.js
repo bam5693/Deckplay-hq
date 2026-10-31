@@ -42,6 +42,38 @@ test('T2.1 signed buyer and seller exchange real Inbox messages',async({browser}
   },reply),{timeout:18000}).toBe(1);
   await buyer.evaluate(id=>showInboxPage(id),sellerId);
   await expect(buyer.locator('.conversation-bubbles')).toContainText(reply,{timeout:20000});
+  // T2.4 visible send error: rejection must not discard the draft.
+  const failedDraft=title+' failed draft';
+  await buyer.locator('#chatInput').fill(failedDraft);
+  await buyer.evaluate(()=>{
+   const original=supabaseClient.from.bind(supabaseClient);
+   window.__t2FromOriginal=original;
+   supabaseClient.from=table=>{
+    if(table!=='collector_messages')return original(table);
+    const q=original(table),insert=q.insert.bind(q);
+    q.insert=row=>{
+     if(row.body.includes('failed draft')){
+      return {select:()=>({single:async()=>({data:null,error:new Error('T2.4 simulated message rejection')})})};
+     }
+     return insert(row);
+    };
+    return q;
+   };
+  });
+  try{
+   await buyer.locator('[aria-label="Send message"]').click();
+   await expect(buyer.locator('.chat-send-status')).toContainText('Could not send:',{timeout:15000});
+   await expect(buyer.locator('#chatInput')).toHaveValue(failedDraft);
+  }finally{
+   await buyer.evaluate(()=>{supabaseClient.from=window.__t2FromOriginal;delete window.__t2FromOriginal});
+  }
+  // Correcting the draft and retrying must use the real backend.
+  await buyer.locator('#chatInput').fill(title+' recovered draft');
+  await buyer.locator('[aria-label="Send message"]').click();
+  await expect.poll(()=>buyer.evaluate(async body=>{
+   const {data,error}=await supabaseClient.from('collector_messages').select('id').eq('body',body).eq('sender_id',currentUser.id);
+   if(error)throw Error(error.message);return data.length;
+  },title+' recovered draft'),{timeout:18000}).toBe(1);
   // T2.4: the database commits, but the first HTTP success is lost and the
   // confirmation read fails. The next retry must reuse its message UUID.
   const retryResult=await buyer.evaluate(async({sellerId,body})=>{
