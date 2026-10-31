@@ -91,3 +91,39 @@ test('collection inquiry opt-in requires a shared public link',async({page})=>{
  await expect(page.locator('#profileStatus')).toContainText('Add a public collection link');
  expect(await page.evaluate(()=>collectionProfileWrites.length)).toBe(0);
 });
+
+test('duplicate first contact opens the existing conversation without another inquiry',async({page})=>{
+ await fixture(page,'buy_trade');await page.locator('[data-collection-inquiry]').click();
+ await expect(page.locator('#collectionInquiryModal')).toContainText('does not set a price, reserve an item, or create an agreement');
+ await page.locator('#collectionInquiryItem').fill('Nintendo Switch OLED console');
+ await page.locator('#collectionInquiryBody').fill('Would you consider trading this console?');
+ await page.evaluate(()=>{window.inboxOpens=[];showInboxPage=async target=>{inboxOpens.push(target??null)}});
+ await page.locator('#collectionInquiryForm button[type="submit"]').click();
+ await page.evaluate(()=>finishInquiry({error:{message:'You already inquired about this item. Continue in your inbox'}}));
+ await expect(page.locator('#collectionInquiryContinue')).toBeVisible();
+ await expect(page.locator('#collectionInquiryContinue')).toHaveText('Continue existing conversation');
+ await expect(page.locator('#collectionInquiryBody')).toHaveValue('Would you consider trading this console?');
+ await page.locator('#collectionInquiryContinue').click();
+ expect(await page.evaluate(()=>({writes:inquiryWrites.length,targets:inboxOpens}))).toEqual({writes:1,targets:['tanner']});
+});
+test('daily first-contact limit directs to inbox overview, not an unverified recipient thread',async({page})=>{
+ await fixture(page,'trades');await page.locator('[data-collection-inquiry]').click();
+ await page.locator('#collectionInquiryItem').fill('Signed sports memorabilia');
+ await page.locator('#collectionInquiryBody').fill('Is this available for trade?');
+ await page.evaluate(()=>{window.inboxOpens=[];showInboxPage=async target=>{inboxOpens.push(target??null)}});
+ await page.locator('#collectionInquiryForm button[type="submit"]').click();
+ await page.evaluate(()=>finishInquiry({error:{message:'Collection inquiry limit reached. Continue existing conversations or try tomorrow'}}));
+ await expect(page.locator('#collectionInquiryContinue')).toHaveText('Open inbox');
+ await page.locator('#collectionInquiryContinue').click();
+ expect(await page.evaluate(()=>({writes:inquiryWrites.length,targets:inboxOpens}))).toEqual({writes:1,targets:[null]});
+});
+test('blocked first contact cannot use the inbox recovery shortcut',async({page})=>{
+ await fixture(page,'buy_trade');await page.locator('[data-collection-inquiry]').click();
+ await page.locator('#collectionInquiryItem').fill('One Piece alternate art card');
+ await page.locator('#collectionInquiryBody').fill('Could we discuss a trade?');
+ await page.locator('#collectionInquiryForm button[type="submit"]').click();
+ await page.evaluate(()=>finishInquiry({error:{message:'Collection inquiry unavailable'}}));
+ await expect(page.locator('#collectionInquiryStatus')).toContainText('not accepting new collection inquiries');
+ await expect(page.locator('#collectionInquiryContinue')).toBeHidden();
+ await expect(page.locator('#collectionInquiryBody')).toHaveValue('Could we discuss a trade?');
+});
