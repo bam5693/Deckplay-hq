@@ -153,11 +153,11 @@ test('real buyer and seller recover their price and trade counter history in Inb
   await expect(page.locator('.chat-deal-panel > summary')).toBeVisible({timeout:18000});
   await page.locator('.chat-deal-panel > summary').click();
   await expect.poll(async()=>page.locator('.chat-deal-panel [data-deal-details]').textContent(),{timeout:18000}).toContain('Transaction:');
-  await expect(page.locator('.transaction-next-steps')).toBeVisible({timeout:18000});
-  await expect(page.locator('.transaction-next-steps')).toContainText('Progress is self-reported');
-  await expect(page.locator('.transaction-next-steps')).toContainText('DeckPlay does not verify payments or shipping');
-  const sellerCanTrack=await page.locator('.transaction-next-steps [data-deal-status]').count();
-  expect(sellerCanTrack).toBeGreaterThan(0);
+  const sellerProgress=page.locator('.transaction-next-steps').filter({has:page.locator('[data-deal-status="'+progressProbe.id+'"]')});
+  await expect(sellerProgress).toHaveCount(1,{timeout:18000});
+  await expect(sellerProgress).toBeVisible();
+  await expect(sellerProgress).toContainText('Progress is self-reported');
+  await expect(sellerProgress).toContainText('DeckPlay does not verify payments or shipping');
   // A second signed-in, mobile-emulated buyer independently reads the same
   // participant-scoped history and sees the seller-created progress record.
   mobileContext=await browser.newContext({
@@ -174,10 +174,12 @@ test('real buyer and seller recover their price and trade counter history in Inb
   await expect(mobileBuyer.locator('.conversation-bubbles')).toContainText('22.00',{timeout:18000});
   await expect(mobileBuyer.locator('.chat-deal-panel > summary')).toBeVisible({timeout:18000});
   await mobileBuyer.locator('.chat-deal-panel > summary').click();
-  await expect(mobileBuyer.locator('.transaction-next-steps')).toBeVisible({timeout:18000});
-  await expect(mobileBuyer.locator('.transaction-next-steps')).toContainText('Progress is self-reported');
-  await expect(mobileBuyer.locator('.transaction-next-steps')).toContainText('DeckPlay does not verify payments or shipping');
-  expect(await mobileBuyer.locator('.transaction-next-steps [data-confirm-deal]').count()).toBeGreaterThan(0);
+  const mobileProgress=mobileBuyer.locator('.transaction-next-steps').filter({has:mobileBuyer.locator('[data-deal-status="'+progressProbe.id+'"]')});
+  await expect(mobileProgress).toHaveCount(1,{timeout:18000});
+  await expect(mobileProgress).toBeVisible();
+  await expect(mobileProgress).toContainText('Progress is self-reported');
+  await expect(mobileProgress).toContainText('DeckPlay does not verify payments or shipping');
+  await expect(mobileProgress.locator('[data-confirm-deal]')).toHaveCount(1);
  }catch(error){primaryFailure=error;throw error}
  finally{
   const errors=[];
