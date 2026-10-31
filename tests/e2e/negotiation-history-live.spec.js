@@ -135,6 +135,14 @@ test('real buyer and seller recover their price and trade counter history in Inb
   expect(accepted.listings).toHaveLength(2);
   expect(accepted.listings.every(x=>x.status==='reserved')).toBe(true);
 
+  // Verify the authenticated deal progress RPC itself before the Inbox rendering.
+  const progressProbe=await page.evaluate(async id=>{
+   const {data,error}=await supabaseClient.rpc('ensure_deal_progress',{p_offer_type:'trade',p_offer_id:id});
+   return {id:data?.id||null,status:data?.status||null,error:error?.message||null};
+  },tradeId);
+  expect(progressProbe.error,'Accepted synthetic trade must initialize scoped progress').toBeNull();
+  expect(progressProbe.status).toBe('accepted');
+
   // The listing owner must be able to open the actual Inbox and see the
   // accepted deal next steps; the server creates an isolated progress row
   // only when the seller views this accepted bot transaction.
