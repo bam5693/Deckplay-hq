@@ -1,0 +1,44 @@
+name: V1 focused regression repairs
+on:
+  workflow_dispatch:
+  push:
+    branches: [test/staging-reporting]
+    paths:
+      - '.github/workflows/v1-regression-repair.yml'
+      - 'tests/reports/v1-regression-request.txt'
+permissions:
+  contents: read
+jobs:
+  repaired-cases:
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Cheap syntax and safety checks before local browser tests
+        run: |
+          node --check scripts/build-staging.cjs
+          node --check tests/e2e/regressions.spec.js
+          node --check tests/e2e/wanted-matches.spec.js
+          node --check tests/e2e/private-message-photos.spec.js
+          node scripts/check-inline-js.cjs
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: staging-playwright-${{ hashFiles('package-lock.json') }}
+      - run: npx playwright install chromium --only-shell
+      - name: Recheck only last V1 sweep failures in local mobile and desktop
+        run: npx playwright test --config=playwright.local.config.js regressions.spec.js wanted-matches.spec.js private-message-photos.spec.js --workers=2 --retries=0 --max-failures=3 --timeout=30000
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: deckplay-v1-targeted-regressions
+          path: |
+            test-results/local-junit.xml
+            test-results/local/
+          if-no-files-found: ignore
+          retention-days: 3
