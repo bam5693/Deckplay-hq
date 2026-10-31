@@ -1037,7 +1037,7 @@ test('T2.2 focused draft keeps keyboard focus and caret after a manual Inbox ref
  await expect(input).toBeFocused();
  expect(await input.evaluate(el=>[el.selectionStart,el.selectionEnd])).toEqual([3,8]);
  await page.keyboard.type('New');
- await expect(input).toHaveValue('My Newizard card back question');
+ await expect(input).toHaveValue('My Newzard card back question');
 });
 
 test('T2.2 Inbox refresh does not redirect keyboard focus away from Back to all messages',async({page})=>{
