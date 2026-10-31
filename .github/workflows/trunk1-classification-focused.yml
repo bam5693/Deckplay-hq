@@ -31,4 +31,4 @@ jobs:
           key: staging-playwright-${{ hashFiles('package-lock.json') }}
       - run: npx playwright install chromium --only-shell
       - name: Two seller metadata and deck quantity regressions (local synthetic only)
-        run: npx playwright test --config=playwright.local.config.js tests/e2e/listing-editor.spec.js --grep 'T1\\.[34] (latest edited classification wins|seller deck edits reject)' --retries=0 --timeout=20000
+        run: npx playwright test --config=playwright.local.config.js tests/e2e/listing-editor.spec.js --grep 'T1\.[34] (latest edited classification wins|seller deck edits reject)' --retries=0 --timeout=20000
