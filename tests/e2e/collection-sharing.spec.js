@@ -160,3 +160,27 @@ test('trades-only inquiry stays trades-only after a failed send',async({page})=>
  await expect(page.locator('#collectionInquiryForm button[type="submit"]')).toBeEnabled();
  await expect(page.locator('#collectionInquiryBody')).toHaveValue('Would you consider a trade?');
 });
+
+test('dismissing a pending collection inquiry never opens Inbox after a late response',async({page})=>{
+ await fixture(page,'buy_trade');
+ await page.locator('[data-collection-inquiry]').click();
+ await page.locator('#collectionInquiryItem').fill('Sealed retro game');
+ await page.locator('#collectionInquiryBody').fill('Would you trade this game?');
+ await page.evaluate(()=>{window.inboxOpens=[];showInboxPage=async target=>inboxOpens.push(target);});
+ await page.locator('#collectionInquiryForm button[type="submit"]').click();
+ await page.evaluate(()=>{window.dismissedInquiryResolve=finishInquiry});
+ await page.locator('#collectionInquiryModal [data-close="collectionInquiryModal"]').click();
+ await page.evaluate(()=>dismissedInquiryResolve({error:null}));
+ await expect(page.locator('#collectionInquiryModal')).not.toHaveClass(/open/);
+ expect(await page.evaluate(()=>inboxOpens)).toEqual([]);
+ await page.evaluate(()=>showPublicProfile('tanner'));
+ await page.locator('[data-collection-inquiry]').click();
+ await expect(page.locator('#collectionInquiryForm button[type="submit"]')).toBeEnabled();
+ await page.locator('#collectionInquiryItem').fill('Different game');
+ await page.locator('#collectionInquiryBody').fill('New inquiry draft');
+ await page.locator('#collectionInquiryForm button[type="submit"]').click();
+ expect(await page.evaluate(()=>inquiryWrites.length)).toBe(2);
+ await page.evaluate(()=>finishInquiry({error:{message:'Network unavailable'}}));
+ await expect(page.locator('#collectionInquiryBody')).toHaveValue('New inquiry draft');
+ await expect(page.locator('#collectionInquiryStatus')).toContainText('draft is preserved');
+});
