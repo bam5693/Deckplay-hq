@@ -49,3 +49,33 @@ test('buyer can refresh an empty search without losing typed filters',async({pag
  await expect(page.locator('#search')).toHaveValue('Latest sealed card');
  expect(await page.evaluate(()=>marketTestRefreshes)).toBe(2);
 });
+
+
+test('network request deadline rejects even when an adapter ignores AbortSignal',async({page})=>{
+ const result=await page.evaluate(async()=>{
+  const started=performance.now();
+  try{await readMarketplaceRequest(new Promise(()=>{}),45);return {timedOut:false}}
+  catch(error){return {timedOut:/timed out/i.test(error.message),elapsed:performance.now()-started}}
+ });
+ expect(result.timedOut).toBe(true);
+ expect(result.elapsed).toBeLessThan(1000);
+});
+test('seller block preflight fails closed when network adapter never resolves',async({page})=>{
+ const result=await page.evaluate(async()=>{
+  const previousUser=currentUser,originalFrom=supabaseClient.from,originalRead=readMarketplaceRequest;
+  currentUser={id:'synthetic-block-owner'};
+  const q={then:()=>new Promise(()=>{})};
+  q.select=()=>q;q.eq=()=>q;q.abortSignal=()=>q;
+  supabaseClient.from=table=>table==='user_blocks'?q:originalFrom.call(supabaseClient,table);
+  readMarketplaceRequest=(req,ms)=>originalRead(req,45);
+  try{
+   const started=performance.now(),ready=await loadBlockedCollectors();
+   return {ready,elapsed:performance.now()-started};
+  }finally{
+   readMarketplaceRequest=originalRead;supabaseClient.from=originalFrom;
+   currentUser=previousUser;
+  }
+ });
+ expect(result.ready).toBe(false);
+ expect(result.elapsed).toBeLessThan(1000);
+});
