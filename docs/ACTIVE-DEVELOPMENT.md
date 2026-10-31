@@ -90,3 +90,7 @@
 ### T5 narrow listing preview browser layout accepted
 - Local 375px-wide mobile-browser geometry regression at `411ab4b` confirms the photo sits above listing details, details occupy substantial card width and card has no horizontal overflow. Uses local synthetic listing fixture, no real accounts.
 - [Focused run 41247603736](https://github.com/bam5693/Deckplay-hq/actions/runs/41247603736) **PASS 1/1 mobile browser + source preflight**. Visual device inspection and authenticated shared staging checks remain open. Next T5 priority: integrate safe branch changes into deployed private staging, subject to build parity/concurrency, then physical-phone acceptance when user is ready. Production untouched.
+
+### T5 private staging integration — deployed and parity verified
+- Completed [staging-only deployment 41248114335](https://github.com/bam5693/Deckplay-hq/actions/runs/41248114335) on private `deckplay-hq-staging`, integrated staging branch SHA `afca7ac`, with isolated Supabase `prrrzeelltmyugssqnzk`; private HTTP Basic gate rechecked successfully. No `main` merge or production deploy.
+- Followed with [low-cost exact deployed asset/private-gate parity check 41248151678](https://github.com/bam5693/Deckplay-hq/actions/runs/41248151678) whose main asset validation step passed. Signed-in owner device testing cannot be completed without an existing owner staging account; do not conflate synthetic automation with that acceptance. Remaining T5 gate: physical phone/PWA plus authenticated real device navigation and camera checks.
