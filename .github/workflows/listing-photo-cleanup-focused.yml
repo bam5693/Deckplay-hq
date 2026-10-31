@@ -1,0 +1,38 @@
+name: Listing photo failure cleanup focused verification
+on:
+  push:
+    branches: [test/staging-reporting]
+    paths: ['.github/workflows/listing-photo-cleanup-focused.yml', 'tests/e2e/listing-publication.spec.js']
+permissions:
+  contents: read
+jobs:
+  photo-failure:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Check changed application and test syntax
+        run: |
+          node scripts/check-inline-js.cjs
+          node --check tests/e2e/listing-publication.spec.js
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: staging-playwright-${{ hashFiles('package-lock.json') }}
+      - run: npx playwright install chromium --only-shell
+      - name: Run only partial-upload failure cleanup on desktop and mobile
+        run: npx playwright test --config=playwright.local.config.js listing-publication.spec.js --grep 'partial listing-photo upload' --retries=0 --timeout=20000
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: listing-photo-cleanup-failure
+          path: |
+            test-results/local/
+            test-results/local-junit.xml
+          if-no-files-found: ignore
+          retention-days: 3
