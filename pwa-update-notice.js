@@ -38,6 +38,12 @@
     refresh.style.cssText = 'background:#e8c778;color:#14213d;border:0;border-radius:8px;padding:10px 15px;font-weight:700';
     later.addEventListener('click', removeNotice);
     refresh.addEventListener('click', () => {
+      // Keep the existing page and unsaved work visible while offline. A
+      // service-worker fallback page cannot restore a draft after a reload.
+      if (navigator.onLine === false) {
+        message.textContent = 'You are offline. Reconnect before refreshing so unfinished work is not lost.';
+        return;
+      }
       // An unsent photo cannot be recovered from a refreshed browser page.
       // The user chooses when to reload; no automatic reload on controller change.
       if (!window.confirm('Refresh DeckPlay now? Save any unfinished listing, message or photo first.')) return;
