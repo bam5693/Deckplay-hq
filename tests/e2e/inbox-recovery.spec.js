@@ -1138,3 +1138,44 @@ test('T2.2 Inbox normalized search still obeys unread-only and clear filters',as
  await expect(page.locator('[data-conversation-unread]')).not.toBeChecked();
  await expect(page.locator('[data-conversation-id="buyer-a"]')).toBeVisible();
 });
+
+test('T2.5 offers and trades quick filter finds negotiations without hiding message-only collectors',async({page})=>{
+ await inbox(page,true);
+ await page.evaluate(async()=>{
+  const original=supabaseClient.from;
+  supabaseClient.from=table=>{
+   if(table==='price_offers'){
+    const q={then:(resolve,reject)=>Promise.resolve({data:[{id:'price-one',buyer_id:'buyer-a',seller_id:'fixture-seller',amount:28,status:'pending',last_actor_id:'buyer-a',updated_at:new Date().toISOString()}],error:null}).then(resolve,reject)};
+    for(const name of ['select','order','limit'])q[name]=()=>q;
+    return q;
+   }
+   return original(table);
+  };
+  await loadInbox('buyer-a');
+ });
+ await page.locator('#inboxThreadBack').click();
+ const offers=page.locator('[data-conversation-negotiations]');
+ await offers.check();
+ await expect(page.locator('[data-conversation-id="buyer-a"]')).toBeVisible();
+ await expect(page.locator('[data-conversation-id="buyer-b"]')).toBeHidden();
+ await expect(page.locator('[data-conversation-id="buyer-a"]')).toHaveAttribute('data-has-negotiation','true');
+ await expect(page.locator('[data-conversation-id="buyer-b"]')).toHaveAttribute('data-has-negotiation','false');
+ await page.evaluate(()=>loadInbox());
+ await expect(page.locator('[data-conversation-negotiations]')).toBeChecked();
+ await expect(page.locator('[data-conversation-id="buyer-b"]')).toBeHidden();
+ await page.locator('[data-conversation-clear]').click();
+ await expect(page.locator('[data-conversation-negotiations]')).not.toBeChecked();
+ await expect(page.locator('[data-conversation-id="buyer-b"]')).toBeVisible();
+});
+
+test('T2.5 direct conversation navigation resets active negotiation-only filter',async({page})=>{
+ await inbox(page);
+ await page.locator('#inboxThreadBack').click();
+ await page.locator('[data-conversation-negotiations]').check();
+ await expect(page.locator('[data-conversation-id="buyer-a"]')).toBeHidden();
+ await expect(page.locator('[data-conversation-id="buyer-b"]')).toBeHidden();
+ await page.evaluate(()=>showInboxPage('buyer-b'));
+ await expect(page.locator('[data-conversation-negotiations]')).not.toBeChecked();
+ await expect(page.locator('#chatInput')).toBeVisible();
+ await expect(page.locator('.chat-composer')).toHaveAttribute('data-chat-recipient','buyer-b');
+});
