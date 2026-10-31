@@ -545,7 +545,7 @@ body.inbox-focus .inbox-page-heading{margin-top:12px}
 }
 #inboxPage .chat-composer textarea{resize:none;background:transparent;border-radius:10px}
 /* Trunk 5: 16px mobile inputs prevent iOS focus-zoom in the message composer. */
-@media(max-width:700px){#inboxPage .chat-composer textarea{font-size:16px;touch-action:manipulation}}
+@media(max-width:700px){#inboxPage .chat-composer textarea{font-size:max(16px,1em);touch-action:manipulation}}
 @media(max-width:420px){
  #inboxPage #messageInbox .conversation-contact{padding:14px 12px;gap:11px}
  #inboxPage #messageInbox .conversation-contact .conversation-summary>.conversation-preview{font-size:14px}
