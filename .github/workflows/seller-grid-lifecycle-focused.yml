@@ -1,0 +1,38 @@
+name: Seller grid lifecycle targeted check
+on:
+  push:
+    branches: [test/staging-reporting]
+    paths: ['.github/workflows/seller-grid-lifecycle-focused.yml']
+permissions:
+  contents: read
+jobs:
+  seller-grid:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Syntax check affected seller lifecycle tests and app
+        run: |
+          node scripts/check-inline-js.cjs
+          node --check tests/e2e/seller-inventory.spec.js
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: seller-grid-chromium-${{ hashFiles('package-lock.json') }}
+      - run: npx playwright install chromium --only-shell
+      - name: Verify no false sold/delete success on stale inventory, desktop and mobile
+        run: npx playwright test --config=playwright.local.config.js seller-inventory.spec.js --grep 'marketplace My Listings' --retries=0 --timeout=20000
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: seller-grid-focused-failure
+          path: |
+            test-results/local/
+            test-results/local-junit.xml
+          if-no-files-found: ignore
+          retention-days: 3
