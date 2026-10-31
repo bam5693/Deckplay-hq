@@ -81,6 +81,7 @@
           <label for="supportFeedbackKind">What would you like to share?</label>
           <select id="supportFeedbackKind"><option value="bug">Something isn't working</option><option value="idea">An improvement idea</option><option value="category">A missing collectible category</option><option value="other">Other feedback</option></select>
           <p class="muted">Your feedback is private to you and support. Please avoid personal information.</p>
+          <button type="button" class="ghost" id="supportFeedbackDiscard" hidden>Discard unsent feedback</button>
         </div>
         <div id="supportTradeConcernFields" hidden>
           <label for="supportTradeConcernKind">What happened?</label>
@@ -120,6 +121,25 @@
   let userId = null, generation = 0, isStaff = false, staffView = false, staffSafetyOnly = false, ticketFilter = "all", ticketCategory = "all", feedbackQueueSubject = null, selected = null, tickets = [], ticketOffset = 0, ticketListRequest = 0, loadingTickets = false, moreTickets = false, replyOffset = 0, moreReplies = false, loadingReplies = false, replyRequest = 0, returnToFeedback = false, returnTopic = "feedback", feedbackMode = false, tradeConcernMode = false, listingReportId = null, pendingReportId = null, viewGeneration = 0, createRequest = 0, replySubmitRequest = 0, statusSubmitRequest = 0;
   // Drafts are tab-memory only, keyed by ticket and purged on account/view reset.
   const replyDrafts = new Map();
+  // Unsaved beta feedback stays only in this tab and only for the same account.
+  // Do not use localStorage: shared devices must not retain private feedback.
+  let feedbackDraft = null;
+  function captureFeedbackDraft(){
+    if(!feedbackMode || !userId)return;
+    const subject=el("supportSubject").value,body=el("supportDescription").value;
+    feedbackDraft=subject.trim() || body.trim()
+      ? {owner:userId,kind:el("supportFeedbackKind").value,subject,body} : null;
+    el("supportFeedbackDiscard").hidden=!feedbackDraft;
+  }
+  function restoreFeedbackDraft(){
+    if(!feedbackDraft || feedbackDraft.owner!==userId)return false;
+    el("supportFeedbackKind").value=feedbackDraft.kind;
+    updateFeedbackKind();
+    el("supportSubject").value=feedbackDraft.subject;
+    el("supportDescription").value=feedbackDraft.body;
+    el("supportFeedbackDiscard").hidden=false;
+    return true;
+  }
   const feedbackQueueSubjects = Object.freeze({empty:"[Idea] Improve marketplace search results",discovery:"[Idea] Improve listing discovery",contact:"[Idea] Improve listing contact experience"});
   const feedbackQueueLabels = Object.freeze({empty:"No-result reports",discovery:"Discovery reports",contact:"Contact-friction reports"});
   const feedbackKinds = {
@@ -138,6 +158,7 @@
     feedbackMode = enabled;
     el("supportCategoryField").hidden = enabled;
     el("supportFeedbackOptions").hidden = !enabled;
+    el("supportFeedbackDiscard").hidden = !enabled || !feedbackDraft || feedbackDraft.owner!==userId;
     if(enabled)setTradeConcernMode(false);
     el("supportNewTitle").textContent = enabled ? "Share private beta feedback" : "Open a new support ticket";
     el("supportNewForm").querySelector('button[type="submit"]').textContent = enabled ? "Send private feedback" : "Create private ticket";
@@ -198,6 +219,18 @@
     if(listingReportId)el("supportReportReason").value = "counterfeit";
   }
   el("supportFeedbackKind").addEventListener("change", updateFeedbackKind);
+  for(const eventName of ["input","change"])
+    el("supportNewForm").addEventListener(eventName,captureFeedbackDraft);
+  el("supportFeedbackDiscard").addEventListener("click",()=>{
+    feedbackDraft=null;
+    el("supportSubject").value="";
+    el("supportDescription").value="";
+    el("supportFeedbackKind").value="bug";
+    updateFeedbackKind();
+    el("supportFeedbackDiscard").hidden=true;
+    status("supportCreateStatus","Unsent feedback discarded. You can start a new report.");
+    el("supportSubject").focus();
+  });
   const valid = (v,u) => v === generation && userId === u && modal.classList.contains("open");
   // Read refreshes increment generation. Writes must instead survive unrelated
   // ticket-list refreshes, while still being discarded after account/view changes.
@@ -259,8 +292,11 @@
     void show();
     setFeedbackMode(true);
     if (!currentUser?.id) return; // Never reveal a previous account's draft.
+    const restored=restoreFeedbackDraft();
     el("supportSubject").focus();
-    status("supportCreateStatus", "Describe your experience without personal information.");
+    status("supportCreateStatus", restored
+      ? "Your unsent feedback is restored in this tab. Discard it to start over."
+      : "Describe your experience without personal information.");
   }
   document.addEventListener("deckplay:open-feedback", openFeedback);
   // Search feedback is user-initiated and uses the existing private support workflow.
@@ -272,6 +308,11 @@
     const category=allowed.includes(detail.category)?detail.category:"All";
     openFeedback();
     if(!currentUser?.id)return; // Signed-out navigation retains intent only, never search context.
+    // An opt-in search report must never overwrite a collector's existing draft.
+    if(feedbackDraft?.owner===userId){
+      status("supportCreateStatus","Your unsent feedback was restored. Discard it before starting a new search report.");
+      return;
+    }
     el("supportFeedbackKind").value="idea";
     updateFeedbackKind();
     el("supportSubject").value=detail.outcome==="empty"?"Improve marketplace search results":detail.outcome==="detail"?"Improve listing contact experience":"Improve listing discovery";
@@ -292,6 +333,7 @@
          "",
          "What I hoped to find: "];
     el("supportDescription").value=lines.join("\n");
+    captureFeedbackDraft();
     status("supportCreateStatus","Review and add your experience before sending. No search words, listing IDs or personal information were copied automatically.");
     el("supportDescription").focus();
   }
@@ -364,8 +406,9 @@
     ++viewGeneration;
     userId = currentUser?.id || null;
     clearPrivate();
-    // Every visit starts with a blank draft, even when a different collector
-    // previously opened feedback on this shared browser.
+    // Ordinary support opens blank; the feedback action may restore only the
+    // same account's tab-memory draft, never a previous collector's.
+    if(feedbackDraft && feedbackDraft.owner!==userId)feedbackDraft=null;
     el("supportNewForm").reset();
     setTradeConcernMode(false);
     setFeedbackMode(false);
@@ -680,6 +723,7 @@
       el("supportTradeConcernKind").value,el("supportReportReason").value,
       feedbackMode,tradeConcernMode,listingReportId];
     const sentDraft=JSON.stringify(draftState()),request=++createRequest;
+    if(feedbackMode)captureFeedbackDraft();
     button.disabled=true;status("supportCreateStatus","Submitting…");
     try{
       const {data,error}=await supabaseClient.rpc("create_support_ticket",{
@@ -689,7 +733,10 @@
       if(error)throw error;
       if(!validWrite(v,u))return;
       const newerDraft=JSON.stringify(draftState())!==sentDraft;
-      if(!newerDraft){form.reset();setTradeConcernMode(false);setListingReportMode(null);updateFeedbackKind();}
+      if(!newerDraft){
+        if(feedbackMode){feedbackDraft=null;el("supportFeedbackDiscard").hidden=true;}
+        form.reset();setTradeConcernMode(false);setListingReportMode(null);updateFeedbackKind();
+      }
       // A successful new ticket must be visible in My tickets even when the
       // collector was browsing a different topic or staff-only drill-down.
       // Keep form category/unsent edits intact; only reset the history view.
@@ -761,7 +808,8 @@
   supabaseClient.auth.onAuthStateChange((_event,session)=>{
     const next=session?.user?.id||null;
     if(next===userId)return;
-    userId=next;++generation;++viewGeneration;clearPrivate();
+    userId=next;++generation;++viewGeneration;feedbackDraft=null;clearPrivate();
+    el("supportFeedbackDiscard").hidden=true;
     el("supportNewForm").reset(); // Never carry a private draft into another account.
     setTradeConcernMode(false);
     listingReportId=null;

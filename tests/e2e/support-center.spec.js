@@ -226,6 +226,51 @@ test('T7.6: collector submits typed private feedback for bugs, improvements and 
  await expect(page.locator('#supportTicketList')).not.toContainText('Please add vintage toys');
 });
 
+test('T7.6: same-account beta feedback draft survives closing support and can be discarded',async({page})=>{
+ await boot(page);await signIn(page,'buyer');
+ await page.evaluate(()=>document.dispatchEvent(new Event('deckplay:open-feedback')));
+ await page.locator('#supportFeedbackKind').selectOption('category');
+ await page.locator('#supportSubject').fill('Please add model kits');
+ await page.locator('#supportDescription').fill('Synthetic request for Gundam models and other hobby collectibles.');
+ await expect(page.locator('#supportFeedbackDiscard')).toBeVisible();
+ await page.locator('#supportClose').click();
+ await page.evaluate(()=>document.dispatchEvent(new Event('deckplay:open-feedback')));
+ await expect(page.locator('#supportFeedbackKind')).toHaveValue('category');
+ await expect(page.locator('#supportSubject')).toHaveValue('Please add model kits');
+ await expect(page.locator('#supportDescription')).toContainText('Gundam models');
+ await page.locator('#supportFeedbackDiscard').click();
+ await expect(page.locator('#supportSubject')).toBeEmpty();
+ await expect(page.locator('#supportDescription')).toBeEmpty();
+ await expect(page.locator('#supportFeedbackDiscard')).toBeHidden();
+ await page.locator('#supportSubject').fill('Add retro game manuals');
+ await page.locator('#supportDescription').fill('Synthetic request for vintage game manuals and strategy guides.');
+ await page.getByRole('button',{name:'Send private feedback'}).click();
+ await expect(page.locator('#supportTicketTitle')).toHaveText('[Bug] Add retro game manuals');
+ await page.locator('#supportClose').click();
+ await page.evaluate(()=>document.dispatchEvent(new Event('deckplay:open-feedback')));
+ await expect(page.locator('#supportSubject')).toBeEmpty();
+ await expect(page.locator('#supportFeedbackDiscard')).toBeHidden();
+});
+
+test('T7.6: search feedback cannot overwrite an unsent draft or expose it after account change',async({page})=>{
+ await boot(page);await signIn(page,'buyer');
+ await page.evaluate(()=>document.dispatchEvent(new Event('deckplay:open-feedback')));
+ await page.locator('#supportFeedbackKind').selectOption('idea');
+ await page.locator('#supportSubject').fill('Improve sports memorabilia search');
+ await page.locator('#supportDescription').fill('Synthetic draft about signed jerseys and vintage collectibles.');
+ await page.locator('#supportClose').click();
+ await page.evaluate(()=>document.dispatchEvent(new CustomEvent('deckplay:search-feedback',{detail:{
+  outcome:'empty',category:'Video Games',hasFilters:true
+ }})));
+ await expect(page.locator('#supportSubject')).toHaveValue('Improve sports memorabilia search');
+ await expect(page.locator('#supportDescription')).toContainText('signed jerseys');
+ await expect(page.locator('#supportCreateStatus')).toContainText('Discard it before starting');
+ await page.evaluate(()=>{window.currentUser={id:'other'};window.__authCallback('SIGNED_IN',{user:{id:'other'}})});
+ await page.evaluate(()=>document.dispatchEvent(new Event('deckplay:open-feedback')));
+ await expect(page.locator('#supportSubject')).toBeEmpty();
+ await expect(page.locator('#supportDescription')).toBeEmpty();
+ await expect(page.locator('#supportFeedbackDiscard')).toBeHidden();
+});
 test('T7.6: signed-out feedback returns to the private form after login without carrying drafts',async({page})=>{
  await boot(page);
  await page.evaluate(()=>document.dispatchEvent(new Event('deckplay:open-feedback')));
