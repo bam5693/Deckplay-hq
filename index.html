@@ -1233,19 +1233,35 @@ async function prepareListingPhoto(file){
 async function uploadPhotos(files,userId){
  const accountVersion=listingAccountVersion;
  const checkAccount=()=>{if(currentUser?.id!==userId||listingAccountVersion!==accountVersion)throw new Error("Account changed while uploading photos. Please sign in again before posting.")};
- const urls=[];
- for(const original of files){
-  checkAccount();const file=await prepareListingPhoto(original);checkAccount();
-  const extension=(file.name.split(".").pop()||"jpg").toLowerCase().replace(/[^a-z0-9]/g,"");
-  const path=`${userId}/${crypto.randomUUID()}.${extension}`;
-  const {error}=await supabaseClient.storage.from("listing-images").upload(path,file,{cacheControl:"3600",contentType:file.type,upsert:false});
-  if(error)throw error;checkAccount();
-  const {data}=supabaseClient.storage.from("listing-images").getPublicUrl(path);
-  urls.push(data.publicUrl);
+ const urls=[],uploadedPaths=[];
+ try{
+  for(const original of files){
+   checkAccount();const file=await prepareListingPhoto(original);checkAccount();
+   const extension=(file.name.split(".").pop()||"jpg").toLowerCase().replace(/[^a-z0-9]/g,"");
+   const path=`${userId}/${crypto.randomUUID()}.${extension}`;
+   const {error}=await supabaseClient.storage.from("listing-images").upload(path,file,{cacheControl:"3600",contentType:file.type,upsert:false});
+   if(error)throw error;
+   // Track every successful object before any further work can fail.
+   uploadedPaths.push(path);checkAccount();
+   const {data}=supabaseClient.storage.from("listing-images").getPublicUrl(path);
+   urls.push(data.publicUrl);
+  }
+  return urls;
+ }catch(error){
+  // Never delete under a different account. Only objects created by this
+  // failed attempt are eligible for scoped cleanup.
+  if(uploadedPaths.length&&currentUser?.id===userId&&listingAccountVersion===accountVersion){
+   try{
+    const {error:cleanupError}=await supabaseClient.storage.from("listing-images").remove(uploadedPaths);
+    if(cleanupError)throw cleanupError;
+   }catch(cleanupError){
+    console.warn("Failed listing photo cleanup did not complete",cleanupError);
+    throw new Error("Photo upload failed and some temporary photos could not be cleared. Retry or contact support.");
+   }
+  }
+  throw error;
  }
- return urls;
 }
-
 async function sendCollectorEmailForSource(sourceId){if(!currentUser||!sourceId)return;try{const {data}=await supabaseClient.from("collector_notifications").select("id").eq("actor_id",currentUser.id).eq("source_id",sourceId).order("created_at",{ascending:false}).limit(1);if(data?.[0]?.id)await supabaseClient.functions.invoke("send-collector-notification",{body:{notification_id:data[0].id}})}catch(err){console.warn("Email notification request failed",err)}}
 let priceOfferListingId=null,priceOfferPending=false,priceOfferContextVersion=0,priceOfferDraftVersion=0;
 document.getElementById("priceOfferAmount").addEventListener("input",()=>priceOfferDraftVersion++);
