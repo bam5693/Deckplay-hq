@@ -70,3 +70,7 @@
 ### T8 private support reply validation — verified
 - `support-center.js` `34294ed` prevents whitespace-only private ticket replies from invoking `reply_support_ticket` after trimming, informs the collector and preserves their unfinished reply in the field. Added mocked client regression `b1ff7a0` on mobile/desktop and included it in the existing focused workflow (`ce12c94`).
 - [Run 41244824477](https://github.com/bam5693/Deckplay-hq/actions/runs/41244824477) **PASS 52/52** desktop/mobile-emulated support and feedback cases with cheap preflight. No real service requests, private staging deploy, or production changes.
+
+### T8 oversize private reply protection
+- Added defensive length check to `support-center.js` `1fcf231` so unexpectedly oversized trimmed private support replies (>3000) do not reach the backend or lose their draft. The normal form already has a 3000-character maxlength; this validates unusual client-state/DOM cases.
+- Local browser acceptance case `8ffc3d8` verifies no API RPC is attempted, on both desktop/mobile. [Focused run 41245063220](https://github.com/bam5693/Deckplay-hq/actions/runs/41245063220) **PASS 54/54**; no live accounts, shared staging deploy, or production changes. Move to more impactful beta work rather than rechecking same support validations.
