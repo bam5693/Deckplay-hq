@@ -106,7 +106,7 @@ test('buyer sees exact seller card condition from legacy and edited classificati
   showDetails({
    id:'test-card-original',n:'TEST ONLY Japanese foil',c:'Trading Cards',
    rawCategory:'trading_cards',game:'one_piece',p:25,cond:'Like new',
-   description:'[Card Condition]\\nNear Mint\\n\\nSet: Synthetic Set\\nCard number: 007\\nOriginal print disclosure.',
+   description:'[Card Condition]\nNear Mint\n\nSet: Synthetic Set\nCard number: 007\nOriginal print disclosure.',
    imageUrls:[],s:'Test seller'
   });
  });
@@ -116,7 +116,7 @@ test('buyer sees exact seller card condition from legacy and edited classificati
   showDetails({
    id:'test-card-edited',n:'TEST ONLY Japanese foil',c:'Trading Cards',
    rawCategory:'trading_cards',game:'one_piece',p:25,cond:'Used',
-   description:'[Card Condition]\\nNear Mint\\n\\n[Listing classification]\\nCard condition: Lightly Played\\nSet: Synthetic Set\\nCard number: 007\\n[End classification]\\n\\nLatest wear disclosure.',
+   description:'[Card Condition]\nNear Mint\n\n[Listing classification]\nCard condition: Lightly Played\nSet: Synthetic Set\nCard number: 007\n[End classification]\n\nLatest wear disclosure.',
    imageUrls:[],s:'Test seller'
   });
  });
