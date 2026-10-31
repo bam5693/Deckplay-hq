@@ -2709,6 +2709,14 @@ if(tradeById.size){
  const dealStatusByUser=new Map();const {data:dealRows}=await supabaseClient.from("deal_progress").select("buyer_id,seller_id,status,updated_at").order("updated_at",{ascending:false}).limit(300);for(const d of dealRows||[]){const other=d.buyer_id===currentUser.id?d.seller_id:d.buyer_id;if(!dealStatusByUser.has(other))dealStatusByUser.set(other,d.status)}
  if(requestId!==inboxLoadVersion||currentUser?.id!==userId)return;
  const preview=x=>!x?"Start a conversation":x.type==="message"?"✉ "+x.body:x.type==="price"?"💰 Offer · $"+Number(x.amount).toFixed(2)+" · "+x.action:x.type==="trade_counter"?"↩ Trade counteroffer · "+x.status:"⇄ Trade · "+x.status;
+ // A background refresh must not jump a collector away from older messages.
+ // Sample the scroll position immediately before replacing the thread: the
+ // collector may keep reading while the network requests are in flight.
+ const oldHistory=el.querySelector(".conversation-bubbles");
+ const sameVisibleThread=!!oldHistory&&document.getElementById("inboxPage").classList.contains("thread-open")&&
+  selectedInboxCollector===requestedTarget;
+ const oldHistoryDistance=sameVisibleThread?Math.max(0,oldHistory.scrollHeight-oldHistory.clientHeight-oldHistory.scrollTop):0;
+ const restoreHistoryDistance=oldHistoryDistance>72?oldHistoryDistance:null;
  // Preserve an actively edited message across a manual Inbox refresh.
  // Capture focus immediately before replacement: the collector may move to
  // another control while network requests are still pending.
@@ -2766,7 +2774,7 @@ if(tradeById.size){
   if(currentUser?.id!==userId||!el.isConnected)return;
   (el.querySelector("[data-inbox-more-activity]")||el.querySelector("[data-conversation-search]"))?.focus({preventScroll:true});
  });
- const openThread=async (id,preserveDistanceFromBottom=null)=>{
+ const openThread=async (id,preserveDistanceFromBottom=null,focusHistory=false)=>{
  rememberInboxDraft();
  const sameThread=document.getElementById("inboxPage").classList.contains("thread-open")&&selectedInboxCollector===id;
  const entries=groups.get(id)||[],unread=entries.filter(x=>x.type==="message"&&x.recipient_id===currentUser.id&&!x.read_at).map(x=>x.id);
@@ -2794,7 +2802,7 @@ if(tradeById.size){
  // Initial positioning and history restoration must be immediate, not smooth.
  bubbles.style.scrollBehavior="auto";
  bubbles.scrollTop=preserveDistanceFromBottom===null?bubbles.scrollHeight:Math.max(0,bubbles.scrollHeight-bubbles.clientHeight-preserveDistanceFromBottom);
- if(preserveDistanceFromBottom!==null)bubbles.focus({preventScroll:true});
+ if(focusHistory)bubbles.focus({preventScroll:true});
  // A long negotiation history can leave the buyer far above the newest reply.
  // Offer a keyboard-accessible way back without interrupting history reading.
  const jumpLatest=thread.querySelector(".chat-jump-latest");
@@ -2831,7 +2839,7 @@ if(tradeById.size){
   }
   // The reader may have scrolled while the request was pending.
   const distance=Math.max(0,bubbles.scrollHeight-bubbles.scrollTop-bubbles.clientHeight);
-  await openThread(id,distance);
+  await openThread(id,distance,true);
  });
  const negotiationButton=thread.querySelector("[data-inbox-older-negotiations]");
   negotiationButton?.addEventListener("click",async()=>{
@@ -2969,7 +2977,7 @@ if(tradeById.size){
  }
  };
  el.querySelectorAll("[data-conversation-id]").forEach(b=>b.addEventListener("click",()=>openThread(b.dataset.conversationId)));
- if(requestedTarget&&groups.has(requestedTarget))await openThread(requestedTarget);
+ if(requestedTarget&&groups.has(requestedTarget))await openThread(requestedTarget,restoreHistoryDistance);
  else document.getElementById("inboxPage").classList.remove("thread-open");
  // The thread render replaces the composer node. Restore a focused draft only
  // when this exact request, account and thread still own the visible Inbox,
