@@ -137,3 +137,30 @@ test('mismatched contents stay in the draft and cannot publish until corrected',
  expect(await page.evaluate(()=>collectListingDraftValues())).toMatchObject({listingIncludedQuantity:'4',listingQuantityUnit:'games',listingContentsList:'2x Complete game\n1x Disc-only game'});
  await page.locator('#listingIncludedQuantity').fill('3');await submit(page);await expect.poll(()=>page.evaluate(()=>publishWrites.length)).toBe(1);
 });
+
+for(const cleanupFails of [false,true])test('partial listing-photo upload '+(cleanupFails?'reports failed cleanup':'removes earlier temporary photos'),async({page})=>{
+ await ready(page,'none');
+ const result=await page.evaluate(async cleanupFails=>{
+  const oldPrepare=prepareListingPhoto,oldStorage=supabaseClient.storage.from;
+  const uploads=[],removals=[];
+  prepareListingPhoto=async file=>file;
+  supabaseClient.storage.from=()=>({
+   upload:async path=>{uploads.push(path);return {error:uploads.length===2?new Error('Synthetic second-photo upload failure'):null}},
+   getPublicUrl:path=>({data:{publicUrl:'https://example.test/'+path}}),
+   remove:async paths=>{removals.push([...paths]);return {error:cleanupFails?new Error('Synthetic cleanup failure'):null}}
+  });
+  try{
+   const photos=['first.jpg','second.jpg'].map(name=>new File(['synthetic'],name,{type:'image/jpeg'}));
+   let error='';
+   try{await window.realUploadPhotos(photos,currentUser.id)}catch(e){error=String(e.message||e)}
+   return {error,uploads,removals,owner:currentUser.id};
+  }finally{
+   prepareListingPhoto=oldPrepare;
+   supabaseClient.storage.from=oldStorage;
+  }
+ },cleanupFails);
+ expect(result.uploads).toHaveLength(2);
+ expect(result.uploads[0]).toMatch(new RegExp('^'+result.owner+'/[a-f0-9-]+\\.jpg$'));
+ expect(result.removals).toEqual([[result.uploads[0]]]);
+ expect(result.error).toContain(cleanupFails?'some temporary photos could not be cleared':'Synthetic second-photo upload failure');
+});
