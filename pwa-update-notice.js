@@ -43,12 +43,12 @@
     later.type = 'button';
     later.textContent = 'Later';
     later.setAttribute('aria-label', 'Dismiss app update notification');
-    later.style.cssText = 'background:transparent;color:#fff;border:1px solid #9aaecb;border-radius:8px;padding:10px 12px';
+    later.style.cssText = 'background:transparent;color:#fff;border:1px solid #9aaecb;border-radius:8px;padding:10px 12px;min-height:44px';
     const refresh = document.createElement('button');
     refresh.type = 'button';
     refresh.textContent = 'Refresh';
     refresh.setAttribute('aria-label', 'Refresh DeckPlay to load new version');
-    refresh.style.cssText = 'background:#e8c778;color:#14213d;border:0;border-radius:8px;padding:10px 15px;font-weight:700';
+    refresh.style.cssText = 'background:#e8c778;color:#14213d;border:0;border-radius:8px;padding:10px 15px;font-weight:700;min-height:44px';
     later.addEventListener('click', removeNotice);
     refresh.addEventListener('click', () => {
       // Keep the existing page and unsaved work visible while offline. A
