@@ -40,6 +40,7 @@ on:
       - 'tests/reports/listing-photo-retry-live-request.txt'
       - 'tests/reports/listing-photo-categories-live-request.txt'
       - 'tests/reports/t2-messaging-live-request.txt'
+      - 'tests/reports/t2-mobile-live-request.txt'
 permissions:
   contents: read
   id-token: write
@@ -178,7 +179,7 @@ jobs:
           key: staging-playwright-${{ hashFiles('package-lock.json') }}
       - run: npx playwright install chromium --only-shell
       - name: Cheap local preflight before deployment or signed sessions
-        if: github.event_name == 'push' && !startsWith(github.event.head_commit.message, '[focused-history]') && !startsWith(github.event.head_commit.message, '[feedback-live]') && !startsWith(github.event.head_commit.message, '[share-live]') && !startsWith(github.event.head_commit.message, '[price-live]') && !startsWith(github.event.head_commit.message, '[t2-live]')
+        if: github.event_name == 'push' && !startsWith(github.event.head_commit.message, '[focused-history]') && !startsWith(github.event.head_commit.message, '[feedback-live]') && !startsWith(github.event.head_commit.message, '[share-live]') && !startsWith(github.event.head_commit.message, '[price-live]') && !startsWith(github.event.head_commit.message, '[t2-live]') && !startsWith(github.event.head_commit.message, '[t2-mobile]')
         run: |
           node scripts/check-inline-js.cjs
           node --check support-center.js
@@ -195,7 +196,7 @@ jobs:
           node --test tests/security/trade-delivery.test.cjs tests/security/staging-browser-config.test.cjs
           npx playwright test --config=playwright.local.config.js support-center.spec.js support-trade-triage.spec.js listing-gallery.spec.js checkout-simulation.spec.js checkout-preview-clarity.spec.js wanted-search-handoff.spec.js inbox-negotiation-history.spec.js inbox-older-activity-discovery.spec.js trade-conversation-navigation.spec.js inbox-price-withdrawal.spec.js share-links.spec.js getting-started.spec.js discovery-profiles.spec.js notification-prices.spec.js pwa-update-notice.spec.js --retries=0 --max-failures=1 --timeout=20000
       - name: Build and deploy exact private staging source after preflight
-        if: github.event_name == 'push' && !startsWith(github.event.head_commit.message, '[focused-history]') && !startsWith(github.event.head_commit.message, '[feedback-live]') && !startsWith(github.event.head_commit.message, '[share-live]') && !startsWith(github.event.head_commit.message, '[price-live]') && !startsWith(github.event.head_commit.message, '[t2-live]')
+        if: github.event_name == 'push' && !startsWith(github.event.head_commit.message, '[focused-history]') && !startsWith(github.event.head_commit.message, '[feedback-live]') && !startsWith(github.event.head_commit.message, '[share-live]') && !startsWith(github.event.head_commit.message, '[price-live]') && !startsWith(github.event.head_commit.message, '[t2-live]') && !startsWith(github.event.head_commit.message, '[t2-mobile]')
         env:
           DECKPLAY_STAGING_SUPABASE_URL: https://prrrzeelltmyugssqnzk.supabase.co
           DECKPLAY_STAGING_SUPABASE_KEY: sb_publishable_0omvNnv_ZOvXrZ-LHPMyIQ_a9zxD-yh
@@ -208,13 +209,13 @@ jobs:
       - name: Load credentials using existing trusted identity
         run: node scripts/staging-ci-credentials.cjs
       - name: Verify exact served assets and anonymous denial
-        if: github.event_name == 'push' && !startsWith(github.event.head_commit.message, '[focused-history]') && !startsWith(github.event.head_commit.message, '[feedback-live]') && !startsWith(github.event.head_commit.message, '[share-live]') && !startsWith(github.event.head_commit.message, '[price-live]') && !startsWith(github.event.head_commit.message, '[t2-live]')
+        if: github.event_name == 'push' && !startsWith(github.event.head_commit.message, '[focused-history]') && !startsWith(github.event.head_commit.message, '[feedback-live]') && !startsWith(github.event.head_commit.message, '[share-live]') && !startsWith(github.event.head_commit.message, '[price-live]') && !startsWith(github.event.head_commit.message, '[t2-live]') && !startsWith(github.event.head_commit.message, '[t2-mobile]')
         run: node scripts/verify-staging-assets.cjs
       - name: ONE authentication smoke only when requested
         if: github.event.inputs.auth_smoke_only == 'true'
         run: npx playwright test --config=playwright.staging.config.js staging-auth-smoke.spec.js --project=staging-desktop --retries=0 --timeout=20000
       - name: Read-only deployed buyer and seller desktop and mobile acceptance
-        if: success() && github.event.inputs.acceptance_scope != 'seller_desktop' && !(github.event_name == 'push' && (startsWith(github.event.head_commit.message, '[focused-history]') || startsWith(github.event.head_commit.message, '[feedback-live]') || startsWith(github.event.head_commit.message, '[share-live]') || startsWith(github.event.head_commit.message, '[price-live]') || startsWith(github.event.head_commit.message, '[t2-live]')))
+        if: success() && github.event.inputs.acceptance_scope != 'seller_desktop' && !(github.event_name == 'push' && (startsWith(github.event.head_commit.message, '[focused-history]') || startsWith(github.event.head_commit.message, '[feedback-live]') || startsWith(github.event.head_commit.message, '[share-live]') || startsWith(github.event.head_commit.message, '[price-live]') || startsWith(github.event.head_commit.message, '[t2-live]') || startsWith(github.event.head_commit.message, '[t2-mobile]')))
         run: npx playwright test --config=playwright.staging.config.js staging-account-readonly.spec.js --retries=0 --timeout=40000
       - name: Seller desktop only after diagnosed transport reset
         if: success() && github.event.inputs.acceptance_scope == 'seller_desktop'
@@ -271,9 +272,18 @@ jobs:
       - name: T2 verify exact served assets and private authentication
         if: ${{ success() && github.event_name == 'push' && startsWith(github.event.head_commit.message, '[t2-live]') }}
         run: node scripts/verify-staging-assets.cjs
+      - name: T2 mobile-only syntax and fixture preflight
+        if: ${{ github.event_name == 'push' && startsWith(github.event.head_commit.message, '[t2-mobile]') }}
+        run: |
+          node --check tests/e2e/t2-buyer-seller-messaging-live.spec.js
+          node scripts/check-inline-js.cjs
+          node --test tests/security/staging-browser-config.test.cjs tests/security/fixture-cleanup.test.cjs
       - name: T2 signed buyer-seller messaging and delivery recovery
         if: ${{ success() && github.event_name == 'push' && startsWith(github.event.head_commit.message, '[t2-live]') }}
         run: npx playwright test --config=playwright.staging.config.js t2-buyer-seller-messaging-live.spec.js --project=staging-desktop --retries=0 --max-failures=1 --timeout=120000
+      - name: T2 mobile-only signed Inbox and read receipts
+        if: ${{ success() && github.event_name == 'push' && startsWith(github.event.head_commit.message, '[t2-mobile]') }}
+        run: npx playwright test --config=playwright.staging.config.js t2-buyer-seller-messaging-live.spec.js --project=staging-mobile --retries=0 --max-failures=1 --timeout=120000
       - uses: actions/upload-artifact@v4
         if: always()
         with:
