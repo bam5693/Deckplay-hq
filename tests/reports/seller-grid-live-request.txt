@@ -1,0 +1,4 @@
+T1.1 targeted signed seller lifecycle acceptance — 2026-10-31.
+Source seller guard: 5ecd9e38d5f0257b647ada86f444a2df5c13766b; 4/4 focused local desktop/mobile PASS at run 41216218260.
+Protected private staging deploy: 41216703600 SUCCESS; exact current served asset parity / Basic Auth: 41216758718 SUCCESS.
+Run only seller-grid-live.spec.js on staging desktop from the trusted existing private-staging workflow using dedicated TEST ONLY BOT identities and exact guarded fixture cleanup. Confirm stale/sold/delete results and buyer active catalog omission. Do not run older broad suites, stage DB migrations, production deploys or real payments.
