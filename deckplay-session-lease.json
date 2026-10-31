@@ -2,10 +2,10 @@
   "version": 1,
   "project": "DeckPlay HQ",
   "scope": "test/staging-reporting",
-  "holder": null,
-  "token": null,
-  "focus": null,
-  "acquired_at": null,
-  "expires_at": null,
-  "updated_at": "2026-10-31T13:09:18.599Z"
+  "holder": "manual-g",
+  "token": "manual-g-20261031T131615Z-t35ui",
+  "focus": "accepted deal UI buttons",
+  "acquired_at": "2026-10-31T13:16:15Z",
+  "expires_at": "2026-10-31T14:01:15Z",
+  "updated_at": "2026-10-31T13:16:15Z"
 }
