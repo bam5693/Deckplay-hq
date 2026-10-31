@@ -2579,10 +2579,15 @@ function inboxHistoryFilter(userId,recipientId,cursor){
  return "and(sender_id.eq."+userId+",recipient_id.eq."+recipientId+before+"),and(sender_id.eq."+recipientId+",recipient_id.eq."+userId+before+")";
 }
 let inboxLoadVersion=0,selectedInboxCollector=null;
+// Search should tolerate accent differences (Pokémon/Pokemon), arbitrary spaces,
+// and punctuation composed with Unicode combining marks, without changing stored drafts.
+function inboxSearchKey(value){
+ return String(value||"").normalize("NFKD").replace(/[\u0300-\u036f]/g,"").toLocaleLowerCase().replace(/\s+/g," ").trim();
+}
 function filterInboxConversations(){
  const el=document.getElementById("messageInbox"),searchInput=el.querySelector("[data-conversation-search]"),unreadInput=el.querySelector("[data-conversation-unread]");if(!searchInput||!unreadInput)return;
- inboxConversationFilter={search:searchInput.value,unread:unreadInput.checked};const query=searchInput.value.trim().toLocaleLowerCase(),unreadOnly=unreadInput.checked;let visible=0;
- el.querySelectorAll("[data-conversation-id]").forEach(contact=>{const match=(!query||contact.textContent.toLocaleLowerCase().includes(query))&&(!unreadOnly||!!contact.querySelector(".conversation-unread"));contact.hidden=!match;if(match)visible++});
+ inboxConversationFilter={search:searchInput.value,unread:unreadInput.checked};const query=inboxSearchKey(searchInput.value),unreadOnly=unreadInput.checked;let visible=0;
+ el.querySelectorAll("[data-conversation-id]").forEach(contact=>{const match=(!query||inboxSearchKey(contact.textContent).includes(query))&&(!unreadOnly||!!contact.querySelector(".conversation-unread"));contact.hidden=!match;if(match)visible++});
  const clear=el.querySelector("[data-conversation-clear]");if(clear)clear.hidden=!query&&!unreadOnly;
  const status=el.querySelector("[data-conversation-filter-status]");if(status)status.textContent=visible?visible+" conversation"+(visible===1?"":"s"):"No matching conversations. Clear search or turn off Unread.";
 }
