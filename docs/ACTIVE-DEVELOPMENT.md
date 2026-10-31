@@ -49,3 +49,7 @@
 - Added dedicated, read-only, cheap Actions workflow `.github/workflows/t5-inbox-back-focused.yml` (commit `693f8fa`), reusing **existing** Inbox recovery tests without changing the blocked signed staging messaging test file.
 - [Focused run 41240815845](https://github.com/bam5693/Deckplay-hq/actions/runs/41240815845) **PASS 2/2 local mobile-emulated browser cases**: Android Back from a direct conversation retains unsent buyer draft when reopened; switching threads produces no phantom Back steps. Inline JS and syntax preflight passed.
 - **Not** signed/live staging or physical Android device sign-off. These remain in [Issue #24](https://github.com/bam5693/Deckplay-hq/issues/24). No production/main merge, staging Worker deploy, or database writes.
+
+### T5 mobile keyboard focus and Android Back — local acceptance
+- Extended existing cheap workflow in `86694e9` to cover caret/keyboard focus retention on a manual Inbox refresh, plus the two previously accepted Android Back navigation scenarios. Tests reuse existing `tests/e2e/inbox-recovery.spec.js` cases and make no edits to the previously blocked signed messaging test.
+- [Run 41241142978](https://github.com/bam5693/Deckplay-hq/actions/runs/41241142978) **PASS 4/4 mobile-emulated Playwright tests**, with source/inline-JS preflight. These cover draft/caret restoration and not stealing focus from the Back control. Does not establish real Android keyboard behavior, signed staging, or public production readiness. See Issue #24 for remaining gates.
