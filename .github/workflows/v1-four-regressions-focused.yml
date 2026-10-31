@@ -1,0 +1,39 @@
+name: V1 four prior failures focused verification
+on:
+  push:
+    branches: [test/staging-reporting]
+    paths: ['.github/workflows/v1-four-regressions-focused.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: deckplay-v1-four-focused
+  cancel-in-progress: false
+jobs:
+  focused:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Cheap source and test syntax
+        run: |
+          node scripts/check-inline-js.cjs
+          node --check tests/e2e/private-message-photos.spec.js
+          node --check tests/e2e/regressions.spec.js
+          node --check tests/e2e/wanted-matches.spec.js
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: staging-playwright-${{ hashFiles('package-lock.json') }}
+      - run: npx playwright install chromium --only-shell
+      - name: Recheck only the four previous audit failures on desktop and mobile
+        run: >-
+          npx playwright test --config=playwright.local.config.js
+          private-message-photos.spec.js regressions.spec.js wanted-matches.spec.js
+          --grep "photo-only messages recover confirmed sends|built page is isolated and scripts initialize all late handlers|discovery notification resolves the active listing|wanted matches link to real listing details"
+          --project=local-desktop --project=local-mobile --workers=2 --retries=0 --timeout=30000
