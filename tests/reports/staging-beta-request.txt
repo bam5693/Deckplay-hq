@@ -162,3 +162,5 @@ Focused verification request: validate staging startup and notification polling 
 2026-10-31 T3.2 corrected fixture destructuring after fast ReferenceError. One focused signed cross-category bundle verification recheck; stop on further substantive failure, do not launch broad suites.
 
 2026-10-31 T3.3 focused signed staging price-versus-trade competing acceptance, three independent same-listing rounds, inventory one-winner assertions and guarded fixture cleanup. No broad V1 suite.
+
+2026-10-31 T4.3 focused stale discovery-alert recovery: source f2d1d7f, desktop/mobile regression fc2a11b, existing focused gate includes notification-prices.spec.js via add3781. Preflight cheap inline/static + local focused tests before deploying exact isolated private staging; ensure seller fallback only for unblocked actors, anonymous denial, exact asset parity and signed read-only buyer/seller. No stateful/photo suites, production, main, merges, billing or customer writes.
