@@ -1536,7 +1536,8 @@ grid.addEventListener("click",e=>{
  for(const group of ["cat","filter","game"])document.querySelectorAll("[data-"+group+"]").forEach(button=>button.classList.toggle("active",button.dataset[group]==="All"));
  document.getElementById("search").focus({preventScroll:true});
 });
-document.getElementById("marketSearchFeedback").addEventListener("click",()=>openMarketplaceSearchFeedback("results"));
+// Public owner preview excludes the support-backed search feedback button.
+// Do not bind to an absent element; otherwise subsequent page handlers break.
 document.querySelectorAll("[data-filter]").forEach(button=>button.addEventListener("click",()=>{filter=button.dataset.filter;cat="All";game="All";document.querySelectorAll("[data-game]").forEach(b=>b.classList.toggle("active",b.dataset.game==="All"));document.querySelectorAll("[data-filter]").forEach(item=>item.classList.toggle("active",item===button));document.querySelectorAll("[data-cat]").forEach(item=>item.classList.toggle("active",item.dataset.cat==="All"));render()}));
 document.querySelectorAll("[data-game]").forEach(button=>button.addEventListener("click",()=>{game=button.dataset.game;cat="All";filter="All";document.querySelectorAll("[data-game]").forEach(b=>b.classList.toggle("active",b===button));document.querySelectorAll("[data-cat]").forEach(b=>b.classList.toggle("active",b.dataset.cat==="All"));document.querySelectorAll("[data-filter]").forEach(b=>b.classList.toggle("active",b.dataset.filter==="All"));render()}));
 function toggleSportsBrand(){const sports=document.getElementById("category").value==="trading_cards"&&document.getElementById("tcgGame").value==="sports_cards";const wrap=document.getElementById("sportsBrandWrap");wrap.hidden=!sports;for(const id of ["sportsSport","sportsBrand","sportsYear","sportsPlayer"]){const field=document.getElementById(id);field.required=sports;if(!sports)field.value=""}}

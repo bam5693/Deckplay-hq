@@ -1,12 +1,14 @@
 const {test,expect}=require('@playwright/test');
 const OWNER='22222222-2222-4222-8222-222222222222';
 test.beforeEach(async({page})=>{
-  page.on('pageerror',error=>console.log('OWNER_PREVIEW_PAGE_ERROR:',error.message));
+  page._previewErrors=[];
+  page.on('pageerror',error=>{page._previewErrors.push(error.message);console.log('OWNER_PREVIEW_PAGE_ERROR:',error.message)});
   await page.route('https://challenges.cloudflare.com/**',route=>route.abort());
   await page.route('https://*.supabase.co/rest/v1/**',route=>route.fulfill({status:200,contentType:'application/json',body:'[]'}));
   await page.goto('/');
   await page.waitForLoadState('domcontentloaded');
 });
+test.afterEach(async({page})=>{expect(page._previewErrors||[]).toEqual([])});
 test('public preview includes navigation, profile and onboarding but no unsupported support submission',async({page})=>{
   if(test.info().project.name==='owner-preview-mobile') await expect(page.locator('#mobileDock')).toBeVisible();
   else await expect(page.locator('#accountButton')).toBeVisible();
