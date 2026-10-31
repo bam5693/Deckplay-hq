@@ -22,6 +22,7 @@ test('real buyer and seller recover their price and trade counter history in Inb
   await signIn(buyer,'BUYER');buyerSignedIn=true;
   const buyerId=await buyer.evaluate(()=>currentUser.id);
   const offered=await seedListing(buyer,title,{description:'Synthetic One Piece single to validate trade history',tcg_game:'one_piece'});
+  const bundleGame=await seedListing(buyer,title,{category:'video_games',description:'Complete boxed game, original manual retained'});
 
   const priceId=await buyer.evaluate(async listing=>{
    const {data,error}=await supabaseClient.rpc('submit_price_offer',{p_listing_id:listing,p_amount:20});
@@ -35,12 +36,12 @@ test('real buyer and seller recover their price and trade counter history in Inb
 
   const tradeId=await buyer.evaluate(async ids=>{
    const {data,error}=await supabaseClient.from('trade_offers').insert({
-    listing_id:ids.target,offered_listing_id:ids.offered,sender_id:currentUser.id,
+    listing_id:ids.target,offered_listing_id:ids.offered,offered_listing_ids:[ids.offered,ids.bundleGame],sender_id:currentUser.id,
     recipient_id:ids.seller,offer_note:ids.marker
    }).select('id').single();
    if(error)throw Error('Creating synthetic trade offer failed: '+error.message);
    return data.id;
-  },{target,offered,seller:sellerId,marker:title});
+  },{target,offered,bundleGame,seller:sellerId,marker:title});
   const counterId=await page.evaluate(async id=>{
    const {data,error}=await supabaseClient.rpc('create_trade_counter',{
     p_offer:id,p_cash:5,p_direction:'sender_pays',p_note:'Synthetic counter '+id
@@ -120,19 +121,24 @@ test('real buyer and seller recover their price and trade counter history in Inb
   },counterId);
   const accepted=await buyer.evaluate(async ({tradeId,target,offered})=>{
    const {data:trade,error}=await supabaseClient.from('trade_offers')
-    .select('status,cash_amount,cash_direction,offer_note,initial_terms').eq('id',tradeId).single();
+    .select('status,cash_amount,cash_direction,offer_note,initial_terms,offered_listing_ids,item_snapshots').eq('id',tradeId).single();
    if(error)throw Error(error.message);
    const {data:listings,error:listingError}=await supabaseClient.from('listings')
-    .select('id,status').in('id',[target,offered]);
+    .select('id,status').in('id',[target,offered,bundleGame]);
    if(listingError)throw Error(listingError.message);
    return {trade,listings};
-  },{tradeId,target,offered});
+  },{tradeId,target,offered,bundleGame});
   expect(accepted.trade.status).toBe('accepted');
   expect(Number(accepted.trade.cash_amount)).toBe(5);
   expect(accepted.trade.cash_direction).toBe('sender_pays');
   expect(accepted.trade.offer_note).toBe('Synthetic counter '+tradeId);
   expect(accepted.trade.initial_terms.note).toBe(title);
-  expect(accepted.listings).toHaveLength(2);
+  expect(accepted.listings).toHaveLength(3);
+  expect(accepted.trade.offered_listing_ids).toEqual([offered,bundleGame]);
+  const snapshots=accepted.trade.item_snapshots;
+  expect(Array.isArray(snapshots)).toBe(true);
+  expect(new Set(snapshots.map(x=>x.listing_id))).toEqual(new Set([target,offered,bundleGame]));
+  expect(snapshots.find(x=>x.listing_id===bundleGame)?.description).toContain('original manual retained');
   expect(accepted.listings.every(x=>x.status==='reserved')).toBe(true);
 
   // Verify the authenticated deal progress RPC itself before the Inbox rendering.
@@ -150,6 +156,7 @@ test('real buyer and seller recover their price and trade counter history in Inb
   const sellerOlder=page.locator('[data-inbox-older-negotiations]');
   if(await sellerOlder.isVisible())await sellerOlder.click();
   await expect(page.locator('.conversation-bubbles')).toContainText('Synthetic counter',{timeout:18000});
+  await expect(page.locator('.conversation-bubbles')).toContainText('Complete boxed game',{timeout:18000});
   await expect(page.locator('.chat-deal-panel > summary')).toBeVisible({timeout:18000});
   await page.locator('.chat-deal-panel > summary').click();
   await expect.poll(async()=>page.locator('.chat-deal-panel [data-deal-details]').textContent(),{timeout:18000}).toContain('Transaction:');
@@ -171,6 +178,7 @@ test('real buyer and seller recover their price and trade counter history in Inb
   const mobileOlder=mobileBuyer.locator('[data-inbox-older-negotiations]');
   if(await mobileOlder.isVisible())await mobileOlder.click();
   await expect(mobileBuyer.locator('.conversation-bubbles')).toContainText('Synthetic counter',{timeout:18000});
+  await expect(mobileBuyer.locator('.conversation-bubbles')).toContainText('Complete boxed game',{timeout:18000});
   await expect(mobileBuyer.locator('.conversation-bubbles')).toContainText('22.00',{timeout:18000});
   await expect(mobileBuyer.locator('.chat-deal-panel > summary')).toBeVisible({timeout:18000});
   await mobileBuyer.locator('.chat-deal-panel > summary').click();
