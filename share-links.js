@@ -72,26 +72,29 @@ function showManualShareLink(url){
 async function shareLink(kind,id,nativeShare){
  const url=sharedUrl(kind,id);
  if(!url){toast('Only published listings and collector profiles can be shared.');return}
- try{
-  if(nativeShare&&typeof navigator.share==='function'){
+ // A rejected native share should still try clipboard before manual selection.
+ // A deliberate cancellation must not trigger any alternative sharing action.
+ if(nativeShare&&typeof navigator.share==='function'){
+  try{
    await navigator.share({title:kind==='listing'?'DeckPlay listing':'DeckPlay collector',url});
    return;
+  }catch(error){
+   if(error&&error.name==='AbortError')return;
   }
-  if(navigator.clipboard&&typeof navigator.clipboard.writeText==='function'){
+ }
+ if(navigator.clipboard&&typeof navigator.clipboard.writeText==='function'){
+  try{
    await navigator.clipboard.writeText(url);
    toast('Link copied. Anyone opening it still needs access to this site.');
    return;
-  }
-  showManualShareLink(url);
- }catch(error){
-  if(error&&error.name==='AbortError')return;
-  // Web Share and clipboard permissions can fail on Android and private browsers.
-  // Preserve the public URL so collectors can still copy it manually.
-  try {
-   showManualShareLink(url);
   }catch(_error){
-   toast('Could not share the link. Please retry from your browser.');
+   // Clipboard permission can be denied on Android and private browsers.
   }
+ }
+ try{
+  showManualShareLink(url);
+ }catch(_error){
+  toast('Could not share the link. Please retry from your browser.');
  }
 }
 document.addEventListener('click',event=>{
