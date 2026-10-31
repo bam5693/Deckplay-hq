@@ -88,6 +88,14 @@
   async function start() {
     try {
       registration = await worker.register('/sw.js', { updateViaCache: 'none' });
+      // An update may finish installing without changing the active controller.
+      // Offer an explicit refresh when the browser has a waiting replacement.
+      registration.addEventListener?.('updatefound', () => {
+        const installing = registration.installing;
+        installing?.addEventListener?.('statechange', () => {
+          if (installing.state === 'installed' && hasController && registration.waiting) showUpdateNotice();
+        });
+      });
       // Browser may already have a new worker waiting when this tab resumes.
       if (hasController && registration.waiting) showUpdateNotice();
       lastCheck = Date.now();
