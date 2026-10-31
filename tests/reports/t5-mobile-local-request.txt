@@ -1,1 +1,1 @@
-T5 mobile editable-field focus-zoom prevention (search, sign-in, listing forms) plus existing Inbox safe-area and privacy source checks. Run only existing Node-only workflow. No browser, staging Worker deploy or production changes.
+Verify T5 Inbox composer max(16px,1em) preserves larger text accessibility settings, alongside existing mobile editable fields and T2 privacy regressions. Node-only preflight, no deployment.
