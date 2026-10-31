@@ -1,0 +1,40 @@
+name: T5 focused mobile Inbox Back and draft retention
+on:
+  push:
+    branches: [test/staging-reporting]
+    paths:
+      - '.github/workflows/t5-inbox-back-focused.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  inbox-back-local:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Cheap source and browser syntax preflight
+        run: |
+          node scripts/check-inline-js.cjs
+          node --check tests/e2e/inbox-recovery.spec.js
+      - run: npm ci
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: staging-playwright-${{ hashFiles('package-lock.json') }}
+      - run: npx playwright install chromium --only-shell
+      - name: Existing Android Back and draft retention tests, mobile emulation only
+        run: npx playwright test --config=playwright.local.config.js inbox-recovery.spec.js --project=local-mobile --grep 'Android Back from a directly opened chat|switching inbox contacts does not add phantom Android Back steps' --retries=0 --max-failures=1 --timeout=25000
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: t5-inbox-back-failure
+          path: |
+            test-results/
+            playwright-report/
+          if-no-files-found: ignore
+          retention-days: 3
