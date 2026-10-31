@@ -2,10 +2,10 @@
   "version": 1,
   "project": "DeckPlay HQ",
   "scope": "test/staging-reporting",
-  "holder": null,
-  "token": null,
-  "focus": null,
-  "acquired_at": null,
-  "expires_at": null,
-  "updated_at": "2026-10-31T09:17:04.376Z"
+  "holder": "manual-g",
+  "token": "manual-g-20261031T091811688Z-q83npd13s5",
+  "focus": "T3.6 signed buyer seller offer and trade acceptance",
+  "acquired_at": "2026-10-31T09:18:11.688Z",
+  "expires_at": "2026-10-31T10:03:11.688Z",
+  "updated_at": "2026-10-31T09:18:11.688Z"
 }
