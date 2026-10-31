@@ -98,3 +98,28 @@ test('updated classification reads as item details while keeping seller disclosu
  await page.route('https://**/*',r=>r.abort());await page.goto('/');await page.evaluate(()=>showDetails({id:'fixture',n:'TEST ONLY game',p:25,c:'Video Games',cond:'Used',imageUrls:[],description:'[Listing classification]\nPlatform: Nintendo Switch\n[End classification]\n\nCorner wear disclosed. <script>fixture</script>'}));
  await expect(page.locator('.detail-description')).toHaveText('Item details\nPlatform: Nintendo Switch\n\nCorner wear disclosed. <script>fixture</script>');await expect(page.locator('.detail-description script')).toHaveCount(0);
 });
+
+test('buyer sees exact seller card condition from legacy and edited classifications',async({page})=>{
+ await page.route('https://challenges.cloudflare.com/**',route=>route.abort());
+ await page.goto('/');
+ await page.evaluate(()=>{
+  showDetails({
+   id:'test-card-original',n:'TEST ONLY Japanese foil',c:'Trading Cards',
+   rawCategory:'trading_cards',game:'one_piece',p:25,cond:'Like new',
+   description:'[Card Condition]\\nNear Mint\\n\\nSet: Synthetic Set\\nCard number: 007\\nOriginal print disclosure.',
+   imageUrls:[],s:'Test seller'
+  });
+ });
+ await expect(page.locator('.detail-item-specifics')).toContainText('Card condition:');
+ await expect(page.locator('.detail-item-specifics')).toContainText('Near Mint');
+ await page.evaluate(()=>{
+  showDetails({
+   id:'test-card-edited',n:'TEST ONLY Japanese foil',c:'Trading Cards',
+   rawCategory:'trading_cards',game:'one_piece',p:25,cond:'Used',
+   description:'[Card Condition]\\nNear Mint\\n\\n[Listing classification]\\nCard condition: Lightly Played\\nSet: Synthetic Set\\nCard number: 007\\n[End classification]\\n\\nLatest wear disclosure.',
+   imageUrls:[],s:'Test seller'
+  });
+ });
+ await expect(page.locator('.detail-item-specifics')).toContainText('Lightly Played');
+ await expect(page.locator('.detail-item-specifics')).not.toContainText('Near Mint');
+});
