@@ -2261,7 +2261,7 @@ document.getElementById("collectionInquiryForm").addEventListener("submit",async
  const item=document.getElementById("collectionInquiryItem").value.trim(),body=document.getElementById("collectionInquiryBody").value.trim(),intent=document.getElementById("collectionInquiryIntent").value;
  if(item.length<3||!body)return;
  const requestVersion=++collectionInquiryRequestVersion;
- const current=()=>requestVersion===collectionInquiryRequestVersion&&currentUser?.id===userId&&collectionInquiryOwner===userId&&collectionInquiryRecipient===recipient;
+ const current=()=>requestVersion===collectionInquiryRequestVersion&&currentUser?.id===userId&&collectionInquiryOwner===userId&&collectionInquiryRecipient===recipient&&document.getElementById("collectionInquiryModal").classList.contains("open");
  form.dataset.pending="true";form.querySelectorAll("input,textarea,select,button").forEach(x=>x.disabled=true);status.textContent="Sending inquiry…";
  try{const {error}=await supabaseClient.rpc("send_collection_inquiry",{p_recipient:recipient,p_item:item,p_intent:intent,p_body:body});if(!current())return;if(error)throw error;form.reset();closeModal("collectionInquiryModal");await showInboxPage(recipient);toast("Inquiry sent. Continue in your inbox.")}
  catch(error){if(current()){
