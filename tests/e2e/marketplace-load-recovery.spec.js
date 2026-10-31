@@ -79,3 +79,22 @@ test('seller block preflight fails closed when network adapter never resolves',a
  expect(result.ready).toBe(false);
  expect(result.elapsed).toBeLessThan(1000);
 });
+
+test('account bootstrap survives deferred seller and listing helper modules',async({page})=>{
+ const state=await page.evaluate(()=>{
+  const old=currentUser,editor=window.listingEditor,overview=window.sellerOverview,photos=window.privateMessagePhotos;
+  try{
+   window.listingEditor={};
+   window.sellerOverview={};
+   window.privateMessagePhotos={};
+   currentUser={id:'synthetic-account-with-deferred-scripts'};
+   syncInboxDraftUser();
+   return {matched:inboxDraftUser===currentUser.id,version:messageAccountVersion};
+  }finally{
+   window.listingEditor=editor;window.sellerOverview=overview;window.privateMessagePhotos=photos;
+   currentUser=old;syncInboxDraftUser();
+  }
+ });
+ expect(state.matched).toBe(true);
+ expect(state.version).toBeGreaterThan(0);
+});
