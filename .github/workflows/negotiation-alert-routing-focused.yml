@@ -1,0 +1,30 @@
+name: Negotiation alert destination focused checks
+on:
+  pull_request:
+    branches: [test/staging-reporting]
+    paths:
+      - index.html
+      - playwright.local.config.js
+      - tests/e2e/negotiation-alert-routing.spec.js
+      - .github/workflows/negotiation-alert-routing-focused.yml
+permissions:
+  contents: read
+jobs:
+  focused:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: node scripts/check-inline-js.cjs && node --check tests/e2e/negotiation-alert-routing.spec.js
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: staging-playwright-${{ hashFiles('package-lock.json') }}
+      - run: npx playwright install chromium --only-shell
+      - name: Source-checked alert routing in mobile and desktop
+        run: npx playwright test --config=playwright.local.config.js negotiation-alert-routing.spec.js --retries=0 --max-failures=1 --timeout=20000
