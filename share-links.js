@@ -98,12 +98,12 @@ async function shareLink(kind,id,nativeShare){
  }
 }
 document.addEventListener('click',event=>{
- const button=event.target.closest('[data-copy-kind],[data-share-kind],#copyOwnProfileLink');
+ const button=event.target.closest('[data-copy-kind],[data-share-kind],#copyOwnProfileLink,#shareOwnProfileLink');
  if(!button)return;
- const own=button.id==='copyOwnProfileLink';
+ const own=button.id==='copyOwnProfileLink'||button.id==='shareOwnProfileLink';
  const kind=own?'collector':(button.dataset.copyKind||button.dataset.shareKind);
  const id=own?currentUser?.id:(button.dataset.copyId||button.dataset.shareId);
- void shareLink(kind,id,!!button.dataset.shareKind);
+ void shareLink(kind,id,button.id==='shareOwnProfileLink'||!!button.dataset.shareKind);
 });
 let attempted=false, opening=false;
 function showRetry(message){
