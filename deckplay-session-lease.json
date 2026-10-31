@@ -2,10 +2,10 @@
   "version": 1,
   "project": "DeckPlay HQ",
   "scope": "test/staging-reporting",
-  "holder": null,
-  "token": null,
-  "focus": null,
-  "acquired_at": null,
-  "expires_at": null,
-  "updated_at": "2026-10-31T09:10:00Z"
+  "holder": "manual-g",
+  "token": "manual-g-2026-10-31T091005758Z-x4usktjypy",
+  "focus": "T7.6 real signed-in feedback and share acceptance",
+  "acquired_at": "2026-10-31T09:10:05.758Z",
+  "expires_at": "2026-10-31T09:55:05.758Z",
+  "updated_at": "2026-10-31T09:10:05.758Z"
 }
