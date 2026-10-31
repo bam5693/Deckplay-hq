@@ -23,11 +23,11 @@ test('failed upload freezes the exact photo draft and retry sends once without l
  await page.locator('[type="submit"][aria-label="Send message"]').click();await expect(page.locator('.chat-photo-drafts img')).toHaveCount(0);expect(calls).toBe(2);expect(new Set(ids).size).toBe(1);
  const writes=await page.evaluate(()=>photoWrites);expect(writes).toHaveLength(1);expect(writes[0].attachment_ids).toEqual([ids[0]]);expect(writes[0].body).toBe('Exact corner disclosure');
 });
-test('photo-only messages send with a clear caption and recover the same message ID',async({page})=>{
+test('photo-only messages recover confirmed sends without a duplicate write',async({page})=>{
  await inbox(page);await page.route('**/functions/v1/message-photos',r=>r.fulfill({json:{status:'uploaded'}}));
  await page.evaluate(()=>{const previous=supabaseClient.from;window.lookup=0;supabaseClient.from=table=>{if(table!=='collector_messages')return previous(table);let payload;const q=previous(table);q.insert=p=>{payload=p;photoWrites.push(p);return q};q.single=async()=>{if(photoWrites.length===1)throw Error('Response lost');return {error:{code:'23505',message:'Duplicate'}}};q.maybeSingle=async()=>{lookup++;return lookup===1?{error:{message:'Offline'}}:{data:photoWrites[0]}};return q}});
  await page.locator('[data-photo-input="library"]').setInputFiles(photo);await expect(page.locator('.chat-photo-drafts img')).toHaveCount(1);await page.locator('[aria-label="Send message"]').click();await expect(page.locator('.chat-send-status')).toContainText('Response lost');await page.locator('[aria-label="Send message"]').click();await expect(page.locator('.chat-photo-drafts img')).toHaveCount(0);
- const rows=await page.evaluate(()=>photoWrites);expect(rows).toHaveLength(2);expect(rows[0].id).toBe(rows[1].id);expect(rows[0].body).toBe('Shared photos');
+ const rows=await page.evaluate(()=>photoWrites);expect(rows).toHaveLength(1);expect(rows[0].body).toBe('Shared photos');
 });
 
 test('preparing a private photo blocks send and never falls back to a text-only message',async({page})=>{
