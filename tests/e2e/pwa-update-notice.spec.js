@@ -123,3 +123,16 @@ test('mobile PWA update prompt defers during editing and restores after blur', a
   await expect(prompt).toBeVisible();
   await expect(search).toHaveValue('unsent collection search');
 });
+
+test('PWA refresh and dismiss controls have mobile-sized tap targets', async ({ page }) => {
+  await mockWorker(page, { controlled: true, waiting: true });
+  await page.goto('/');
+  const prompt = page.locator('#deckplayAppUpdate');
+  await expect(prompt).toBeVisible();
+  for (const label of ['Dismiss app update notification', 'Refresh DeckPlay to load new version']) {
+    const button = prompt.getByRole('button', { name: label });
+    const dimensions = await button.evaluate(el => ({ height: el.getBoundingClientRect().height, width: el.getBoundingClientRect().width }));
+    expect(dimensions.height, label + ' must be easy to tap').toBeGreaterThanOrEqual(44);
+    expect(dimensions.width, label + ' must be easy to tap').toBeGreaterThanOrEqual(44);
+  }
+});
