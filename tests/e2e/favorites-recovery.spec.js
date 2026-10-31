@@ -55,6 +55,7 @@ test('a saved-items refresh cannot erase an optimistic favorite while its write 
  await fixture(page);
  await page.locator('[data-heart]').click();
  await page.evaluate(()=>{
+  supabaseClient.from=()=>({select:()=>({eq:()=>({})})});
   window.savedReadQueue=[];readMarketplaceRequest=()=>new Promise(resolve=>savedReadQueue.push(resolve));
   window.savedRefreshDone=false;loadSavedListings().then(()=>savedRefreshDone=true);
  });
@@ -71,6 +72,7 @@ test('a stale saved-items read cannot undo a confirmed save after its write comp
  await fixture(page);
  await page.locator('[data-heart]').click();
  await page.evaluate(()=>{
+  supabaseClient.from=()=>({select:()=>({eq:()=>({})})});
   window.savedReadQueue=[];readMarketplaceRequest=()=>new Promise(resolve=>savedReadQueue.push(resolve));
   window.savedRefreshDone=false;loadSavedListings().then(()=>savedRefreshDone=true);
  });
@@ -86,6 +88,7 @@ test('a saved-items refresh does not resurrect an item being unsaved',async({pag
  await fixture(page,true);
  await page.locator('[data-heart]').click();
  await page.evaluate(()=>{
+  supabaseClient.from=()=>({select:()=>({eq:()=>({})})});
   window.savedReadQueue=[];readMarketplaceRequest=()=>new Promise(resolve=>savedReadQueue.push(resolve));
   window.savedRefreshDone=false;loadSavedListings().then(()=>savedRefreshDone=true);
  });
