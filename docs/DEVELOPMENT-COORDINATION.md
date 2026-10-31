@@ -22,3 +22,11 @@ If both have `total_count: 0`, Actions are clear. If nonzero, check branch/workf
 ## Safety boundaries
 
 This branch split is not production approval. No merges to `main`, public deployment, payment activation, billing changes, destructive SQL, secrets exposure, or real customer data modification without separate owner approval. Private staging must remain private. Never bypass tool-level safety rejections by repackaging blocked actions.
+
+
+## Worker 2 — Trunk 1 ownership (2026-10-31)
+- Hourly Developer 1 exclusively owns T4.1–T4.6 on `dev/hourly-autonomous` (top of hour).
+- Hourly Developer 2 exclusively owns T1.1–T1.6 on `dev/hourly-trunk1` (half past the hour), reports via `docs/HOURLY-TRUNK1.md` on its branch, and proposes reviewable PRs.
+- Interactive G developer owns T2,T3,T5,T6,T7,T8 and reviews/integrates T1/T4 PRs. Do not independently develop Trunk 1 except coordinated integration or urgent owner-approved fix.
+- Trunk 9 is research/advisory only, independently scheduled daily.
+- Neither hourly worker may commit to `test/staging-reporting`, deploy to shared staging, merge PRs, modify production, or use the retired session lease. Coordinate integration by checking active GitHub Actions and using focused acceptance evidence.
