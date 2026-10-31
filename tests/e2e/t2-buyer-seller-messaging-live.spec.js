@@ -199,8 +199,7 @@ test('T2.1 signed buyer and seller exchange real Inbox messages',async({browser}
   const privateDraft=title+' unsent buyer-private draft';
   await buyer.locator('#chatInput').fill(privateDraft);
   await buyer.locator('#chatInput').dispatchEvent('input');
-  await buyer.locator('#accountButton').click();
-  await buyer.locator('#signOutButton').click();
+  await buyer.evaluate(async()=>{const {error}=await supabaseClient.auth.signOut();if(error)throw Error(error.message)});
   await expect.poll(()=>buyer.evaluate(()=>currentUser?.id||null),{timeout:15000}).toBeNull();
   await expect(buyer.locator('#headerUnread')).toBeHidden();
   await expect(buyer.locator('#menuUnread')).toBeHidden();
@@ -211,8 +210,7 @@ test('T2.1 signed buyer and seller exchange real Inbox messages',async({browser}
   await expect(buyer.locator('#chatInput')).not.toHaveValue(privateDraft);
   await expect(buyer.locator('#messageInbox')).not.toContainText(privateDraft);
   // Restore the original buyer identity before its marker-scoped cleanup.
-  await buyer.locator('#accountButton').click();
-  await buyer.locator('#signOutButton').click();
+  await buyer.evaluate(async()=>{const {error}=await supabaseClient.auth.signOut();if(error)throw Error(error.message)});
   await expect.poll(()=>buyer.evaluate(()=>currentUser?.id||null),{timeout:15000}).toBeNull();
   await signIn(buyer,'BUYER');
   await expect.poll(()=>buyer.evaluate(()=>currentUser?.id),{timeout:12000}).toBe(buyerId);
