@@ -7,7 +7,8 @@ test.beforeEach(async({page})=>{
   await page.waitForLoadState('domcontentloaded');
 });
 test('public preview includes navigation, profile and onboarding but no unsupported support submission',async({page})=>{
-  await expect(page.locator('#accountButton')).toBeVisible();
+  if(test.info().project.name==='owner-preview-mobile') await expect(page.locator('#mobileDock')).toBeVisible();
+  else await expect(page.locator('#accountButton')).toBeVisible();
   await expect(page.locator('#signOutButton')).toHaveCount(1);
   await expect(page.locator('#profileSignOut')).toHaveCount(1);
   await expect(page.locator('#settingsSignOut')).toHaveCount(1);
@@ -51,7 +52,10 @@ test('profile sign out remains reachable and invokes safe auth signout',async({p
     window.confirm=()=>true;
     supabaseClient.auth.signOut=async()=>{window.previewSignouts++;return {error:null}};
   },OWNER);
-  await page.locator('#profileSignOut').click();
+  await expect(page.locator('#profileSignOut')).toBeVisible();
+  // Set the synthetic account at the moment of the click; initial auth hydration
+  // may clear a fake identity between test setup and a Playwright click.
+  await page.evaluate(id=>{currentUser={id};document.getElementById('profileSignOut').click()},OWNER);
   await expect.poll(()=>page.evaluate(()=>window.previewSignouts)).toBe(1);
   await expect(page.locator('#collectorPage')).toBeHidden();
 });
