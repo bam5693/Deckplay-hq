@@ -1147,3 +1147,42 @@ test('T8.3: delayed staff status failure cannot unlock or overwrite another tick
   await expect(page.locator('#supportTicketState')).toContainText('Waiting on collector');
   await page.evaluate(()=>{if(window.__db.tickets.find(t=>t.id==='card-status').status!=='open')throw Error('Old failed save changed the card ticket');});
 });
+
+test('T8.3: ticket topic filters reset after new account ticket so collector can follow it',async({page})=>{
+  await boot(page);await signIn(page,'buyer');
+  await page.getByRole('button',{name:'Help & support'}).last().click();
+  await page.locator('#supportTicketCategory').selectOption('listing');
+  await expect(page.locator('#supportTicketCategory')).toHaveValue('listing');
+  await page.locator('#supportCategory').selectOption('account');
+  await page.locator('#supportSubject').fill('Account access for game collecting');
+  await page.locator('#supportDescription').fill('I need private help signing in to manage my game collection.');
+  await page.getByRole('button',{name:'Create private ticket'}).click();
+  await expect(page.locator('#supportTicketTitle')).toHaveText('Account access for game collecting');
+  await expect(page.locator('#supportTicketCategory')).toHaveValue('all');
+  await expect(page.locator('#supportTicketCategory')).toBeEnabled();
+  await expect(page.locator('#supportTicketList')).toContainText('Account access for game collecting');
+  await expect(page.locator('#supportCreateStatus')).toContainText('Ticket created.');
+  await page.evaluate(()=>{window.currentUser={id:'other'};window.__authCallback('SIGNED_IN',{user:{id:'other'}})});
+  await page.getByRole('button',{name:'Help & support'}).last().click();
+  await expect(page.locator('#supportTicketList')).not.toContainText('Account access for game collecting');
+});
+
+test('T8.3: ticket topic filters clear staff feedback drill-down after creating private ticket',async({page})=>{
+  await boot(page);await signIn(page,'staff');
+  await page.getByRole('button',{name:'Help & support'}).last().click();
+  await expect(page.locator('#supportStaff')).toBeVisible();
+  await page.locator('#supportStaff').click();
+  await page.locator('[data-feedback-queue="empty"]').click();
+  await expect(page.locator('#supportTicketCategory')).toHaveValue('other');
+  await expect(page.locator('#supportTicketCategory')).toBeDisabled();
+  await expect(page.locator('#supportFeedbackQueueNotice')).toBeVisible();
+  await page.locator('#supportSubject').fill('Staff account help request');
+  await page.locator('#supportDescription').fill('I need private help with a collector account on the marketplace.');
+  await page.getByRole('button',{name:'Create private ticket'}).click();
+  await expect(page.locator('#supportTicketTitle')).toHaveText('Staff account help request');
+  await expect(page.locator('#supportTicketCategory')).toHaveValue('all');
+  await expect(page.locator('#supportTicketCategory')).toBeEnabled();
+  await expect(page.locator('#supportFeedbackQueueNotice')).toBeHidden();
+  await expect(page.locator('#supportStaffSafety')).toHaveAttribute('aria-pressed','false');
+  await expect(page.locator('#supportTicketList')).toContainText('Staff account help request');
+});

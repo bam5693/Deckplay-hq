@@ -686,7 +686,13 @@
       if(!validWrite(v,u))return;
       const newerDraft=JSON.stringify(draftState())!==sentDraft;
       if(!newerDraft){form.reset();setTradeConcernMode(false);setListingReportMode(null);updateFeedbackKind();}
-      staffView=false;selected=data;
+      // A successful new ticket must be visible in My tickets even when the
+      // collector was browsing a different topic or staff-only drill-down.
+      // Keep form category/unsent edits intact; only reset the history view.
+      staffView=false;staffSafetyOnly=false;
+      clearFeedbackQueue();resetTicketCategory();
+      el("supportStaffSafety").setAttribute("aria-pressed","false");
+      selected=data;
       // A new open ticket must be visible even if the collector was filtering resolved history.
       ticketFilter="all";
       modal.querySelectorAll("[data-support-filter]").forEach(item => item.setAttribute("aria-pressed", String(item.dataset.supportFilter === "all")));
