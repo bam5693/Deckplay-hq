@@ -28,6 +28,15 @@ test('video game customers see platform help, not card rarity advice; cards keep
  await expect(page.locator('#listingDescriptionHelp')).not.toContainText('platform');
  await page.locator('#listingType').selectOption('sealed');
  await expect(page.locator('#listingDescriptionHelp')).toContainText('card');
+ await page.locator('#listingType').selectOption('deck');
+ await expect(page.locator('#listingDescriptionHelp')).toContainText('decklist');
+ await expect(page.locator('#listingDescriptionHelp')).not.toContainText('Missing a card');
+ await expect(page.locator('#description')).toHaveAttribute('placeholder',/substitutions/);
+ await page.locator('#listingType').selectOption('lot');
+ await expect(page.locator('#listingDescriptionHelp')).toContainText('quantities');
+ await expect(page.locator('#listingDescriptionHelp')).not.toContainText('decklist');
+ await page.locator('#listingType').selectOption('single');
+ await expect(page.locator('#listingDescriptionHelp')).toContainText('rarity');
 });
 test('deck and contents fields are legible in both themes and Cancel matches Post',async({page},info)=>{
  for(const mode of ['light','dark']){
