@@ -3,6 +3,7 @@ on:
   push:
     branches: [qa/v1-customer-public-journeys-20261101]
     paths:
+      - index.html
       - tests/e2e/v1-public-customer-audit.spec.js
       - playwright.v1-public-customer.config.cjs
       - .github/workflows/v1-public-customer-audit.yml
