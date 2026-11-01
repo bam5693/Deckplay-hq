@@ -1422,3 +1422,37 @@ test('T8.6 release-controlled beta status is honest and does not collect invitat
  await expect(notice.locator('form,input,textarea')).toHaveCount(0);
  await expect(page.locator('#supportPrivate')).toBeHidden();
 });
+
+test('T8.3 staff queue supports oldest waiting first with server pagination and account isolation',async({page})=>{
+ await boot(page);
+ await page.evaluate(()=>{
+  const now=Date.now();
+  for(let i=0;i<47;i++){
+   const time=new Date(now-(46-i)*60_000).toISOString();
+   window.__db.tickets.push({
+    id:'sort-ticket-'+String(i).padStart(3,'0'),owner_id:'buyer',category:'account',
+    subject:'Sort queue '+i,body:'Synthetic sorting fixture',status:'open',
+    created_at:time,updated_at:time
+   });
+  }
+ });
+ await signIn(page,'staff');
+ await page.getByRole('button',{name:'Help & support'}).last().click();
+ await page.locator('#supportStaff').click();
+ const sorter=page.locator('#supportStaffSort');
+ await expect(sorter).toBeVisible();
+ await expect(page.locator('#supportTicketList button').first()).toContainText('Sort queue 46');
+ await sorter.selectOption('oldest');
+ await expect(page.locator('#supportTicketList button').first()).toContainText('Sort queue 0');
+ await expect(page.locator('#supportTicketList button')).toHaveCount(40);
+ await page.locator('#supportLoadMore').click();
+ await expect(page.locator('#supportTicketList button')).toHaveCount(47);
+ await expect(page.locator('#supportTicketList button').last()).toContainText('Sort queue 46');
+ await page.locator('#supportMine').click();
+ await expect(page.locator('#supportStaffSortWrap')).toBeHidden();
+ await page.evaluate(()=>{window.currentUser={id:'buyer'};window.__authCallback('SIGNED_IN',{user:{id:'buyer'}})});
+ await page.getByRole('button',{name:'Help & support'}).last().click();
+ await expect(page.locator('#supportStaffSortWrap')).toBeHidden();
+ await expect(sorter).toHaveValue('newest');
+ await expect(page.locator('#supportTicketList button').first()).toContainText('Sort queue 46');
+});
