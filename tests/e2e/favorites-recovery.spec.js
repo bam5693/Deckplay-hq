@@ -207,3 +207,50 @@ test('saved profile fails closed if blocked collectors cannot be checked',async(
  await expect(page.locator('[data-retry-profile-saved]')).toBeVisible();
  expect(await page.evaluate(()=>privateSavedReads)).toBe(0);
 });
+
+test('saved profile recovers from a stalled saved-list read even when seller reviews never finish',async({page})=>{
+ await fixture(page);
+ await page.evaluate(()=>{
+  window.stalledSavedReads=0;
+  sellerRatingHtml=()=>new Promise(()=>{}); // Unrelated seller reviews must not hold Saved hostage.
+  const bounded=readMarketplaceRequest;readMarketplaceRequest=(request)=>bounded(request,60);
+  supabaseClient.from=table=>{
+   const q={select:()=>q,eq:()=>q,order:()=>q,in:()=>q,then:(resolve,reject)=>{
+    if(table==='saved_listings'&&++stalledSavedReads===1)return new Promise(()=>{}).then(resolve,reject);
+    const response=table==='saved_listings'?{data:[{listing_id:'favorite-item'}],error:null}:table==='listings'?{data:[{id:'favorite-item',title:'TEST ONLY game',price:25,status:'active',seller_id:'seller',image_urls:[]}],error:null}:{data:[],error:null};
+    return Promise.resolve(response).then(resolve,reject);
+   }};
+   q.maybeSingle=async()=>({data:{username:'jayden'},error:null});
+   return q;
+  };
+  return showCollectorPage('saved');
+ });
+ await expect(page.locator('#profilePageContent')).toContainText('Your saved items could not load');
+ await page.locator('[data-retry-profile-saved]').click();
+ await expect(page.locator('#profilePageContent')).toContainText('TEST ONLY game');
+ expect(await page.evaluate(()=>stalledSavedReads)).toBe(2);
+});
+
+test('saved profile gives a retry rather than spinning forever when profile preflight stalls',async({page})=>{
+ await fixture(page);
+ await page.evaluate(()=>{
+  window.profilePreflightReads=0;sellerRatingHtml=async()=>'';
+  const bounded=readMarketplaceRequest;readMarketplaceRequest=(request)=>bounded(request,60);
+  supabaseClient.from=table=>{
+   const q={select:()=>q,eq:()=>q,order:()=>q,in:()=>q,then:(resolve,reject)=>{
+    const response=table==='saved_listings'?{data:[],error:null}:{data:[],error:null};
+    return Promise.resolve(response).then(resolve,reject);
+   }};
+   q.maybeSingle=()=>{
+    if(table==='profiles'&&++profilePreflightReads===1)return new Promise(()=>{});
+    return Promise.resolve({data:{username:'jayden'},error:null});
+   };
+   return q;
+  };
+  return showCollectorPage('saved');
+ });
+ await expect(page.locator('#profilePageContent')).toContainText('Your saved items could not load');
+ await page.locator('[data-retry-profile-saved]').click();
+ await expect(page.locator('#profilePageContent')).toContainText('No saved items yet');
+ expect(await page.evaluate(()=>profilePreflightReads)).toBe(2);
+});
