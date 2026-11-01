@@ -46,6 +46,10 @@ async function boot(page){
       let rows=all.filter(row=>state.filters.every(([k,v,not])=>not?row[k]!==v:row[k]===v))
        .filter(row=>table==='support_tickets'?(row.owner_id===window.currentUser?.id||window.currentUser?.id==='staff'):
         window.__db.tickets.some(t=>t.id===row.ticket_id&&(t.owner_id===window.currentUser?.id||window.currentUser?.id==='staff')));
+      if(table==='support_tickets' && state.start===0 && window.__db.failFirstPageOnce){
+       window.__db.failFirstPageOnce=false;
+       return Promise.resolve({data:null,error:{message:'Simulated refresh interruption'}}).then(resolve,reject);
+      }
       if(table==='support_tickets' && state.start>=40 && window.__db.failOlderOnce){
        window.__db.failOlderOnce=false;
        return Promise.resolve({data:null,error:{message:'Simulated temporary network error'}}).then(resolve,reject);
@@ -1390,4 +1394,20 @@ test('trimmed support details cannot create empty or misleadingly short tickets'
  await page.getByRole('button',{name:'Create private ticket'}).click();
  await expect(page.locator('#supportTicketTitle')).toHaveText('Help with an order');
  expect(await page.evaluate(()=>window.__db.calls.filter(c=>c.name==='create_support_ticket').length)).toBe(1);
+});
+
+test('T8: failed ticket refresh preserves the last readable list and allows retry',async({page})=>{
+ await boot(page);await signIn(page,'buyer');
+ await page.getByRole('button',{name:'Help & support'}).last().click();
+ await page.locator('#supportSubject').fill('My existing ticket');
+ await page.locator('#supportDescription').fill('The seller and buyer cannot find the correct listing.');
+ await page.getByRole('button',{name:'Create private ticket'}).click();
+ await expect(page.locator('#supportTicketList')).toContainText('My existing ticket');
+ await page.evaluate(()=>{window.__db.failFirstPageOnce=true});
+ await page.locator('#supportRefresh').click();
+ await expect(page.locator('#supportListStatus')).toContainText('Tickets could not load');
+ await expect(page.locator('#supportTicketList')).toContainText('My existing ticket');
+ await page.locator('#supportRefresh').click();
+ await expect(page.locator('#supportListStatus')).toContainText('Showing 1');
+ await expect(page.locator('#supportTicketList')).toContainText('My existing ticket');
 });
