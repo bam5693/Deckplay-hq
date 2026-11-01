@@ -3325,8 +3325,15 @@ async function showCollectorPage(tab="listings"){
  window.scrollTo({top:0,behavior:"smooth"});document.getElementById("profilePageContent").innerHTML='<p class="muted">Loading your collection…</p>';
  let profileResult,listingsResult,wantedResult;
   try{
-   const requests=Promise.all([supabaseClient.from("profiles").select("username,bio,favorite_tcg,location_label,avatar_url").eq("id",userId).maybeSingle(),supabaseClient.from("listings").select("id,title,price,status,category,image_urls,created_at").eq("seller_id",userId).order("created_at",{ascending:false}),supabaseClient.from("wanted_posts").select("id,title,details,game,budget,created_at").eq("user_id",userId).order("created_at",{ascending:false})]);
-   [profileResult,listingsResult,wantedResult]=await (tab==="saved"?readMarketplaceRequest(requests,8000):requests);
+   const profileRequest=supabaseClient.from("profiles").select("username,bio,favorite_tcg,location_label,avatar_url").eq("id",userId).maybeSingle();
+   if(tab==="saved"){
+    // Saved cards need their own IDs, not the owner's listings or Wanted history.
+    // An unrelated slow query must never hide a collector's saved inventory.
+    profileResult=await readMarketplaceRequest(profileRequest,8000);
+    listingsResult={data:[]};wantedResult={data:[]};
+   }else{
+    [profileResult,listingsResult,wantedResult]=await Promise.all([profileRequest,supabaseClient.from("listings").select("id,title,price,status,category,image_urls,created_at").eq("seller_id",userId).order("created_at",{ascending:false}),supabaseClient.from("wanted_posts").select("id,title,details,game,budget,created_at").eq("user_id",userId).order("created_at",{ascending:false})]);
+   }
   }catch(error){
    if(current()&&tab==="saved")document.getElementById("profilePageContent").innerHTML='<p class="muted" role="status">Your saved items could not load. Check your connection and <button type="button" class="ghost" data-retry-profile-saved>retry saved items</button>.</p>';
    return;
@@ -3336,7 +3343,7 @@ async function showCollectorPage(tab="listings"){
  document.getElementById("pageAvatar").innerHTML=avatar?`<img src="${escapeHtml(avatar)}" alt="Your profile picture">`:escapeHtml(username[0].toUpperCase());
  document.getElementById("pageHandle").textContent="@"+username;document.getElementById("pageBio").textContent=profile.bio||"Add a bio to tell collectors about yourself.";
  document.getElementById("pageMeta").textContent=[profile.favorite_tcg?"Favorite TCG: "+profile.favorite_tcg:"",profile.location_label||""].filter(Boolean).join(" · ");
- document.getElementById("pageListingCount").textContent=listings.length+" listings";document.getElementById("pageWantedCount").textContent=wanted.length+" wanted posts";
+ document.getElementById("pageListingCount").textContent=tab==="saved"?"— listings":listings.length+" listings";document.getElementById("pageWantedCount").textContent=tab==="saved"?"— wanted posts":wanted.length+" wanted posts";
  if(tab==="saved"){
    const rating=document.getElementById("ownSellerRatings");rating.textContent="Loading seller reviews…";
    void sellerRatingHtml(userId).then(html=>{if(current())rating.innerHTML=html}).catch(()=>{if(current())rating.textContent="Seller reviews unavailable."});
