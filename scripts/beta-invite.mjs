@@ -40,7 +40,7 @@ export function validateStagingRedirect(value) {
   try { u = new URL(String(value || '')); } catch { throw new Error('A reviewed staging invite redirect URL is required.'); }
   if (u.protocol !== 'https:' || u.hostname !== 'deckplay-hq-staging.cstivers56.workers.dev' ||
       u.username || u.password || u.port || u.hash || u.search ||
-      !['/', '/auth/callback'].includes(u.pathname)) {
+      u.pathname !== '/') {
     throw new Error('Invitation redirect must be an approved HTTPS path on private staging.');
   }
   return u.toString();
