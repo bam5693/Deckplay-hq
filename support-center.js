@@ -75,7 +75,8 @@
         <button type="button" class="ghost" id="supportRepliesLoadMore" hidden>Load earlier replies</button>
         <form id="supportReplyForm">
           <label for="supportReplyBody">Reply privately</label>
-          <textarea id="supportReplyBody" minlength="2" maxlength="3000" rows="3" required></textarea>
+          <textarea id="supportReplyBody" minlength="2" maxlength="3000" rows="3" aria-describedby="supportReplyCount" required></textarea>
+          <p id="supportReplyCount" class="muted" aria-live="off">0 / 3000 characters</p>
           <p id="supportReplyStatus" class="status" role="status"></p>
           <button class="primary" type="submit">Send reply</button>
         </form>
@@ -337,6 +338,7 @@
     for(const id of ["supportFeedbackEmptyCount","supportFeedbackDiscoveryCount","supportFeedbackContactCount"])el(id).textContent="—";
     status("supportFeedbackOverviewStatus","");
     el("supportReplyBody").value = "";
+    updateReplyCount();
     ["supportListStatus","supportReplyStatus","supportCreateStatus"].forEach(id=>status(id,""));
   }
   const menu = el("accountMenu");
@@ -643,6 +645,7 @@
     }
     selected=id;
     el("supportReplyBody").value=replyDrafts.get(id)||"";
+    updateReplyCount();
     const v=++generation,u=userId;
     el("supportTicketDetail").hidden=false;
     el("supportTicketTitle").textContent=ticket.subject;
@@ -845,7 +848,12 @@
     }catch(error){if(validWrite(v,u))status("supportCreateStatus",error.message||"Could not create ticket. Try again.")}
     finally{if(request===createRequest)button.disabled=false}
   });
+  const updateReplyCount = () => {
+    el("supportReplyCount").textContent = el("supportReplyBody").value.length + " / 3000 characters";
+  };
+  updateReplyCount();
   el("supportReplyBody").addEventListener("input",event=>{
+    updateReplyCount();
     if(selected && userId) replyDrafts.set(selected,event.target.value);
   });
   el("supportReplyForm").addEventListener("submit",async e=>{
@@ -875,7 +883,7 @@
       if(!validWrite(v,u))return;
       if(replyDrafts.get(id)===submittedRaw)replyDrafts.delete(id);
       if(selected!==id)return; // Never erase or overwrite the other ticket's draft.
-      if(el("supportReplyBody").value===submittedRaw)el("supportReplyBody").value="";
+      if(el("supportReplyBody").value===submittedRaw){el("supportReplyBody").value="";updateReplyCount();}
       const newerDraftSaved=replyDrafts.has(id);
       await loadTickets(); // Refresh reopens the ticket and clears the previous status line.
       if(validWrite(v,u)&&selected===id)status("supportReplyStatus",newerDraftSaved?"Reply sent. Your newer draft is saved.":"Reply sent.");
