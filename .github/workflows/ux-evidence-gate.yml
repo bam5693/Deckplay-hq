@@ -1,0 +1,24 @@
+name: UX evidence gate
+on:
+  pull_request:
+    types: [opened, synchronize, edited, reopened, ready_for_review]
+permissions:
+  contents: read
+  pull-requests: read
+jobs:
+  ux-evidence:
+    name: Independent UX evidence present
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - name: Self-test enforcement with allowed and blocked PR fixtures
+        run: node scripts/test-ux-evidence.cjs
+      - name: Fetch changed filenames, read-only
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+        run: gh api --paginate "repos/$REPO/pulls/$PR/files?per_page=100" --jq '.[] | {filename}' | jq -s '.' > /tmp/ux-pr-files.json
+      - name: Fail closed on missing independent UX acceptance
+        run: node scripts/check-ux-evidence.cjs /tmp/ux-pr-files.json
