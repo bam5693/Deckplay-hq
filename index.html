@@ -1904,7 +1904,7 @@ void supabaseClient.auth.getSession().then(({data,error})=>{
 
 let wantedLoadVersion=0;
 // Match buttons are tied to the Wanted post and account snapshot that rendered them.
-let wantedVisiblePosts=new Map(),wantedVisibleOwner=null,wantedVisibleEpoch=0;
+let wantedVisiblePosts=new Map(),wantedVisibleOwner=null,wantedVisibleEpoch=0,wantedVisibleBlockedIds=new Set();
 function wantedMatchMarkup(post){
  const meta=wantedMetadata(post);
  if(!meta||!(meta.cardNumber||meta.nonCardExact===true))return "";
@@ -1931,15 +1931,21 @@ async function loadWanted(){
  const request=++wantedLoadVersion,owner=currentUser?.id||null,epoch=listingAccountVersion;
  const active=()=>request===wantedLoadVersion&&(currentUser?.id||null)===owner&&listingAccountVersion===epoch;
  const grid=document.getElementById("wantedGrid");
- wantedVisiblePosts.clear();wantedVisibleOwner=owner;wantedVisibleEpoch=epoch;
+ wantedVisiblePosts.clear();wantedVisibleOwner=owner;wantedVisibleEpoch=epoch;wantedVisibleBlockedIds=new Set();
  grid.textContent="Loading wanted posts…";
- let data,error;
+ let postsResult,blocksResult;
  try{
-  ({data,error}=await readMarketplaceRequest(supabaseClient.from("wanted_posts").select("id,user_id,title,game,details,offer_type,budget,created_at").order("created_at",{ascending:false}).limit(50),12000));
- }catch(cause){error=cause}
+  // Verify blocks for this exact viewer before showing Wanted authors or matches.
+  // A concurrent global block refresh may be superseded or still loading.
+  const postsRead=readMarketplaceRequest(supabaseClient.from("wanted_posts").select("id,user_id,title,game,details,offer_type,budget,created_at").order("created_at",{ascending:false}).limit(50),12000).catch(error=>({data:null,error}));
+  const blocksRead=owner?readMarketplaceRequest(supabaseClient.from("user_blocks").select("blocked_id").eq("blocker_id",owner),8000).catch(error=>({data:null,error})):Promise.resolve({data:[],error:null});
+  [postsResult,blocksResult]=await Promise.all([postsRead,blocksRead]);
+ }catch(error){postsResult={data:null,error}}
  if(!active())return;
- if(error){grid.innerHTML='<p role="status" class="muted">Wanted posts could not load. <button type="button" class="ghost" data-retry-wanted>Retry wanted posts</button></p>';return}
- const visiblePosts=(data||[]).filter(p=>!blockedCollectorIds.has(p.user_id));
+ if(postsResult?.error||!Array.isArray(postsResult?.data)){grid.innerHTML='<p role="status" class="muted">Wanted posts could not load. <button type="button" class="ghost" data-retry-wanted>Retry wanted posts</button></p>';return}
+ if(blocksResult?.error||!Array.isArray(blocksResult?.data)){grid.innerHTML='<p role="alert" class="muted">Could not verify blocked collectors. Wanted posts are hidden until this check succeeds. <button type="button" class="ghost" data-retry-wanted>Retry wanted posts</button></p>';return}
+ wantedVisibleBlockedIds=new Set(blocksResult.data.map(row=>row.blocked_id).filter(Boolean));
+ const visiblePosts=postsResult.data.filter(p=>!wantedVisibleBlockedIds.has(p.user_id)&&!blockedCollectorIds.has(p.user_id));
  wantedVisiblePosts=new Map(visiblePosts.map(p=>[String(p.id),p]));
  if(!visiblePosts.length){grid.innerHTML='<p class="muted">No wanted posts yet. Be the first to post what you are looking for!</p>';return}
  const ids=[...new Set(visiblePosts.map(p=>p.user_id))];
@@ -2006,7 +2012,8 @@ function exactWantedMatches(post){
  const normText=x=>String(x||"").normalize("NFKC").trim().replace(/\s+/g," ").toLocaleLowerCase();
  const budget=post.budget==null||post.budget===""?null:Number(post.budget);
  if(budget!==null&&(!Number.isFinite(budget)||budget<0))return [];
- const available=item=>item.id&&item.sellerId&&item.sellerId!==post.user_id&&!blockedCollectorIds.has(item.sellerId)
+ const viewerBlocked=wantedVisibleOwner===(currentUser?.id||null)&&wantedVisibleEpoch===listingAccountVersion?wantedVisibleBlockedIds:blockedCollectorIds;
+ const available=item=>item.id&&item.sellerId&&item.sellerId!==post.user_id&&!viewerBlocked.has(item.sellerId)&&!blockedCollectorIds.has(item.sellerId)
   &&(!item.status||item.status==="active")
   // A trade-only Wanted post must not advertise sale-only inventory as a trade match.
   &&(post.offer_type!=="trade"||item.trades===true)
