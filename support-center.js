@@ -764,6 +764,14 @@
       status("supportCreateStatus","Enter a subject of at least 8 characters that fits the limit.");
       return;
     }
+    // HTML minlength counts whitespace that is removed before the RPC. Reject
+    // empty/too-short actual descriptions locally, without losing the draft.
+    const meaningfulDescription=el("supportDescription").value.trim();
+    if(meaningfulDescription.length<20){
+      status("supportCreateStatus","Add at least 20 characters of meaningful detail before sending. Your draft is preserved.");
+      el("supportDescription").focus();
+      return;
+    }
     if(body.length>3000){
       status("supportCreateStatus","This ticket is too long once the report details are included. Shorten the description and retry; your draft is saved here.");
       el("supportDescription").focus();
