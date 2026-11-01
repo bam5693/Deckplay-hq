@@ -42,3 +42,21 @@ test('Plain legacy notes and CRLF classification blocks remain safe',()=>{
  assert.equal(helpers.listingEditorVisibleDescription(windows),'Mint corners.');
  assert.match(helpers.listingEditorPreserveDescription(windows,'Updated corners.'),/Set: 151/);
 });
+
+test('Tanner: legacy Sports Cards Fleer block cannot leak into corrected O-Pee-Chee notes',()=>{
+ const original=[block('Sport: Hockey\nSports brand: O-Pee-Chee\nYear: 1983-84\nPlayer: Gretzky'),'[Sports Cards]\nSport: Hockey\nBrand: Fleer\nYear: 1981\nPlayer: Gretzky','Original notes'].join('\n\n');
+ assert.equal(helpers.listingEditorVisibleDescription(original),'Original notes');
+ const saved=helpers.listingEditorPreserveDescription(original,'Updated notes');
+ assert.match(saved,/O-Pee-Chee/);
+ assert.doesNotMatch(saved,/Fleer|1981|\[Sports Cards\]/);
+});
+
+test('Jayden: stale original video-game platform and card condition are not reintroduced',()=>{
+ const game=[block('Platform: Nintendo Switch 2'),'[Video Game]\nPlatform: PlayStation 5','Case and manual included'].join('\n\n');
+ assert.equal(helpers.listingEditorVisibleDescription(game),'Case and manual included');
+ const saved=helpers.listingEditorPreserveDescription(game,'Case and manual included; tested.');
+ assert.match(saved,/Nintendo Switch 2/);
+ assert.doesNotMatch(saved,/PlayStation 5|\[Video Game\]/);
+ const card=[block('Card condition: Near Mint'),'[Card Condition]\nLightly Played','One tiny edge mark'].join('\n\n');
+ assert.equal(helpers.listingEditorVisibleDescription(card),'One tiny edge mark');
+});
