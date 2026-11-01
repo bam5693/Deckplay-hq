@@ -46,3 +46,28 @@ test('first-time visitor explores V1 navigation with readable controls and scree
  await info.attach('v1-public-journey-audit',{path:output,contentType:'application/json'});
  expect(results.filter(r=>r.status==='visited').length,'No public V1 surfaces could be visited').toBeGreaterThan(0);
 });
+
+test('guest seller sign-in has three separate readable actions with no overlapping Cancel',async({page},info)=>{
+ await page.goto(base,{waitUntil:'domcontentloaded'});
+ const sell=page.locator('button:has-text("Sell")').filter({visible:true}).first();
+ await sell.click();
+ const dialog=page.locator('#authModal');
+ await expect(dialog).toBeVisible();
+ const buttons=dialog.locator('.dialog-actions button');
+ await expect(buttons).toHaveCount(3);
+ const rects=await buttons.evaluateAll(els=>els.map(el=>{const r=el.getBoundingClientRect(),s=getComputedStyle(el);return {text:el.textContent.trim(),left:r.left,right:r.right,top:r.top,bottom:r.bottom,width:r.width,height:r.height,color:s.color,background:s.backgroundColor}}));
+ const [signIn,forgot,cancel]=rects;
+ for(const button of rects){
+  expect(button.width,button.text+' should have tappable width').toBeGreaterThan(50);
+  expect(button.height,button.text+' should be tall enough to tap').toBeGreaterThanOrEqual(40);
+  expect(button.left,button.text+' should stay inside viewport').toBeGreaterThanOrEqual(-1);
+  expect(button.right,button.text+' should stay inside viewport').toBeLessThanOrEqual(page.viewportSize().width+1);
+ }
+ const overlap=(a,b)=>Math.max(0,Math.min(a.right,b.right)-Math.max(a.left,b.left))*Math.max(0,Math.min(a.bottom,b.bottom)-Math.max(a.top,b.top));
+ expect(overlap(signIn,forgot),'Sign in and Forgot password must not overlap').toBe(0);
+ expect(overlap(forgot,cancel),'Cancel and Forgot password must not overlap').toBe(0);
+ expect(overlap(signIn,cancel),'Cancel and Sign in must not overlap').toBe(0);
+ const shot=info.outputPath('auth-actions-'+info.project.name+'.png');
+ await page.screenshot({path:shot});
+ await info.attach('guest-seller-sign-in-actions',{path:shot,contentType:'image/png'});
+});
