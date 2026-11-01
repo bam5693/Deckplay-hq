@@ -34,6 +34,56 @@ test('profile save prevents duplicate submissions and releases controls on excep
  await page.evaluate(()=>finishProfileSave(Promise.reject(Error('Profile connection failed'))));await expect(page.locator('#profileStatus')).toContainText('Profile connection failed');await expect(page.locator('#profileForm button[type="submit"]')).toBeEnabled();await expect(page.locator('#profileUsername')).toHaveValue('fixture_owner');
 });
 
+test('profile save timeout preserves the form and does not invent success when verification fails',async({page})=>{
+ await page.clock.install();await saving(page);
+ await page.evaluate(()=>{
+  supabaseClient.from=()=>({
+   upsert:payload=>{profileWrites.push(payload);return new Promise(()=>{})},
+   select:()=>({eq:()=>({maybeSingle:async()=>({data:null,error:null})})})
+  });
+  document.getElementById('profileForm').requestSubmit();
+ });
+ await expect.poll(()=>page.evaluate(()=>profileWrites.length)).toBe(1);
+ await page.clock.fastForward(10100);
+ await expect(page.locator('#profileStatus')).toContainText('could not confirm whether your changes saved');
+ await expect(page.locator('#profileForm button[type="submit"]')).toBeEnabled();
+ await expect(page.locator('#profileBio')).toHaveValue('My profile edit');
+ await expect(page.locator('#profileModal')).toHaveClass(/open/);
+});
+
+test('profile save timeout verifies the owner row before showing saved',async({page})=>{
+ await page.clock.install();await saving(page);
+ await page.evaluate(()=>{
+  supabaseClient.from=()=>({
+   upsert:payload=>{profileWrites.push(payload);return new Promise(()=>{})},
+   select:()=>({eq:()=>({maybeSingle:async()=>({data:profileWrites.at(-1),error:null})})})
+  });
+  document.getElementById('profileForm').requestSubmit();
+ });
+ await expect.poll(()=>page.evaluate(()=>profileWrites.length)).toBe(1);
+ await page.clock.fastForward(10100);
+ await expect(page.locator('#profileModal')).not.toHaveClass(/open/);
+ expect(await page.evaluate(()=>profileWrites.length)).toBe(1);
+});
+
+test('late profile save from a signed-out account cannot alter the next account editor',async({page})=>{
+ await saving(page);
+ await page.evaluate(()=>{
+  supabaseClient.from=()=>({upsert:payload=>{profileWrites.push(payload);return new Promise(done=>window.finishOldProfileSave=done)}});
+  document.getElementById('profileForm').requestSubmit();
+ });
+ await expect.poll(()=>page.evaluate(()=>profileWrites.length)).toBe(1);
+ await page.evaluate(()=>{
+  currentUser={id:'fixture-new',user_metadata:{}};
+  syncInboxDraftUser();
+  finishOldProfileSave({error:null});
+ });
+ await settle(page);
+ await expect(page.locator('#profileForm button[type="submit"]')).toBeEnabled();
+ await expect(page.locator('#profileModal')).not.toHaveClass(/open/);
+ expect(await page.evaluate(()=>metadataWrites)).toBe(0);
+});
+
 test('posting a listing cannot overwrite an existing collector username or display name',async({page})=>{
  await page.evaluate(async()=>{
   window.profileEnsureWrites=[];
