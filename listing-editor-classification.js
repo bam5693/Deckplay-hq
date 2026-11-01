@@ -2,6 +2,27 @@ function latestEditorClassification(description){
  const edits=[...String(description||"").matchAll(/(?:^|\n)\[Listing classification\]\r?\n([\s\S]*?)\r?\n\[End classification\]/g)];
  return edits.length?edits[edits.length-1][1]:null;
 }
+// Generated classification belongs in structured controls, not duplicate
+// free-text notes after multiple seller edits.
+function listingEditorVisibleDescription(description){
+ const withoutContents=String(description||"").replace(/^\[Listing contents\]\r?\n[\s\S]*?\r?\n\[End listing contents\]\r?\n*/,"");
+ return withoutContents.replace(/(?:^|\r?\n)\[Listing classification\]\r?\n[\s\S]*?\r?\n\[End classification\](?=\r?\n|$)/g,"\n")
+  .replace(/^\n+|\n+$/g,"").replace(/\n{3,}/g,"\n\n");
+}
+function listingEditorLatestDeckList(description){
+ const source=latestEditorClassification(description)??String(description||"");
+ return source.match(/(?:^|\n)Full decklist:\r?\n([\s\S]*?)(?:\r?\n\[End classification\]|\r?\n\r?\n|$)/)?.[1]||"";
+}
+// Preserve the current public classification and quantity disclosure when
+// editing prose, without reintroducing superseded generated identity blocks.
+function listingEditorPreserveDescription(original,edited){
+ const raw=String(original||""),notes=String(edited||"");
+ if(listingEditorVisibleDescription(raw).trim()===notes.trim())return original;
+ const contents=raw.match(/^\[Listing contents\]\r?\n[\s\S]*?\r?\n\[End listing contents\]/)?.[0]||"";
+ const latest=latestEditorClassification(raw);
+ const classification=latest===null?"":"[Listing classification]\n"+latest+"\n[End classification]";
+ return [contents,classification,notes.trim()].filter(Boolean).join("\n\n")||null;
+}
 /* Independent editor controls clone the real seller catalog, without touching creation drafts. */
 window.createListingEditorClassification=(container,status)=>{
  container.innerHTML='<details><summary>Category, condition and item details</summary><label class="check-row"><input type="checkbox" id="editClassificationEnabled"> Change classification and item details</label><p class="file-help">Review your description when changing category. Your existing disclosures are preserved.</p><fieldset id="editClassificationFields" disabled style="border:0;padding:0;min-width:0;max-width:100%"></fieldset></details>';
@@ -35,7 +56,7 @@ window.createListingEditorClassification=(container,status)=>{
   if(id==='category'&&['consoles','controllers','accessories'].includes(get(id)))set('consoleItemType',{consoles:'Console',controllers:'Controller',accessories:'Accessory'}[get(id)]);
   sync();
  });enabled.addEventListener('change',sync);
- const strip=text=>stripListingContents(String(text||'')).replace(/^\[Listing classification\]\n[\s\S]*?\n\[End classification\]\n*/,'');
+ const strip=listingEditorVisibleDescription;
  function reset(row={}){
   for(const [id,el]of controls){el.value='';if(id==='condition')el.value='used';if(id==='cardCondition')el.value='lightly_played'}
   enabled.checked=false;container.querySelector('details').open=false;busy=false;
@@ -55,7 +76,7 @@ window.createListingEditorClassification=(container,status)=>{
   // Never let a legacy [Card Condition] override the latest edited value.
   const option=options.find(o=>o.textContent.trim()===conditionLine)||(!latest?options.find(o=>description.includes('[Card Condition]\n'+o.textContent.trim())):null);
   if(option)set('cardCondition',option.value);else if(row.condition==='graded')set('cardCondition','graded');else if(row.condition==='new')set('cardCondition','sealed');
-  set('deckList',description.match(/Full decklist:\n([\s\S]*?)(?:\n\[End classification\]|\n\n|$)/)?.[1]||'');
+  set('deckList',listingEditorLatestDeckList(description));
   if(!get('consoleItemType'))set('consoleItemType',{consoles:'Console',controllers:'Controller',accessories:'Accessory'}[get('category')]);sync();
  }
  function values(description){
@@ -71,5 +92,5 @@ window.createListingEditorClassification=(container,status)=>{
   if(cards){const setName=get('tcgCustomSet').trim()||get('tcgSet'),variant=get('tcgCustomVariant').trim()||get('tcgVariant');if(setName)lines.push('Set: '+setName);if(variant)lines.push('Variant: '+variant)}
   return {category,product_type:type,tcg_game:cards?get('tcgGame'):null,collectible_subcategory:category==='collectibles'?get('collectibleSubcategory'):null,condition:cards?({near_mint:'like_new',lightly_played:'used',moderately_played:'used',heavily_played:'damaged',damaged:'damaged',sealed:'new',graded:'graded'})[get('cardCondition')]:get('condition'),description:(contentsBlock?contentsBlock+'\n\n':'')+'[Listing classification]\n'+lines.join('\n')+'\n[End classification]\n\n'+strip(description)};
  }
- reset();return {reset,values,strip,preserve(original,edited){if(strip(original).trim()===(edited||'').trim())return original;const prefix=String(original||'').slice(0,String(original||'').length-strip(original).length);return prefix+(edited||'')||null},setBusy(value){busy=value;sync()}};
+ reset();return {reset,values,strip,preserve:listingEditorPreserveDescription,setBusy(value){busy=value;sync()}};
 };
