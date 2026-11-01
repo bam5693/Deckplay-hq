@@ -1,0 +1,17 @@
+# DeckPlay HQ — hourly integration checkpoint
+
+## 2026-11-01 — PR #32 mobile Sell UX consolidation (candidate, not accepted)
+
+**DONE:** Started isolated `dev/hourly-integration` from current `test/staging-reporting` (staging index blob `bb7787058c5f9bfa935ceda1b3f06d086bc6af7b`). Brought PR #32's seller mobile readability, category-specific description help, hidden redundant Category picker, and matching Cancel/Post styling into a fresh staging-derived integration candidate. Source repair in commit [13dc8eb](https://github.com/bam5693/Deckplay-hq/commit/13dc8ebf6ce3132e1979b5cee4711c128451392e): selecting **Controller** or **Accessory** under the single hardware listing type now updates the actual hidden category to `controllers` or `accessories` and dispatches the existing category-change event; previously both silently remained `consoles` in PR #32. No worker branch or shared staging write.
+
+**Focused test candidate:** Added PR #32's scoped mobile Sell Playwright journeys plus a new Console/Controller/Accessory classification regression in [7474608](https://github.com/bam5693/Deckplay-hq/commit/74746085a5bece11449c450df04b8fcd23c234b0), and scoped config [11ec435](https://github.com/bam5693/Deckplay-hq/commit/11ec435289ec617cfafada66949c23c5d1148295). Static checks **PASS**: five inline JS scripts compiled without syntax error; Playwright test and config compiled; confirmed selector and category-change handler source. **NOT RUN:** Playwright browser, real signed seller publish/edit and buyer readback, dark/light screenshot inspection, Android hardware, staging deployment parity. Do not call this UX accepted.
+
+**Jayden (video-game/TCG buyer) critique:** Category-specific help prevents card rarity/foil advice on games, but check Switch 2 game selection, keyboard/focus, empty states and buyer details in actual browser. **Tanner (sports/hardware seller) critique:** One visible hardware-type selector now drives buyer-facing category; check controller/accessory buyer filters, sports brand selection, light/dark readability, Cancel unsaved-draft recovery, and no account leakage in a signed test. These are source-review personas, **not independent people or independent visual reviewers**.
+
+**Disposition: UX BLOCKED** until a separate reviewer inspects mobile light/dark screenshots and the manual G integration lead checks authenticated staging create/edit → buyer filter/readback and real Android; **FUNCTIONAL CANDIDATE** for isolated code review only. No production or staging changes.
+
+**Conflict/ownership:** PR #32 source copied as a narrow isolated candidate; do not merge PR #32 plus this PR independently (duplicate code). Trunk 1 worker owns its metadata PR #25 and may touch `index.html`; reconcile their later changes before integration. Trunk 4 PR #10 remains separate. Trunk 8 PR #36 not touched. Trunk 9 PR #37 preserved. No CI was triggered intentionally; repository Actions in_progress=0 queued=0 at preflight.
+
+**IN PROGRESS:** Draft integration PR into `test/staging-reporting` for owner/lead review.
+
+**NEXT EXECUTABLE ACTION:** Independently run only `npx playwright test --config=playwright.v1-mobile-sell.config.cjs --project=local-mobile --retries=0 --max-failures=1` in an authorized local runner, inspect light/dark screenshots, then compare PR #25's current index metadata changes and plan non-destructive conflict resolution. Manual G owns any staging deploy/acceptance.
