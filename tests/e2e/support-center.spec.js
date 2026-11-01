@@ -1371,3 +1371,23 @@ test('T8.3: oversized support reply never reaches RPC and preserves draft',async
  await expect(page.locator('#supportReplyBody')).toHaveValue('x'.repeat(3001));
  expect(await page.evaluate(()=>window.__db.calls.filter(x=>x.name==='reply_support_ticket').length)).toBe(0);
 });
+
+test('trimmed support details cannot create empty or misleadingly short tickets',async({page})=>{
+ await boot(page);await signIn(page,'buyer');
+ await page.getByRole('button',{name:'Help & support'}).last().click();
+ await page.locator('#supportSubject').fill('Help with an order');
+ // Browser minlength accepts these 20 characters, but the RPC would receive empty text.
+ await page.locator('#supportDescription').fill(' '.repeat(20));
+ await page.getByRole('button',{name:'Create private ticket'}).click();
+ await expect(page.locator('#supportCreateStatus')).toContainText('at least 20 characters of meaningful detail');
+ await expect(page.locator('#supportDescription')).toHaveValue(' '.repeat(20));
+ expect(await page.evaluate(()=>window.__db.calls.filter(c=>c.name==='create_support_ticket').length)).toBe(0);
+ await page.locator('#supportDescription').fill('   Too short   '.padEnd(20,' '));
+ await page.getByRole('button',{name:'Create private ticket'}).click();
+ await expect(page.locator('#supportCreateStatus')).toContainText('at least 20 characters of meaningful detail');
+ expect(await page.evaluate(()=>window.__db.calls.filter(c=>c.name==='create_support_ticket').length)).toBe(0);
+ await page.locator('#supportDescription').fill('A real support issue with enough detail.');
+ await page.getByRole('button',{name:'Create private ticket'}).click();
+ await expect(page.locator('#supportTicketTitle')).toHaveText('Help with an order');
+ expect(await page.evaluate(()=>window.__db.calls.filter(c=>c.name==='create_support_ticket').length)).toBe(1);
+});
