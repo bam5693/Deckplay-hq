@@ -3519,10 +3519,14 @@ let profileTab="listings",profileInventoryFilter={search:"",status:"all",categor
 function showHomePage(){showMainMarketplace();document.body.classList.remove("deckplay-market");document.body.classList.add("deckplay-home");window.scrollTo({top:0,behavior:"smooth"})}
 function showMainMarketplace(){document.body.classList.remove("deckplay-home");document.body.classList.add("deckplay-market");document.body.classList.remove("inbox-focus","profile-focus");document.getElementById("inboxPage").hidden=true;document.getElementById("collectorPage").hidden=true;document.querySelectorAll("main > section,main > aside").forEach(el=>{el.hidden=(el.id==="collectorPage"||el.id==="inboxPage")});window.scrollTo({top:0,behavior:"smooth"})}
 let profileLoadVersion=0;
+// A timed-out profile removal can have reached the server. Reconcile it before retrying.
+const uncertainProfileSavedRemovals=new Set();
+const profileSavedRemoveKey=(owner,epoch,id)=>JSON.stringify([owner,epoch,String(id)]);
+function profileSavedRemoveLabel(id){return currentUser&&uncertainProfileSavedRemovals.has(profileSavedRemoveKey(currentUser.id,listingAccountVersion,id))?"Check removal status":"Remove from saved"}
 async function showCollectorPage(tab="listings"){
  if(!currentUser){openModal("authModal");return}
  window.sellerOverview?.refresh?.();
- const userId=currentUser.id,request=++profileLoadVersion,current=()=>request===profileLoadVersion&&currentUser?.id===userId;
+ const userId=currentUser.id,accountEpoch=listingAccountVersion,request=++profileLoadVersion,current=()=>request===profileLoadVersion&&currentUser?.id===userId&&listingAccountVersion===accountEpoch;
  profileTab=tab;document.body.classList.remove("inbox-focus","deckplay-home","deckplay-market");document.body.classList.add("profile-focus");document.getElementById("inboxPage").hidden=true;document.querySelectorAll("main > section,main > aside").forEach(el=>{if(el.id!=="collectorPage")el.hidden=true});document.getElementById("collectorPage").hidden=false;
  window.scrollTo({top:0,behavior:"smooth"});document.getElementById("profilePageContent").innerHTML='<p class="muted">Loading your collection…</p>';
  let profileResult,listingsResult,wantedResult;
@@ -3598,7 +3602,7 @@ async function showCollectorPage(tab="listings"){
   // disclose a blocked/removed seller's private title or status.
   const visibleIds=new Set(visible.map(row=>String(row.id)));
   const unavailable=ids.filter(id=>!visibleIds.has(String(id)));
-  const missingCards=unavailable.map(id=>`<article class="profile-item"><h3>Saved listing unavailable</h3><p class="muted">This item may have sold, been paused, removed, or hidden by your blocked-seller settings.</p><button type="button" class="ghost" data-remove-profile-saved="${escapeHtml(id)}">Remove from saved</button></article>`).join("");
+  const missingCards=unavailable.map(id=>`<article class="profile-item"><h3>Saved listing unavailable</h3><p class="muted">This item may have sold, been paused, removed, or hidden by your blocked-seller settings.</p><button type="button" class="ghost" data-remove-profile-saved="${escapeHtml(id)}">${profileSavedRemoveLabel(id)}</button></article>`).join("");
   content.innerHTML=(visible.length?renderProfileCards(visible,false,true):"")+(missingCards?`<div class="profile-card-grid">${missingCards}</div>`:"")+(visible.length||missingCards?"":'<p class="muted">No saved items available.</p>')+browse;
   return
  }
@@ -3606,7 +3610,7 @@ async function showCollectorPage(tab="listings"){
  content.innerHTML=listings.length?renderProfileInventory(listings):'<p class="muted">You haven’t posted any listings yet. Tap Sell an item to get started.</p>';
  if(listings.length)filterProfileInventory();
 }
-function renderProfileCards(rows,own,savedView=false){return '<div class="profile-card-grid">'+rows.map(l=>{const image=safeImageUrl(l.image_urls?.[0]);return `<article class="profile-item" data-inventory-status="${escapeHtml(l.status||"active")}" data-inventory-category="${escapeHtml(l.category||"other")}" data-inventory-search="${escapeHtml(l.title)}">${image?`<img class="profile-listing-image" src="${escapeHtml(image)}" alt="${escapeHtml(l.title)}">`:""}<h3>${escapeHtml(l.title)}</h3><strong>$${Number(l.price||0).toFixed(2)}</strong><p class="muted">${escapeHtml(l.status||"active")}</p><div class="profile-item-actions">${l.status==="active"?`<button type="button" class="ghost" data-profile-view="${escapeHtml(l.id)}">View listing</button>`:""}${own&&l.status==="active"?`<button type="button" class="ghost" data-profile-edit="${escapeHtml(l.id)}">Edit listing</button><button type="button" class="ghost" data-page-sold="${escapeHtml(l.id)}">Mark sold</button>`:""}${own&&l.status==="active"?`<button type="button" class="ghost" data-page-pause="${escapeHtml(l.id)}">Pause listing</button>`:""}${own&&l.status==="paused"?`<button type="button" class="ghost" data-page-resume="${escapeHtml(l.id)}">Resume listing</button>`:""}${own?`<button type="button" class="ghost" data-page-delete="${escapeHtml(l.id)}">Delete</button>`:""}${savedView?`<button type="button" class="ghost" data-remove-profile-saved="${escapeHtml(l.id)}">Remove from saved</button>`:""}</div></article>`}).join("")+'</div>'}
+function renderProfileCards(rows,own,savedView=false){return '<div class="profile-card-grid">'+rows.map(l=>{const image=safeImageUrl(l.image_urls?.[0]);return `<article class="profile-item" data-inventory-status="${escapeHtml(l.status||"active")}" data-inventory-category="${escapeHtml(l.category||"other")}" data-inventory-search="${escapeHtml(l.title)}">${image?`<img class="profile-listing-image" src="${escapeHtml(image)}" alt="${escapeHtml(l.title)}">`:""}<h3>${escapeHtml(l.title)}</h3><strong>$${Number(l.price||0).toFixed(2)}</strong><p class="muted">${escapeHtml(l.status||"active")}</p><div class="profile-item-actions">${l.status==="active"?`<button type="button" class="ghost" data-profile-view="${escapeHtml(l.id)}">View listing</button>`:""}${own&&l.status==="active"?`<button type="button" class="ghost" data-profile-edit="${escapeHtml(l.id)}">Edit listing</button><button type="button" class="ghost" data-page-sold="${escapeHtml(l.id)}">Mark sold</button>`:""}${own&&l.status==="active"?`<button type="button" class="ghost" data-page-pause="${escapeHtml(l.id)}">Pause listing</button>`:""}${own&&l.status==="paused"?`<button type="button" class="ghost" data-page-resume="${escapeHtml(l.id)}">Resume listing</button>`:""}${own?`<button type="button" class="ghost" data-page-delete="${escapeHtml(l.id)}">Delete</button>`:""}${savedView?`<button type="button" class="ghost" data-remove-profile-saved="${escapeHtml(l.id)}">${profileSavedRemoveLabel(l.id)}</button>`:""}</div></article>`}).join("")+'</div>'}
 
 
 function renderProfileInventory(rows){
@@ -3628,9 +3632,29 @@ document.getElementById("profilePageContent").addEventListener("click",async e=>
  if(removeSaved){
   const owner=currentUser?.id,epoch=listingAccountVersion,id=removeSaved.dataset.removeProfileSaved,view=profileLoadVersion;
   if(!owner||!id||removeSaved.disabled)return;
+  const key=profileSavedRemoveKey(owner,epoch,id),checking=uncertainProfileSavedRemovals.has(key);
   const sameView=()=>currentUser?.id===owner&&listingAccountVersion===epoch&&profileLoadVersion===view&&profileTab==="saved";
-  removeSaved.disabled=true;removeSaved.setAttribute("aria-busy","true");removeSaved.textContent="Removing…";
+  removeSaved.disabled=true;removeSaved.setAttribute("aria-busy","true");removeSaved.textContent=checking?"Checking…":"Removing…";
   try{
+   if(typeof navigator!=="undefined"&&navigator.onLine===false)throw Error("Offline. Reconnect before changing saved items.");
+   if(checking){
+    // The previous delete may still have committed after its timeout. Never blindly send another.
+    const {data,error}=await readMarketplaceRequest(supabaseClient.from("saved_listings").select("listing_id").eq("user_id",owner).eq("listing_id",id).maybeSingle(),8000);
+    if(!sameView())return;
+    if(error||data===undefined||data!==null&&String(data.listing_id)!==String(id))throw error||Error("Could not verify saved status.");
+    uncertainProfileSavedRemovals.delete(key);
+    if(data){
+     removeSaved.disabled=false;removeSaved.removeAttribute("aria-busy");removeSaved.textContent="Remove from saved";
+     let status=removeSaved.nextElementSibling;
+     if(!status||!status.matches("[data-saved-remove-error]")){status=document.createElement("p");status.dataset.savedRemoveError="";status.setAttribute("role","status");removeSaved.after(status)}
+     status.textContent="Confirmed: this item is still saved. Tap Remove from saved to try again.";
+    }else{
+     saved.delete(id);++savedListingsLoadVersion;
+     await showCollectorPage("saved");
+     toast("Confirmed: item removed from saved.");
+    }
+    return;
+   }
    const {error}=await readMarketplaceRequest(supabaseClient.from("saved_listings").delete().eq("user_id",owner).eq("listing_id",id),8000);
    if(!sameView())return;
    if(error)throw error;
@@ -3638,10 +3662,12 @@ document.getElementById("profilePageContent").addEventListener("click",async e=>
    await showCollectorPage("saved");
   }catch(error){
    if(sameView()){
-    removeSaved.disabled=false;removeSaved.removeAttribute("aria-busy");removeSaved.textContent="Retry remove";
+    if(!checking&&(/timed out|abort/i.test(String(error?.message||""))||["AbortError","TimeoutError"].includes(error?.name)))uncertainProfileSavedRemovals.add(key);
+    const unknown=uncertainProfileSavedRemovals.has(key);
+    removeSaved.disabled=false;removeSaved.removeAttribute("aria-busy");removeSaved.textContent=unknown?"Check removal status":"Retry remove";
     let status=removeSaved.nextElementSibling;
     if(!status||!status.matches("[data-saved-remove-error]")){status=document.createElement("p");status.dataset.savedRemoveError="";status.setAttribute("role","alert");removeSaved.after(status)}
-    status.textContent="Could not remove this saved item. Check your connection and retry.";
+    status.textContent=unknown?"Removal may have completed. Reconnect and check its status before trying again.":"Could not remove this saved item. Check your connection and retry.";
    }
   }
   return;
