@@ -1641,6 +1641,9 @@ document.getElementById("profileForm").addEventListener("submit",async event=>{
  finally{delete form.dataset.pending;form.removeAttribute("aria-busy");button.disabled=false;form.querySelectorAll("input,textarea,select").forEach(el=>el.disabled=false)}
 });
 function openMarketplaceInventory(savedOnly){
+ // Saved listings must use the account-scoped ID lookup, not just the current marketplace page.
+ // Otherwise older saved cards disappear and the grid falsely says there are no favorites.
+ if(savedOnly){closeAccountMenu();void showCollectorPage("saved");return}
  closeAccountMenu();rememberInboxDraft();showMainMarketplace();
  onlyMyListings=!savedOnly;onlySavedListings=savedOnly;query="";document.getElementById("search").value="";
  document.getElementById("marketClearFilters").click();
