@@ -324,3 +324,35 @@ test('Wanted exact matching prefers seller-edited classification over stale crea
  });
  expect(result).toEqual({games:['current-game'],consoles:['current-console']});
 });
+
+test('Wanted posts and match actions appear before optional profile names finish loading',async({page})=>{
+ await page.goto('/');await page.waitForLoadState('networkidle');
+ await page.evaluate(()=>{
+  const originalFrom=supabaseClient.from.bind(supabaseClient);
+  window.resolveSlowWantedProfile=null;
+  supabaseClient.from=table=>{
+   if(table==='wanted_posts'){
+    const query={select:()=>query,order:()=>query,limit:()=>Promise.resolve({data:[{
+     id:'wanted-slow-name',user_id:'collector-slow',game:'video_games',
+     title:'Metroid Prime',details:'Looking for a complete copy',
+     offer_type:'buy',budget:50,created_at:'2026-10-31T00:00:00Z'
+    }],error:null})};
+    return query;
+   }
+   if(table==='profiles'){
+    const query={select:()=>query,in:()=>new Promise(resolve=>{window.resolveSlowWantedProfile=resolve})};
+    return query;
+   }
+   return originalFrom(table);
+  };
+  toggleWanted(true);
+ });
+ const card=page.locator('#wantedGrid .wanted-card');
+ // The old implementation held all cards behind a five-second profile timeout.
+ await expect(card).toBeVisible({timeout:1000});
+ await expect(card).toContainText('Metroid Prime');
+ await expect(card.locator('[data-wanted-author="collector-slow"]')).toHaveText('DeckPlay member');
+ await page.evaluate(()=>resolveSlowWantedProfile({data:[{id:'collector-slow',username:'retrocollector'}],error:null}));
+ await expect(card.locator('[data-wanted-author="collector-slow"]')).toHaveText('@retrocollector');
+ await expect(card).toContainText('Looking for a complete copy');
+});
