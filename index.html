@@ -1851,7 +1851,7 @@ function updateDeckQuantityStatus(){
  if(summary.invalid)el.textContent="Each explicit quantity must be between 1 and 1,000 cards."+disclaimer;
  else if(mismatch)el.textContent="Quantities total "+summary.total+" cards, but the stated total is "+declared+". Correct the quantities or stated total before posting."+disclaimer;
  else if(summary.complete)el.textContent="Counted "+summary.total+" cards"+(declared>0?"; the stated total matches.":". Enter the total number of cards included.")+disclaimer;
- else if(summary.unrecognized)el.textContent="Counted "+summary.total+" cards in explicit quantity lines. "+summary.unrecognized+" line(s) could not be counted. Use 4x Card name for each line to check the total."+disclaimer;
+ else if(summary.unrecognized)el.textContent="Cannot post yet: "+summary.unrecognized+" decklist line(s) have no valid quantity. Use 4x Card name on every line, then match the stated card total."+disclaimer;
  else el.textContent="Use explicit quantities such as 4x Card name."+disclaimer;
  return {...summary,mismatch};
 }
@@ -1930,7 +1930,7 @@ document.getElementById("listingForm").addEventListener("submit",async event=>{
  }
  if(document.getElementById("listingType").value==="deck"){
   const quantities=updateDeckQuantityStatus();
-  if(quantities.invalid||quantities.mismatch){status.textContent=document.getElementById("deckQuantityStatus").textContent;document.getElementById("deckList").focus();return}
+  if(!quantities.complete||quantities.invalid||quantities.mismatch){status.textContent=document.getElementById("deckQuantityStatus").textContent;document.getElementById("deckList").focus();return}
  }
  let contentsDetails;
  try{contentsDetails=listingContentsBlock({quantity:document.getElementById("listingIncludedQuantity").value,unit:document.getElementById("listingQuantityUnit").value,contents:document.getElementById("listingContentsList").value})}catch(error){status.textContent=error.message;return}
