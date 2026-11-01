@@ -19,6 +19,7 @@ window.favoriteActions=(()=>{
  async function toggle(id){
   const owner=currentUser?.id,epoch=listingAccountVersion;if(!owner){toast('Sign in to save items');openModal('authModal');return}
   const requestKey=key(id);if(pending.has(requestKey))return;
+  const valid=()=>currentUser?.id===owner&&listingAccountVersion===epoch;
   // A timed-out write might still commit. The next tap checks the server; it
   // must not silently perform the opposite write on an uncertain favorite.
   if(unconfirmed.has(requestKey)){
@@ -38,7 +39,6 @@ window.favoriteActions=(()=>{
    finally{pending.delete(requestKey);if(valid())render()}
    return;
   }
-  const valid=()=>currentUser?.id===owner&&listingAccountVersion===epoch;
   const wasSaved=saved.has(id),item=items.find(x=>String(x.id)===String(id));
   // A blocked seller cannot gain new saves, but an existing save must remain removable.
   // Never trap a collector's old favorite behind the block that hid its listing.
@@ -61,7 +61,7 @@ window.favoriteActions=(()=>{
   }catch(error){if(valid()){
     ++savedListingsLoadVersion;
     wasSaved?saved.add(id):saved.delete(id);
-    if(/timed out/i.test(String(error?.message||''))&&item?.databaseId){
+    if((/timed out|abort/i.test(String(error?.message||''))||['AbortError','TimeoutError'].includes(error?.name))&&item?.databaseId){
      unconfirmed.set(requestKey,item.databaseId);
      toast('Saved change may have completed. Tap the heart to check its status before changing it again.');
     }else toast(error.message||'Could not update saved items. Try again.');
@@ -69,9 +69,9 @@ window.favoriteActions=(()=>{
   finally{pending.delete(requestKey);pendingDesired.delete(requestKey);if(valid()){++savedListingsLoadVersion;render()}}
  }
  return {toggle,pending:id=>pending.has(key(id)),uncertain:id=>unconfirmed.has(key(id)),
-  reconcile:(owner,epoch,rows)=>{
+  reconcile:(owner,epoch)=>{
    if(currentUser?.id!==owner||listingAccountVersion!==epoch)return;
-   for(const [requestKey,listingId] of unconfirmed){
+   for(const requestKey of unconfirmed.keys()){
     const [entryOwner,entryEpoch]=JSON.parse(requestKey);
     if(entryOwner===owner&&entryEpoch===epoch&&!pending.has(requestKey))unconfirmed.delete(requestKey);
    }
