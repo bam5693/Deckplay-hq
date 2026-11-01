@@ -60,6 +60,7 @@
         <h3 id="supportTicketTitle"></h3>
         <p id="supportTicketBody" style="white-space:pre-wrap;overflow-wrap:anywhere"></p>
         <p id="supportTicketState" class="muted"></p>
+        <p id="supportTicketNextStep" class="muted" role="status" aria-live="polite"></p>
         <div id="supportReplies" aria-live="polite"></div>
         <p id="supportRepliesStatus" class="status" role="status" aria-live="polite"></p>
         <button type="button" class="ghost" id="supportRepliesLoadMore" hidden>Load earlier replies</button>
@@ -138,6 +139,7 @@
   const status = (id, message) => { el(id).textContent = message || ""; };
   const date = value => new Date(value).toLocaleString();
   const labels = {open:"Open",waiting_on_staff:"Waiting on support",waiting_on_user:"Waiting on collector",resolved:"Resolved"};
+  const nextSteps = {open:"Your ticket has been recorded. Check My tickets for updates; no response time is guaranteed.",waiting_on_staff:"Your ticket is waiting on support. You can check this page for replies.",waiting_on_user:"Support is waiting for your response. Read the replies below and respond if more information is needed.",resolved:"This ticket is marked resolved. If the problem continues, open a new support ticket."};
   let userId = null, generation = 0, isStaff = false, staffView = false, staffSafetyOnly = false, ticketFilter = "all", ticketCategory = "all", feedbackQueueSubject = null, selected = null, tickets = [], ticketOffset = 0, ticketListRequest = 0, loadingTickets = false, moreTickets = false, replyOffset = 0, moreReplies = false, loadingReplies = false, replyRequest = 0, returnToFeedback = false, returnTopic = "feedback", feedbackMode = false, tradeConcernMode = false, listingReportId = null, pendingReportId = null, viewGeneration = 0, createRequest = 0, replySubmitRequest = 0, statusSubmitRequest = 0;
   // Drafts are tab-memory only, keyed by ticket and purged on account/view reset.
   const replyDrafts = new Map();
@@ -297,6 +299,7 @@
     el("supportTicketTitle").textContent = "";
     el("supportTicketBody").textContent = "";
     el("supportTicketState").textContent = "";
+    el("supportTicketNextStep").textContent = "";
     ++replyRequest; replyOffset = 0; moreReplies = false; loadingReplies = false;
     el("supportReplies").replaceChildren();
     el("supportRepliesLoadMore").hidden = true;
@@ -622,6 +625,7 @@
     el("supportTicketTitle").textContent=ticket.subject;
     el("supportTicketBody").textContent=ticket.body;
     el("supportTicketState").textContent=(labels[ticket.status]||ticket.status)+" · "+date(ticket.created_at);
+    el("supportTicketNextStep").textContent=nextSteps[ticket.status]||"Check this ticket for status updates.";
     el("supportReplyForm").hidden=ticket.status==="resolved";
     el("supportStaffControls").hidden=!isStaff;
     el("supportStatusSelect").value=ticket.status;
