@@ -183,3 +183,14 @@ Focused [test source](https://github.com/bam5693/Deckplay-hq/blob/3b17c5970652a3
 | P1 | Owner `33662.jpg` dark deck panel / `33660.jpg` Cancel footer | Android readability and accidental draft loss risk | Independent Tanner/Jayden Android-sized light/dark reviewer and owner physical phone | **VISUAL REVIEW BLOCKED**; original screenshot bytes not available |
 
 **UX acceptance:** Jayden/Tanner scenarios were developer-authored; no independent browser actor, signed publication/edit/buyer readback, mobile screenshots, physical Android or staging parity. This patch changes only the **deck** readback/edit journey; all eight listing types remain subject to existing mandatory matrix, but unchanged other types were not re-run. T1.1/T1.2 remain accepted, T1.3–T1.6 not accepted. Production/shared staging untouched.
+
+
+## 2026-11-01 17:30 CST — Buyer platform alias gap (T1.3)
+| Priority | Official source / collector item | Impact, owner, exact focused test | Status |
+|---|---|---|---|
+| P1 | [Nintendo Super Nintendo](https://www.nintendo.com/en-gb/Hardware/Nintendo-History/Super-Nintendo/Super-Nintendo-627040.html), SNES buyer query | Jayden searches `SNES` while seller correctly classified `Super Nintendo`; pre-fix false negative reproduced with committed search normalizer. T1 owner: `trunk1-console-search-alias.test.cjs`, buyer SNES→listing and reverse. | **BRANCH FIX** [8a94d76](https://github.com/bam5693/Deckplay-hq/commit/8a94d76174acdd791fd3ce8b80ce763d984abb85); V8 PASS; signed staging UNKNOWN |
+| P1 | [Nintendo 64](https://www.nintendo.com/us/about/), N64 shorthand | Tanner/Jayden query `N64` for `Nintendo 64`; keep NES/SNES distinct. Same focused test. | **BRANCH FIX**; V8 PASS; buyer browser UNKNOWN |
+| P1 | [PlayStation PS5 official](https://www.playstation.com/en-us/ps5/buy-now/), PS1–PS5 shorthand | `PS5` should match `PlayStation 5` but never `PlayStation 4`. Existing OP17/ST-31 aliases unaffected. Same focused test. | **BRANCH FIX**; V8 PASS; signed buyer UNKNOWN |
+| P1 | Owner screenshot `33654.jpg` long platform menu, `33660.jpg` Cancel | Real Android-sized light/dark visual reviewer, first-time form → publish → buyer search, wrong platform and offline; no new seller dropdowns introduced by this fix. | **VISUAL REVIEW BLOCKED** — original JPG bytes unavailable, no independent reviewer or physical Android |
+
+**Evidence limits:** [4-group committed Node test](https://github.com/bam5693/Deckplay-hq/blob/dev/hourly-trunk1/tests/security/trunk1-console-search-alias.test.cjs), 13 V8 assertions against fetched committed source **PASS**, but native Node CI, browser screenshots, signed publish/edit/buyer readback, account privacy and protected staging parity **NOT VERIFIED**. Existing T1.1/T1.2 acceptance stands; T1.3–T1.6 remain OPEN. PR #25 is unmerged; separate PR #30 hockey changes remain unintegrated. This is a search alias fix, not a complete platform taxonomy audit.
