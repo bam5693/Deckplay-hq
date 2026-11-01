@@ -2,6 +2,8 @@
 
 > Single source of truth for **finite, testable V1 scope** on isolated staging. Created 2026-10-29. The full, larger product roadmap remains in [the eight-trunk master plan](../tests/reports/2026-10-27-next-roadmap-handoff.md); this scoreboard does **not** delete those long-term commitments.
 
+> **Public beta release gate:** After V1 feature acceptance, require the independent real-collector think-aloud usability review, P0/P1 remediation, and owner sign-off described in [FINAL-INDEPENDENT-BETA-TEST-GATE.md](FINAL-INDEPENDENT-BETA-TEST-GATE.md). This gate is not complete and must not be treated as permission to deploy.
+
 ## Rules that make 100% meaningful
 
 - **V1 means a safe, usable invite-only beta with no live checkout, purchased shipping, payouts, or real-money customer transactions.** Pricing/shipping previews must be explicitly simulations. Production publication of separately verified completed features is a different release workstream.
