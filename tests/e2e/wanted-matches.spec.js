@@ -445,3 +445,59 @@ test('wanted exact-match catalog failure offers retry without falsely claiming n
  await expect(slot.locator('[data-wanted-match="recovered-luffy"]')).toBeVisible();
  expect(await page.evaluate(()=>wantedListingAttempts)).toBe(2);
 });
+
+
+test('trade-only Wanted exact matches exclude sale-only listings in card and video-game categories',async({page})=>{
+ await page.goto('/');await page.waitForLoadState('networkidle');
+ const result=await page.evaluate(()=>{
+  const previous=items;
+  const card={c:'Trading Cards',game:'one_piece',sellerId:'seller',status:'active',description:'Card number: OP05-119\\nVariant: Manga Rare'};
+  const game={rawCategory:'video_games',n:'Mario Kart 8 Deluxe',sellerId:'seller',status:'active',description:'Platform: Nintendo Switch'};
+  items=[
+   {id:'sale-card',...card,p:50,trades:false},
+   {id:'trade-card',...card,p:500,trades:true},
+   {id:'unknown-card',...card,p:10},
+   {id:'sale-game',...game,p:40,trades:false},
+   {id:'trade-game',...game,p:100,trades:true}
+  ];
+  const cardPost={user_id:'buyer',game:'one_piece',offer_type:'trade',budget:10,details:'[DeckPlay match: {"cardNumber":"OP05-119","variant":"Manga Rare"}]'};
+  const tradeCards=exactWantedMatches(cardPost).map(x=>x.id);
+  const buyCards=exactWantedMatches({...cardPost,offer_type:'buy',budget:100}).map(x=>x.id);
+  const eitherCards=exactWantedMatches({...cardPost,offer_type:'either',budget:600}).map(x=>x.id);
+  const gamePost={user_id:'buyer',game:'video_games',title:'Mario Kart 8 Deluxe',offer_type:'trade',budget:10,details:'[DeckPlay match: {"nonCardExact":true,"platform":"Nintendo Switch"}]'};
+  const tradeGames=exactWantedMatches(gamePost).map(x=>x.id);
+  items=previous;return {tradeCards,buyCards,eitherCards,tradeGames};
+ });
+ expect(result).toEqual({
+  tradeCards:['trade-card'],
+  buyCards:['sale-card','unknown-card'],
+  eitherCards:['sale-card','trade-card','unknown-card'],
+  tradeGames:['trade-game']
+ });
+});
+
+test('trade-only Wanted publishing hides buying budget and does not submit stale cash value',async({page})=>{
+ await page.goto('/');await page.waitForLoadState('networkidle');
+ await page.evaluate(()=>{
+  currentUser={id:'wanted-trade-buyer'};syncInboxDraftUser();
+  window.capturedWantedPayload=null;
+  const original=supabaseClient.from.bind(supabaseClient);
+  supabaseClient.from=table=>table==='wanted_posts'?{
+   insert:payload=>{capturedWantedPayload=payload;return Promise.resolve({error:{message:'Fixture: keep draft open'}})}
+  }:original(table);
+  openModal('wantedModal');
+ });
+ await page.locator('#wantedItem').fill('OP-05 Manga Luffy');
+ await page.locator('#wantedOffer').selectOption('buy');
+ await page.locator('#wantedBudget').fill('50');
+ await page.locator('#wantedOffer').selectOption('trade');
+ await expect(page.locator('#wantedBudgetWrap')).toBeHidden();
+ await expect(page.locator('#wantedBudget')).toBeDisabled();
+ await page.locator('#wantedForm button[type="submit"]').click();
+ await expect(page.locator('#wantedStatus')).toHaveText('Fixture: keep draft open');
+ expect(await page.evaluate(()=>capturedWantedPayload)).toMatchObject({offer_type:'trade',budget:null});
+ await page.locator('#wantedOffer').selectOption('buy');
+ await expect(page.locator('#wantedBudgetWrap')).toBeVisible();
+ await expect(page.locator('#wantedBudget')).toBeEnabled();
+ await expect(page.locator('#wantedBudget')).toHaveValue('50');
+});
