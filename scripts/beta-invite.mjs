@@ -27,8 +27,13 @@ export function parseInviteArgs(args) {
     if (arg.startsWith('--email=')) {
       if (result.email !== null) throw new Error('Provide exactly one email.');
       result.email = validateEmail(arg.slice(8));
-    } else if (arg === '--send') result.send = true;
-    else if (arg.startsWith('--confirm=')) result.confirmation = arg.slice(10);
+    } else if (arg === '--send') {
+      if (result.send) throw new Error('Provide --send only once.');
+      result.send = true;
+    } else if (arg.startsWith('--confirm=')) {
+      if (result.confirmation !== null) throw new Error('Provide exactly one confirmation.');
+      result.confirmation = arg.slice(10);
+    }
     else throw new Error('Unknown option. Use --email=... and optionally --send --confirm=SEND-STAGING-INVITE.');
   }
   if (!result.email) throw new Error('Use --email=collector@example.com.');
