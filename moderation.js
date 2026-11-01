@@ -1,10 +1,11 @@
 /* UI privacy safeguards supplement server authorization; never grant roles here. */
 (() => {
  const state=document.getElementById('state'),out=document.getElementById('reports'),status=document.getElementById('actionStatus');
+ const refresh=document.getElementById('refreshReports'),coverage=document.getElementById('queueCoverage');
  const client=window.supabase.createClient('https://yffruutknztvdyioovmp.supabase.co','sb_publishable_cHzM8sQmrqfcCH8lhESytg_FMJrQtCX');
  let generation=0,authorizedUser=null,busy=false;
- function clearPrivate(){authorizedUser=null;busy=false;out.replaceChildren();status.textContent=''}
- function controls(disabled){out.querySelectorAll('button,textarea').forEach(control=>control.disabled=disabled)}
+ function clearPrivate(){authorizedUser=null;busy=false;out.replaceChildren();status.textContent='';coverage.textContent='';refresh.disabled=false}
+ function controls(disabled){out.querySelectorAll('button,textarea').forEach(control=>control.disabled=disabled);refresh.disabled=disabled}
  function deny(message){const error=Error(message);error.accessDenied=true;throw error}
  async function verifyAccess(active){
   const {data,error}=await client.auth.getUser();
@@ -20,7 +21,7 @@
  }
  async function load(){
   const version=++generation,active=()=>version===generation;
-  clearPrivate();state.textContent='Checking your moderator access…';
+  clearPrivate();refresh.disabled=true;state.textContent='Checking your moderator access…';
   try{
    const userId=await verifyAccess(active);if(!userId||!active())return;
    state.textContent='Loading private report queue…';
@@ -28,9 +29,17 @@
    if(!active())return;if(error)throw error;
    if(!Array.isArray(data))throw Error('Moderator queue is unavailable.');
    authorizedUser=userId;
-   state.textContent=data.length?data.length+' reports in this queue. Reports are allegations, not proof of wrongdoing.':'No reports in the queue.';
+   state.textContent=data.length?data.length+' reports returned by the private queue. Reports are allegations, not proof of wrongdoing.':'No reports returned by the private queue.';
+   // The server RPC returns at most 100 reports, sorted open first. Never
+   // present that bounded snapshot as a complete database-wide total.
+   coverage.textContent=data.length>=100
+    ?'Showing the first 100 reports, prioritized by open, then reviewing, then resolved. More reports may exist. Refresh to check for changes.'
+    :'Queue snapshot loaded. Refresh to check for new or updated reports.';
    for(const report of data)renderReport(report);
-  }catch(error){if(active()){clearPrivate();state.textContent=error.message||'Unable to load moderation queue.'}}
+  }catch(error){if(active()){
+   clearPrivate();
+   state.textContent=error.accessDenied?error.message:'Private report queue unavailable. Refresh to retry.';
+  }}finally{if(active())refresh.disabled=false}
  }
  async function act(button,name,payload,question){
   if(busy||!authorizedUser)return;
@@ -69,6 +78,12 @@
   }
   card.append(actions);out.append(card);
  }
+ refresh.addEventListener('click',()=>{if(!refresh.disabled&&!busy)void load()});
+ document.addEventListener('visibilitychange',()=>{
+  if(document.hidden){++generation;clearPrivate();state.textContent='Private reports hidden while this tab is inactive.'}
+  else void load(); // Recheck both MFA and server role on return.
+ });
+ window.addEventListener('pagehide',()=>{++generation;clearPrivate()});
  client.auth.onAuthStateChange((event,session)=>{
   if(event==='INITIAL_SESSION')return;
   ++generation;clearPrivate();
