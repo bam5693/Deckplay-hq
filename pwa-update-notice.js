@@ -112,6 +112,12 @@
   document.addEventListener('focusin', syncNoticeVisibility);
   document.addEventListener('focusout', () => queueMicrotask(syncNoticeVisibility));
   // The offline warning should not remain stale after connectivity returns.
+  window.addEventListener('offline', () => {
+    if (!notice) return;
+    const message = notice.querySelector('span');
+    if (message) message.textContent = 'You are offline. Reconnect before refreshing so unfinished work is not lost.';
+    syncNoticeVisibility();
+  });
   window.addEventListener('online', () => {
     if (notice) {
       const message = notice.querySelector('span');
