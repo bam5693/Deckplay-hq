@@ -1867,16 +1867,21 @@ async function loadWanted(){
  const visiblePosts=(data||[]).filter(p=>!blockedCollectorIds.has(p.user_id));
  if(!visiblePosts.length){grid.innerHTML='<p class="muted">No wanted posts yet. Be the first to post what you are looking for!</p>';return}
  const ids=[...new Set(visiblePosts.map(p=>p.user_id))];
- // Profile enrichment is optional: a missing/slow public name must not hide wanted posts.
- let people=[];
+ // Show actual Wanted posts and exact matches immediately. Profile names are
+ // optional enrichment and must never hold the board behind a slow request.
+ grid.innerHTML=visiblePosts.map(p=>`<article class="wanted-card"><div class="kind">${escapeHtml(tcgNames[p.game]||[...document.getElementById("wantedGame").options].find(o=>o.value===p.game)?.textContent||p.game||"Collectibles")} · ${escapeHtml(p.offer_type==="either"?"Buy or trade":p.offer_type==="buy"?"Looking to buy":"Looking to trade")}</div><h3>${escapeHtml(p.title)}</h3><p>${escapeHtml((p.details||"").split("[DeckPlay match: ")[0].trim()||"No additional details")}</p>${(()=>{const matches=exactWantedMatches(p);return matches.length?`<div class="wanted-matches"><strong>${matches.length} matching listing${matches.length===1?"":"s"}</strong>${matches.map(m=>`<p><button type="button" class="ghost" data-wanted-match="${escapeHtml(m.id)}">View ${escapeHtml(m.n)} · $${Number(m.p).toFixed(2)}</button></p>`).join("")}<small>Exact listing matches; verify condition, variant and photos before buying.</small></div>`:""})()}<div class="wanted-bottom"><span><span data-wanted-author="${escapeHtml(p.user_id)}">DeckPlay member</span>${p.budget!=null?" · Budget $"+Number(p.budget).toFixed(2):""}</span>${p.user_id===currentUser?.id?`<button type="button" class="ghost" data-delete-wanted="${escapeHtml(p.id)}">Delete</button>`:""}</div></article>`).join("");
  try{
   const result=await readMarketplaceRequest(supabaseClient.from("profiles").select("id,username,display_name").in("id",ids),5000);
   if(!active())return;
-  if(!result.error)people=result.data||[];
+  if(result.error)return;
+  const names=new Map((result.data||[]).map(p=>[p.id,p.username?"@"+p.username:p.display_name]).filter(([,name])=>!!name));
+  // Update labels in place: do not discard search matches, focused buttons,
+  // or a newer account's board when a delayed profile request finishes.
+  grid.querySelectorAll("[data-wanted-author]").forEach(label=>{
+   const name=names.get(label.dataset.wantedAuthor);
+   if(name)label.textContent=name;
+  });
  }catch(cause){if(!active())return}
- const names=new Map(people.map(p=>[p.id,p.username?"@"+p.username:p.display_name]));
- if(!active())return;
- grid.innerHTML=visiblePosts.map(p=>`<article class="wanted-card"><div class="kind">${escapeHtml(tcgNames[p.game]||[...document.getElementById("wantedGame").options].find(o=>o.value===p.game)?.textContent||p.game||"Collectibles")} · ${escapeHtml(p.offer_type==="either"?"Buy or trade":p.offer_type==="buy"?"Looking to buy":"Looking to trade")}</div><h3>${escapeHtml(p.title)}</h3><p>${escapeHtml((p.details||"").split("[DeckPlay match: ")[0].trim()||"No additional details")}</p>${(()=>{const matches=exactWantedMatches(p);return matches.length?`<div class="wanted-matches"><strong>${matches.length} matching listing${matches.length===1?"":"s"}</strong>${matches.map(m=>`<p><button type="button" class="ghost" data-wanted-match="${escapeHtml(m.id)}">View ${escapeHtml(m.n)} · $${Number(m.p).toFixed(2)}</button></p>`).join("")}<small>Exact listing matches; verify condition, variant and photos before buying.</small></div>`:""})()}<div class="wanted-bottom"><span>${escapeHtml(names.get(p.user_id)||"DeckPlay member")}${p.budget!=null?" · Budget $"+Number(p.budget).toFixed(2):""}</span>${p.user_id===currentUser?.id?`<button type="button" class="ghost" data-delete-wanted="${escapeHtml(p.id)}">Delete</button>`:""}</div></article>`).join("");
 }
 function toggleWanted(open){const panel=document.getElementById("wantedSection"),tab=document.getElementById("wantedNav"),backdrop=document.getElementById("wantedBackdrop");panel.classList.toggle("is-open",open);panel.setAttribute("aria-hidden",String(!open));tab.setAttribute("aria-expanded",String(open));backdrop.hidden=!open;document.body.classList.toggle("wanted-open",open);if(open)loadWanted()}
 document.getElementById("wantedNav").addEventListener("click",()=>toggleWanted(!document.getElementById("wantedSection").classList.contains("is-open")));
