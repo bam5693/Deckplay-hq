@@ -58,3 +58,13 @@
 | P0 | Every `index.html` change launches unrelated Inbox/browser Actions on T1 branch, consuming free CI. | Manual G integration/CI | One scoped branch change should start only matching workflow; retain staging security/parity gates. | [Issue #34](https://github.com/bam5693/Deckplay-hq/issues/34) filed; no unauthorized CI edits. |
 
 **UX / screenshot gate:** Owner 33656.jpg is a relevant game classification regression seed, not visual proof of this filter issue. Jayden and Tanner source critiques only; no independent visual reviewer, owner JPG pixels, actual mobile light/dark screenshots, physical Android or signed staging seller→buyer proof. **UX BLOCKED; functional acceptance PENDING.** T1.1/T1.2 remain accepted, T1.3–T1.6 unchecked.
+
+
+## 2026-11-01 incremental gap update — price scope and fee contrast (not catalog completion)
+
+| Priority | Collector case | Evidence and impact | Owner / exact next check | Fix status |
+|---|---|---|---|---|
+| P1 | Tanner: four vintage O-Pee-Chee hockey cards sold as one lot for $45.50 | Seller price field and buyer offer field previously did not say whether $45.50 was the lot total or per card; a buyer could reasonably misinterpret an offer. | T1; signed seller creates four-card lot, buyer opens details and offers $40, confirms lot quantity and no invented charges, seller edits/reopens. | **Branch code 07ae4cf; V8 focused 5/5; staging UNKNOWN** |
+| P1 | Jayden: buyer opens listing details in dark mobile theme | Fee disclosure had fixed inline `#657087` against dark dialog `#1b2636`, ~3.07:1 calculated contrast for 12px text. | T1; inspect actual light/dark mobile screenshots, buyer detail fee note and offer modal; independent reviewer required. | **Branch code 89a73ff; calculated contrast light 7.58:1/dark 10.27:1; visual/staging UNKNOWN** |
+
+**Scope and source:** `docs/V1-ACCEPTANCE-SCOREBOARD.md` T1.6 and owner screenshot atlas 33658/33660 (related UX seeds, not direct screenshot proof). Test source [04e8452](https://github.com/bam5693/Deckplay-hq/commit/04e845269cbf95e5261b23e974f331129bab9e65), executed only in a V8 Node-style harness against the branch HTML; no GitHub Actions run. Existing catalog gaps above remain open. **UX BLOCKED / REAL CUSTOMER ACCEPTANCE NOT VERIFIED.**
