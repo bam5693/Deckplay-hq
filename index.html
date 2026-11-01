@@ -1135,12 +1135,21 @@ function sportsListingDetail(item,key){
  };
  return classification?from(classification)??"":from(description)??"";
 }
+// A seller's latest classification overrides the original game platform.
+// An intentionally blank edited platform must not resurrect an old value.
+function marketplaceCurrentPlatform(description){
+ const raw=String(description||"");
+ const edits=[...raw.matchAll(/(?:^|\n)\[Listing classification\]\r?\n([\s\S]*?)\r?\n\[End classification\]/g)];
+ const source=edits.length?edits[edits.length-1][1]:raw;
+ const line=source.split(/\r?\n/).find(value=>/^\s*Platform\s*:/i.test(value));
+ return line?line.replace(/^\s*Platform\s*:\s*/i,"").trim():"";
+}
 function render(){
  const terms=marketplaceSearchText(query).trim().split(/\s+/).filter(Boolean);
  let list=items.filter(item=>!blockedCollectorIds.has(item.sellerId)&&(!onlyMyListings||(currentUser&&item.sellerId===currentUser.id))&&(!onlySavedListings||saved.has(item.id))&&(cat==="All"||item.c===cat)&&(filter==="All"||item.c===filter||(filter==="Under $50"&&item.p<50))&&(game==="All"||item.game===game)&&terms.every(term=>marketplaceSearchText([item.n,item.c,item.s,item.gameLabel,marketplaceCurrentSearchDescription(item.description),item.cond,item.collectibleSubcategory,item.platform,item.rawCategory].filter(Boolean).join(" ")).includes(term)));
  const sport=document.getElementById("marketSport")?.value||"",brand=(document.getElementById("marketSportsBrand")?.value||"").trim().toLowerCase();if(game==="sports_cards"){const detail=sportsListingDetail;if(sport)list=list.filter(item=>detail(item,"Sport")===sport.toLowerCase());if(brand)list=list.filter(item=>detail(item,"Brand").includes(brand));const year=(document.getElementById("marketSportsYear").value||"").trim(),player=(document.getElementById("marketSportsPlayer").value||"").trim().toLowerCase();if(year)list=list.filter(item=>detail(item,"Year")===year.toLowerCase());if(player)list=list.filter(item=>detail(item,"Player").includes(player));}
  const collectibleSub=document.getElementById("marketCollectibleSubcategory")?.value||"All";if(cat==="Collectibles"&&collectibleSub!=="All")list=list.filter(item=>item.collectibleSubcategory===collectibleSub);
- const platform=document.getElementById("marketPlatform")?.value||"All",hardware=document.getElementById("marketHardwareType")?.value||"All";if(cat==="Video Games"&&platform!=="All")list=list.filter(item=>(item.platform||(item.description||"").match(/(?:^|\n)Platform: ([^\n]+)/)?.[1])===platform);if(cat==="Consoles & Controllers"&&hardware!=="All")list=list.filter(item=>item.rawCategory===hardware);
+ const platform=document.getElementById("marketPlatform")?.value||"All",hardware=document.getElementById("marketHardwareType")?.value||"All";if(cat==="Video Games"&&platform!=="All")list=list.filter(item=>(item.platform??marketplaceCurrentPlatform(item.description))===platform);if(cat==="Consoles & Controllers"&&hardware!=="All")list=list.filter(item=>item.rawCategory===hardware);
  const minPrice=Number(document.getElementById("marketMinPrice")?.value||0);
  if(Number.isFinite(minPrice)&&minPrice>0)list=list.filter(item=>Number(item.p)>=minPrice);
  const maxPrice=Number(document.getElementById("marketMaxPrice")?.value||0);
@@ -1156,7 +1165,7 @@ function render(){
 }
 let listingsLoadVersion=0;
 function readableListingDescription(value){return marketplaceCurrentSearchDescription(value).replace(/(^|\n)\[Listing contents\]\n/g,"$1Included items\n").replace(/\n\[End listing contents\](?=\n|$)/g,"").replace(/(^|\n)\[Listing classification\]\n/g,"$1Item details\n").replace(/\n\[End classification\](?=\n|$)/g,"")}
-function marketplaceItemFromRow(row,profile){return {rawCategory:row.category,platform:(row.description||"").match(/(?:^|\n)Platform: ([^\n]+)/)?.[1]||"",id:row.id,databaseId:row.id,n:row.title,c:databaseCategory(row.category),game:row.tcg_game||"",collectibleSubcategory:row.collectible_subcategory||"",gameLabel:tcgNames[row.tcg_game]||"",p:Number(row.price),s:profile?.username?"@"+profile.username:(profile?.display_name||"DeckPlay seller"),cond:databaseCondition(row.condition),e:databaseEmoji(row.category),description:row.description||"No description provided.",trades:row.accepts_trades,priceOffers:row.accepts_price_offers,imageUrls:row.image_urls||[],created_at:row.created_at,sellerId:row.seller_id}}
+function marketplaceItemFromRow(row,profile){return {rawCategory:row.category,platform:marketplaceCurrentPlatform(row.description),id:row.id,databaseId:row.id,n:row.title,c:databaseCategory(row.category),game:row.tcg_game||"",collectibleSubcategory:row.collectible_subcategory||"",gameLabel:tcgNames[row.tcg_game]||"",p:Number(row.price),s:profile?.username?"@"+profile.username:(profile?.display_name||"DeckPlay seller"),cond:databaseCondition(row.condition),e:databaseEmoji(row.category),description:row.description||"No description provided.",trades:row.accepts_trades,priceOffers:row.accepts_price_offers,imageUrls:row.image_urls||[],created_at:row.created_at,sellerId:row.seller_id}}
 // Every buyer should see catalog results even if display-name enrichment is slow.
 // Bound network requests so mobile browsers never leave the marketplace spinning.
 async function readMarketplaceRequest(request,timeoutMs){
