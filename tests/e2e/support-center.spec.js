@@ -1388,3 +1388,25 @@ test('T8.6 private beta access and issue follow-up set honest expectations for g
  await expect(page.locator('#supportSignIn')).toBeVisible();
  await expect(page.locator('#supportPrivate')).toBeHidden();
 });
+
+test('T8.6 ticket next-step guidance explains whose action is needed without promises',async({page})=>{
+ await boot(page);await signIn(page,'buyer');
+ await page.getByRole('button',{name:'Help & support'}).last().click();
+ await page.locator('#supportSubject').fill('Synthetic beta navigation issue');
+ await page.locator('#supportDescription').fill('A test report about finding the marketplace.');
+ await page.getByRole('button',{name:'Create private ticket'}).click();
+ await expect(page.locator('#supportTicketNextStep')).toContainText('no response time is guaranteed');
+ await page.evaluate(()=>{window.__db.tickets[0].status='waiting_on_staff'});
+ await page.locator('#supportRefresh').click();
+ await page.locator('#supportTicketList button').first().click();
+ await expect(page.locator('#supportTicketNextStep')).toContainText('waiting on support');
+ await page.evaluate(()=>{window.__db.tickets[0].status='waiting_on_user'});
+ await page.locator('#supportRefresh').click();
+ await page.locator('#supportTicketList button').first().click();
+ await expect(page.locator('#supportTicketNextStep')).toContainText('Support is waiting for your response');
+ await page.evaluate(()=>{window.__db.tickets[0].status='resolved'});
+ await page.locator('#supportRefresh').click();
+ await page.locator('#supportTicketList button').first().click();
+ await expect(page.locator('#supportTicketNextStep')).toContainText('marked resolved');
+ await expect(page.locator('#supportReplyForm')).toBeHidden();
+});
