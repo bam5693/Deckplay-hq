@@ -287,12 +287,14 @@ test('Saved profile loads older favorites even when unrelated seller and Wanted 
     select:()=>q,
     eq:key=>{if(table==='listings'&&key==='seller_id')throw Error('Saved must not query seller inventory');return q},
     in:()=>q,order:()=>q,
-    maybeSingle:async()=>({data:{username:'jayden'},error:null}),
+    maybeSingle:async()=>{if(window.profileHeaderFails)throw Error('Optional profile header unavailable');return {data:{username:'jayden'},error:null}},
     then:(ok,bad)=>Promise.resolve(result).then(ok,bad)
    };
    return q;
   };
   await showCollectorPage('saved');
+  window.profileHeaderFails=true;
+  await showCollectorPage('saved'); // Optional profile metadata failure must not hide saved cards.
  });
  await expect(page.locator('#profilePageContent')).toContainText('Older saved One Piece card');
  await expect(page.locator('#pageListingCount')).toContainText('— listings');
