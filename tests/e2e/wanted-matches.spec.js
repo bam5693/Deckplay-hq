@@ -399,3 +399,49 @@ test('stale Wanted match buttons recheck exact variant, listing availability, an
   'This listing is no longer an exact match. Refresh wanted posts.'
  ]);
 });
+
+
+test('wanted matches refresh when the listing catalog finishes loading',async({page})=>{
+ await page.goto('/');await page.waitForLoadState('networkidle');
+ await page.evaluate(()=>{
+  const original=supabaseClient.from.bind(supabaseClient);
+  const post={id:'late-wanted',user_id:'buyer',game:'one_piece',title:'OP-05 Manga Luffy',offer_type:'buy',budget:200,details:'[DeckPlay match: {"cardNumber":"OP05-119","variant":"Manga Rare"}]'};
+  const qPosts={select:()=>qPosts,order:()=>qPosts,limit:()=>Promise.resolve({data:[post],error:null})};
+  const qListings={select:()=>qListings,eq:()=>qListings,order:()=>new Promise(resolve=>{window.finishLateWantedListings=resolve})};
+  const qProfiles={select:()=>qProfiles,in:()=>Promise.resolve({data:[],error:null})};
+  supabaseClient.from=table=>table==='wanted_posts'?qPosts:table==='listings'?qListings:table==='profiles'?qProfiles:original(table);
+  window.wantedPostsPending=loadWanted();
+  window.wantedCatalogPending=loadListings();
+ });
+ const slot=page.locator('[data-wanted-matches-for="late-wanted"]');
+ await expect(slot).toContainText('Checking active listings');
+ await expect(slot.locator('[data-wanted-match]')).toHaveCount(0);
+ await page.evaluate(()=>finishLateWantedListings({data:[{id:'late-luffy',title:'Manga Luffy',description:'Card number: OP05-119\nVariant: Manga Rare',category:'trading_cards',tcg_game:'one_piece',price:125,condition:'used',seller_id:'seller',image_urls:[],status:'active'}],error:null}));
+ await page.evaluate(()=>Promise.all([wantedPostsPending,wantedCatalogPending]));
+ await expect(slot).toContainText('1 matching listing');
+ await expect(slot.locator('[data-wanted-match="late-luffy"]')).toContainText('Manga Luffy');
+});
+
+test('wanted exact-match catalog failure offers retry without falsely claiming no matches',async({page})=>{
+ await page.goto('/');await page.waitForLoadState('networkidle');
+ await page.evaluate(()=>{
+  const original=supabaseClient.from.bind(supabaseClient);
+  const post={id:'retry-wanted',user_id:'buyer',game:'one_piece',title:'OP-05 Manga Luffy',offer_type:'buy',details:'[DeckPlay match: {"cardNumber":"OP05-119","variant":"Manga Rare"}]'};
+  const qPosts={select:()=>qPosts,order:()=>qPosts,limit:()=>Promise.resolve({data:[post],error:null})};
+  const qProfiles={select:()=>qProfiles,in:()=>Promise.resolve({data:[],error:null})};
+  window.wantedListingAttempts=0;
+  const qListings={select:()=>qListings,eq:()=>qListings,order:()=>{
+   wantedListingAttempts++;
+   return Promise.resolve(wantedListingAttempts===1?{data:null,error:{message:'Offline'}}:{data:[{id:'recovered-luffy',title:'Manga Luffy',description:'Card number: OP05-119\nVariant: Manga Rare',category:'trading_cards',tcg_game:'one_piece',price:125,condition:'used',seller_id:'seller',image_urls:[]}],error:null});
+  }};
+  supabaseClient.from=table=>table==='wanted_posts'?qPosts:table==='listings'?qListings:table==='profiles'?qProfiles:original(table);
+  window.wantedPostsPending=loadWanted();
+  window.wantedCatalogPending=loadListings();
+ });
+ const slot=page.locator('[data-wanted-matches-for="retry-wanted"]');
+ await expect(slot).toContainText('Active listings unavailable');
+ await expect(slot).not.toContainText('No exact active listings');
+ await slot.locator('[data-retry-wanted-listings]').click();
+ await expect(slot.locator('[data-wanted-match="recovered-luffy"]')).toBeVisible();
+ expect(await page.evaluate(()=>wantedListingAttempts)).toBe(2);
+});
