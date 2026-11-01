@@ -127,3 +127,15 @@ This was a small catalog correction, **not** an all-TCG/sports audit or complete
 | P0 | Vintage O-Pee-Chee, Parkhurst and Leaf exact dropdown options are in draft PR #30, not this branch. Vintage manufacturer attribution must not be invented. | Manual G integration owner: reconcile PR #30 and T1; one signed vintage hockey seller→buyer classification/readback. | **SEPARATE PR CANDIDATE / NOT DEPLOYED**. |
 
 **UX gate:** Conditional custom input appears only for sports brand Other / Unknown; known brands do not get another question. Independent Tanner/Jayden, Android-sized light/dark screenshot review, original owner JPG bytes and signed buyer/seller acceptance are **BLOCKED/NOT VERIFIED**. T1.3 remains unchecked; T1.1/T1.2 accepted, T1.4–T1.6 unchecked.
+
+
+## 2026-11-01 12:30 CST — mainstream historical sports-brand direct choices (T1.3)
+| Priority | Collector case / independent source | Impact and exact focused test | Owner | Status |
+|---|---|---|---|---|
+| P1 | 1991 Pro Set Football ([PSA CardFacts](https://www.psacard.com/cardfacts/football-cards/1991-pro-set/707)) | Tanner should select **Pro Set** directly, edit/reopen, buyer filter/search reads latest brand, not original Topps; no Other detour. | T1 / manual G integration | **BRANCH FIX** [3b17c59](https://github.com/bam5693/Deckplay-hq/commit/3b17c5970652a395bda0668cdce4893582c499f7); V8 focused 6/6, signed staging UNKNOWN |
+| P1 | 1997 Pacific Crown Royale hockey ([PSA certificate](https://www.psacard.com/cert/81568695/psa)) | **Pacific** is brand; Crown Royale product line; seller/editor/buyer preserve exact identity without treating modern Upper Deck as vintage manufacturer. | T1 / manual G integration | **BRANCH FIX**; V8 focused, signed staging UNKNOWN |
+| P1 | 1997 Press Pass racing ([PSA Dale Earnhardt set registry](https://www.psacard.com/psasetregistry/misc-sports/modern-racing-1970-present/dale-earnhardt-sr-master-set-racing/composition/7451)) | **Press Pass** direct brand; VIP product line; buyer filters by Press Pass after edit. | T1 / manual G integration | **BRANCH FIX**; V8 focused, signed staging UNKNOWN |
+| P0 | O-Pee-Chee, Parkhurst, Leaf hockey (owner atlas 33652) | PR #30 pending; avoid duplicate option/conflicting cherry-pick, check vintage attribution and actual buyer readback. | Manual G integration | **SEPARATE DRAFT CANDIDATE, NOT DEPLOYED** |
+| P1 | Long Android sports brand selector (owner atlas 33652) | New three options increase native menu length; mobile light/dark screenshot, scroll, focus, Cancel/reentry and independent reviewer required. | T1 + independent reviewer | **VISUAL REVIEW BLOCKED** |
+
+Focused [test source](https://github.com/bam5693/Deckplay-hq/blob/3b17c5970652a395bda0668cdce4893582c499f7/tests/security/trunk1-custom-sports-brand.test.cjs) ran **6/6** in V8 Node-compatible shim; **native CI, deployed signed buyer/seller and physical Android NOT RUN**. Seller source, editor clone and buyer brand helpers are shared; no additional form question, DB change or new paid tooling. **UX BLOCKED / T1.3–T1.6 unchecked**. Other catalog domains remain unaudited; do not call this catalog complete.
