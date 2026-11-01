@@ -164,3 +164,25 @@ test('an offline empty saved view does not falsely claim there are no favorites'
  await page.evaluate(()=>savedReadQueue.shift()({data:[],error:null}));
  await expect(page.locator('#grid')).toContainText('No saved items to show yet');
 });
+
+test('saved profile tab offers an inline retry after an offline read',async({page})=>{
+ await fixture(page);
+ await page.evaluate(()=>{
+  window.profileSavedReads=0;sellerRatingHtml=async()=>'';
+  supabaseClient.from=table=>{
+   const q={select:()=>q,eq:()=>q,order:()=>q,in:()=>q,then:(resolve,reject)=>{
+    const response=table==='saved_listings'?(++profileSavedReads===1?{data:null,error:{message:'Offline'}}:{data:[{listing_id:'favorite-item'}],error:null}):table==='listings'?{data:[{id:'favorite-item',title:'TEST ONLY game',price:25,status:'active',seller_id:'seller',image_urls:[]}],error:null}:{data:[],error:null};
+    return Promise.resolve(response).then(resolve,reject);
+   }};
+   q.maybeSingle=async()=>({data:{username:'jayden'},error:null});
+   return q;
+  };
+  return showCollectorPage('saved');
+ });
+ await expect(page.locator('#profilePageContent')).toContainText('Your saved items could not load');
+ await expect(page.locator('[data-retry-profile-saved]')).toBeVisible();
+ await page.locator('[data-retry-profile-saved]').click();
+ await expect(page.locator('#profilePageContent')).toContainText('TEST ONLY game');
+ await expect(page.locator('[data-retry-profile-saved]')).toHaveCount(0);
+ expect(await page.evaluate(()=>profileSavedReads)).toBe(2);
+});
