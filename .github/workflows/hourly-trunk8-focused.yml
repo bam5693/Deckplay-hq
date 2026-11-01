@@ -1,0 +1,34 @@
+name: Trunk 8 private operator queue focused check
+on:
+  push:
+    branches: [dev/hourly-trunk8]
+    paths:
+      - 'moderation.js'
+      - 'moderation.html'
+      - 'tests/e2e/moderation-security.spec.js'
+      - '.github/workflows/hourly-trunk8-focused.yml'
+permissions:
+  contents: read
+concurrency:
+  group: trunk8-local-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  local-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Cheap syntax preflight
+        run: node --check moderation.js && node --check tests/e2e/moderation-security.spec.js
+      - run: npm ci
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: staging-playwright-${{ hashFiles('package-lock.json') }}
+      - run: npx playwright install chromium --only-shell
+      - name: T8.2 isolated mock UI regression only (desktop and mobile)
+        run: npx playwright test --config=playwright.local.config.js moderation-security.spec.js --grep 'T8.2: staff can refresh capped private queue, recover from failure and scrub on tab hide' --project=local-desktop --project=local-mobile --max-failures=1 --timeout=20000
