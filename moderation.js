@@ -29,7 +29,7 @@
    if(!active())return;if(error)throw error;
    if(!Array.isArray(data))throw Error('Moderator queue is unavailable.');
    authorizedUser=userId;
-   state.textContent=data.length?data.length+' reports returned by the private queue. Reports are allegations, not proof of wrongdoing.':'No reports returned by the private queue.';
+   state.textContent=data.length?data.length+(data.length===1?' report':' reports')+' returned by the private queue. Reports are allegations, not proof of wrongdoing.':'No reports returned by the private queue.';
    // The server RPC returns at most 100 reports, sorted open first. Never
    // present that bounded snapshot as a complete database-wide total.
    coverage.textContent=data.length>=100
