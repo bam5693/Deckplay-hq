@@ -1,0 +1,20 @@
+name: Verify UX policy checker
+on:
+  push:
+    branches: [governance/mandatory-ux-evidence-2026-10-31]
+    paths:
+      - scripts/check-ux-evidence.cjs
+      - scripts/test-ux-evidence.cjs
+      - .github/workflows/verify-ux-policy.yml
+permissions:
+  contents: read
+jobs:
+  test-policy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node scripts/test-ux-evidence.cjs
