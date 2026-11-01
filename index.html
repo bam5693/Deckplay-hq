@@ -1657,11 +1657,20 @@ deckplaySyncSetFields();
 
 function syncListingDescriptionHelp(){
  const category=document.getElementById("category").value;
+ const type=document.getElementById("listingType").value;
  const help=document.getElementById("listingDescriptionHelp");
  const description=document.getElementById("description");
  if(category==="trading_cards"){
-  help.textContent="Missing a card, set or variant? Describe rarity, language, edition, foil, serial number, condition and flaws here. For lots, describe the included cards.";
-  description.placeholder="Describe the exact card, set or printing, and any flaws";
+  if(type==="deck"){
+   help.textContent="Use the decklist above to identify every card. Describe substitutions, language, special printings and condition issues here.";
+   description.placeholder="Describe deck substitutions, condition issues or missing cards";
+  }else if(type==="lot"){
+   help.textContent="List the included cards and quantities, sets, variants, condition, and anything missing or damaged.";
+   description.placeholder="Describe the cards, quantities, variants and any flaws";
+  }else{
+   help.textContent="Missing a card, set or variant? Describe rarity, language, edition, foil, serial number, condition and flaws here.";
+   description.placeholder="Describe the exact card, set or printing, and any flaws";
+  }
  }else if(category==="video_games"||category==="consoles"||category==="controllers"||category==="accessories"){
   help.textContent="Describe platform and compatibility, edition, included accessories, tested condition and any defects. Do not include personal contact details.";
   description.placeholder="Include platform, version, accessories and any defects";
