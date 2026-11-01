@@ -58,7 +58,7 @@
         </section>
       </section>
       <div id="supportFeedbackQueueNotice" hidden role="status" style="padding:10px;margin:8px 0;border:1px solid #819c9640;border-radius:10px"><span id="supportFeedbackQueueLabel"></span> <button type="button" class="ghost" id="supportFeedbackQueueClear">Show all staff tickets</button></div>
-      <div id="supportStaffSortWrap" hidden style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:8px 0">
+      <div id="supportStaffSortWrap" hidden style="gap:8px;align-items:center;flex-wrap:wrap;margin:8px 0">
         <label for="supportStaffSort">Staff queue order</label>
         <select id="supportStaffSort" aria-label="Sort staff support queue"><option value="newest">Latest activity first</option><option value="oldest">Longest waiting first</option></select>
       </div>
