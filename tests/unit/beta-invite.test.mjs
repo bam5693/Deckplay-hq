@@ -108,3 +108,8 @@ test('duplicate send and confirmation options fail closed before any network wor
   ['--email=collector@example.test','--confirm=wrong','--confirm=SEND-STAGING-INVITE']
  ]) assert.throws(()=>parseInviteArgs(flags),/(only once|exactly one confirmation)/);
 });
+
+test('confirmation cannot masquerade as an approved invitation during dry run',()=>{
+ assert.throws(()=>parseInviteArgs(['--email=collector@example.test','--confirm=SEND-STAGING-INVITE']),/only accepted together with --send/);
+ assert.equal(parseInviteArgs(['--email=collector@example.test']).send,false);
+});
