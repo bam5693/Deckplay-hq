@@ -2560,7 +2560,7 @@ async function showPublicProfile(id){
   catch(error){followResult={data:null,error}}
  }
  if(!current())return;
- const followUnavailable=!!followResult.error,isFollowing=!!followResult.data;
+ const followUnavailable=!!followResult.error||followResult.data===undefined||(followResult.data!==null&&followResult.data?.seller_id!==id),isFollowing=!!followResult.data;
  let ratingMarkup='<p class="muted">Seller reviews unavailable right now.</p>';
  try{ratingMarkup=await readMarketplaceRequest(sellerRatingHtml(id),5000)}
  catch(error){/* Reviews are optional; do not hide listings or public links. */}
