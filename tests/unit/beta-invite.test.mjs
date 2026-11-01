@@ -72,3 +72,13 @@ test('rejected API requests never log secrets or recipient email',async()=>{
    return true;
   });
 });
+
+test('transport exceptions cannot expose credentials or recipient in operator output',async()=>{
+ const secretMessage='request failed: collector@example.test '+key;
+ await assert.rejects(sendStagingInvite({email:'collector@example.test',key,redirectTo:redirect,
+  fetchImpl:async()=>{throw new Error(secretMessage);}}),error=>{
+   assert.match(error.message,/connection failed/);
+   assert.doesNotMatch(error.message,/collector|eyJ|request failed/);
+   return true;
+  });
+});
