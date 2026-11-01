@@ -184,3 +184,28 @@ test('dismissing a pending collection inquiry never opens Inbox after a late res
  await expect(page.locator('#collectionInquiryBody')).toHaveValue('New inquiry draft');
  await expect(page.locator('#collectionInquiryStatus')).toContainText('draft is preserved');
 });
+
+
+test('collection consent editor opens while optional listing and Wanted counts stall',async({page})=>{
+ await fixture(page,'trades');
+ await page.evaluate(()=>{
+  const original=supabaseClient.from;
+  supabaseClient.from=table=>{
+   const q=original(table);
+   if(table==='profiles')q.maybeSingle=async()=>({data:{
+    username:'jayden',collection_links:[{label:'Sports collection',url:'https://collectr.com/jayden'}],
+    collection_inquiry_mode:'trades'
+   },error:null});
+   if(table==='listings'||table==='wanted_posts'){
+    q.select=()=>q;q.eq=()=>q;q.then=()=>new Promise(()=>{});
+   }
+   return q;
+  };
+  document.getElementById('profileEdit').click();
+ });
+ await expect(page.locator('#profileModal')).toHaveClass(/open/);
+ await expect(page.locator('#collectionInquiryMode')).toHaveValue('trades');
+ await expect(page.locator('#collectionLabel0')).toHaveValue('Sports collection');
+ await expect(page.locator('#profileForm button[type="submit"]')).toBeEnabled();
+ await expect(page.locator('#profileListingCount')).toHaveText('—');
+});
