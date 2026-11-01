@@ -1,0 +1,37 @@
+name: V1 mobile Sell owner fixes focused browser checks
+on:
+  push:
+    branches: [integration/v1-mobile-sell-ux-20261031]
+    paths:
+      - index.html
+      - tests/e2e/v1-mobile-sell-acceptance.spec.js
+      - playwright.v1-mobile-sell.config.cjs
+      - .github/workflows/v1-mobile-sell-focused.yml
+permissions:
+  contents: read
+jobs:
+  owner-sell-ux:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: node scripts/check-inline-js.cjs
+      - run: npm ci
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: staging-playwright-${{ hashFiles('package-lock.json') }}
+      - run: npx playwright install chromium --only-shell
+      - run: npx playwright test --config=playwright.v1-mobile-sell.config.cjs --project=local-mobile --retries=0 --max-failures=1
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: v1-mobile-sell-owner-review
+          path: |
+            test-results/
+          if-no-files-found: ignore
+          retention-days: 3
