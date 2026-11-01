@@ -99,7 +99,7 @@ test('seller storefront listing preserves exact disclosures, category and offer 
    const q={then:resolve=>Promise.resolve({data:table==='listings'?[row]:[],error:null}).then(resolve)};
    q.select=columns=>{if(table==='listings')storefrontSelection=columns;return q};
    for(const key of ['eq','order','limit'])q[key]=()=>q;
-   q.maybeSingle=async()=>({data:table==='profiles'?{username:'fixture-seller'}:null,error:null});return q;
+   q.maybeSingle=async()=>({data:table==='profiles'?{username:'fixture-seller'}:table==='listings'?row:null,error:null});return q;
   };
   await showPublicProfile('fixture-seller');
  });
@@ -129,7 +129,7 @@ test('public seller inventory searches, filters and sorts all seven marketplace 
    const q={};
    for(const method of ['select','eq','order','limit'])q[method]=()=>q;
    q.then=resolve=>Promise.resolve({data:table==='listings'?storefrontFixture:[],error:null}).then(resolve);
-   q.maybeSingle=async()=>({data:table==='profiles'?{username:'store-seller',bio:'Sports, TCG and games'}:null,error:null});
+   q.maybeSingle=async()=>({data:table==='profiles'?{username:'store-seller',bio:'Sports, TCG and games'}:table==='listings'?storefrontFixture.find(row=>row.id==='store-item-5'):null,error:null});
    return q;
   };
   await showPublicProfile('store-seller');
@@ -229,4 +229,55 @@ test('seller storefront loads older inventory beyond 60, retries failure and rev
  await expect(page.locator('#publicProfileResults .profile-item')).toHaveCount(1);
  await expect(page.locator('#publicProfileResults')).toContainText('Rare video game');
  expect(await page.evaluate(()=>storefrontPageRequests)).toEqual([{start:60,end:120},{start:60,end:120}]);
+});
+
+test('T4.4 stale storefront item cannot open a sold or paused listing',async({page})=>{
+ await page.route('https://challenges.cloudflare.com/**',r=>r.abort());
+ await page.route('https://prrrzeelltmyugssqnzk.supabase.co/**',r=>r.fulfill({json:[]}));
+ await page.goto('/');await page.waitForLoadState('networkidle');
+ await page.evaluate(async()=>{
+  await supabaseClient.auth.getSession();currentUser=null;
+  const row={id:'stale-storefront',seller_id:'seller-a',title:'OP05-119 Manga Luffy',price:350,category:'trading_cards',tcg_game:'one_piece',image_urls:[]};
+  window.storefrontChecks=0;
+  supabaseClient.from=table=>{
+   const q={};for(const key of ['select','eq','order','limit'])q[key]=()=>q;
+   q.then=resolve=>Promise.resolve({data:table==='listings'?[row]:[],error:null}).then(resolve);
+   q.maybeSingle=async()=>{if(table==='listings'){storefrontChecks++;return {data:null,error:null}}return {data:table==='profiles'?{username:'seller-a'}:null,error:null}};
+   return q;
+  };
+  await showPublicProfile('seller-a');
+ });
+ await page.locator('[data-public-listing="stale-storefront"]').click();
+ await expect(page.locator('#detailModal')).not.toHaveClass(/open/);
+ await expect(page.locator('#publicProfileModal')).toHaveClass(/open/);
+ await expect(page.locator('#publicProfileResults')).toContainText('No active listings yet');
+ expect(await page.evaluate(()=>storefrontChecks)).toBe(1);
+});
+
+test('T4.4 failed storefront availability check keeps item for retry, then opens current details',async({page})=>{
+ await page.route('https://challenges.cloudflare.com/**',r=>r.abort());
+ await page.route('https://prrrzeelltmyugssqnzk.supabase.co/**',r=>r.fulfill({json:[]}));
+ await page.goto('/');await page.waitForLoadState('networkidle');
+ await page.evaluate(async()=>{
+  await supabaseClient.auth.getSession();currentUser=null;
+  const row={id:'updated-storefront',seller_id:'seller-b',title:'Sports card old price',price:100,category:'trading_cards',tcg_game:'sports_cards',image_urls:[]};
+  window.storefrontChecks=0;
+  supabaseClient.from=table=>{
+   const q={};for(const key of ['select','eq','order','limit'])q[key]=()=>q;
+   q.then=resolve=>Promise.resolve({data:table==='listings'?[row]:[],error:null}).then(resolve);
+   q.maybeSingle=async()=>{
+    if(table==='listings'){storefrontChecks++;return storefrontChecks===1?{data:null,error:{message:'offline'}}:{data:{...row,title:'Sports card current price',price:65,status:'active'},error:null}}
+    return {data:table==='profiles'?{username:'seller-b'}:null,error:null};
+   };
+   return q;
+  };
+  await showPublicProfile('seller-b');
+ });
+ await page.locator('[data-public-listing="updated-storefront"]').click();
+ await expect(page.locator('#detailModal')).not.toHaveClass(/open/);
+ await expect(page.locator('[data-public-listing="updated-storefront"]')).toBeEnabled();
+ await page.locator('[data-public-listing="updated-storefront"]').click();
+ await expect(page.locator('#detailModal')).toHaveClass(/open/);
+ await expect(page.locator('#detailTitle')).toHaveText('Sports card current price');
+ expect(await page.evaluate(()=>storefrontChecks)).toBe(2);
 });
