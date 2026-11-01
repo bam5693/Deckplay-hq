@@ -2178,11 +2178,12 @@ document.getElementById("authForgotPassword").addEventListener("click",async()=>
 });
 
 let notificationChannel=null,notificationPoll=null,notificationCenterLoadVersion=0,notificationCountLoadVersion=0;
-async function refreshNotificationCount(){const requestId=++notificationCountLoadVersion;const bell=document.getElementById("notificationBell"),badge=document.getElementById("notificationBadge");bell.hidden=!currentUser;if(!currentUser){badge.hidden=true;const dot=document.getElementById("dockNotifications");if(dot)dot.hidden=true;return}const userId=currentUser.id;const {count,error}=await supabaseClient.from("collector_notifications").select("id",{count:"exact",head:true}).eq("user_id",currentUser.id).is("read_at",null).in("kind",["favorite_price_drop","favorite_sold","followed_seller_listing","wanted_match"]);if(requestId!==notificationCountLoadVersion||currentUser?.id!==userId||error)return;badge.hidden=!count;badge.textContent=count>99?"99+":String(count||0);const dockBadge=document.getElementById("dockNotifications");if(dockBadge){dockBadge.hidden=!count;dockBadge.setAttribute("aria-label",count+" unread notifications")}bell.setAttribute("aria-label",count?count+" unread notifications":"Notifications")}
-async function markNotificationRead(id){if(!currentUser)return;const ids=String(id).split(",").filter(Boolean);if(!ids.length)return;const {error}=await supabaseClient.from("collector_notifications").update({read_at:new Date().toISOString()}).in("id",ids).eq("user_id",currentUser.id);if(error){toast("Could not mark notification as read.");return}await refreshNotificationCount()}
+async function refreshNotificationCount(){const requestId=++notificationCountLoadVersion;const bell=document.getElementById("notificationBell"),badge=document.getElementById("notificationBadge");bell.hidden=!currentUser;if(!currentUser){badge.hidden=true;const dot=document.getElementById("dockNotifications");if(dot)dot.hidden=true;return}const userId=currentUser.id;const {count,error}=await notificationRead(supabaseClient.from("collector_notifications").select("id",{count:"exact",head:true}).eq("user_id",userId).is("read_at",null).in("kind",["favorite_price_drop","favorite_sold","followed_seller_listing","wanted_match"]),6000);if(requestId!==notificationCountLoadVersion||currentUser?.id!==userId||error)return;badge.hidden=!count;badge.textContent=count>99?"99+":String(count||0);const dockBadge=document.getElementById("dockNotifications");if(dockBadge){dockBadge.hidden=!count;dockBadge.setAttribute("aria-label",count+" unread notifications")}bell.setAttribute("aria-label",count?count+" unread notifications":"Notifications")}
+async function markNotificationRead(id){const userId=currentUser?.id;if(!userId)return;const ids=String(id).split(",").filter(Boolean);if(!ids.length)return;const {error}=await notificationRead(supabaseClient.from("collector_notifications").update({read_at:new Date().toISOString()}).in("id",ids).eq("user_id",userId),6000);if(currentUser?.id!==userId)return;if(error){toast("Could not mark alert as read. You can still open it.");return}void refreshNotificationCount()}
 const deckplayInboxNotificationKinds=new Set(["message","trade_offer","counteroffer","trade_update","price_offer","price_counter","price_update"]);
 const deckplayActivityNotificationKinds=["favorite_price_drop","favorite_sold","followed_seller_listing","wanted_match"];
 function notificationListingPrice(value){if(value===null||value===undefined||value==="")return "";const amount=Number(value);return Number.isFinite(amount)&&amount>=0?"$"+amount.toFixed(2):""}
+async function notificationRead(request,timeout=8000){try{return await readMarketplaceRequest(request,timeout)}catch(error){return {data:null,error}}}
 function showNotificationRetry(list){list.innerHTML='<p role="alert" class="muted">Alerts could not load. <button type="button" class="ghost" data-retry-notifications>Retry alerts</button></p>'}
 async function loadNotificationCenter(){
  const lists=[document.getElementById("notificationList"),document.getElementById("inboxNotificationList")];
@@ -2190,7 +2191,7 @@ async function loadNotificationCenter(){
  if(!userId){lists.forEach(list=>{list.textContent="Sign in to see notifications."});return}
  lists.forEach(list=>{list.textContent="Loading notifications…"});
  try{
- const {data,error}=await supabaseClient.from("collector_notifications").select("id,actor_id,kind,source_id,created_at,read_at").eq("user_id",currentUser.id).in("kind",deckplayActivityNotificationKinds).order("created_at",{ascending:false}).limit(100);
+ const {data,error}=await notificationRead(supabaseClient.from("collector_notifications").select("id,actor_id,kind,source_id,created_at,read_at").eq("user_id",userId).in("kind",deckplayActivityNotificationKinds).order("created_at",{ascending:false}).limit(100));
  if(requestId!==notificationCenterLoadVersion||currentUser?.id!==userId)return;
  if(error){lists.forEach(showNotificationRetry);return}
  const activity=(data||[]).filter(n=>!deckplayInboxNotificationKinds.has(n.kind));
@@ -2198,10 +2199,12 @@ async function loadNotificationCenter(){
  const displayed=[],messageGroups=new Map();
  for(const n of activity){if(n.kind==="message"&&n.actor_id){const prior=messageGroups.get(n.actor_id);if(prior){prior.count++;prior.ids.push(n.id);prior.unread=prior.unread||!n.read_at;continue}const entry={...n,count:1,ids:[n.id],unread:!n.read_at};messageGroups.set(n.actor_id,entry);displayed.push(entry)}else displayed.push({...n,count:1,ids:[n.id],unread:!n.read_at})}
  const actors=[...new Set(data.map(n=>n.actor_id).filter(Boolean))],priceIds=[...new Set(data.filter(n=>n.kind.startsWith("price_")).map(n=>n.source_id).filter(Boolean))];
- const [peopleResult,priceResult]=await Promise.all([actors.length?supabaseClient.from("profiles").select("id,username").in("id",actors):Promise.resolve({data:[]}),priceIds.length?supabaseClient.from("price_offers").select("id,amount,status,listing_id").in("id",priceIds):Promise.resolve({data:[]})]);
+ const [peopleResult,priceResult]=await Promise.all([actors.length?notificationRead(supabaseClient.from("profiles").select("id,username").in("id",actors),6000):Promise.resolve({data:[]}),priceIds.length?notificationRead(supabaseClient.from("price_offers").select("id,amount,status,listing_id").in("id",priceIds),6000):Promise.resolve({data:[]})]);
  const names=new Map((peopleResult.data||[]).map(p=>[p.id,p.username])),prices=new Map((priceResult.data||[]).map(p=>[p.id,p]));
  const listingIds=[...new Set([...(priceResult.data||[]).map(p=>p.listing_id),...activity.filter(n=>["favorite_price_drop","favorite_sold","followed_seller_listing","wanted_match"].includes(n.kind)).map(n=>n.source_id)].filter(Boolean))];
- const {data:listingRows}=listingIds.length?await supabaseClient.from("listings").select("id,title,price,status").in("id",listingIds):{data:[]};
+ const listingResult=listingIds.length?await notificationRead(supabaseClient.from("listings").select("id,title,price,status").in("id",listingIds),6000):{data:[]};
+ const listingRows=listingResult.data;
+ const partialDetails=!!(peopleResult.error||priceResult.error||listingResult.error);
  if(requestId!==notificationCenterLoadVersion||currentUser?.id!==userId)return;
  const titles=new Map((listingRows||[]).map(l=>[l.id,l.title]));
   const listingPrices=new Map((listingRows||[]).map(l=>[l.id,l.status==="active"?notificationListingPrice(l.price):""]));
@@ -2221,7 +2224,7 @@ async function loadNotificationCenter(){
   if(n.kind==="message"&&n.count>1){title=`✉️ ${n.count} messages`;detail="sent you messages"}
   return `<div class="notification-entry ${n.unread?"unread":""}"><button type="button" class="notification-open" data-open-notification="${escapeHtml(n.ids.join(","))}" data-notification-actor="${escapeHtml(n.actor_id||"")}" data-notification-kind="${escapeHtml(n.kind)}" data-notification-source="${escapeHtml(n.source_id||"")}"><strong>${escapeHtml(title)}</strong><span>${escapeHtml(name)} ${escapeHtml(detail)}</span><small>${new Date(n.created_at).toLocaleString()}</small></button>${n.unread?`<button type="button" class="ghost notification-read" data-read-notification="${escapeHtml(n.ids.join(","))}">Mark read</button>`:""}</div>`
  }).join("");
- lists.forEach(list=>{list.innerHTML=markup});
+ lists.forEach(list=>{list.innerHTML=(partialDetails?'<p class="muted" role="status">Some alert details could not load. You can still open these alerts. <button type="button" class="ghost" data-retry-notifications>Refresh details</button></p>':"")+markup});
  }catch(error){if(requestId===notificationCenterLoadVersion&&currentUser?.id===userId)lists.forEach(showNotificationRetry)}
 }
 
@@ -2241,7 +2244,7 @@ async function navigateDeckplayNotification(kind,actorId,sourceId){
  if(["favorite_price_drop","followed_seller_listing","wanted_match"].includes(kind)&&sourceId){
   try{
    // Resolve the current active record: cached cards can have old prices or sold status.
-   const {data,error}=await supabaseClient.from("listings").select("id,title,description,category,tcg_game,collectible_subcategory,price,condition,accepts_trades,accepts_price_offers,image_urls,created_at,seller_id").eq("id",sourceId).eq("status","active").maybeSingle();
+   const {data,error}=await notificationRead(supabaseClient.from("listings").select("id,title,description,category,tcg_game,collectible_subcategory,price,condition,accepts_trades,accepts_price_offers,image_urls,created_at,seller_id").eq("id",sourceId).eq("status","active").maybeSingle(),8000);
    if(!current())return;if(error)throw error;
    if(!data){
     // An expired discovery match should not strand the collector in a closed alert.
@@ -2253,7 +2256,7 @@ async function navigateDeckplayNotification(kind,actorId,sourceId){
     return;
    }
    if(blockedCollectorIds.has(data.seller_id)){toast("This listing is no longer available.");return}
-   const {data:profile}=await supabaseClient.from("profiles").select("username,display_name").eq("id",data.seller_id).maybeSingle();
+   const {data:profile}=await notificationRead(supabaseClient.from("profiles").select("username,display_name").eq("id",data.seller_id).maybeSingle(),6000);
    if(!current())return;
    const listing=marketplaceItemFromRow(data,profile),index=items.findIndex(x=>String(x.databaseId||x.id)===String(sourceId));
    if(index<0)items.unshift(listing);else items[index]=listing;
