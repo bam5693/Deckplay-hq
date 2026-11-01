@@ -1371,3 +1371,20 @@ test('T8.3: oversized support reply never reaches RPC and preserves draft',async
  await expect(page.locator('#supportReplyBody')).toHaveValue('x'.repeat(3001));
  expect(await page.evaluate(()=>window.__db.calls.filter(x=>x.name==='reply_support_ticket').length)).toBe(0);
 });
+
+test('T8.6 private beta access and issue follow-up set honest expectations for guests',async({page})=>{
+ await boot(page);
+ await page.getByRole('button',{name:'Help & support'}).last().click();
+ const access=page.locator('#supportBetaAccessGuide');
+ await expect(access).toBeVisible();
+ await access.locator('summary').click();
+ await expect(access).toContainText('does not guarantee an invitation or a launch date');
+ await expect(access).toContainText('Do not send passwords');
+ const followup=page.locator('#supportBetaIssueGuide');
+ await followup.locator('summary').click();
+ await expect(followup).toContainText('My tickets');
+ await expect(followup).toContainText('not an automatic fix or a promise of a response time');
+ await expect(followup).toContainText('Report action');
+ await expect(page.locator('#supportSignIn')).toBeVisible();
+ await expect(page.locator('#supportPrivate')).toBeHidden();
+});
