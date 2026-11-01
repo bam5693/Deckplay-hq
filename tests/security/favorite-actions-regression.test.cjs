@@ -90,18 +90,18 @@ test('a never-settling favorite transport without abortSignal times out and rele
   assert.equal(attempts,2);
 });
 
-test('blocked seller stale card cannot save or remove a favorite',async()=>{
+test('blocked seller cannot gain new favorites but existing favorites can be removed',async()=>{
   const h=harness(null,{blockedCollectorIds:new Set(['seller-1'])});
   h.context.items[0].sellerId='seller-1';
   await h.context.window.favoriteActions.toggle('card-1');
   assert.equal(h.saved.has('card-1'),false);
   assert.equal(h.renders,0);
-  h.saved.add('card-1');
-  await h.context.window.favoriteActions.toggle('card-1');
-  assert.equal(h.saved.has('card-1'),true);
-  assert.equal(h.renders,0);
-  assert.equal(h.notices.length,2);
   assert.match(h.notices[0],/blocked/i);
+  h.saved.add('card-1'); // A favorite saved before the seller was blocked.
+  await h.context.window.favoriteActions.toggle('card-1');
+  assert.equal(h.saved.has('card-1'),false);
+  assert.equal(h.renders,2);
+  assert.equal(h.notices[1],'Removed from saved items');
 });
 
 test('offline tap does not optimistically save and can retry after reconnecting',async()=>{
