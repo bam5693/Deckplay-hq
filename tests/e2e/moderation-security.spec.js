@@ -58,3 +58,47 @@ test('report review requires a reason and sends the displayed status for concurr
  page.once('dialog',dialog=>dialog.accept());await page.getByRole('button',{name:'Resolve report',exact:true}).click();
  await expect.poll(()=>page.evaluate(()=>lastModerationPayload)).toEqual({p_report_id:'synthetic-report',p_status:'resolved',p_reason:'Reviewed synthetic counterfeit evidence.',p_expected_status:'open'});
 });
+
+
+test('T8.2: staff can refresh capped private queue, recover from failure and scrub on tab hide',async({page})=>{
+ await moderator(page);
+ await expect(page.locator('#reports')).toContainText('Private synthetic evidence');
+ await page.evaluate(()=>{
+  moderationFixture.rpc=async name=>{
+   moderationCalls.push(name);
+   if(name==='is_deckplay_moderator')return {data:true,error:null};
+   if(name==='moderation_report_queue')return {data:Array.from({length:100},(_,i)=>({id:'report-'+i,reason:'Synthetic review',details:'Fixture evidence '+i,status:'open'})),error:null};
+   return {data:null,error:null};
+  };
+ });
+ await page.locator('#refreshReports').click();
+ await expect(page.locator('#state')).toContainText('100 reports returned');
+ await expect(page.locator('#queueCoverage')).toContainText('More reports may exist');
+ await expect(page.locator('#reports .card')).toHaveCount(100);
+ await page.evaluate(()=>{
+  moderationFixture.rpc=async name=>name==='is_deckplay_moderator'?{data:true,error:null}:{data:null,error:{message:'Synthetic network interruption'}};
+ });
+ await page.locator('#refreshReports').click();
+ await expect(page.locator('#state')).toContainText('Private report queue unavailable. Refresh to retry.');
+ await expect(page.locator('#state')).not.toContainText('Synthetic network interruption');
+ await expect(page.locator('#reports')).toBeEmpty();
+ await expect(page.locator('#queueCoverage')).toBeEmpty();
+ await expect(page.locator('#refreshReports')).toBeEnabled();
+ await page.evaluate(()=>{
+  moderationFixture.rpc=async name=>name==='is_deckplay_moderator'?{data:true,error:null}:{data:[{id:'recovered',reason:'Recovered report',details:'Private recovered fixture',status:'open'}],error:null};
+ });
+ await page.locator('#refreshReports').click();
+ await expect(page.locator('#state')).toContainText('1 report returned');
+ await expect(page.locator('#reports')).toContainText('Private recovered fixture');
+ await page.evaluate(()=>{
+  Object.defineProperty(document,'hidden',{configurable:true,get:()=>true});
+  document.dispatchEvent(new Event('visibilitychange'));
+ });
+ await expect(page.locator('#reports')).toBeEmpty();
+ await expect(page.locator('#state')).toContainText('Private reports hidden');
+ await page.evaluate(()=>{
+  Object.defineProperty(document,'hidden',{configurable:true,get:()=>false});
+  document.dispatchEvent(new Event('visibilitychange'));
+ });
+ await expect(page.locator('#reports')).toContainText('Private recovered fixture');
+});
