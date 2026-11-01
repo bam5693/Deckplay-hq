@@ -76,6 +76,12 @@ export function validateSendGuard({ args, env }) {
   }
   validateStagingServiceRoleJwt(env.DECKPLAY_STAGING_SERVICE_ROLE_KEY);
   validateStagingRedirect(env.DECKPLAY_STAGING_INVITE_REDIRECT_URL);
+  if (env.DECKPLAY_STAGING_INVITE_LINK_VERIFIED !== '1') {
+    throw new Error('Staging invite link and private access gate must be verified before sending.');
+  }
+  if (env.DECKPLAY_STAGING_AUTH_POLICY_VERIFIED !== '1') {
+    throw new Error('Staging signup policy must be reviewed before sending.');
+  }
   return true;
 }
 
