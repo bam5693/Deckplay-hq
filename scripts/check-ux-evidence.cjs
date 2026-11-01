@@ -15,8 +15,8 @@ const required=['Jayden','Tanner','mobile','dark','light','reviewer','evidence',
 for(const name of required)if(!new RegExp(name,'i').test(body))fail.push('Missing UX evidence field: '+name);
 if(/UX\s*(?:status|decision)\s*:\s*(?:UX\s*)?BLOCKED/i.test(body))fail.push('UX is explicitly BLOCKED');
 if(!/UX\s*(?:status|decision)\s*:\s*ACCEPTED/i.test(body))fail.push('Explicit UX status: ACCEPTED required');
-if(!/Reviewer\s*:\s*@?[\w-]{2,}/i.test(body))fail.push('Named reviewer required');
-if(!/Evidence\s*:\s*https:\/\//i.test(body))fail.push('Link to focused test evidence required');
+if(!/^Reviewer:[ \t]*@?[\w-]{2,}[ \t]*$/im.test(body))fail.push('Named reviewer required');
+if(!/^Evidence:[ \t]*https:\/\/\S+[ \t]*$/im.test(body))fail.push('Link to focused test evidence required');
 if(/\[ \]\s*\*\*(?:Jayden|Tanner)/.test(body))fail.push('Unchecked reviewer persona checkbox');
 if(fail.length){for(const f of fail)console.error('UX BLOCKED: '+f);process.exit(1)}
 console.log('UX evidence gate accepted metadata; code/test correctness is validated separately.');
