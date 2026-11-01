@@ -368,3 +368,59 @@ test('a late Saved removal cannot clear another account after switching users',a
  await expect(page.locator('[data-remove-profile-saved="new-saved"]')).toBeVisible();
  expect(await page.evaluate(()=>[...saved])).toEqual(['new-saved']);
 });
+
+test('follow status read failure offers safe retry instead of guessing the wrong follow action',async({page})=>{
+ await fixture(page);
+ await page.evaluate(async()=>{
+  sellerRatingHtml=async()=>'';window.followReadCount=0;window.followWriteCount=0;
+  supabaseClient.from=table=>{
+   let operation='read';
+   const q={select:()=>q,eq:()=>q,order:()=>q,limit:()=>q,
+    insert:async()=>{followWriteCount++;return {error:null}},
+    delete:()=>{operation='delete';return q},
+    maybeSingle:async()=>{
+     if(table==='profiles')return {data:{username:'Tanner',collection_links:[],collection_inquiry_mode:'off'},error:null};
+     if(table==='user_blocks')return {data:null,error:null};
+     if(table==='seller_follows'){
+      followReadCount++;
+      return followReadCount===1?{data:null,error:{message:'Offline'}}:followReadCount===2?{data:{seller_id:'seller'},error:null}:{data:null,error:null};
+     }
+     return {data:null,error:null};
+    },
+    then:(resolve,reject)=>Promise.resolve(table==='seller_follows'&&operation==='delete'?(followWriteCount++,{error:null}):{data:[],error:null}).then(resolve,reject)};
+   return q;
+  };
+  await showPublicProfile('seller');
+ });
+ await expect(page.locator('[data-follow-profile]')).toHaveText('Follow status unavailable · Retry');
+ await page.locator('[data-follow-profile]').click();
+ await expect(page.locator('[data-follow-profile]')).toHaveText('Following ✓');
+ expect(await page.evaluate(()=>followWriteCount)).toBe(0);
+ await page.locator('[data-follow-profile]').click();
+ await expect(page.locator('[data-follow-profile]')).toHaveText('Follow seller');
+ expect(await page.evaluate(()=>followWriteCount)).toBe(1);
+});
+
+test('late follow success after account change cannot show an old account confirmation',async({page})=>{
+ await fixture(page);
+ await page.evaluate(async()=>{
+  sellerRatingHtml=async()=>'';window.followWriteCount=0;window.followToasts=[];
+  toast=message=>followToasts.push(message);
+  supabaseClient.from=table=>{
+   const q={select:()=>q,eq:()=>q,order:()=>q,limit:()=>q,
+    insert:()=>{followWriteCount++;return new Promise(resolve=>{window.finishOldFollow=resolve})},
+    maybeSingle:async()=>({data:table==='profiles'?{username:'Tanner',collection_links:[],collection_inquiry_mode:'off'}:null,error:null}),
+    then:(resolve,reject)=>Promise.resolve({data:[],error:null}).then(resolve,reject)};
+   return q;
+  };
+  await showPublicProfile('seller');
+ });
+ await page.locator('[data-follow-profile]').click();
+ await expect.poll(()=>page.evaluate(()=>followWriteCount)).toBe(1);
+ await page.evaluate(()=>{
+  currentUser={id:'other-buyer',user_metadata:{}};listingAccountVersion++;
+  finishOldFollow({error:null});
+ });
+ await expect.poll(()=>page.evaluate(()=>followToasts)).toEqual([]);
+ expect(await page.evaluate(()=>currentUser.id)).toBe('other-buyer');
+});
