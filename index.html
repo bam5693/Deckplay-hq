@@ -3548,7 +3548,7 @@ async function showCollectorPage(tab="listings"){
  document.getElementById("pageAvatar").innerHTML=avatar?`<img src="${escapeHtml(avatar)}" alt="Your profile picture">`:escapeHtml(username[0].toUpperCase());
  document.getElementById("pageHandle").textContent="@"+username;document.getElementById("pageBio").textContent=profile.bio||"Add a bio to tell collectors about yourself.";
  document.getElementById("pageMeta").textContent=[profile.favorite_tcg?"Favorite TCG: "+profile.favorite_tcg:"",profile.location_label||""].filter(Boolean).join(" · ");
- document.getElementById("pageListingCount").textContent=tab==="saved"?"— listings":listings.length+" listings";document.getElementById("pageWantedCount").textContent=tab==="saved"?"— wanted posts":wanted.length+" wanted posts";
+ document.getElementById("pageListingCount").textContent=tab==="saved"?"— listings":listingsResult.error?"Listings unavailable":listings.length+" listings";document.getElementById("pageWantedCount").textContent=tab==="saved"?"— wanted posts":wantedResult.error?"Wanted unavailable":wanted.length+" wanted posts";
  // Reviews are optional decoration, not a reason to hide listings or Wanted posts.
  // A hung review lookup must never keep the page on "Loading your collection…".
  const rating=document.getElementById("ownSellerRatings");rating.textContent="Loading seller reviews…";
