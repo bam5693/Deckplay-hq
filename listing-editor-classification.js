@@ -5,7 +5,7 @@ function latestEditorClassification(description){
 // Generated classification belongs in structured controls, not duplicate
 // free-text notes after multiple seller edits.
 function listingEditorVisibleDescription(description){
- const withoutContents=String(description||"").replace(/^\[Listing contents\]\r?\n[\s\S]*?\r?\n\[End listing contents\]\r?\n*/,"");
+ const withoutContents=String(description||"").replace(/\r\n/g,"\n").replace(/^\[Listing contents\]\r?\n[\s\S]*?\r?\n\[End listing contents\]\r?\n*/,"");
  return withoutContents.replace(/(?:^|\r?\n)\[Listing classification\]\r?\n[\s\S]*?\r?\n\[End classification\](?=\r?\n|$)/g,"\n")
   .replace(/^\n+|\n+$/g,"").replace(/\n{3,}/g,"\n\n");
 }
