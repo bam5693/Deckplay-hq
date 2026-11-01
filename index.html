@@ -2312,7 +2312,19 @@ document.getElementById("authForgotPassword").addEventListener("click",async()=>
 });
 
 let notificationChannel=null,notificationPoll=null,notificationCenterLoadVersion=0,notificationCountLoadVersion=0;
-async function refreshNotificationCount(){const requestId=++notificationCountLoadVersion;const bell=document.getElementById("notificationBell"),badge=document.getElementById("notificationBadge");bell.hidden=!currentUser;if(!currentUser){badge.hidden=true;const dot=document.getElementById("dockNotifications");if(dot)dot.hidden=true;return}const userId=currentUser.id;const {count,error}=await notificationRead(supabaseClient.from("collector_notifications").select("id",{count:"exact",head:true}).eq("user_id",userId).is("read_at",null).in("kind",["favorite_price_drop","favorite_sold","followed_seller_listing","wanted_match"]),6000);if(requestId!==notificationCountLoadVersion||currentUser?.id!==userId||error)return;badge.hidden=!count;badge.textContent=count>99?"99+":String(count||0);const dockBadge=document.getElementById("dockNotifications");if(dockBadge){dockBadge.hidden=!count;dockBadge.setAttribute("aria-label",count+" unread notifications")}bell.setAttribute("aria-label",count?count+" unread notifications":"Notifications")}
+async function refreshNotificationCount(){const requestId=++notificationCountLoadVersion;const bell=document.getElementById("notificationBell"),badge=document.getElementById("notificationBadge");bell.hidden=!currentUser;if(!currentUser){badge.hidden=true;const dot=document.getElementById("dockNotifications");if(dot)dot.hidden=true;return}const userId=currentUser.id;const {count,error}=await notificationRead(supabaseClient.from("collector_notifications").select("id",{count:"exact",head:true}).eq("user_id",userId).is("read_at",null).in("kind",["favorite_price_drop","favorite_sold","followed_seller_listing","wanted_match"]),6000);if(requestId!==notificationCountLoadVersion||currentUser?.id!==userId)return;
+ // A failed or malformed count is unknown, not zero or the previous unread total.
+ // Clear stale counts instead of displaying misleading activity after a lost connection.
+ const dockBadge=document.getElementById("dockNotifications");
+ if(error||!Number.isSafeInteger(count)||count<0){
+  badge.hidden=true;badge.textContent="";
+  if(dockBadge){dockBadge.hidden=true;dockBadge.removeAttribute("aria-label")}
+  bell.setAttribute("aria-label","Alerts unavailable. Open to retry");
+  return;
+ }
+ badge.hidden=count===0;badge.textContent=count>99?"99+":String(count);
+ if(dockBadge){dockBadge.hidden=count===0;dockBadge.setAttribute("aria-label",count+" unread notifications")}
+ bell.setAttribute("aria-label",count?count+" unread notifications":"Notifications")}
 async function markNotificationRead(id){const userId=currentUser?.id;if(!userId)return;const ids=String(id).split(",").filter(Boolean);if(!ids.length)return;const {error}=await notificationRead(supabaseClient.from("collector_notifications").update({read_at:new Date().toISOString()}).in("id",ids).eq("user_id",userId),6000);if(currentUser?.id!==userId)return;if(error){toast("Could not mark alert as read. You can still open it.");return}void refreshNotificationCount()}
 const deckplayInboxNotificationKinds=new Set(["message","trade_offer","counteroffer","trade_update","price_offer","price_counter","price_update"]);
 const deckplayActivityNotificationKinds=["favorite_price_drop","favorite_sold","followed_seller_listing","wanted_match"];
@@ -2327,8 +2339,8 @@ async function loadNotificationCenter(){
  try{
  const {data,error}=await notificationRead(supabaseClient.from("collector_notifications").select("id,actor_id,kind,source_id,created_at,read_at").eq("user_id",userId).in("kind",deckplayActivityNotificationKinds).order("created_at",{ascending:false}).limit(100));
  if(requestId!==notificationCenterLoadVersion||currentUser?.id!==userId)return;
- if(error){lists.forEach(showNotificationRetry);return}
- const activity=(data||[]).filter(n=>!deckplayInboxNotificationKinds.has(n.kind));
+ if(error||!Array.isArray(data)){lists.forEach(showNotificationRetry);return}
+ const activity=data.filter(n=>!deckplayInboxNotificationKinds.has(n.kind));
  if(!activity.length){lists.forEach(list=>{list.innerHTML='<p class="muted">No activity alerts yet. Messages, offers and trades are in your Inbox. <button type="button" class="ghost" data-retry-notifications>Refresh alerts</button></p>'});return}
  const displayed=[],messageGroups=new Map();
  for(const n of activity){if(n.kind==="message"&&n.actor_id){const prior=messageGroups.get(n.actor_id);if(prior){prior.count++;prior.ids.push(n.id);prior.unread=prior.unread||!n.read_at;continue}const entry={...n,count:1,ids:[n.id],unread:!n.read_at};messageGroups.set(n.actor_id,entry);displayed.push(entry)}else displayed.push({...n,count:1,ids:[n.id],unread:!n.read_at})}
