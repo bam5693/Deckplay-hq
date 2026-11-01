@@ -23,7 +23,7 @@ function openOffer(currentUser, disclosedQuantity) {
   const items = [{
     databaseId: 'fixture-lot', sellerId: 'seller-id',
     n: '1983-84 O-Pee-Chee hockey lot', p: 45.5,
-    description: '[Listing contents]\\nQuantity: 4\\nUnit: cards\\n[End listing contents]',
+    description: '[Listing contents]\nQuantity: 4\nUnit: cards\n[End listing contents]',
   }];
   const setup = new Function(
     'document', 'currentUser', 'items', 'listingDisclosedQuantity', 'openModal',
@@ -35,23 +35,23 @@ function openOffer(currentUser, disclosedQuantity) {
 }
 
 test('seller sees a full-listing price, not a misleading per-item price', () => {
-  assert.match(html, /<label for="price">Asking price for everything included \\(USD\\)<\\/label><input id="price"[^>]*aria-describedby="listingPriceScopeHelp"/);
-  assert.match(html, /id="listingPriceScopeHelp"[^>]*>One price for the full listing, not per item\\. Shipping, taxes and fees are not calculated\\./);
+  assert.match(html, /<label for="price">Asking price for everything included \(USD\)<\/label><input id="price"[^>]*aria-describedby="listingPriceScopeHelp"/);
+  assert.match(html, /id="listingPriceScopeHelp"[^>]*>One price for the full listing, not per item\. Shipping, taxes and fees are not calculated\./);
 });
 
 test('buyer offer explicitly separates full-listing amount from unknown charges and payment', () => {
-  assert.match(html, /<label for="priceOfferAmount">Your offer for the full listing \\(USD\\)<\\/label><input id="priceOfferAmount"[^>]*aria-describedby="priceOfferScopeHelp"/);
-  assert.match(html, /id="priceOfferScopeHelp"[^>]*>Offers cover everything included, not each item\\.[^<]*does not collect payment\\./);
+  assert.match(html, /<label for="priceOfferAmount">Your offer for the full listing \(USD\)<\/label><input id="priceOfferAmount"[^>]*aria-describedby="priceOfferScopeHelp"/);
+  assert.match(html, /id="priceOfferScopeHelp"[^>]*>Offers cover everything included, not each item\.[^<]*does not collect payment\./);
 });
 
 test('real offer click handler displays lot quantity but never invents legacy quantity', () => {
   const lot = openOffer({ id: 'buyer-id' }, { amount: 4, unit: 'cards' });
   assert.equal(lot.opened[0], 'priceOfferModal');
-  assert.match(lot.context, /Asking \\$45\\.50 · 4 cards included/);
+  assert.match(lot.context, /Asking \$45\.50 · 4 cards included/);
   assert.equal(lot.amount, '45.50');
 
   const legacy = openOffer({ id: 'buyer-id' }, null);
-  assert.match(legacy.context, /Asking \\$45\\.50/);
+  assert.match(legacy.context, /Asking \$45\.50/);
   assert.doesNotMatch(legacy.context, /included/);
 });
 
