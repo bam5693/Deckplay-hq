@@ -1380,14 +1380,22 @@ document.getElementById("priceOffersList").addEventListener("click",async e=>{
 // Disclosed quantity is embedded in the published public listing description.
 // Never infer one item for legacy listings lacking an explicit contents block.
 function listingDisclosedQuantity(description){
- const raw=String(description||"");
+ // Buyers must not see a confident lot quantity when old or malformed itemized
+ // contents contradict the claimed total. Seller creation already validates
+ // these lines; use the same validation for buyer readback and legacy rows.
+ const raw=String(description||"").replace(/\r\n?/g,"\n");
  const block=raw.match(/^\[Listing contents\]\n([\s\S]*?)\n\[End listing contents\](?:\n|$)/)?.[1];
- // Editor defaults are for drafting only: never invent a public quantity from a malformed disclosure.
- if(!block||!/^Quantity included: [1-9]\d*$/m.test(block)||!/^Unit: [^\n]+$/m.test(block))return null;
- const parsed=readListingContents(raw),amount=Number(parsed.quantity);
- const unit=String(parsed.unit||"").replace(/[\x00-\x1f\x7f]+/g," ").trim();
- if(!Number.isSafeInteger(amount)||amount<1||amount>100000||!unit||unit.length>40)return null;
- return {amount,unit};
+ if(!block)return null;
+ const lines=block.split("\n");
+ // Duplicate/ambiguous quantity or unit lines must never choose a random first.
+ if(lines.filter(line=>line.startsWith("Quantity included:")).length!==1||
+    lines.filter(line=>line.startsWith("Unit:")).length!==1)return null;
+ try{
+  const parsed=readListingContents(raw);
+  const verified=listingContentsValues(parsed.quantity,parsed.unit,parsed.contents);
+  const unit=verified.unit.replace(/[\x00-\x1f\x7f]+/g," ").trim();
+  return unit?{amount:verified.quantity,unit}:null;
+ }catch{return null}
 }
 function listingAskingPriceScope(description){
  const disclosed=listingDisclosedQuantity(description);
