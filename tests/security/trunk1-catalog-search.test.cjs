@@ -52,14 +52,14 @@ test('Jayden: One Piece ST-31 to ST-36 are exact selectable starter releases, no
     ['ST-35', 'Red/Black Sabo'],
     ['ST-36', 'Yellow Eustass Kid'],
   ];
-  const buyerDescriptionSource = html.match(/function marketplaceCurrentSearchDescription\\(value\\)\\{[\\s\\S]*?\\n\\}/)?.[0];
+  const buyerDescriptionSource = html.match(/function marketplaceCurrentSearchDescription\(value\)\{[\s\S]*?\n\}/)?.[0];
   assert.ok(buyerDescriptionSource, 'Buyer must read current seller classification');
   const buyerDescription = vm.runInNewContext('(' + buyerDescriptionSource + ')');
   for (const [code, leader] of exact) {
     const value = choices.find(choice => choice.startsWith(code + ' '));
     assert.ok(value, code + ' must be selectable individually');
     assert.ok(value.includes(leader), code + ' must name the correct leader');
-    const description = '[Listing classification]\\nSet: ' + value + '\\n[End classification]';
+    const description = '[Listing classification]\nSet: ' + value + '\n[End classification]';
     assert.ok(normalize(buyerDescription(description)).includes(normalize(code)),
       code + ' must survive into buyer search without requiring a hyphen');
   }
@@ -69,7 +69,7 @@ test('Jayden: One Piece ST-31 to ST-36 are exact selectable starter releases, no
 
 test('Jayden: editor restores exact starter selection and preserves unknown custom products', () => {
   const editor = fs.readFileSync(path.join(__dirname, '../../listing-editor-classification.js'), 'utf8');
-  const helper = editor.match(/function listingEditorRestoreCatalogChoice\\(options,saved\\)\\{[\\s\\S]*?\\n\\}/)?.[0];
+  const helper = editor.match(/function listingEditorRestoreCatalogChoice\(options,saved\)\{[\s\S]*?\n\}/)?.[0];
   assert.ok(helper, 'Editor restore must use the shared seller catalog');
   const restore = vm.runInNewContext('(' + helper + ')');
   const options = catalog.one_piece['Starter decks'].map(value => ({ value }));
