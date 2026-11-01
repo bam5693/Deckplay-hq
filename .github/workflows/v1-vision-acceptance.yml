@@ -1,0 +1,55 @@
+name: V1 AI screenshot acceptance (manual opt-in only)
+on:
+  workflow_dispatch:
+    inputs:
+      screenshot_run_id:
+        description: 'Successful V1 synthetic screenshot workflow run ID'
+        required: true
+        type: string
+permissions:
+  contents: read
+  actions: read
+jobs:
+  review-six-screens-only:
+    if: github.ref == 'refs/heads/feature/v1-vision-review-gate-20261031'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    environment: deckplay-staging
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Cheap V1 vision input tests
+        run: node --test tests/security/vision-review.test.mjs
+      - name: Verify requested artifact comes from approved successful synthetic V1 run
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ inputs.screenshot_run_id }}
+        run: |
+          test "${RUN_ID}" != "" && [[ "${RUN_ID}" =~ ^[0-9]{9,15}$ ]]
+          gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}" > /tmp/v1-source-run.json
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const r=JSON.parse(fs.readFileSync('/tmp/v1-source-run.json','utf8'));
+          if(r.name!=='V1 mobile Sell owner fixes focused browser checks'||r.conclusion!=='success'||r.head_branch!=='integration/v1-mobile-sell-ux-20261031')throw Error('Not an approved synthetic V1 source run');
+          NODE
+          mkdir -p /tmp/v1-screens
+          gh run download "${RUN_ID}" --repo "${GITHUB_REPOSITORY}" --name v1-mobile-sell-owner-review --dir /tmp/v1-screens
+      - name: Review six synthetic images only; fail closed if vision not configured
+        env:
+          REVIEWER_TOKEN: ${{ secrets.DECKPLAY_AI_REVIEWER_TOKEN }}
+          VISION_REVIEWER_URL: ${{ vars.DECKPLAY_V1_VISION_URL }}
+        run: |
+          if [ -z "$REVIEWER_TOKEN" ] || [ -z "$VISION_REVIEWER_URL" ]; then
+            echo "V1 vision NOT CONFIGURED; no AI calls made."
+            exit 1
+          fi
+          node scripts/v1-vision-from-artifact.mjs /tmp/v1-screens
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: v1-vision-advisory
+          path: v1-vision-advisory.json
+          if-no-files-found: ignore
+          retention-days: 3
