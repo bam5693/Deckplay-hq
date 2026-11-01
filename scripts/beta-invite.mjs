@@ -101,12 +101,17 @@ export async function sendStagingInvite({ email, key, redirectTo, fetchImpl = fe
       signal: controller.signal
     });
     // Never echo API bodies, tokens, or email addresses to CI logs.
-    if (!response.ok) throw new Error('Staging invite was rejected (HTTP ' + response.status + '). Check Auth settings/email limits in Supabase.');
+    if (!response.ok) {
+      // A malformed transport response must not inject arbitrary content into logs.
+      const safeStatus = Number.isInteger(response.status) && response.status >= 100 && response.status <= 599
+        ? String(response.status) : 'unknown';
+      throw new Error('Staging invite was rejected (HTTP ' + safeStatus + '). Check Auth settings/email limits in Supabase.');
+    }
     return { sent: true };
   } catch (error) {
     // Network/transport exceptions can include request headers or recipient addresses.
     // Keep the intentionally sanitized HTTP status, but never surface unknown details.
-    if (error instanceof Error && /^Staging invite was rejected \(HTTP \d+\)\./.test(error.message)) throw error;
+    if (error instanceof Error && /^Staging invite was rejected \(HTTP (?:[1-5]\d\d|unknown)\)\. Check Auth settings\/email limits in Supabase\.$/.test(error.message)) throw error;
     throw new Error('Staging invitation connection failed. Check private staging connectivity.');
   } finally {
     clearTimeout(timeout);
