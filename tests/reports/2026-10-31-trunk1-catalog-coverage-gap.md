@@ -117,3 +117,13 @@ This was a small catalog correction, **not** an all-TCG/sports audit or complete
 | P0 | Hockey O-Pee-Chee/Parkhurst manufacturer-vs-product-brand distinction and sports catalog coverage. | T1 / manual integration PR #30; vintage 1983–84 versus modern Upper Deck buyer readback. | **SEPARATE UNMERGED CANDIDATE**; not resolved by platform work. |
 
 **Shared taxonomy:** `gamePlatform` is the seller source; `marketPlatform` copies its options and the edit form clones the same select. Exact saved `Platform:` is used for buyer filters; no inferred 2600/7800 from generic Atari. Focused regression [trunk1-retro-platform-catalog.test.cjs](https://github.com/bam5693/Deckplay-hq/blob/dev/hourly-trunk1/tests/security/trunk1-retro-platform-catalog.test.cjs) 3/3 V8 Node-compatible source harness PASS after test-only corrections; native Node/CI, real browser, signed buyer/seller and deployment parity **NOT VERIFIED**. Static fixture now has 129 rows, not 129 accepted journeys. Jayden/Tanner developer-authored desk scenarios only; no independent second reviewer, original screenshot bytes, rendered light/dark mobile visuals or physical Android. **T1.3–T1.6 unchecked; UX BLOCKED.**
+
+
+## 2026-11-01 11:30 CST — sports brand honest custom fallback
+
+| Priority | Source / collector impact | Owner and exact focused check | Status |
+|---|---|---|---|
+| P1 | Existing seller brand menu had no exact input for mainstream historical Pro Set/Pacific; Other / Unknown mislabeled known products. Owner atlas 33652.jpg is a negative UX seed, not visual proof. | T1 developer: `trunk1-custom-sports-brand.test.cjs` seller create/editor restore, stale custom clearing, buyer sports filter/current description; manual G signed publish/edit/buyer readback. | **BRANCH FIX / V8 helper PASS / native Node, browser, staging, physical Android UNKNOWN**. |
+| P0 | Vintage O-Pee-Chee, Parkhurst and Leaf exact dropdown options are in draft PR #30, not this branch. Vintage manufacturer attribution must not be invented. | Manual G integration owner: reconcile PR #30 and T1; one signed vintage hockey seller→buyer classification/readback. | **SEPARATE PR CANDIDATE / NOT DEPLOYED**. |
+
+**UX gate:** Conditional custom input appears only for sports brand Other / Unknown; known brands do not get another question. Independent Tanner/Jayden, Android-sized light/dark screenshot review, original owner JPG bytes and signed buyer/seller acceptance are **BLOCKED/NOT VERIFIED**. T1.3 remains unchecked; T1.1/T1.2 accepted, T1.4–T1.6 unchecked.

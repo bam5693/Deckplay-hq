@@ -32,6 +32,12 @@ function listingEditorPreserveDescription(original,edited){
 }
 // Restore a known catalog value as a select, never as an invisible custom
 // override. Unknown historical releases remain editable custom values.
+function listingEditorRestoreSportsBrand(options,saved){
+ const value=String(saved||'').trim();
+ if(!value)return {selected:'',custom:''};
+ if(Array.from(options||[]).some(option=>option.value===value))return {selected:value,custom:''};
+ return {selected:'Other / Unknown',custom:value};
+}
 function listingEditorRestoreCatalogChoice(options,saved){
  const value=String(saved||'').trim();
  const known=value&&Array.from(options||[]).some(option=>option.value===value);
@@ -41,7 +47,7 @@ function listingEditorRestoreCatalogChoice(options,saved){
 window.createListingEditorClassification=(container,status)=>{
  container.innerHTML='<details><summary>Category, condition and item details</summary><label class="check-row"><input type="checkbox" id="editClassificationEnabled"> Change classification and item details</label><p class="file-help">Review your description when changing category. Your existing disclosures are preserved.</p><fieldset id="editClassificationFields" disabled style="border:0;padding:0;min-width:0;max-width:100%"></fieldset></details>';
  const fields=container.querySelector('fieldset'),enabled=container.querySelector('#editClassificationEnabled'),groups=new Map(),controls=new Map();let busy=false;
- const definitions=[['listingIncludedQuantity','Quantity included','all'],['listingQuantityUnit','Quantity unit','all'],['listingContentsList','Item-by-item contents','all'],['listingType','Listing type','all'],['category','Category','all'],['tcgGame','Game / series','cards'],['collectibleSubcategory','Collectible type','collectibles'],['gamePlatform','Game platform','games'],['consoleItemType','Hardware type','hardware'],['consoleBrand','Brand','hardware'],['consoleModel','Model','hardware'],['consoleStorage','Storage / version','hardware'],['condition','Condition','general'],['cardCondition','Card condition','cards'],['sportsSport','Sport','sports'],['sportsBrand','Sports card brand','sports'],['sportsYear','Card year','sports'],['sportsPlayer','Player or subject','sports'],['gradingCompany','Grading company','graded'],['gradingScore','Grade','graded'],['gradingCert','Certification','graded'],['tcgEra','Era (optional)','cards'],['tcgSet','Set (optional)','cards'],['tcgCustomSet','Custom set','cards'],['tcgCardNumber','Card number','cards'],['tcgVariant','Variant','cards'],['tcgCustomVariant','Custom variant','cards'],['tcgRarity','Rarity','cards'],['tcgEdition','Edition / printing','cards'],['tcgLanguage','Language','cards'],['deckLeader','Deck name / leader','deck'],['deckCardCount','Number of cards','deck'],['deckList','Full decklist','deck']];
+ const definitions=[['listingIncludedQuantity','Quantity included','all'],['listingQuantityUnit','Quantity unit','all'],['listingContentsList','Item-by-item contents','all'],['listingType','Listing type','all'],['category','Category','all'],['tcgGame','Game / series','cards'],['collectibleSubcategory','Collectible type','collectibles'],['gamePlatform','Game platform','games'],['consoleItemType','Hardware type','hardware'],['consoleBrand','Brand','hardware'],['consoleModel','Model','hardware'],['consoleStorage','Storage / version','hardware'],['condition','Condition','general'],['cardCondition','Card condition','cards'],['sportsSport','Sport','sports'],['sportsBrand','Sports card brand','sports'],['sportsBrandCustom','Brand not listed (optional)','sports'],['sportsYear','Card year','sports'],['sportsPlayer','Player or subject','sports'],['gradingCompany','Grading company','graded'],['gradingScore','Grade','graded'],['gradingCert','Certification','graded'],['tcgEra','Era (optional)','cards'],['tcgSet','Set (optional)','cards'],['tcgCustomSet','Custom set','cards'],['tcgCardNumber','Card number','cards'],['tcgVariant','Variant','cards'],['tcgCustomVariant','Custom variant','cards'],['tcgRarity','Rarity','cards'],['tcgEdition','Edition / printing','cards'],['tcgLanguage','Language','cards'],['deckLeader','Deck name / leader','deck'],['deckCardCount','Number of cards','deck'],['deckList','Full decklist','deck']];
  for(const [source,label,group]of definitions){const el=document.getElementById(source).cloneNode(true);el.id='editAttribute_'+source;el.removeAttribute('aria-describedby');el.required=false;el.disabled=false;el.hidden=false;el.value='';const wrap=document.createElement('div'),heading=document.createElement('label');heading.htmlFor=el.id;heading.textContent=label;wrap.append(heading,el);fields.append(wrap);controls.set(source,el);groups.set(source,{wrap,group})}
  const get=id=>controls.get(id).value;
  const set=(id,value)=>{const el=controls.get(id);el.value=value??''};
@@ -52,7 +58,7 @@ window.createListingEditorClassification=(container,status)=>{
   const category=get('category'),cards=category==='trading_cards',hardware=['consoles','controllers','accessories'].includes(category);
   const visible={all:true,cards,hardware,collectibles:category==='collectibles',games:category==='video_games',general:!cards,sports:cards&&get('tcgGame')==='sports_cards',graded:cards&&get('cardCondition')==='graded',deck:get('listingType')==='deck'};
   const required=new Set(['category','listingType','tcgGame','collectibleSubcategory','gamePlatform','consoleItemType','consoleBrand','consoleModel','condition','cardCondition','sportsSport','sportsBrand','sportsYear','sportsPlayer','gradingCompany','gradingScore','deckLeader','deckCardCount','deckList']);
-  for(const [id,{wrap,group}]of groups){wrap.hidden=!visible[group]||(id==='category'&&get('listingType')!=='other');controls.get(id).disabled=busy||!enabled.checked||!visible[group];controls.get(id).required=enabled.checked&&visible[group]&&required.has(id)}
+  for(const [id,{wrap,group}]of groups){wrap.hidden=!visible[group]||(id==='category'&&get('listingType')!=='other')||(id==='sportsBrandCustom'&&get('sportsBrand')!=='Other / Unknown');controls.get(id).disabled=busy||!enabled.checked||!visible[group];controls.get(id).required=enabled.checked&&visible[group]&&required.has(id)}
   fields.disabled=busy||!enabled.checked;enabled.disabled=busy;
  }
  fields.addEventListener('change',e=>{
@@ -65,6 +71,7 @@ window.createListingEditorClassification=(container,status)=>{
   if(id==='consoleItemType'&&get('listingType')==='console')set('category',({Console:'consoles',Controller:'controllers',Accessory:'accessories'})[get(id)]||'consoles');
   // 'Other' intentionally keeps its explicit category choice, including games/cards.
   if(id==='category'&&get('listingType')!=='other'&&!allowed[get(id)]?.includes(get('listingType')))set('listingType',allowed[get(id)]?.[0]||'other');
+  if(id==='sportsBrand'&&get(id)!=='Other / Unknown')set('sportsBrandCustom','');
   if(id==='tcgGame'){
    sets();set('tcgCustomSet','');set('tcgCustomVariant','');
   }
@@ -98,7 +105,10 @@ window.createListingEditorClassification=(container,status)=>{
   set('tcgSet',restoredSet.selected);set('tcgCustomSet',restoredSet.custom);
   const restoredVariant=listingEditorRestoreCatalogChoice(controls.get('tcgVariant').options,line('Variant'));
   set('tcgVariant',restoredVariant.selected);set('tcgCustomVariant',restoredVariant.custom);
-  if(get('tcgGame')==='sports_cards'&&!get('sportsBrand'))set('sportsBrand',line('Brand'));
+  if(get('tcgGame')==='sports_cards'){
+   const restoredBrand=listingEditorRestoreSportsBrand(controls.get('sportsBrand').options,line('Sports brand')||line('Brand'));
+   set('sportsBrand',restoredBrand.selected);set('sportsBrandCustom',restoredBrand.custom);
+  }
   const conditionLine=line('Card condition'),options=[...controls.get('cardCondition').options];
   // Never let a legacy [Card Condition] override the latest edited value.
   const option=options.find(o=>o.textContent.trim()===conditionLine)||(!latest?options.find(o=>description.includes('[Card Condition]\n'+o.textContent.trim())):null);
@@ -115,7 +125,7 @@ window.createListingEditorClassification=(container,status)=>{
   const lines=['Category: '+controls.get('category').selectedOptions[0].textContent,'Listing type: '+controls.get('listingType').selectedOptions[0].textContent];
   const labels={tcgEra:'Era',gamePlatform:'Platform',consoleItemType:'Hardware type',consoleBrand:'Brand',consoleModel:'Model',consoleStorage:'Storage / version',sportsSport:'Sport',sportsBrand:'Sports brand',sportsYear:'Year',sportsPlayer:'Player',gradingCompany:'Grader',gradingScore:'Grade',gradingCert:'Certification',tcgCardNumber:'Card number',tcgRarity:'Rarity',tcgEdition:'Edition / printing',tcgLanguage:'Language',deckLeader:'Deck',deckCardCount:'Cards',deckList:'Full decklist'};
   if(cards)lines.push('Card condition: '+controls.get('cardCondition').selectedOptions[0].textContent);
-  for(const [id,label]of Object.entries(labels))if(!controls.get(id).disabled&&get(id).trim())lines.push(label+(id==='deckList'?':\n':': ')+get(id).trim());
+  for(const [id,label]of Object.entries(labels))if(!controls.get(id).disabled&&get(id).trim())lines.push(label+(id==='deckList'?':\n':': ')+(id==='sportsBrand'?listingSportsBrandValue(get(id),get('sportsBrandCustom')):get(id)).trim());
   if(cards){const setName=get('tcgCustomSet').trim()||get('tcgSet'),variant=get('tcgCustomVariant').trim()||get('tcgVariant');if(setName)lines.push('Set: '+setName);if(variant)lines.push('Variant: '+variant)}
   return {category,product_type:type,tcg_game:cards?get('tcgGame'):null,collectible_subcategory:category==='collectibles'?get('collectibleSubcategory'):null,condition:cards?({near_mint:'like_new',lightly_played:'used',moderately_played:'used',heavily_played:'damaged',damaged:'damaged',sealed:'new',graded:'graded'})[get('cardCondition')]:get('condition'),description:(contentsBlock?contentsBlock+'\n\n':'')+'[Listing classification]\n'+lines.join('\n')+'\n[End classification]\n\n'+strip(description)};
  }
