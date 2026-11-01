@@ -737,7 +737,14 @@ test('inbox search and unread filters survive refresh but reset on account chang
  await expect(page.locator('[data-conversation-id="buyer-a"]')).toBeVisible();
  await search.fill('buyer-b');await unread.check();
  await page.evaluate(async()=>{currentUser={id:'fixture-another-collector'};syncInboxDraftUser();await showInboxPage()});
- await expect(search).toHaveValue('');await expect(unread).not.toBeChecked();
+ // No conversations belong to the new collector, so the Inbox removes its filters.
+ // Assert isolation before returning to the original fixture account.
+ await expect(page.locator('[data-conversation-id="buyer-a"]')).toHaveCount(0);
+ await expect(search).toHaveCount(0);
+ await expect(unread).toHaveCount(0);
+ await page.evaluate(async()=>{currentUser={id:'fixture-seller'};syncInboxDraftUser();await showInboxPage()});
+ await expect(search).toHaveValue('');
+ await expect(unread).not.toBeChecked();
  await expect(page.locator('[data-conversation-id="buyer-a"]')).toBeVisible();
 });
 
@@ -757,7 +764,7 @@ test('Jayden can retry an offline inbox without losing his TCG inquiry draft',as
  });
  await page.evaluate(()=>loadInbox());
  await expect(page.locator('[data-inbox-retry]')).toBeVisible();
- await expect(page.locator('[role="alert"]')).toContainText('Could not load conversations');
+ await expect(page.locator('[data-inbox-refresh-error]')).toContainText('Conversations could not refresh.');
  await page.locator('[data-inbox-retry]').click();
  await expect(page.locator('#chatInput')).toHaveValue('Is your One Piece deck still available?');
  await expect(page.locator('[data-inbox-retry]')).toHaveCount(0);

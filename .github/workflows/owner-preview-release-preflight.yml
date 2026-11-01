@@ -1,0 +1,40 @@
+name: Owner preview production-asset preflight
+on:
+  push:
+    branches: [release/owner-preview-v1-2026-10-31]
+    paths:
+      - '.github/workflows/owner-preview-release-preflight.yml'
+      - 'index.html'
+      - 'release/assets.json'
+      - 'support-center.js'
+      - 'share-links.js'
+      - 'getting-started.js'
+      - 'pwa-update-notice.js'
+      - 'sw.js'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  source-preflight:
+    name: Strict production asset and JavaScript preflight (no deploy)
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Confirm no staging database or private noindex is in proposed public page
+        run: |
+          node -e "const fs=require('fs');const s=fs.readFileSync('index.html','utf8');if(s.includes('prrrzeelltmyugssqnzk')||s.includes('noindex,nofollow,noarchive'))process.exit(1)"
+      - name: Validate publishable build and allowlisted source without publishing
+        run: node scripts/release-preflight.cjs
+      - name: Check newly introduced browser script syntax
+        run: |
+          node --check support-center.js
+          node --check share-links.js
+          node --check getting-started.js
+          node --check pwa-update-notice.js
+          node --check listing-editor.js
+          node --check seller-overview.js
+          node --check sw.js

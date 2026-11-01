@@ -1,0 +1,43 @@
+name: Owner preview final eighteen regression checks
+on:
+  push:
+    branches: [release/owner-preview-v1-2026-10-31]
+    paths: ['.github/workflows/owner-preview-final-eighteen.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: owner-preview-final-eighteen
+  cancel-in-progress: false
+jobs:
+  browser:
+    name: Verify nine corrected scenarios on desktop and mobile
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Cheap syntax and production release build
+        run: |
+          node scripts/release-preflight.cjs
+          node --check tests/e2e/auth-recovery.spec.js
+          node --check tests/e2e/checkout-simulation.spec.js
+          node --check tests/e2e/inbox-recovery.spec.js
+          node --check tests/e2e/seller-overview.spec.js
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: staging-playwright-${{ hashFiles('package-lock.json') }}
+      - run: npx playwright install chromium --only-shell
+      - name: Check only the nine previous failures in both browser projects
+        run: >-
+          npx playwright test --config=playwright.local.config.js
+          tests/e2e/auth-recovery.spec.js tests/e2e/checkout-simulation.spec.js
+          tests/e2e/inbox-recovery.spec.js tests/e2e/seller-overview.spec.js
+          --grep "recovery eye buttons|recovery cannot update password|settings password change|buyer can complete a private checkout|preview never requests personal|buyer can change illustrative shipping|inbox search and unread filters survive|Jayden can retry an offline inbox|seller overview loads on demand"
+          --project=local-desktop --project=local-mobile
+          --workers=2 --retries=0 --timeout=30000

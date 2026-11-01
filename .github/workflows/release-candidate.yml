@@ -45,7 +45,7 @@ jobs:
           const files=execFileSync('git',['diff-tree','--root','--no-commit-id','--name-only','-r','--first-parent','HEAD'],{encoding:'utf8'}).split('\n');
           const application=new Set(require('./release/assets.json'));
           let full=process.env.MANUAL_RUN==='true'||files.some(f=>application.has(f)||/^package(?:-lock)?\.json$/.test(f));
-          let specs=files.filter(f=>/^tests\/e2e\/[a-z0-9-]+\.spec\.js$/.test(f)&&!f.startsWith('tests/e2e/release-preview-'));
+          let specs=files.filter(f=>/^tests\/e2e\/[a-z0-9-]+\.spec\.js$/.test(f)&&!f.startsWith('tests/e2e/release-preview-')&&!f.startsWith('tests/e2e/owner-preview-'));
           if(process.env.MANUAL_RUN!=='true'&&fs.existsSync('release/browser-scope.json')){
            const scope=JSON.parse(fs.readFileSync('release/browser-scope.json'));
            const rev=ref=>execFileSync('git',['rev-parse',ref],{encoding:'utf8'}).trim();
