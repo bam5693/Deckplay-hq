@@ -1,0 +1,36 @@
+name: Trunk 8 beta guidance focused check
+on:
+  push:
+    branches: [dev/trunk8-beta-status-help-20261101]
+    paths:
+      - support-center.js
+      - tests/e2e/support-center.spec.js
+      - playwright.trunk8-beta-guide.config.cjs
+      - .github/workflows/trunk8-beta-guide-focused.yml
+permissions:
+  contents: read
+jobs:
+  local-guide-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: node --check support-center.js && node --check tests/e2e/support-center.spec.js
+      - run: npm ci
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: staging-playwright-${{ hashFiles('package-lock.json') }}
+      - run: npx playwright install chromium --only-shell
+      - run: npx playwright test --config=playwright.trunk8-beta-guide.config.cjs --max-failures=1
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: trunk8-beta-guide-failure
+          path: test-results/
+          retention-days: 2
+          if-no-files-found: ignore

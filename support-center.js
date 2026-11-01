@@ -16,6 +16,13 @@
     <details><summary><strong>How do I report a suspicious listing?</strong></summary><p>Use the Report action on the listing or collector. For account access, bugs or other help, open a private support ticket below.</p></details>
     <details><summary><strong>What if my listing or account was restricted?</strong></summary><p>You can ask support to review a moderation decision. Explain which listing or action you want reviewed and why, without including passwords, payment information or private addresses. Sending a request does not automatically reverse a restriction.</p><button type="button" class="ghost" id="supportModerationReview">Request a moderation review</button></details>
     <details><summary><strong>What if a trade or shipping arrangement goes wrong?</strong></summary><p>DeckPlay beta does not process payments, purchases or shipping. If a collector pressures you to pay off-platform, report the listing or collector. For a proposed trade, delivery concern or confusing shipping preview, send a private support ticket. Do not include addresses, tracking numbers or payment details.</p><button type="button" class="ghost" id="supportTradeConcern">Get help with a trade or shipping concern</button></details>
+    <section id="supportBetaStatusNotice" aria-label="DeckPlay beta access status" style="border:1px solid #819c9655;border-radius:12px;padding:12px;margin:14px 0">
+      <strong id="supportBetaStatusHeading">Beta access status</strong>
+      <p id="supportBetaStatusDetail" class="muted" role="status" aria-live="polite"></p>
+      <p class="muted" style="font-size:12px;margin-bottom:0">Status is updated through an approved DeckPlay release, not by support tickets. Do not submit personal information or payment to request an invitation.</p>
+    </section>
+    <details id="supportBetaAccessGuide"><summary><strong>How does the private beta work, and can I request access?</strong></summary><p>DeckPlay is preparing a limited collector beta. An account or support request does not guarantee an invitation or a launch date. Do not send passwords, payment information, addresses or identity documents to request access. If invitations open, DeckPlay will communicate the official process through its own website.</p></details>
+    <details id="supportBetaIssueGuide"><summary><strong>I found a problem. How will I know what happens next?</strong></summary><p>Sign in and open a private support ticket describing what you were trying to do, what happened and which device you used. You can return to Help &amp; support → My tickets to read replies and check whether your report is open, waiting or resolved. A report is not an automatic fix or a promise of a response time. For immediate safety concerns, use the listing or collector Report action. Never share passwords, payment details or private addresses.</p></details>
     <div id="supportSignIn"><p class="muted">Sign in to send feedback or open and follow private support tickets.</p><button type="button" class="primary" id="supportSignInButton">Sign in to send feedback</button></div>
     <section id="supportPrivate" hidden>
       <h3>Your support tickets</h3>
@@ -51,6 +58,10 @@
         </section>
       </section>
       <div id="supportFeedbackQueueNotice" hidden role="status" style="padding:10px;margin:8px 0;border:1px solid #819c9640;border-radius:10px"><span id="supportFeedbackQueueLabel"></span> <button type="button" class="ghost" id="supportFeedbackQueueClear">Show all staff tickets</button></div>
+      <div id="supportStaffSortWrap" hidden style="gap:8px;align-items:center;flex-wrap:wrap;margin:8px 0">
+        <label for="supportStaffSort">Staff queue order</label>
+        <select id="supportStaffSort" aria-label="Sort staff support queue"><option value="newest">Latest activity first</option><option value="oldest">Longest waiting first</option></select>
+      </div>
       <p id="supportListStatus" class="status" role="status" aria-live="polite"></p>
       <div id="supportTicketList"></div>
       <button type="button" class="ghost" id="supportLoadMore" hidden>Load older tickets</button>
@@ -58,18 +69,21 @@
         <h3 id="supportTicketTitle"></h3>
         <p id="supportTicketBody" style="white-space:pre-wrap;overflow-wrap:anywhere"></p>
         <p id="supportTicketState" class="muted"></p>
+        <p id="supportTicketNextStep" class="muted" role="status" aria-live="polite"></p>
         <div id="supportReplies" aria-live="polite"></div>
         <p id="supportRepliesStatus" class="status" role="status" aria-live="polite"></p>
         <button type="button" class="ghost" id="supportRepliesLoadMore" hidden>Load earlier replies</button>
         <form id="supportReplyForm">
           <label for="supportReplyBody">Reply privately</label>
-          <textarea id="supportReplyBody" minlength="2" maxlength="3000" rows="3" required></textarea>
+          <textarea id="supportReplyBody" minlength="2" maxlength="3000" rows="3" aria-describedby="supportReplyCount" required></textarea>
+          <p id="supportReplyCount" class="muted" aria-live="off">0 / 3000 characters</p>
           <p id="supportReplyStatus" class="status" role="status"></p>
           <button class="primary" type="submit">Send reply</button>
         </form>
         <div id="supportStaffControls" hidden>
           <label for="supportStatusSelect">Staff: update status</label>
           <select id="supportStatusSelect"><option value="open">Open</option><option value="waiting_on_staff">Waiting on support</option><option value="waiting_on_user">Waiting on collector</option><option value="resolved">Resolved</option></select>
+          <p id="supportStaffStatusHint" class="muted" aria-live="polite"></p>
           <button class="ghost" type="button" id="supportSetStatus">Save status</button>
         </div>
       </section>
@@ -132,11 +146,23 @@
     </section>
   </div>`;
   document.body.append(modal);
+  // Owner-controlled release status. Changing this requires an intentional reviewed deployment.
+  // It does NOT grant accounts access, send invitations, or make a waitlist.
+  const betaAccessPhase = "in-development";
+  const betaStatusCopy = Object.freeze({
+    "in-development": ["Invitations not yet announced", "DeckPlay is still being built and tested. There is no public invitation request form or confirmed beta opening date."],
+    "invite-only": ["Invite-only beta", "Only collectors specifically invited by DeckPlay can participate. This page does not issue invitations or collect access requests."],
+    "paused": ["Beta access paused", "New beta access is temporarily paused. Existing support tickets can still be followed here."]
+  });
+  const betaStatus = betaStatusCopy[betaAccessPhase] || betaStatusCopy["in-development"];
+  document.getElementById("supportBetaStatusHeading").textContent = betaStatus[0];
+  document.getElementById("supportBetaStatusDetail").textContent = betaStatus[1];
   const el = id => document.getElementById(id);
   const status = (id, message) => { el(id).textContent = message || ""; };
   const date = value => new Date(value).toLocaleString();
   const labels = {open:"Open",waiting_on_staff:"Waiting on support",waiting_on_user:"Waiting on collector",resolved:"Resolved"};
-  let userId = null, generation = 0, isStaff = false, staffView = false, staffSafetyOnly = false, ticketFilter = "all", ticketCategory = "all", feedbackQueueSubject = null, selected = null, tickets = [], ticketOffset = 0, ticketListRequest = 0, loadingTickets = false, moreTickets = false, replyOffset = 0, moreReplies = false, loadingReplies = false, replyRequest = 0, returnToFeedback = false, returnTopic = "feedback", feedbackMode = false, tradeConcernMode = false, listingReportId = null, pendingReportId = null, viewGeneration = 0, createRequest = 0, replySubmitRequest = 0, statusSubmitRequest = 0;
+  const nextSteps = {open:"Your ticket has been recorded. Check My tickets for updates; no response time is guaranteed.",waiting_on_staff:"Your ticket is waiting on support. You can check this page for replies.",waiting_on_user:"Support is waiting for your response. Read the replies below and respond if more information is needed.",resolved:"This ticket is marked resolved. If the problem continues, open a new support ticket."};
+  let userId = null, generation = 0, isStaff = false, staffView = false, staffSafetyOnly = false, staffSort = "newest", ticketFilter = "all", ticketCategory = "all", feedbackQueueSubject = null, selected = null, tickets = [], ticketOffset = 0, ticketListRequest = 0, loadingTickets = false, moreTickets = false, replyOffset = 0, moreReplies = false, loadingReplies = false, replyRequest = 0, returnToFeedback = false, returnTopic = "feedback", feedbackMode = false, tradeConcernMode = false, listingReportId = null, pendingReportId = null, viewGeneration = 0, createRequest = 0, replySubmitRequest = 0, statusSubmitRequest = 0;
   // Drafts are tab-memory only, keyed by ticket and purged on account/view reset.
   const replyDrafts = new Map();
   // Unsaved beta feedback stays only in this tab and only for the same account.
@@ -286,7 +312,8 @@
     el("supportSetStatus").disabled = false;
     ++ticketListRequest; loadingTickets = false; moreTickets = false; ticketOffset = 0;
     el("supportLoadMore").hidden = true; el("supportLoadMore").disabled = false;
-    selected = null; tickets = []; replyDrafts.clear(); isStaff = false; staffView = false; staffSafetyOnly = false; ticketFilter = "all"; ticketCategory = "all";
+    selected = null; tickets = []; replyDrafts.clear(); isStaff = false; staffView = false; staffSafetyOnly = false; staffSort = "newest"; ticketFilter = "all";
+    el("supportStaffSort").value = "newest"; el("supportStaffSortWrap").hidden = true; ticketCategory = "all";
     el("supportTicketCategory").value = "all"; el("supportTicketCategory").disabled = false;
     feedbackQueueSubject=null;el("supportFeedbackQueueNotice").hidden=true;el("supportFeedbackQueueLabel").textContent="";
     modal.querySelectorAll("[data-support-filter]").forEach(button => button.setAttribute("aria-pressed", String(button.dataset.supportFilter === ticketFilter)));
@@ -295,6 +322,7 @@
     el("supportTicketTitle").textContent = "";
     el("supportTicketBody").textContent = "";
     el("supportTicketState").textContent = "";
+    el("supportTicketNextStep").textContent = "";
     ++replyRequest; replyOffset = 0; moreReplies = false; loadingReplies = false;
     el("supportReplies").replaceChildren();
     el("supportRepliesLoadMore").hidden = true;
@@ -304,6 +332,8 @@
     el("supportStaffSafety").hidden = true;
     el("supportStaffSafety").setAttribute("aria-pressed","false");
     el("supportStaffControls").hidden = true;
+    el("supportStatusSelect").value = "open";
+    el("supportStaffStatusHint").textContent = "";
     el("supportStaffOverview").hidden = true;
     el("supportStaffOpenCount").textContent = "—";
     el("supportStaffSafetyCount").textContent = "—";
@@ -311,6 +341,7 @@
     for(const id of ["supportFeedbackEmptyCount","supportFeedbackDiscoveryCount","supportFeedbackContactCount"])el(id).textContent="—";
     status("supportFeedbackOverviewStatus","");
     el("supportReplyBody").value = "";
+    updateReplyCount();
     ["supportListStatus","supportReplyStatus","supportCreateStatus"].forEach(id=>status(id,""));
   }
   const menu = el("accountMenu");
@@ -538,6 +569,7 @@
     const offset = append ? ticketOffset : 0;
     const loadMore = el("supportLoadMore");
     loadingTickets = true;
+    el("supportStaffSortWrap").hidden = !(staffView && isStaff);
     loadMore.disabled = true;
     if (!append) {
       moreTickets = false;
@@ -548,7 +580,8 @@
     try {
       let query = supabaseClient.from("support_tickets")
         .select("id,owner_id,category,subject,body,status,created_at,updated_at")
-        .order("updated_at",{ascending:false}).order("id",{ascending:false})
+        .order("updated_at",{ascending: staffView && isStaff && staffSort === "oldest"})
+        .order("id",{ascending: staffView && isStaff && staffSort === "oldest"})
         .range(offset, offset + 40);
       if (!staffView) query = query.eq("owner_id",u);
       if (staffView && isStaff && staffSafetyOnly) query = query.eq("category","safety");
@@ -601,6 +634,16 @@
       }
     }
   }
+  const staffStatusDescriptions = {
+    open:"New or active case. Support has not marked who should respond next.",
+    waiting_on_staff:"Support needs to review or reply next.",
+    waiting_on_user:"Collector needs to reply or provide more information.",
+    resolved:"Case is closed. The collector can open a new ticket if needed."
+  };
+  const updateStaffStatusHint = () => {
+    el("supportStaffStatusHint").textContent = staffStatusDescriptions[el("supportStatusSelect").value] || "";
+  };
+  el("supportStatusSelect").addEventListener("change", updateStaffStatusHint);
   el("supportLoadMore").addEventListener("click", () => { void loadTickets(true); });
   async function showTicket(id){
     const ticket=tickets.find(t=>t.id===id);
@@ -615,14 +658,17 @@
     }
     selected=id;
     el("supportReplyBody").value=replyDrafts.get(id)||"";
+    updateReplyCount();
     const v=++generation,u=userId;
     el("supportTicketDetail").hidden=false;
     el("supportTicketTitle").textContent=ticket.subject;
     el("supportTicketBody").textContent=ticket.body;
     el("supportTicketState").textContent=(labels[ticket.status]||ticket.status)+" · "+date(ticket.created_at);
+    el("supportTicketNextStep").textContent=nextSteps[ticket.status]||"Check this ticket for status updates.";
     el("supportReplyForm").hidden=ticket.status==="resolved";
     el("supportStaffControls").hidden=!isStaff;
     el("supportStatusSelect").value=ticket.status;
+    updateStaffStatusHint();
     ++replyRequest; replyOffset = 0; moreReplies = false; loadingReplies = false;
     el("supportRepliesLoadMore").hidden = true;
     el("supportRepliesLoadMore").disabled = false;
@@ -735,7 +781,13 @@
   function resetTicketCategory(next="all",locked=false){
     ticketCategory=next;el("supportTicketCategory").value=next;el("supportTicketCategory").disabled=locked;
   }
-  el("supportMine").addEventListener("click",()=>{clearFeedbackQueue();staffView=false;staffSafetyOnly=false;resetTicketCategory();el("supportStaffSafety").setAttribute("aria-pressed","false");selected=null;el("supportTicketDetail").hidden=true;loadTickets()});
+  el("supportStaffSort").addEventListener("change",()=>{
+    if(!isStaff || !staffView){el("supportStaffSort").value="newest";return;}
+    staffSort=el("supportStaffSort").value==="oldest"?"oldest":"newest";
+    ticketOffset=0;moreTickets=false;selected=null;el("supportTicketDetail").hidden=true;
+    void loadTickets();
+  });
+  el("supportMine").addEventListener("click",()=>{clearFeedbackQueue();staffView=false;staffSafetyOnly=false;el("supportStaffSortWrap").hidden=true;resetTicketCategory();el("supportStaffSafety").setAttribute("aria-pressed","false");selected=null;el("supportTicketDetail").hidden=true;loadTickets()});
   el("supportStaff").addEventListener("click",()=>{clearFeedbackQueue();if(!isStaff)return;staffView=true;staffSafetyOnly=false;resetTicketCategory();el("supportStaffSafety").setAttribute("aria-pressed","false");selected=null;el("supportTicketDetail").hidden=true;loadTickets()});
   el("supportStaffSafety").addEventListener("click",()=>{clearFeedbackQueue();if(!isStaff)return;staffView=true;staffSafetyOnly=true;resetTicketCategory("safety",true);el("supportStaffSafety").setAttribute("aria-pressed","true");selected=null;el("supportTicketDetail").hidden=true;loadTickets()});
   el("supportRefresh").addEventListener("click", () => { void loadTickets(); if(isStaff)void refreshStaffOverview(); });
@@ -810,7 +862,12 @@
     }catch(error){if(validWrite(v,u))status("supportCreateStatus",error.message||"Could not create ticket. Try again.")}
     finally{if(request===createRequest)button.disabled=false}
   });
+  const updateReplyCount = () => {
+    el("supportReplyCount").textContent = el("supportReplyBody").value.length + " / 3000 characters";
+  };
+  updateReplyCount();
   el("supportReplyBody").addEventListener("input",event=>{
+    updateReplyCount();
     if(selected && userId) replyDrafts.set(selected,event.target.value);
   });
   el("supportReplyForm").addEventListener("submit",async e=>{
@@ -840,7 +897,7 @@
       if(!validWrite(v,u))return;
       if(replyDrafts.get(id)===submittedRaw)replyDrafts.delete(id);
       if(selected!==id)return; // Never erase or overwrite the other ticket's draft.
-      if(el("supportReplyBody").value===submittedRaw)el("supportReplyBody").value="";
+      if(el("supportReplyBody").value===submittedRaw){el("supportReplyBody").value="";updateReplyCount();}
       const newerDraftSaved=replyDrafts.has(id);
       await loadTickets(); // Refresh reopens the ticket and clears the previous status line.
       if(validWrite(v,u)&&selected===id)status("supportReplyStatus",newerDraftSaved?"Reply sent. Your newer draft is saved.":"Reply sent.");

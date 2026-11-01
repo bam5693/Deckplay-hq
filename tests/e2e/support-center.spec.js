@@ -1371,3 +1371,136 @@ test('T8.3: oversized support reply never reaches RPC and preserves draft',async
  await expect(page.locator('#supportReplyBody')).toHaveValue('x'.repeat(3001));
  expect(await page.evaluate(()=>window.__db.calls.filter(x=>x.name==='reply_support_ticket').length)).toBe(0);
 });
+
+test('T8.6 private beta access and issue follow-up set honest expectations for guests',async({page})=>{
+ await boot(page);
+ await page.getByRole('button',{name:'Help & support'}).last().click();
+ const access=page.locator('#supportBetaAccessGuide');
+ await expect(access).toBeVisible();
+ await access.locator('summary').click();
+ await expect(access).toContainText('does not guarantee an invitation or a launch date');
+ await expect(access).toContainText('Do not send passwords');
+ const followup=page.locator('#supportBetaIssueGuide');
+ await followup.locator('summary').click();
+ await expect(followup).toContainText('My tickets');
+ await expect(followup).toContainText('not an automatic fix or a promise of a response time');
+ await expect(followup).toContainText('Report action');
+ await expect(page.locator('#supportSignIn')).toBeVisible();
+ await expect(page.locator('#supportPrivate')).toBeHidden();
+});
+
+test('T8.6 ticket next-step guidance explains whose action is needed without promises',async({page})=>{
+ await boot(page);await signIn(page,'buyer');
+ await page.getByRole('button',{name:'Help & support'}).last().click();
+ await page.locator('#supportSubject').fill('Synthetic beta navigation issue');
+ await page.locator('#supportDescription').fill('A test report about finding the marketplace.');
+ await page.getByRole('button',{name:'Create private ticket'}).click();
+ await expect(page.locator('#supportTicketNextStep')).toContainText('no response time is guaranteed');
+ await page.evaluate(()=>{window.__db.tickets[0].status='waiting_on_staff'});
+ await page.locator('#supportRefresh').click();
+ await page.locator('#supportTicketList button').first().click();
+ await expect(page.locator('#supportTicketNextStep')).toContainText('waiting on support');
+ await page.evaluate(()=>{window.__db.tickets[0].status='waiting_on_user'});
+ await page.locator('#supportRefresh').click();
+ await page.locator('#supportTicketList button').first().click();
+ await expect(page.locator('#supportTicketNextStep')).toContainText('Support is waiting for your response');
+ await page.evaluate(()=>{window.__db.tickets[0].status='resolved'});
+ await page.locator('#supportRefresh').click();
+ await page.locator('#supportTicketList button').first().click();
+ await expect(page.locator('#supportTicketNextStep')).toContainText('marked resolved');
+ await expect(page.locator('#supportReplyForm')).toBeHidden();
+});
+
+test('T8.6 release-controlled beta status is honest and does not collect invitations',async({page})=>{
+ await boot(page);
+ await page.getByRole('button',{name:'Help & support'}).last().click();
+ const notice=page.locator('#supportBetaStatusNotice');
+ await expect(notice).toBeVisible();
+ await expect(page.locator('#supportBetaStatusHeading')).toHaveText('Invitations not yet announced');
+ await expect(page.locator('#supportBetaStatusDetail')).toContainText('no public invitation request form');
+ await expect(notice).toContainText('not by support tickets');
+ await expect(notice.locator('form,input,textarea')).toHaveCount(0);
+ await expect(page.locator('#supportPrivate')).toBeHidden();
+});
+
+test('T8.3 staff queue supports oldest waiting first with server pagination and account isolation',async({page})=>{
+ await boot(page);
+ await page.evaluate(()=>{
+  const now=Date.now();
+  for(let i=0;i<47;i++){
+   const time=new Date(now-(46-i)*60_000).toISOString();
+   window.__db.tickets.push({
+    id:'sort-ticket-'+String(i).padStart(3,'0'),owner_id:'buyer',category:'account',
+    subject:'Sort queue '+i,body:'Synthetic sorting fixture',status:'open',
+    created_at:time,updated_at:time
+   });
+  }
+ });
+ await signIn(page,'staff');
+ await page.getByRole('button',{name:'Help & support'}).last().click();
+ await page.locator('#supportStaff').click();
+ const sorter=page.locator('#supportStaffSort');
+ await expect(sorter).toBeVisible();
+ await expect(page.locator('#supportTicketList button').first()).toContainText('Sort queue 46');
+ await sorter.selectOption('oldest');
+ await expect(page.locator('#supportTicketList button').first()).toContainText('Sort queue 0');
+ await expect(page.locator('#supportTicketList button')).toHaveCount(40);
+ await page.locator('#supportLoadMore').click();
+ await expect(page.locator('#supportTicketList button')).toHaveCount(47);
+ await expect(page.locator('#supportTicketList button').last()).toContainText('Sort queue 46');
+ await page.locator('#supportMine').click();
+ await expect(page.locator('#supportStaffSortWrap')).toBeHidden();
+ await page.evaluate(()=>{window.currentUser={id:'buyer'};window.__authCallback('SIGNED_IN',{user:{id:'buyer'}})});
+ await page.getByRole('button',{name:'Help & support'}).last().click();
+ await expect(page.locator('#supportStaffSortWrap')).toBeHidden();
+ await expect(sorter).toHaveValue('newest');
+ await expect(page.locator('#supportTicketList button').first()).toContainText('Sort queue 46');
+});
+
+test('T8.3: private reply length indicator follows draft and resets after send',async({page})=>{
+ await boot(page);await signIn(page,'buyer');
+ await page.getByRole('button',{name:'Help & support'}).last().click();
+ await page.locator('#supportSubject').fill('Question about a collectible listing');
+ await page.locator('#supportDescription').fill('Synthetic support request for a collectible listing and follow-up.');
+ await page.getByRole('button',{name:'Create private ticket'}).click();
+ await expect(page.locator('#supportReplyCount')).toHaveText('0 / 3000 characters');
+ await page.locator('#supportReplyBody').fill('A short follow-up');
+ await expect(page.locator('#supportReplyCount')).toHaveText('17 / 3000 characters');
+ await page.getByRole('button',{name:'Send reply'}).click();
+ await expect(page.locator('#supportReplyCount')).toHaveText('0 / 3000 characters');
+});
+
+test('T8.3: staff sees what a ticket status means before saving',async({page})=>{
+ await boot(page);await signIn(page,'buyer');
+ await page.getByRole('button',{name:'Help & support'}).last().click();
+ await page.locator('#supportSubject').fill('Help with collectible listing');
+ await page.locator('#supportDescription').fill('Synthetic ticket to inspect the staff status guidance.');
+ await page.getByRole('button',{name:'Create private ticket'}).click();
+ await page.evaluate(()=>{window.currentUser={id:'staff'};window.__authCallback('SIGNED_IN',{user:{id:'staff'}})});
+ await page.getByRole('button',{name:'Help & support'}).last().click();
+ await page.locator('#supportStaff').click();
+ await page.locator('#supportTicketList button').filter({hasText:'Help with collectible listing'}).click();
+ await expect(page.locator('#supportStaffStatusHint')).toContainText('New or active case');
+ await page.locator('#supportStatusSelect').selectOption('waiting_on_user');
+ await expect(page.locator('#supportStaffStatusHint')).toContainText('Collector needs to reply');
+ await page.locator('#supportStatusSelect').selectOption('resolved');
+ await expect(page.locator('#supportStaffStatusHint')).toContainText('Case is closed');
+});
+
+test('T8.3: changing accounts clears previous staff status guidance',async({page})=>{
+ await boot(page);await signIn(page,'buyer');
+ await page.getByRole('button',{name:'Help & support'}).last().click();
+ await page.locator('#supportSubject').fill('Question for DeckPlay staff');
+ await page.locator('#supportDescription').fill('Synthetic ticket testing private staff status reset.');
+ await page.getByRole('button',{name:'Create private ticket'}).click();
+ await page.evaluate(()=>{window.currentUser={id:'staff'};window.__authCallback('SIGNED_IN',{user:{id:'staff'}})});
+ await page.getByRole('button',{name:'Help & support'}).last().click();
+ await page.locator('#supportStaff').click();
+ await page.locator('#supportTicketList button').filter({hasText:'Question for DeckPlay staff'}).click();
+ await page.locator('#supportStatusSelect').selectOption('waiting_on_user');
+ await expect(page.locator('#supportStaffStatusHint')).toContainText('Collector needs to reply');
+ await page.evaluate(()=>{window.currentUser={id:'other'};window.__authCallback('SIGNED_IN',{user:{id:'other'}})});
+ await expect(page.locator('#supportStaffStatusHint')).toBeEmpty();
+ await expect(page.locator('#supportStatusSelect')).toHaveValue('open');
+ await expect(page.locator('#supportStaffControls')).toBeHidden();
+});

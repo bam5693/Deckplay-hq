@@ -1,0 +1,25 @@
+name: Trunk 8 staging invitation safety checks
+on:
+  push:
+    branches: [dev/trunk8-beta-status-help-20261101]
+    paths:
+      - scripts/beta-invite.mjs
+      - tests/unit/beta-invite.test.mjs
+      - .github/workflows/trunk8-invite-dry-run.yml
+permissions:
+  contents: read
+jobs:
+  invite-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Static preflight
+        run: node --check scripts/beta-invite.mjs && node --check tests/unit/beta-invite.test.mjs
+      - name: Run only new invitation safety tests (no secrets or email)
+        run: node --test tests/unit/beta-invite.test.mjs
+      - name: Verify default dry run never sends
+        run: node scripts/beta-invite.mjs --email=example@example.test
