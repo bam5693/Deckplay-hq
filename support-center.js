@@ -60,6 +60,7 @@
         <p id="supportTicketState" class="muted"></p>
         <div id="supportReplies" aria-live="polite"></div>
         <p id="supportRepliesStatus" class="status" role="status" aria-live="polite"></p>
+        <button type="button" class="ghost" id="supportRepliesRetry" hidden>Retry loading replies</button>
         <button type="button" class="ghost" id="supportRepliesLoadMore" hidden>Load earlier replies</button>
         <form id="supportReplyForm">
           <label for="supportReplyBody">Reply privately</label>
@@ -299,6 +300,7 @@
     el("supportReplies").replaceChildren();
     el("supportRepliesLoadMore").hidden = true;
     el("supportRepliesLoadMore").disabled = false;
+    el("supportRepliesRetry").hidden = true;
     status("supportRepliesStatus","");
     el("supportStaff").hidden = true;
     el("supportStaffSafety").hidden = true;
@@ -626,6 +628,7 @@
     ++replyRequest; replyOffset = 0; moreReplies = false; loadingReplies = false;
     el("supportRepliesLoadMore").hidden = true;
     el("supportRepliesLoadMore").disabled = false;
+    el("supportRepliesRetry").hidden = true;
     el("supportReplies").textContent="Loading replies…";
     status("supportRepliesStatus","");
     status("supportReplyStatus","");
@@ -643,6 +646,7 @@
     loadingReplies = true;
     button.disabled = true;
     status("supportRepliesStatus", append ? "Loading earlier replies…" : "");
+    if (!append) el("supportRepliesRetry").hidden = true;
     try {
       const {data,error}=await supabaseClient.from("support_ticket_replies")
         .select("id,author_id,is_staff,body,created_at")
@@ -675,7 +679,10 @@
       status("supportRepliesStatus",moreReplies?"Showing "+replyOffset+" most recent replies. Load earlier replies for more.":"");
     }catch(error){
       if(validWrite(v,u)&&selected===id&&request===replyRequest){
-        if(!append)el("supportReplies").textContent="Replies could not load. Reopen this ticket to retry.";
+        if(!append){
+          el("supportReplies").textContent="Replies could not load.";
+          el("supportRepliesRetry").hidden=false;
+        }
         else button.hidden=false;
         status("supportRepliesStatus",append?"Could not load earlier replies. Retry.":"");
       }
@@ -685,6 +692,9 @@
   }
   el("supportRepliesLoadMore").addEventListener("click",()=>{
     if(selected&&userId)void loadReplies(selected,true,viewGeneration,userId);
+  });
+  el("supportRepliesRetry").addEventListener("click",()=>{
+    if(selected&&userId)void loadReplies(selected,false,viewGeneration,userId);
   });
   modal.querySelectorAll("[data-support-filter]").forEach(button => button.addEventListener("click", () => {
     const next = button.dataset.supportFilter;
