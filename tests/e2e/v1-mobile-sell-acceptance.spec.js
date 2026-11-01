@@ -10,8 +10,8 @@ test('a first-time seller makes one classification choice across eight listing t
  for(const [type,category] of Object.entries(types)){
   await page.locator('#listingType').selectOption(type);
   await expect(page.locator('#category')).toHaveValue(category);
-  await expect(page.locator('#listingCategoryAdvanced')).toBeHidden();
-  await expect(page.locator('#listingCategoryAdvanced select')).toHaveCount(1);
+  await expect(page.locator('#listingCategoryChoice'))[type==='other'?'toBeVisible':'toBeHidden']();
+  await expect(page.locator('#listingCategoryChoice select')).toHaveCount(1);
   await expect(page.locator('#deckFields'))[type==='deck'?'toBeVisible':'toBeHidden']();
   await expect(page.locator('#cardConditionWrap'))[category==='trading_cards'?'toBeVisible':'toBeHidden']();
  }
@@ -72,7 +72,7 @@ test('Jayden and Tanner inspect customer-visible screens, not just selectable op
    const b=document.getElementById('publishButton');
    const radius=parseFloat(getComputedStyle(a).borderTopLeftRadius);
    const buttonHeight=Math.abs(a.getBoundingClientRect().height-b.getBoundingClientRect().height);
-   return {overflow,help:text,visibleCategory:visible(document.getElementById('listingCategoryAdvanced')),cancelRadius:radius,buttonHeight,scrollWidth:dlg.scrollWidth,clientWidth:dlg.clientWidth};
+   return {overflow,help:text,visibleCategory:visible(document.getElementById('listingCategoryChoice')),cancelRadius:radius,buttonHeight,scrollWidth:dlg.scrollWidth,clientWidth:dlg.clientWidth};
   });
   expect(observations.overflow,mission.goal+' must not clip controls').toEqual([]);
   expect(observations.visibleCategory,mission.goal+' must not ask twice').toBe(false);
@@ -95,7 +95,7 @@ test('hardware type maps to the actual category without a second category questi
  for(const [hardware,category] of [['Console','consoles'],['Controller','controllers'],['Accessory','accessories']]){
   await page.locator('#consoleItemType').selectOption(hardware);
   await expect(page.locator('#category')).toHaveValue(category);
-  await expect(page.locator('#listingCategoryAdvanced')).toBeHidden();
+  await expect(page.locator('#listingCategoryChoice')).toBeHidden();
   await expect(page.locator('#consoleFields')).toBeVisible();
   await expect(page.locator('#gamePlatformFields')).toBeHidden();
   await expect(page.locator('#listingDescriptionHelp')).toContainText('compatibility');
@@ -105,4 +105,24 @@ test('hardware type maps to the actual category without a second category questi
  await page.locator('#listingType').selectOption('console');
  await expect(page.locator('#consoleItemType')).toHaveValue('Console');
  await expect(page.locator('#category')).toHaveValue('consoles');
+});
+
+
+test('Other item can choose a buyer-search category, and card set fields reset after switching type',async({page})=>{
+ await page.locator('#listingType').selectOption('other');
+ await expect(page.locator('#listingCategoryChoice')).toBeVisible();
+ await page.locator('#category').selectOption('video_games');
+ await expect(page.locator('#gamePlatformFields')).toBeVisible();
+ await expect(page.locator('#listingDescriptionHelp')).toContainText('platform');
+ await page.locator('#listingType').selectOption('single');
+ await expect(page.locator('#listingCategoryChoice')).toBeHidden();
+ await expect(page.locator('#category')).toHaveValue('trading_cards');
+ await page.locator('#tcgGame').selectOption('pokemon');
+ await expect(page.locator('#tcgSetFields')).toBeVisible();
+ await page.locator('#listingType').selectOption('game');
+ await page.locator('#listingType').selectOption('single');
+ await expect(page.locator('#tcgGame')).toHaveValue('');
+ await expect(page.locator('#tcgSetFields')).toBeHidden();
+ await page.locator('#tcgGame').selectOption('one_piece');
+ await expect(page.locator('#tcgSetFields')).toBeVisible();
 });
