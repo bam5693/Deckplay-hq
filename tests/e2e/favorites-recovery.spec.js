@@ -254,3 +254,16 @@ test('saved profile gives a retry rather than spinning forever when profile pref
  await expect(page.locator('#profilePageContent')).toContainText('No saved items yet');
  expect(await page.evaluate(()=>profilePreflightReads)).toBe(2);
 });
+
+
+test('Favorites menu routes to the complete account Saved tab, not the loaded marketplace page',async({page})=>{
+ await fixture(page);
+ await page.evaluate(()=>{
+  window.savedRouteVisits=[];
+  showCollectorPage=async tab=>{savedRouteVisits.push(tab)};
+  onlySavedListings=false;
+  document.getElementById('myFavorites').click();
+ });
+ expect(await page.evaluate(()=>savedRouteVisits)).toEqual(['saved']);
+ expect(await page.evaluate(()=>onlySavedListings)).toBe(false);
+});
