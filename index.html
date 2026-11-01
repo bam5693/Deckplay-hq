@@ -1608,7 +1608,14 @@ document.getElementById("photos").addEventListener("change",event=>{
  status.textContent=unique.length?`${unique.length} photo(s) added. Tap Make cover to choose the first photo.`:"Those photos are already selected.";
  renderListingPhotos()
 });
-function syncCategoryFields(){const cat=document.getElementById("category").value;const collectible=cat==="collectibles";document.getElementById("collectibleSubcategoryWrap").hidden=!collectible;document.getElementById("collectibleSubcategory").required=collectible;const show=["consoles","controllers","accessories"].includes(cat);const game=cat==="video_games";document.getElementById("gamePlatformFields").hidden=!game;document.getElementById("gamePlatform").required=game;document.getElementById("consoleItemTypeWrap").hidden=!show;document.getElementById("consoleItemType").required=show;document.getElementById("consoleFields").hidden=!show;document.getElementById("consoleBrand").required=show;document.getElementById("consoleModel").required=show}
+function syncCategoryFields(){const cat=document.getElementById("category").value;const collectible=cat==="collectibles";document.getElementById("collectibleSubcategoryWrap").hidden=!collectible;document.getElementById("collectibleSubcategory").required=collectible;const show=["consoles","controllers","accessories"].includes(cat);const game=cat==="video_games";document.getElementById("gamePlatformFields").hidden=!game;document.getElementById("gamePlatform").required=game;
+ // "Other item" sellers already chose the exact hardware category. Do not ask them again.
+ const other=document.getElementById("listingType").value==="other";
+ const hardware=document.getElementById("consoleItemType");
+ if(show&&other)hardware.value={consoles:"Console",controllers:"Controller",accessories:"Accessory"}[cat];
+ document.getElementById("consoleItemTypeWrap").hidden=!show||other;
+ hardware.required=show&&!other;
+ document.getElementById("consoleFields").hidden=!show;document.getElementById("consoleBrand").required=show;document.getElementById("consoleModel").required=show}
 document.getElementById("category").addEventListener("change",syncCategoryFields);
 document.getElementById("category").addEventListener("change",()=>{syncGradedCondition();updateListingQuickSummary()});
 syncCategoryFields();
