@@ -353,6 +353,18 @@
         "label": "Score"
       },
       {
+        "value": "Pro Set",
+        "label": "Pro Set"
+      },
+      {
+        "value": "Pacific",
+        "label": "Pacific"
+      },
+      {
+        "value": "Press Pass",
+        "label": "Press Pass"
+      },
+      {
         "value": "Other / Unknown",
         "label": "Other / Unknown"
       }
