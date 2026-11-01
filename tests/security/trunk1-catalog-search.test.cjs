@@ -44,5 +44,32 @@ test('Jayden: mainstream Magic releases appear as selectable sets, not manufactu
 
 test('Tanner: seller set metadata remains included in buyer searchable description', () => {
   assert.match(html, /\["Set",document\.getElementById\("tcgCustomSet"\)\.value\.trim\(\)\|\|document\.getElementById\("tcgSet"\)\.value\]/);
-  assert.match(html, /marketplaceSearchText\(\[item\.n,item\.c,item\.s,item\.gameLabel,item\.description/);
+  assert.match(html, /marketplaceCurrentSearchDescription\(item\.description\)/);
+});
+
+test('Jayden: edited game platform wins for buyer filters, details and search', () => {
+  const helperSource = html.match(/function marketplaceCurrentPlatform\\(description\\)\\{[\\s\\S]*?\\n\\}/)?.[0];
+  assert.ok(helperSource, 'Current game platform helper must exist');
+  const platform = vm.runInNewContext('(' + helperSource + ')');
+  const currentDescriptionSource = html.match(/function marketplaceCurrentSearchDescription\\(value\\)\\{[\\s\\S]*?\\n\\}/)?.[0];
+  assert.ok(currentDescriptionSource, 'Current seller metadata search helper must exist');
+  const buyerDescription = vm.runInNewContext('(' + currentDescriptionSource + ')');
+  const mappingSource = html.match(/function marketplaceItemFromRow\\(row,profile\\)\\{[^\\n]*\\}/)?.[0];
+  assert.ok(mappingSource, 'Real marketplace row mapper must exist');
+  const mapRow = vm.runInNewContext('(' + mappingSource + ')', {
+    marketplaceCurrentPlatform: platform,
+    databaseCategory: () => 'Video Games',
+    databaseCondition: () => 'Used',
+    databaseEmoji: () => '',
+    tcgNames: {}
+  });
+  const description = 'Platform: PlayStation 5\\nSeller note: complete in box\\n[Listing classification]\\nCategory: Video games\\nPlatform: Nintendo Switch 2\\n[End classification]';
+  const row = { id: 'synthetic-game', title: 'Retro game', category: 'video_games', price: 39, description };
+  const item = mapRow(row);
+  assert.equal(item.platform, 'Nintendo Switch 2', 'Buyer platform must match latest seller edit');
+  assert.ok(buyerDescription(description).includes('Nintendo Switch 2'));
+  assert.ok(!buyerDescription(description).includes('Platform: PlayStation 5'), 'Search must not revive old platform');
+  assert.equal(platform('Platform: Sega Dreamcast'), 'Sega Dreamcast', 'Legacy unedited listings still work');
+  assert.equal(platform('Platform: PlayStation 5\\n[Listing classification]\\nPlatform: \\n[End classification]'), '', 'Cleared edit must not restore old platform');
+  assert.match(html, /item\\.platform\\?\\?marketplaceCurrentPlatform\\(item\\.description\\)/, 'Buyer filter must use the current platform without stale fallback');
 });
