@@ -52,3 +52,36 @@ for(const theme of ['light','dark']){
   await expect(page.locator('#sellModal')).toHaveClass(/open/);
  });
 }
+
+for(const theme of ['light','dark']){
+ test('T1 edit classification avoids duplicate category and preserves hardware buyer taxonomy — mobile '+theme,async({page})=>{
+  await page.setViewportSize({width:390,height:844});
+  await page.route('https://**/*',route=>route.abort());
+  await page.goto('/');
+  await page.evaluate(theme=>{
+   document.documentElement.dataset.theme=theme;
+   window.trunk1Classification=createListingEditorClassification(document.getElementById('editListingClassification'),{});
+   trunk1Classification.reset({category:'controllers',product_type:'console',condition:'used',description:'[Hardware: Controller]\\nBrand: Sony\\nModel: DualSense'});
+  },theme);
+  await page.locator('#editListingClassification summary').click();
+  await page.locator('#editClassificationEnabled').check();
+  await expect(page.locator('#editAttribute_listingType')).toHaveValue('console');
+  await expect(page.locator('#editAttribute_category')).toHaveValue('controllers');
+  await expect(page.locator('#editAttribute_category')).toBeHidden();
+  await expect(page.locator('#editAttribute_consoleItemType')).toHaveValue('Controller');
+  await page.locator('#editAttribute_consoleItemType').selectOption('Accessory');
+  await expect(page.locator('#editAttribute_category')).toHaveValue('accessories');
+  await expect(page.locator('#editAttribute_category')).toBeHidden();
+  await page.locator('#editAttribute_listingType').selectOption('other');
+  await expect(page.locator('#editAttribute_category')).toBeVisible();
+  await expect(page.locator('#editAttribute_category')).toHaveValue('other');
+  await page.locator('#editAttribute_category').selectOption('video_games');
+  await expect(page.locator('#editAttribute_listingType')).toHaveValue('other');
+  await page.locator('#editAttribute_listingType').selectOption('game');
+  await expect(page.locator('#editAttribute_category')).toHaveValue('video_games');
+  await expect(page.locator('#editAttribute_category')).toBeHidden();
+  await page.locator('#editAttribute_listingType').selectOption('single');
+  await expect(page.locator('#editAttribute_category')).toHaveValue('trading_cards');
+  await expect(page.locator('#editAttribute_category')).toBeHidden();
+ });
+}
