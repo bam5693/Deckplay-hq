@@ -37,6 +37,9 @@ export function parseInviteArgs(args) {
     else throw new Error('Unknown option. Use --email=... and optionally --send --confirm=SEND-STAGING-INVITE.');
   }
   if (!result.email) throw new Error('Use --email=collector@example.com.');
+  if (!result.send && result.confirmation !== null) {
+    throw new Error('Confirmation is only accepted together with --send. No invitation was sent.');
+  }
   return result;
 }
 
