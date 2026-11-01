@@ -1956,7 +1956,10 @@ function exactWantedMatches(post){
  if(budget!==null&&(!Number.isFinite(budget)||budget<0))return [];
  const available=item=>item.id&&item.sellerId&&item.sellerId!==post.user_id&&!blockedCollectorIds.has(item.sellerId)
   &&(!item.status||item.status==="active")
-  &&(budget===null||(Number.isFinite(Number(item.p))&&Number(item.p)<=budget));
+  // A trade-only Wanted post must not advertise sale-only inventory as a trade match.
+  &&(post.offer_type!=="trade"||item.trades===true)
+  // An optional cash budget is relevant to buying, not a trade-only request.
+  &&(post.offer_type==="trade"||budget===null||(Number.isFinite(Number(item.p))&&Number(item.p)<=budget));
  if(meta.cardNumber){
   const cardNumber=normCard(meta.cardNumber);if(!cardNumber)return [];
   return items.filter(item=>available(item)&&item.c==="Trading Cards"&&item.game===post.game
