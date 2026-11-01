@@ -2375,11 +2375,23 @@ function publicCollectionHtml(p,id,isBlocked){
  const links=(Array.isArray(p.collection_links)?p.collection_links:[]).slice(0,3).filter(l=>safeCollectionUrl(l.url));if(!links.length)return "";
  return `<section class="public-collections"><h3>Shared collections</h3><p class="muted">External pages · Unverified ownership · Items are not listed for sale</p>${links.map(l=>`<p><a href="${escapeHtml(safeCollectionUrl(l.url))}" target="_blank" rel="noopener noreferrer nofollow ugc">${escapeHtml(l.label)} ↗ <small>(${escapeHtml(new URL(l.url).hostname)})</small></a></p>`).join("")}${p.collection_inquiry_mode!=="off"&&["trades","buy_trade"].includes(p.collection_inquiry_mode)&&!isBlocked&&currentUser?.id!==id?`<button class="ghost" type="button" data-collection-inquiry="${escapeHtml(id)}">${p.collection_inquiry_mode==="trades"?"Ask about a trade":"Ask about buying or trading"}</button>`:'<p class="muted">Collection showcase · New collection inquiries are off</p>'}</section>`;
 }
+async function publicProfileRead(request,timeout=8000){
+ try{return await readMarketplaceRequest(request,timeout)}
+ catch(error){return {data:null,error}}
+}
 async function showPublicProfile(id){
  const version=++publicProfileVersion,viewer=currentUser?.id,current=()=>version===publicProfileVersion&&currentUser?.id===viewer;
  if(blockedCollectorIds.has(id)){toast("This collector is blocked. Unblock them in Settings to view their profile.");return}
  const content=document.getElementById("publicProfileContent");content.textContent="Loading collector…";openModal("publicProfileModal");
- const [pResult,lResult,wResult,blockResult]=await Promise.all([supabaseClient.from("profiles").select("username,bio,favorite_tcg,location_label,avatar_url,collection_links,collection_inquiry_mode").eq("id",id).maybeSingle(),supabaseClient.from("listings").select("id,title,description,price,image_urls,condition,category,tcg_game,collectible_subcategory,accepts_trades,accepts_price_offers,created_at,seller_id").eq("seller_id",id).eq("status","active").order("created_at",{ascending:false}).order("id",{ascending:false}).limit(61),supabaseClient.from("wanted_posts").select("id,title,details,game").eq("user_id",id).order("created_at",{ascending:false}).limit(30),currentUser?supabaseClient.from("user_blocks").select("blocked_id").eq("blocker_id",currentUser.id).eq("blocked_id",id).maybeSingle():Promise.resolve({data:null})]);
+ // Each section has a bounded read. An optional Wanted failure must not keep
+ // an otherwise usable storefront stuck on "Loading collector" forever.
+ // The block check remains fail-closed before any profile details are shown.
+ const [pResult,lResult,wResult,blockResult]=await Promise.all([
+  publicProfileRead(supabaseClient.from("profiles").select("username,bio,favorite_tcg,location_label,avatar_url,collection_links,collection_inquiry_mode").eq("id",id).maybeSingle()),
+  publicProfileRead(supabaseClient.from("listings").select("id,title,description,price,image_urls,condition,category,tcg_game,collectible_subcategory,accepts_trades,accepts_price_offers,created_at,seller_id").eq("seller_id",id).eq("status","active").order("created_at",{ascending:false}).order("id",{ascending:false}).limit(61)),
+  publicProfileRead(supabaseClient.from("wanted_posts").select("id,title,details,game").eq("user_id",id).order("created_at",{ascending:false}).limit(30)),
+  currentUser?publicProfileRead(supabaseClient.from("user_blocks").select("blocked_id").eq("blocker_id",viewer).eq("blocked_id",id).maybeSingle()):Promise.resolve({data:null,error:null})
+ ]);
  if(!current())return;
  // Block verification is an access boundary for external collection links and
  // storefront details. A failed lookup must never be treated as unblocked.
@@ -2396,11 +2408,14 @@ async function showPublicProfile(id){
  }
  if(!current())return;
  const followUnavailable=!!followResult.error,isFollowing=!!followResult.data;
- const ratingMarkup=await sellerRatingHtml(id);
+ let ratingMarkup='<p class="muted">Seller reviews unavailable right now.</p>';
+ try{ratingMarkup=await readMarketplaceRequest(sellerRatingHtml(id),5000)}
+ catch(error){/* Reviews are optional; do not hide listings or public links. */}
  if(!current())return;
- const p=pResult.data,avatar=safeImageUrl(p.avatar_url),listings=(lResult.data||[]).slice(0,60),wanted=wResult.data||[],isBlocked=!!blockResult.data;
+ const p=pResult.data,avatar=safeImageUrl(p.avatar_url),listings=(lResult.data||[]).slice(0,60),isBlocked=!!blockResult.data;
+ let wanted=wResult.data||[],wantedUnavailable=!!wResult.error;
  let hasMoreListings=(lResult.data||[]).length>60,nextListingOffset=60,loadingMoreListings=false,moreListingError="";
- content.innerHTML=`<div class="collector-summary"><div class="collector-avatar">${avatar?`<img src="${escapeHtml(avatar)}" alt="Collector avatar">`:escapeHtml((p.username||"C")[0].toUpperCase())}</div><div><h2 id="publicProfileTitle">@${escapeHtml(p.username||"collector")}</h2><p class="muted">${escapeHtml(p.location_label||"DeckPlay collector")}</p></div></div><p>${escapeHtml(p.bio||"This collector hasn't added a bio yet.")}</p><p class="muted">${p.favorite_tcg?"Favorite game: "+escapeHtml(p.favorite_tcg):""}</p><div class="profile-page-stats"><span>${lResult.error?"Listings unavailable":hasMoreListings?"60+ active listings":listings.length+" active listings"}</span><span>${wanted.length} wanted posts</span></div>${ratingMarkup}${publicCollectionHtml(p,id,isBlocked)}<div class="collector-actions"><button type="button" class="ghost" data-share-kind="collector" data-share-id="${escapeHtml(id)}">Share profile</button><button type="button" class="ghost" data-copy-kind="collector" data-copy-id="${escapeHtml(id)}">Copy link</button></div>${currentUser?.id!==id?`<div class="collector-actions">${!p.collection_links?.length||listings.length?`<button class="primary" type="button" data-message-profile="${escapeHtml(id)}" ${isBlocked?"disabled":""}>${isBlocked?"Collector blocked":"Message collector"}</button>`:""}<button type="button" class="ghost" data-follow-profile="${escapeHtml(id)}" ${followUnavailable?'data-follow-retry="true" title="Retry checking follow status"':""}>${followUnavailable?"Follow status unavailable · Retry":isFollowing?"Following ✓":"Follow seller"}</button><button type="button" class="ghost flag-action" data-report-profile="${escapeHtml(id)}" title="Report collector" aria-label="Report collector">⚑</button></div>`:""}<div class="profile-page-tabs"><button type="button" class="profile-tab active" data-public-tab="listings">Listings</button><button type="button" class="profile-tab" data-public-tab="wanted">Wanted</button></div><div id="publicProfileResults"></div>`;
+ content.innerHTML=`<div class="collector-summary"><div class="collector-avatar">${avatar?`<img src="${escapeHtml(avatar)}" alt="Collector avatar">`:escapeHtml((p.username||"C")[0].toUpperCase())}</div><div><h2 id="publicProfileTitle">@${escapeHtml(p.username||"collector")}</h2><p class="muted">${escapeHtml(p.location_label||"DeckPlay collector")}</p></div></div><p>${escapeHtml(p.bio||"This collector hasn't added a bio yet.")}</p><p class="muted">${p.favorite_tcg?"Favorite game: "+escapeHtml(p.favorite_tcg):""}</p><div class="profile-page-stats"><span>${lResult.error?"Listings unavailable":hasMoreListings?"60+ active listings":listings.length+" active listings"}</span><span>${wantedUnavailable?"Wanted unavailable":wanted.length+" wanted posts"}</span></div>${ratingMarkup}${publicCollectionHtml(p,id,isBlocked)}<div class="collector-actions"><button type="button" class="ghost" data-share-kind="collector" data-share-id="${escapeHtml(id)}">Share profile</button><button type="button" class="ghost" data-copy-kind="collector" data-copy-id="${escapeHtml(id)}">Copy link</button></div>${currentUser?.id!==id?`<div class="collector-actions">${!p.collection_links?.length||listings.length?`<button class="primary" type="button" data-message-profile="${escapeHtml(id)}" ${isBlocked?"disabled":""}>${isBlocked?"Collector blocked":"Message collector"}</button>`:""}<button type="button" class="ghost" data-follow-profile="${escapeHtml(id)}" ${followUnavailable?'data-follow-retry="true" title="Retry checking follow status"':""}>${followUnavailable?"Follow status unavailable · Retry":isFollowing?"Following ✓":"Follow seller"}</button><button type="button" class="ghost flag-action" data-report-profile="${escapeHtml(id)}" title="Report collector" aria-label="Report collector">⚑</button></div>`:""}<div class="profile-page-tabs"><button type="button" class="profile-tab active" data-public-tab="listings">Listings</button><button type="button" class="profile-tab" data-public-tab="wanted">Wanted</button></div><div id="publicProfileResults"></div>`;
 
  const storefrontLabels={trading_cards:"Trading cards",video_games:"Video games",consoles:"Consoles",controllers:"Controllers",accessories:"Accessories",collectibles:"Collectibles",other:"Other collectibles"};
  const storefrontTools=document.createElement("section");
@@ -2433,13 +2448,30 @@ async function showPublicProfile(id){
   content.querySelectorAll("[data-public-tab]").forEach(button=>{const selected=button.dataset.publicTab===tab;button.classList.toggle("active",selected);button.setAttribute("aria-pressed",String(selected))});
   const results=content.querySelector("#publicProfileResults");
   storefrontTools.hidden=tab!=="listings";
-  if(tab==="wanted"){results.innerHTML=wanted.length?wanted.map(w=>`<article class="profile-item"><h3>${escapeHtml(w.title)}</h3><p>${escapeHtml(w.details||"")}</p></article>`).join(""):'<p class="muted">No wanted posts yet.</p>';return}
+  if(tab==="wanted"){
+   results.innerHTML=wantedUnavailable?'<p class="muted" role="alert">Wanted posts could not load. Your seller listings are still available.</p><button type="button" class="ghost" data-retry-public-wanted>Retry wanted posts</button>':wanted.length?wanted.map(w=>`<article class="profile-item"><h3>${escapeHtml(w.title)}</h3><p>${escapeHtml(w.details||"")}</p></article>`).join(""):'<p class="muted">No wanted posts yet.</p>';
+   return;
+  }
   renderStorefront();
  };
  content.oninput=e=>{if(e.target?.id==="publicStorefrontSearch")renderStorefront()};
  content.onchange=e=>{if(["publicStorefrontCategory","publicStorefrontSort"].includes(e.target?.id))renderStorefront()};
  showTab("listings");
  content.onclick=async e=>{if(!current())return;
+  const wantedRetry=e.target.closest("[data-retry-public-wanted]");
+  if(wantedRetry){
+   if(wantedRetry.disabled)return;
+   wantedRetry.disabled=true;wantedRetry.textContent="Retrying wanted posts…";
+   try{
+    const {data,error}=await publicProfileRead(supabaseClient.from("wanted_posts").select("id,title,details,game").eq("user_id",id).order("created_at",{ascending:false}).limit(30));
+    if(!current())return;
+    if(error)throw error;
+    wanted=data||[];wantedUnavailable=false;
+    content.querySelector(".profile-page-stats span:last-child").textContent=wanted.length+" wanted posts";
+    showTab("wanted");
+   }catch(error){if(current()){wantedRetry.disabled=false;wantedRetry.textContent="Retry wanted posts";toast("Wanted posts are still unavailable. Check your connection and retry.")}}
+   return;
+  }
   if(e.target.closest("[data-storefront-more]")){
    if(loadingMoreListings||!hasMoreListings)return;
    loadingMoreListings=true;moreListingError="";renderStorefront();
