@@ -332,6 +332,8 @@
     el("supportStaffSafety").hidden = true;
     el("supportStaffSafety").setAttribute("aria-pressed","false");
     el("supportStaffControls").hidden = true;
+    el("supportStatusSelect").value = "open";
+    el("supportStaffStatusHint").textContent = "";
     el("supportStaffOverview").hidden = true;
     el("supportStaffOpenCount").textContent = "—";
     el("supportStaffSafetyCount").textContent = "—";
