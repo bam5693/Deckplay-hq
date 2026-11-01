@@ -221,3 +221,43 @@ test('T8.4: stale report decisions refresh without retrying and denied writes sc
  await expect(page.locator('#incidentPanel')).toBeHidden();
  await expect(page.locator('#state')).not.toContainText('Sensitive authorization details');
 });
+
+test('T8.4: private review history is MFA-scoped, readable and cleared on account exit',async({page})=>{
+ await moderator(page);
+ await expect(page.locator('#reports')).toContainText('Private synthetic evidence');
+ await page.evaluate(()=>{
+  window.historyPayload=null;
+  moderationFixture.rpc=async(name,payload)=>{
+   moderationCalls.push(name);
+   if(name==='is_deckplay_moderator')return {data:true,error:null};
+   if(name==='moderation_report_queue')return {data:[{id:'synthetic-report',reason:'Counterfeit suspicion',details:'Private synthetic evidence',status:'reviewing'}],error:null};
+   if(name==='moderation_report_review_history'){
+    historyPayload=payload;
+    return {data:[{reviewed_at:'2026-11-01T21:00:00Z',previous_status:'open',next_status:'reviewing',review_reason:'Reviewed supplied evidence before decision.'}],error:null};
+   }
+   throw Error('Unexpected moderation RPC');
+  };
+ });
+ await page.locator('.review-history summary').click();
+ await expect(page.locator('.review-history')).toContainText('open → reviewing');
+ await expect(page.locator('.review-history')).toContainText('Reviewed supplied evidence before decision.');
+ expect(await page.evaluate(()=>historyPayload)).toEqual({p_report_id:'synthetic-report'});
+ await page.locator('.review-history summary').click();
+ await page.evaluate(()=>{
+  moderationFixture.rpc=async(name)=>{
+   moderationCalls.push(name);
+   if(name==='is_deckplay_moderator')return {data:true,error:null};
+   if(name==='moderation_report_review_history')return await new Promise(resolve=>window.finishHistory=resolve);
+   throw Error('Unexpected moderation RPC');
+  };
+ });
+ await page.locator('.review-history summary').click();
+ await expect.poll(()=>page.evaluate(()=>typeof window.finishHistory)).toBe('function');
+ await page.evaluate(()=>{
+  fireModerationAuth('SIGNED_OUT',null);
+  finishHistory({data:[{reviewed_at:'2026-11-01T21:00:00Z',previous_status:'open',next_status:'resolved',review_reason:'Former account secret must not render'}],error:null});
+ });
+ await expect(page.locator('#reports')).toBeEmpty();
+ await expect(page.locator('body')).not.toContainText('Former account secret must not render');
+ await expect(page.locator('#state')).toContainText('Sign in');
+});

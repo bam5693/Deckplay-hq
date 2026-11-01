@@ -107,6 +107,51 @@
   }
   for(const report of visible)renderReport(report);
  }
+
+ // Read-only audit history is fetched on demand, after a fresh AAL2/role check.
+ // No moderator identity, session ID, or report contents are returned by this RPC.
+ function appendReviewHistory(card,report){
+  const history=document.createElement('details');history.className='review-history';
+  const summary=document.createElement('summary');summary.textContent='View private review history (latest 20)';
+  const message=document.createElement('p');message.setAttribute('role','status');message.setAttribute('aria-live','polite');
+  const entries=document.createElement('ol');
+  history.append(summary,message,entries);card.append(history);
+  let request=0;
+  history.addEventListener('toggle',()=>{
+   const token=++request;
+   entries.replaceChildren();
+   if(!history.open){message.textContent='';return}
+   const version=generation,userId=authorizedUser;
+   const active=()=>token===request&&version===generation&&userId===authorizedUser&&history.isConnected&&history.open&&!document.hidden;
+   void (async()=>{
+    message.textContent='Verifying access to private review history…';
+    try{
+     const verified=await verifyAccess(active);if(!active())return;
+     if(verified!==userId)deny('Moderator account changed. Refresh to retry.');
+     const {data,error}=await client.rpc('moderation_report_review_history',{p_report_id:report.id});
+     if(!active())return;
+     if(error)throw error;
+     if(!Array.isArray(data))throw Error('History unavailable');
+     if(!data.length){message.textContent='No recorded status decisions for this report.';return}
+     for(const event of data.slice(0,20)){
+      const item=document.createElement('li');
+      const when=Date.parse(event.reviewed_at);
+      const date=Number.isFinite(when)?new Date(when).toLocaleString():'Date unavailable';
+      item.textContent=date+' — '+String(event.previous_status||'unknown')+' → '+String(event.next_status||'unknown')+'. Reason: '+String(event.review_reason||'No reason recorded.');
+      entries.append(item);
+     }
+     message.textContent=data.length>=20?'Showing the latest 20 recorded status decisions.':'Showing '+data.length+' recorded status decision(s).';
+    }catch(error){
+     if(!active())return;
+     entries.replaceChildren();
+     if(error.accessDenied||error.code==='42501'||error.status===401||error.status===403){
+      ++generation;clearPrivate();
+      state.textContent=error.accessDenied?error.message:'Moderator access could not be verified. Refresh to retry.';
+     }else message.textContent='Review history unavailable. Close and reopen to retry.';
+    }
+   })();
+  });
+ }
  function renderReport(report){
   const card=document.createElement('section');card.className='card';
   const heading=document.createElement('h2');heading.textContent=report.reason||'Report';card.append(heading);
@@ -129,7 +174,7 @@
   if(report.listing_id){
    const note=document.createElement('p');note.textContent='Listing removal is not available yet. Reviewing a report does not remove its listing.';card.append(note);
   }
-  card.append(actions);out.append(card);
+  card.append(actions);appendReviewHistory(card,report);out.append(card);
  }
  const allowedIssues=new Set([...incidentKind.options].map(option=>option.value));
  const allowedImpacts=new Set([...incidentImpact.options].map(option=>option.value));
