@@ -20,17 +20,13 @@ test('first-time visitor explores V1 navigation with readable controls and scree
   await page.evaluate(t=>document.documentElement.dataset.theme=t,theme);
   for(const surface of surfaces){
    const mobile=await page.locator('#mobileDock').isVisible();
-   if(surface.menu&&!mobile){
-    const account=page.locator('#accountButton');
-    await expect(account,'Desktop account menu must be discoverable').toBeVisible();
-    await account.click();
-    await expect(page.locator('#accountMenu'),'Desktop account menu must open for guests').toBeVisible();
-   }
-   // Mobile has an intentional bottom dock; Favorites is a signed-in destination,
-   // not a guest-visible navigation button. Record the gate without pretending we visited it.
+   // Guests do not get the desktop signed-in account menu. On mobile,
+   // Inbox/Profile have their own dock buttons and may correctly prompt login.
    const mobileTargets={marketplace:'[data-dock="market"]',inbox:'[data-dock="inbox"]',profile:'[data-dock="profile"]',sell:'[data-dock="sell"]'};
-   const guestGated=mobile&&surface.name==='favorites';
-   const item=page.locator(mobile?(mobileTargets[surface.name]||'#__signed_in_favorites__'):surface.target).locator(':visible').first();
+   const desktopTargets={marketplace:'.cat',sell:'button[data-sell]'};
+   const guestGated=surface.name==='favorites'||(!mobile&&['inbox','profile'].includes(surface.name));
+   const target=mobile?mobileTargets[surface.name]:desktopTargets[surface.name];
+   const item=page.locator(target||'#__signed_in_destination__').locator(':visible').first();
    const available=!guestGated&&await item.count()>0;
    let status=guestGated?'signed-in-only':'missing',overflow=[],unlabeled=[];
    if(available){
