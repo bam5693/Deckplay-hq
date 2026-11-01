@@ -111,6 +111,17 @@
 
   document.addEventListener('focusin', syncNoticeVisibility);
   document.addEventListener('focusout', () => queueMicrotask(syncNoticeVisibility));
+  // The offline warning should not remain stale after connectivity returns.
+  window.addEventListener('online', () => {
+    if (notice) {
+      const message = notice.querySelector('span');
+      if (message && message.textContent?.startsWith('You are offline.')) {
+        message.textContent = 'DeckPlay has an update ready. Refresh when you have saved your work.';
+      }
+      syncNoticeVisibility();
+    }
+    void checkForUpdate();
+  });
   window.addEventListener('resize', syncNoticeVisibility);
   document.addEventListener('visibilitychange', () => { if (!document.hidden) void checkForUpdate(); });
   window.addEventListener('pageshow', () => { void checkForUpdate(); });
