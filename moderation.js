@@ -54,8 +54,8 @@
     :'Queue snapshot loaded. Refresh to check for new or updated reports.';
    renderSnapshot();
   }catch(error){if(active()){
-   if(error.accessDenied||!authorizedUser){
-    clearPrivate();state.textContent=error.accessDenied?error.message:'Private report queue unavailable. Refresh to retry.';
+   if(error.accessDenied||!authorizedUser||error.code==='42501'||error.status===401||error.status===403){
+    clearPrivate();state.textContent=error.accessDenied?error.message:'Moderator access could not be verified. Refresh to retry.';
    }else{
     // Keep only the verified operator's generic recovery panel, not failed/stale evidence.
     reportsSnapshot=[];out.replaceChildren();coverage.textContent='';status.textContent='';
