@@ -28,3 +28,15 @@ test('light theme preserves contrast in full-deck form',async({page})=>{
  expect(color.bg).not.toBe('rgb(255, 255, 255)');
  await expect(page.locator('#listingQuantityUnit')).toHaveValue('items');
 });
+
+test('listing type is the only category picker across all eight types',async({page})=>{
+ await page.evaluate(()=>document.getElementById('sellModal').classList.add('open'));
+ const types={single:'trading_cards',deck:'trading_cards',lot:'trading_cards',sealed:'trading_cards',game:'video_games',console:'consoles',figure:'collectibles',other:'other'};
+ for(const [type,category] of Object.entries(types)){
+  await page.locator('#listingType').selectOption(type);
+  await expect(page.locator('#listingCategoryAdvanced')).toBeHidden();
+  await expect(page.locator('#category')).toHaveValue(category);
+  if(type==='deck') await expect(page.locator('#deckFields')).toBeVisible();
+  else await expect(page.locator('#deckFields')).toBeHidden();
+ }
+});
