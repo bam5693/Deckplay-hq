@@ -30,7 +30,7 @@ for(const theme of ['light','dark']){
     // Owner 33662.jpg: white deck panel against a dark form made labels illegible.
     // Measure actual rendered foreground/background contrast, not merely theme class names.
     const deckContrast=await page.locator('#deckFields').evaluate(panel=>{
-     const rgb=color=>(color.match(/[\\d.]+/g)||[]).slice(0,3).map(Number);
+     const rgb=color=>(color.match(/[0-9.]+/g)||[]).slice(0,3).map(Number);
      const luminance=color=>{
       const channels=rgb(color).map(n=>{const v=n/255;return v<=0.04045?v/12.92:Math.pow((v+0.055)/1.055,2.4)});
       return channels[0]*0.2126+channels[1]*0.7152+channels[2]*0.0722;
