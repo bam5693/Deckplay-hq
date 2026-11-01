@@ -1071,7 +1071,7 @@ async function refreshSellerRatingCache(){
  sellerRatingCache=new Map([...grouped].map(([id,x])=>[id,{average:(x.total/x.count).toFixed(1),count:x.count}]));
  render();
 }
-function marketplaceSearchText(value){return String(value).normalize("NFKD").replace(/[\u0300-\u036f]/g,"").toLowerCase()}
+function marketplaceSearchText(value){return String(value).normalize("NFKD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/\b(op|eb|st|prb)(?:\s*-\s*|\s+)(\d{1,3})\b/g,(_,series,number)=>series+number)}
 // Keep active filters visible on mobile, even when the detailed filter panel is collapsed.
 // Labels come from selected values and are HTML-escaped before insertion.
 function renderActiveMarketFilters(){
@@ -1602,6 +1602,11 @@ syncCategoryFields();
 
 // Optional card metadata for future Wanted Board matching; never blocks posting.
 const deckplaySets={
+ // Mainstream Magic sets are selectable as sets, not treated as a manufacturer or product type.
+ magic:{
+  "Recent expansions":["Bloomburrow","Magic: The Gathering Foundations","Other / unknown"],
+  "Universes Beyond":["Magic: The Gathering—FINAL FANTASY","Other / unknown"]
+ },
  pokemon:{
   "Base / Classic":["Base Set","Jungle","Fossil","Base Set 2","Team Rocket","Gym Heroes","Gym Challenge","Neo Genesis","Neo Discovery","Neo Revelation","Neo Destiny","Other / unknown"],
   "EX":["EX Ruby & Sapphire","EX Sandstorm","EX Dragon","EX FireRed & LeafGreen","EX Deoxys","EX Crystal Guardians","Other / unknown"],
