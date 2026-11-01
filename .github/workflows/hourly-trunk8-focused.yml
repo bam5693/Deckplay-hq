@@ -33,6 +33,6 @@ jobs:
           path: ~/.cache/ms-playwright
           key: staging-playwright-${{ hashFiles('package-lock.json') }}
       - run: npx playwright install chromium --only-shell
-      - name: T8.5 incident handoff local mock only (desktop and mobile)
+      - name: T8.4 stale report recovery local mock only (desktop and mobile)
         run: |
-          npx playwright test --config=playwright.local.config.js moderation-security.spec.js --grep 'T8.5: verified operator can prepare a safe incident handoff when report queue fails' --project=local-desktop --project=local-mobile --max-failures=1 --timeout=20000
+          npx playwright test --config=playwright.local.config.js moderation-security.spec.js --grep 'T8.4: stale report decisions refresh without retrying and denied writes scrub evidence' --project=local-desktop --project=local-mobile --max-failures=1 --timeout=20000
