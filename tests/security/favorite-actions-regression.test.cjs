@@ -82,7 +82,7 @@ test('a timed-out save checks persisted state before any second write',async()=>
     clearTimeout: id => {if(id!==1)clearTimeout(id);},
     supabaseClient: {from: () => ({
       insert: () => {inserts++;return new Promise(()=>{});},
-      select: () => ({eq: () => ({eq: () => ({maybeSingle: async () => {reads++;return {data:{listing_id:'listing-1'},error:null};}}})})
+      select: () => {const q={eq:()=>q,maybeSingle:async()=>{reads++;return {data:{listing_id:'listing-1'},error:null};}};return q;}
     })}
   });
   await h.context.window.favoriteActions.toggle('card-1');
@@ -104,7 +104,7 @@ test('a failed saved-status check keeps the item uncertain without another write
     clearTimeout: id => {if(id!==1)clearTimeout(id);},
     supabaseClient: {from: () => ({
       insert: () => {inserts++;return new Promise(()=>{});},
-      select: () => ({eq: () => ({eq: () => ({maybeSingle: async () => {reads++;return {data:null,error:{message:'Offline'}};}}})})
+      select: () => {const q={eq:()=>q,maybeSingle:async()=>{reads++;return {data:null,error:{message:'Offline'}};}};return q;}
     })}
   });
   await h.context.window.favoriteActions.toggle('card-1');
