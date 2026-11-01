@@ -100,3 +100,11 @@ test('malformed HTTP status cannot inject secrets into operator diagnostics',asy
    return true;
   });
 });
+
+test('duplicate send and confirmation options fail closed before any network work',()=>{
+ for(const flags of [
+  ['--email=collector@example.test','--send','--send'],
+  ['--email=collector@example.test','--confirm=SEND-STAGING-INVITE','--confirm=SEND-STAGING-INVITE'],
+  ['--email=collector@example.test','--confirm=wrong','--confirm=SEND-STAGING-INVITE']
+ ]) assert.throws(()=>parseInviteArgs(flags),/(only once|exactly one confirmation)/);
+});
