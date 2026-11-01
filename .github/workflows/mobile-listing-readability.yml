@@ -1,0 +1,25 @@
+name: Mobile listing readability hotfix validation
+on:
+  push:
+    branches: [fix/mobile-listing-dark-contrast-2026-10-31]
+    paths: ['.github/workflows/mobile-listing-readability.yml', 'index.html', 'tests/e2e/mobile-listing-readability.spec.js']
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: node scripts/release-preflight.cjs
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: staging-playwright-${{ hashFiles('package-lock.json') }}
+      - run: npx playwright install chromium --only-shell
+      - run: npx playwright test --config=playwright.mobile-listing.config.cjs mobile-listing-readability.spec.js --project=owner-preview-mobile --retries=0 --workers=1
