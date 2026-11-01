@@ -4,7 +4,7 @@ import {STAGING_PROJECT_URL,parseInviteArgs,validateSendGuard,validateStagingRed
 
 const jwt = (claims) => ['eyJhbGciOiJIUzI1NiJ9',Buffer.from(JSON.stringify(claims)).toString('base64url'),'signature'].join('.');
 const key = jwt({role:'service_role',ref:'prrrzeelltmyugssqnzk',exp:Math.floor(Date.now()/1000)+3600});
-const redirect = 'https://deckplay-hq-staging.cstivers56.workers.dev/auth/callback';
+const redirect = 'https://deckplay-hq-staging.cstivers56.workers.dev/';
 const config = {DECKPLAY_STAGING_SUPABASE_URL:STAGING_PROJECT_URL,DECKPLAY_STAGING_SERVICE_ROLE_KEY:key,
   DECKPLAY_STAGING_INVITE_REDIRECT_URL:redirect,DECKPLAY_BETA_INVITE_APPROVED:'1'};
 
@@ -38,7 +38,8 @@ test('redirect must target a clean allowlisted staging callback',()=>{
   'https://deckplay-hq-staging.cstivers56.workers.dev.evil.example',
   'https://deckplay-hq-staging.cstivers56.workers.dev@evil.example/',
   'https://deckplay-hq-staging.cstivers56.workers.dev/?token=foo',
-  'https://deckplay-hq-staging.cstivers56.workers.dev/other','not-url']){
+  'https://deckplay-hq-staging.cstivers56.workers.dev/other',
+  'https://deckplay-hq-staging.cstivers56.workers.dev/auth/callback','not-url']){
   assert.throws(()=>validateStagingRedirect(bad),bad);
  }
 });
