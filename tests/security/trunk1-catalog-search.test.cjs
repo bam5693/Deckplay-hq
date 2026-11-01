@@ -42,6 +42,48 @@ test('Jayden: mainstream Magic releases appear as selectable sets, not manufactu
   assert.ok(catalog.one_piece['Main booster sets'].includes('OP-17'), 'Existing One Piece catalog retained');
 });
 
+test('Jayden: One Piece ST-31 to ST-36 are exact selectable starter releases, not one misleading bucket', () => {
+  const choices = catalog.one_piece['Starter decks'];
+  const exact = [
+    ['ST-31', 'Red Monkey D. Luffy'],
+    ['ST-32', 'Green Roronoa Zoro'],
+    ['ST-33', 'Blue Kuzan'],
+    ['ST-34', 'Purple Charlotte Katakuri'],
+    ['ST-35', 'Red/Black Sabo'],
+    ['ST-36', 'Yellow Eustass Kid'],
+  ];
+  const buyerDescriptionSource = html.match(/function marketplaceCurrentSearchDescription\\(value\\)\\{[\\s\\S]*?\\n\\}/)?.[0];
+  assert.ok(buyerDescriptionSource, 'Buyer must read current seller classification');
+  const buyerDescription = vm.runInNewContext('(' + buyerDescriptionSource + ')');
+  for (const [code, leader] of exact) {
+    const value = choices.find(choice => choice.startsWith(code + ' '));
+    assert.ok(value, code + ' must be selectable individually');
+    assert.ok(value.includes(leader), code + ' must name the correct leader');
+    const description = '[Listing classification]\\nSet: ' + value + '\\n[End classification]';
+    assert.ok(normalize(buyerDescription(description)).includes(normalize(code)),
+      code + ' must survive into buyer search without requiring a hyphen');
+  }
+  assert.ok(choices.includes('ST-31 and later'), 'Existing legacy grouped listings must remain editable');
+  assert.ok(choices.includes('Other / unknown'), 'Unlisted starter releases must keep a custom fallback');
+});
+
+test('Jayden: editor restores exact starter selection and preserves unknown custom products', () => {
+  const editor = fs.readFileSync(path.join(__dirname, '../../listing-editor-classification.js'), 'utf8');
+  const helper = editor.match(/function listingEditorRestoreCatalogChoice\\(options,saved\\)\\{[\\s\\S]*?\\n\\}/)?.[0];
+  assert.ok(helper, 'Editor restore must use the shared seller catalog');
+  const restore = vm.runInNewContext('(' + helper + ')');
+  const options = catalog.one_piece['Starter decks'].map(value => ({ value }));
+  for (const code of ['ST-31', 'ST-32', 'ST-33', 'ST-34', 'ST-35', 'ST-36']) {
+    const exact = options.find(option => option.value.startsWith(code + ' ')).value;
+    const result = restore(options, exact);
+    assert.equal(result.selected, exact);
+    assert.equal(result.custom, '', 'A known choice must not hide a stale custom override');
+  }
+  const custom = restore(options, 'ST-37 Custom regional printing');
+  assert.equal(custom.selected, '');
+  assert.equal(custom.custom, 'ST-37 Custom regional printing');
+});
+
 test('Tanner: seller set metadata remains included in buyer searchable description', () => {
   assert.match(html, /\["Set",document\.getElementById\("tcgCustomSet"\)\.value\.trim\(\)\|\|document\.getElementById\("tcgSet"\)\.value\]/);
   assert.match(html, /marketplaceCurrentSearchDescription\(item\.description\)/);
