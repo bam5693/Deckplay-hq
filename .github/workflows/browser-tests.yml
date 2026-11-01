@@ -19,6 +19,8 @@ concurrency:
   cancel-in-progress: true
 jobs:
   preflight:
+    # Trunk 1's draft PR uses its own focused tests; run broad security on integration PRs.
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.pull_request.head.ref != 'dev/hourly-trunk1' }}
     # Every draft PR change gets a cheap security check, not an entire Chromium run.
     runs-on: ubuntu-latest
     timeout-minutes: 5

@@ -1,5 +1,6 @@
 name: Inbox jump-to-latest focused regression
 on:
+  workflow_dispatch:
   pull_request:
     branches: [test/staging-reporting]
     paths:
@@ -10,6 +11,8 @@ permissions:
   contents: read
 jobs:
   focused:
+    # Avoid unrelated Inbox browser runs on Trunk 1 listing-only PR updates.
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.pull_request.head.ref != 'dev/hourly-trunk1' }}
     runs-on: ubuntu-latest
     timeout-minutes: 7
     steps:

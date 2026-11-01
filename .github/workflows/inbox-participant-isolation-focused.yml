@@ -1,5 +1,6 @@
 name: Inbox participant isolation regression
 on:
+  workflow_dispatch:
   pull_request:
     branches: [test/staging-reporting]
     paths:
@@ -10,6 +11,8 @@ permissions:
   contents: read
 jobs:
   focused:
+    # Listing-only Trunk 1 PRs use their own focused tests; preserve manual/integration checks.
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.pull_request.head.ref != 'dev/hourly-trunk1' }}
     runs-on: ubuntu-latest
     timeout-minutes: 7
     steps:
