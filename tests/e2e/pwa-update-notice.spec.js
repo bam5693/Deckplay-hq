@@ -77,6 +77,28 @@ test('offline refresh leaves unsent work on screen instead of opening the PWA of
   expect(confirmations).toBe(0);
 });
 
+
+test('PWA offline refresh warning clears on reconnection without reloading or losing input', async ({ page }) => {
+  await mockWorker(page, { controlled: true, waiting: true });
+  await page.goto('/');
+  await page.locator('#search').fill('draft stays intact');
+  await page.locator('#search').blur();
+  await page.evaluate(() => {
+    window.__pwaOnline = false;
+    Object.defineProperty(navigator, 'onLine', { configurable: true, get: () => window.__pwaOnline });
+  });
+  await page.locator('#deckplayAppUpdate button:has-text("Refresh")').click();
+  await expect(page.locator('#deckplayAppUpdate')).toContainText('You are offline.');
+  await page.evaluate(() => {
+    window.__pwaOnline = true;
+    window.dispatchEvent(new Event('online'));
+  });
+  await expect(page.locator('#deckplayAppUpdate')).toContainText('Refresh when you have saved your work');
+  await expect(page.locator('#deckplayAppUpdate')).not.toContainText('You are offline.');
+  await expect(page.locator('#search')).toHaveValue('draft stays intact');
+});
+
+
 test('foreground-only update checks are throttled and do not run while offline', async ({ page }) => {
   await mockWorker(page, { controlled: true });
   await page.addInitScript(() => {
