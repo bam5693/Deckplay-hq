@@ -35,6 +35,37 @@ export function parseInviteArgs(args) {
   return result;
 }
 
+export function validateStagingRedirect(value) {
+  let u;
+  try { u = new URL(String(value || '')); } catch { throw new Error('A reviewed staging invite redirect URL is required.'); }
+  if (u.protocol !== 'https:' || u.hostname !== 'deckplay-hq-staging.cstivers56.workers.dev' ||
+      u.username || u.password || u.port || u.hash || u.search ||
+      !['/', '/auth/callback'].includes(u.pathname)) {
+    throw new Error('Invitation redirect must be an approved HTTPS path on private staging.');
+  }
+  return u.toString();
+}
+
+// Checks the JWT role locally to prevent accidental use of an anon key.
+// The remote Auth API still validates its cryptographic signature.
+export function validateStagingServiceRoleJwt(value) {
+  const secret = String(value || '');
+  if (!/^eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(secret)) {
+    throw new Error('A legacy staging service-role JWT is required.');
+  }
+  try {
+    const claims = JSON.parse(Buffer.from(secret.split('.')[1], 'base64url').toString('utf8'));
+    if (claims.role !== 'service_role' ||
+        (claims.ref && claims.ref !== 'prrrzeelltmyugssqnzk') ||
+        (claims.exp && (!Number.isFinite(claims.exp) || claims.exp <= Date.now()/1000))) {
+      throw new Error('Invalid service-role claims.');
+    }
+  } catch {
+    throw new Error('Valid staging service-role JWT required; anon and publishable keys are forbidden.');
+  }
+  return secret;
+}
+
 export function validateSendGuard({ args, env }) {
   if (!args.send) return false;
   if (args.confirmation !== 'SEND-STAGING-INVITE' || env.DECKPLAY_BETA_INVITE_APPROVED !== '1') {
@@ -43,20 +74,18 @@ export function validateSendGuard({ args, env }) {
   if (env.DECKPLAY_STAGING_SUPABASE_URL !== STAGING_PROJECT_URL) {
     throw new Error('Incorrect Supabase URL. Staging-only invitation required.');
   }
-  const secret = env.DECKPLAY_STAGING_SERVICE_ROLE_KEY || '';
-  // This simple standalone REST client requires the legacy JWT service-role key,
-  // never a publishable key or browser anon key.
-  if (!/^eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(secret)) {
-    throw new Error('A server-only staging service-role JWT is required (not publishable/secret API keys).');
-  }
+  validateStagingServiceRoleJwt(env.DECKPLAY_STAGING_SERVICE_ROLE_KEY);
+  validateStagingRedirect(env.DECKPLAY_STAGING_INVITE_REDIRECT_URL);
   return true;
 }
 
-export async function sendStagingInvite({ email, key, fetchImpl = fetch }) {
+export async function sendStagingInvite({ email, key, redirectTo, fetchImpl = fetch }) {
+  validateStagingServiceRoleJwt(key);
+  const destination = validateStagingRedirect(redirectTo);
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 12000);
   try {
-    const response = await fetchImpl(STAGING_PROJECT_URL + '/auth/v1/invite', {
+    const response = await fetchImpl(STAGING_PROJECT_URL + '/auth/v1/invite?redirect_to=' + encodeURIComponent(destination), {
       method: 'POST',
       redirect: 'error',
       headers: { apikey: key, Authorization: 'Bearer ' + key, 'Content-Type': 'application/json' },
@@ -78,7 +107,7 @@ export async function main(argv = process.argv.slice(2), env = process.env) {
     process.stdout.write('DRY RUN: one staging collector invite prepared. No email sent. No account created.\n');
     return;
   }
-  await sendStagingInvite({ email: args.email, key: env.DECKPLAY_STAGING_SERVICE_ROLE_KEY });
+  await sendStagingInvite({ email: args.email, key: env.DECKPLAY_STAGING_SERVICE_ROLE_KEY, redirectTo: env.DECKPLAY_STAGING_INVITE_REDIRECT_URL });
   process.stdout.write('Staging invitation request accepted by Supabase. Check delivery privately; no production changes.\n');
 }
 
