@@ -121,3 +121,46 @@ test('an old account pending save never enters a new account saved-list refresh'
  await page.evaluate(()=>finishFavorite({error:null}));
  expect(await page.evaluate(()=>[...saved])).toEqual([]);
 });
+
+test('saved marketplace keeps previous favorites visible offline and retries only the saved read',async({page})=>{
+ await fixture(page,true);
+ await page.evaluate(()=>{
+  resetSavedListingsForAccount('first-buyer');saved.add('favorite-item');onlySavedListings=true;render();
+  window.savedReadQueue=[];
+  supabaseClient.from=()=>({select:()=>({eq:()=>({})})});
+  readMarketplaceRequest=()=>new Promise(resolve=>savedReadQueue.push(resolve));
+  window.firstSavedRead=loadSavedListings();
+ });
+ await expect(page.locator('#grid')).toContainText('Refreshing your saved items');
+ await expect.poll(()=>page.evaluate(()=>savedReadQueue.length)).toBe(1);
+ await page.evaluate(()=>savedReadQueue.shift()({error:{message:'Offline'}}));
+ await page.evaluate(()=>firstSavedRead);
+ await expect(page.locator('#grid [data-retry-saved-listings]')).toBeVisible();
+ await expect(page.locator('#grid')).toContainText('Showing your previous saves for this account');
+ await expect(page.locator('#grid [data-heart]')).toHaveText('♥');
+ await page.locator('#grid [data-retry-saved-listings]').click();
+ await expect.poll(()=>page.evaluate(()=>savedReadQueue.length)).toBe(1);
+ await page.evaluate(()=>savedReadQueue.shift()({data:[{listing_id:'favorite-item'}],error:null}));
+ await expect(page.locator('#grid [data-retry-saved-listings]')).toHaveCount(0);
+ await expect(page.locator('#grid [data-heart]')).toHaveText('♥');
+});
+
+test('an offline empty saved view does not falsely claim there are no favorites',async({page})=>{
+ await fixture(page);
+ await page.evaluate(()=>{
+  resetSavedListingsForAccount('first-buyer');onlySavedListings=true;render();
+  window.savedReadQueue=[];
+  supabaseClient.from=()=>({select:()=>({eq:()=>({})})});
+  readMarketplaceRequest=()=>new Promise(resolve=>savedReadQueue.push(resolve));
+  window.firstSavedRead=loadSavedListings();
+ });
+ await expect(page.locator('#grid')).toContainText('Loading your saved items');
+ await page.evaluate(()=>savedReadQueue.shift()({error:{message:'Offline'}}));
+ await page.evaluate(()=>firstSavedRead);
+ await expect(page.locator('#grid')).toContainText('Could not refresh your saved items');
+ await expect(page.locator('#grid')).not.toContainText('No saved items to show yet');
+ await page.locator('#grid [data-retry-saved-listings]').click();
+ await expect.poll(()=>page.evaluate(()=>savedReadQueue.length)).toBe(1);
+ await page.evaluate(()=>savedReadQueue.shift()({data:[],error:null}));
+ await expect(page.locator('#grid')).toContainText('No saved items to show yet');
+});
