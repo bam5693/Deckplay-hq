@@ -2610,6 +2610,7 @@ async function showPublicProfile(id){
  content.oninput=e=>{if(e.target?.id==="publicStorefrontSearch")renderStorefront()};
  content.onchange=e=>{if(["publicStorefrontCategory","publicStorefrontSort"].includes(e.target?.id))renderStorefront()};
  showTab("listings");
+ let followStatusUncertain=false;
  content.onclick=async e=>{if(!current())return;
   const wantedRetry=e.target.closest("[data-retry-public-wanted]");
   if(wantedRetry){
@@ -2650,20 +2651,34 @@ async function showPublicProfile(id){
    if(follow.disabled)return;
    if(followUnavailable){await showPublicProfile(id);return}
    if(blockedCollectorIds.has(id)){toast("This collector is blocked. Unblock them in Settings before following.");return}
-   const owner=currentUser.id;
+   const owner=currentUser.id,accountEpoch=messageAccountVersion;
+   const sameFollow=()=>current()&&messageAccountVersion===accountEpoch;
    follow.disabled=true;follow.setAttribute("aria-busy","true");
    try{
-    const request=isFollowing?supabaseClient.from("seller_follows").delete().eq("follower_id",owner).eq("seller_id",id):supabaseClient.from("seller_follows").insert({follower_id:owner,seller_id:id});
-    const {error}=await readMarketplaceRequest(request,8000);
-    if(!current())return;
-    if(error&&!(error.code==="23505"&&!isFollowing))throw error;
-    toast(isFollowing?"Seller unfollowed.":"You'll hear about new listings from this seller.");
+    if(!followStatusUncertain){
+     const request=isFollowing?supabaseClient.from("seller_follows").delete().eq("follower_id",owner).eq("seller_id",id):supabaseClient.from("seller_follows").insert({follower_id:owner,seller_id:id});
+     const {error}=await readMarketplaceRequest(request,8000);
+     if(!sameFollow())return;
+     if(error&&!(error.code==="23505"&&!isFollowing))throw error;
+    }
+    // Uncertain writes and duplicate inserts require an owner-scoped readback.
+    // Never retry a mutation blindly or claim a change that was not confirmed.
+    const result=await publicProfileRead(supabaseClient.from("seller_follows").select("seller_id").eq("follower_id",owner).eq("seller_id",id).maybeSingle(),6000);
+    if(!sameFollow())return;
+    if(result.error||(result.data!==null&&result.data?.seller_id!==id))throw result.error||Error("Follow status could not be verified.");
+    if(!followStatusUncertain&&!!result.data===isFollowing)throw Error("Follow change could not be confirmed.");
+    followStatusUncertain=false;
+    if(!!result.data!==isFollowing)toast(isFollowing?"Seller unfollowed.":"You'll hear about new listings from this seller.");
     await showPublicProfile(id);
    }catch(error){
-    if(current()){
+    if(sameFollow()){
+     followStatusUncertain=true;
+     follow.textContent="Check follow status";
+     follow.setAttribute("title","Check saved follow status before changing it again");
+    }
+   }finally{
+    if(sameFollow()&&follow.isConnected){
      follow.disabled=false;follow.removeAttribute("aria-busy");
-     follow.textContent="Could not update follow · Retry";
-     follow.setAttribute("title","Check your connection and retry this follow change");
     }
    }
    return;
