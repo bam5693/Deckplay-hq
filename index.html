@@ -2016,6 +2016,7 @@ document.getElementById("wantedForm").addEventListener("submit",async e=>{
  }catch(error){if(valid())status.textContent=error.message||"Could not publish. Try again."}
  finally{if(valid()){wantedPublishBusy=false;button.disabled=false;form.removeAttribute("aria-busy")}}
 });
+const wantedDeletePending=new Set();
 document.getElementById("wantedGrid").addEventListener("click",async e=>{if(e.target.closest("[data-retry-wanted]")){await loadWanted();return}if(e.target.closest("[data-retry-wanted-listings]")){await loadListings();return}const match=e.target.closest("[data-wanted-match]");if(match){
  const post=wantedVisiblePosts.get(match.dataset.wantedPost);
  const item=items.find(x=>String(x.id)===match.dataset.wantedMatch);
@@ -2025,7 +2026,28 @@ document.getElementById("wantedGrid").addEventListener("click",async e=>{if(e.ta
  if(!sameView||!post||!item||!exactWantedMatches(post).some(x=>String(x.id)===String(item.id))){
   toast("This listing is no longer an exact match. Refresh wanted posts.");return;
  }
- toggleWanted(false);showDetails(item);return}const button=e.target.closest("[data-delete-wanted]");if(!button||!currentUser)return;if(!confirm("Delete this wanted post?"))return;const {error}=await supabaseClient.from("wanted_posts").delete().eq("id",button.dataset.deleteWanted).eq("user_id",currentUser.id);if(error){toast(error.message);return}await loadWanted()});
+ toggleWanted(false);showDetails(item);return}const button=e.target.closest("[data-delete-wanted]");
+ if(!button||!currentUser)return;
+ const owner=currentUser.id,epoch=listingAccountVersion,postId=button.dataset.deleteWanted;
+ // A stale card or a switched account must never delete another collector's post.
+ if(wantedVisibleOwner!==owner||wantedVisibleEpoch!==epoch||wantedVisiblePosts.get(postId)?.user_id!==owner){
+  toast("This wanted post is no longer available. Refresh wanted posts.");return;
+ }
+ const key=owner+":"+postId;
+ if(wantedDeletePending.has(key)||!confirm("Delete this wanted post?"))return;
+ wantedDeletePending.add(key);button.disabled=true;button.setAttribute("aria-busy","true");button.textContent="Deleting…";
+ const active=()=>currentUser?.id===owner&&listingAccountVersion===epoch;
+ try{
+  const request=supabaseClient.from("wanted_posts").delete().eq("id",postId).eq("user_id",owner);
+  const {error}=await readMarketplaceRequest(request,12000);
+  if(!active())return;
+  if(error)throw error;
+  await loadWanted();
+ }catch(error){if(active())toast(error?.message||"Could not delete wanted post. Retry.");}
+ finally{
+  wantedDeletePending.delete(key);
+  if(active()&&button.isConnected){button.disabled=false;button.removeAttribute("aria-busy");button.textContent="Delete";}
+ }});
 let savedListingsLoadVersion=0,savedListingsOwnerId=null,savedListingsStatus="idle";
 function resetSavedListingsForAccount(userId){
  const owner=userId||null;
