@@ -67,6 +67,7 @@ test('Jayden: edited game platform wins for buyer filters, details and search', 
   const row = { id: 'synthetic-game', title: 'Retro game', category: 'video_games', price: 39, description };
   const item = mapRow(row);
   assert.equal(item.platform, 'Nintendo Switch 2', 'Buyer platform must match latest seller edit');
+  assert.equal(mapRow({ ...row, description: 'Platform: PlayStation 5' }).platform, 'PlayStation 5', 'Legacy unedited buyer filter still works');
   assert.ok(buyerDescription(description).includes('Nintendo Switch 2'));
   assert.ok(!buyerDescription(description).includes('Platform: PlayStation 5'), 'Search must not revive old platform');
   assert.equal(platform('Platform: Sega Dreamcast'), 'Sega Dreamcast', 'Legacy unedited listings still work');
