@@ -1,14 +1,14 @@
-# DeckPlay HQ — Trunk 4 hourly checkpoint (2026-11-01 16:33 CST)
+# DeckPlay HQ — hourly Trunk 4 checkpoint (2026-11-01 17:34 CST)
 
-**Owner/branch:** T4.1–T4.6 only; `dev/hourly-autonomous` → review-only draft PR #10 against `test/staging-reporting`. No shared staging/production/retired-lease writes.
+**Owner:** T4.1–T4.6 only, branch `dev/hourly-autonomous`; draft PR #10 review-only to `test/staging-reporting`. No staging/production/retired-lease changes.
 
 ## DONE — implemented, NOT accepted
-- **T4.3 activity alert truthfulness:** `867f6e766131b4f7e45bd82afada4895e0c2d1a8` clears an old unread badge on failed/malformed count refresh instead of implying stale activity; malformed/null alert feed now offers **Retry alerts**, not “No activity alerts yet.” Regression `35385d84fb4dded3c4cd97aaf518647939889d2e` adds two focused Node test cases (**added, NOT run**). **Actually executed:** 4/4 focused V8 extracted-handler fixture checks PASS (offline stale badge, true zero, malformed feed, genuine empty feed); changed handlers and spec parse.
-- **T4.2 Wanted publish:** `9f8044c` UUID-stable uncertain insert, **Check publish status** and **Retry same post**, owner-scoped readback; regression `2a29d6e`. Prior 5/5 isolated V8 checks PASS; no retest. Prior uncertain-delete `f7aae96` / `3cf532f` and T4.1 favorite/saved fixes preserved.
+- **T4.1 seller follow safety:** `2f2e5d011c682b58db8f8162828999c872b24334` changes a timed-out follow/unfollow from blind **Retry** to **Check follow status**, performs owner/seller-scoped readback before another write or success toast, and ignores stale account epochs. `ea28ae3fcef288c51798bfa7a67260db0424ecfa` fails closed on malformed initial follow status. Regression `85bc2a106e5436bc7d2b2a1e7a1968a36929b3e6` adds four Node cases (**committed, NOT run**).
+- **Actually executed this run:** 4/4 isolated V8 checks of the *actual changed follow click handler* PASS (timeout readback without second write, confirmed follow, unconfirmed read, switched account). All 17 inline scripts parsed. Earlier T4.1 Favorites, T4.2 Wanted, T4.3 alerts and T4.4–T4.6 implementation evidence remains preserved; no broad retest.
 
-## IN PROGRESS — UX/acceptance BLOCKED
-Staging scoreboard **T4.1–T4.6 unchecked**. Jayden (TCG buyer) and Tanner (sports collector) source-level adversarial review: offline badges must not imply fresh notifications, and empty alerts must distinguish network errors from zero activity. Owner screenshot atlas text reviewed; JPG bytes **not inspected**. Browser mobile/desktop light/dark, independent reviewer, authenticated staging, deployment parity and physical Android **NOT VERIFIED**. PR #10 remains review-only with integration conflicts.
+## IN PROGRESS — UX / integration BLOCKED
+Staging scoreboard **T4.1–T4.6 unchecked**. Jayden buyer and Tanner collector adversarial source review: timed-out follow must not duplicate writes or falsely claim success. Browser mobile/desktop light/dark, independent UX reviewer, protected signed-in staging, deployment parity and physical Android **NOT VERIFIED**. Owner screenshot atlas text reviewed; actual JPG bytes **not inspected**. PR #10 is still conflicted/dirty against staging (last inspected head `908844b`, staging `35895d3` before this run).
 
 ## NEXT
-1. Inspect an independent unfinished T4.2 exact-match/privacy or T4.3 seller-follow notification defect; implement the smallest observed customer fix, not another report or broad retest.
-2. Integration lead resolves PR #10 conflicts and performs targeted signed-in Jayden/Tanner UX acceptance before checking any T4 ID.
+1. Review another genuinely unfinished T4.2 exact-match/privacy or T4.3 follow-alert behavior; implement only a concrete defect. Do not rerun existing green tests without impact.
+2. Integration lead reviews/conflict-resolves PR #10 and runs targeted signed-in Jayden/Tanner desktop/mobile UX before accepting any T4 ID. Current hourly HEAD `ea28ae3fcef288c51798bfa7a67260db0424ecfa`.
