@@ -30,6 +30,13 @@ function listingEditorPreserveDescription(original,edited){
  const classification=latest===null?"":"[Listing classification]\n"+latest+"\n[End classification]";
  return [contents,classification,notes.trim()].filter(Boolean).join("\n\n")||null;
 }
+// Restore a known catalog value as a select, never as an invisible custom
+// override. Unknown historical releases remain editable custom values.
+function listingEditorRestoreCatalogChoice(options,saved){
+ const value=String(saved||'').trim();
+ const known=value&&Array.from(options||[]).some(option=>option.value===value);
+ return {selected:known?value:'',custom:known?'':value};
+}
 /* Independent editor controls clone the real seller catalog, without touching creation drafts. */
 window.createListingEditorClassification=(container,status)=>{
  container.innerHTML='<details><summary>Category, condition and item details</summary><label class="check-row"><input type="checkbox" id="editClassificationEnabled"> Change classification and item details</label><p class="file-help">Review your description when changing category. Your existing disclosures are preserved.</p><fieldset id="editClassificationFields" disabled style="border:0;padding:0;min-width:0;max-width:100%"></fieldset></details>';
@@ -58,8 +65,17 @@ window.createListingEditorClassification=(container,status)=>{
   if(id==='consoleItemType'&&get('listingType')==='console')set('category',({Console:'consoles',Controller:'controllers',Accessory:'accessories'})[get(id)]||'consoles');
   // 'Other' intentionally keeps its explicit category choice, including games/cards.
   if(id==='category'&&get('listingType')!=='other'&&!allowed[get(id)]?.includes(get('listingType')))set('listingType',allowed[get(id)]?.[0]||'other');
-  if(id==='tcgGame')sets();
-  if(id==='tcgEra')deckplayFillOptions(controls.get('tcgSet'),deckplaySets[get('tcgGame')]?.[get('tcgEra')]||[],'Not specified');
+  if(id==='tcgGame'){
+   sets();set('tcgCustomSet','');set('tcgCustomVariant','');
+  }
+  if(id==='tcgEra'){
+   deckplayFillOptions(controls.get('tcgSet'),deckplaySets[get('tcgGame')]?.[get('tcgEra')]||[],'Not specified');
+   set('tcgCustomSet','');
+  }
+  // A deliberate known selection must replace, not be silently overridden by,
+  // an old custom value restored from a previous edit. Keep Other editable.
+  if(id==='tcgSet'&&get(id)!=='Other / unknown')set('tcgCustomSet','');
+  if(id==='tcgVariant'&&get(id)!=='Other')set('tcgCustomVariant','');
   if(id==='category'&&['consoles','controllers','accessories'].includes(get(id)))set('consoleItemType',{consoles:'Console',controllers:'Controller',accessories:'Accessory'}[get(id)]);
   sync();
  });enabled.addEventListener('change',sync);
@@ -74,10 +90,14 @@ window.createListingEditorClassification=(container,status)=>{
   // still contain the original Set, Variant or Card condition values.
   const latest=latestEditorClassification(description);
   const line=label=>{const pattern=new RegExp('(?:^|\\n)'+label+': ([^\\n]*)');return (latest??description).match(pattern)?.[1]||''};
-  for(const [id,label]of [['gamePlatform','Platform'],['consoleItemType','Hardware type'],['consoleBrand','Brand'],['consoleModel','Model'],['consoleStorage','Storage / version'],['sportsSport','Sport'],['sportsBrand','Sports brand'],['sportsYear','Year'],['sportsPlayer','Player'],['gradingCompany','Grader'],['gradingScore','Grade'],['gradingCert','Certification'],['tcgCustomSet','Set'],['tcgCardNumber','Card number'],['tcgCustomVariant','Variant'],['tcgRarity','Rarity'],['tcgEdition','Edition / printing'],['tcgLanguage','Language'],['deckLeader','Deck'],['deckCardCount','Cards']])set(id,line(label));
+  for(const [id,label]of [['gamePlatform','Platform'],['consoleItemType','Hardware type'],['consoleBrand','Brand'],['consoleModel','Model'],['consoleStorage','Storage / version'],['sportsSport','Sport'],['sportsBrand','Sports brand'],['sportsYear','Year'],['sportsPlayer','Player'],['gradingCompany','Grader'],['gradingScore','Grade'],['gradingCert','Certification'],['tcgCardNumber','Card number'],['tcgRarity','Rarity'],['tcgEdition','Edition / printing'],['tcgLanguage','Language'],['deckLeader','Deck'],['deckCardCount','Cards']])set(id,line(label));
   // Restore optional set era before reloading its dependent set choices.
   set('tcgEra',line('Era'));
   deckplayFillOptions(controls.get('tcgSet'),deckplaySets[get('tcgGame')]?.[get('tcgEra')]||[],'Not specified');
+  const restoredSet=listingEditorRestoreCatalogChoice(controls.get('tcgSet').options,line('Set'));
+  set('tcgSet',restoredSet.selected);set('tcgCustomSet',restoredSet.custom);
+  const restoredVariant=listingEditorRestoreCatalogChoice(controls.get('tcgVariant').options,line('Variant'));
+  set('tcgVariant',restoredVariant.selected);set('tcgCustomVariant',restoredVariant.custom);
   if(get('tcgGame')==='sports_cards'&&!get('sportsBrand'))set('sportsBrand',line('Brand'));
   const conditionLine=line('Card condition'),options=[...controls.get('cardCondition').options];
   // Never let a legacy [Card Condition] override the latest edited value.
