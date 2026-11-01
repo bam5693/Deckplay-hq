@@ -3320,14 +3320,26 @@ async function showCollectorPage(tab="listings"){
  const userId=currentUser.id,request=++profileLoadVersion,current=()=>request===profileLoadVersion&&currentUser?.id===userId;
  profileTab=tab;document.body.classList.remove("inbox-focus","deckplay-home","deckplay-market");document.body.classList.add("profile-focus");document.getElementById("inboxPage").hidden=true;document.querySelectorAll("main > section,main > aside").forEach(el=>{if(el.id!=="collectorPage")el.hidden=true});document.getElementById("collectorPage").hidden=false;
  window.scrollTo({top:0,behavior:"smooth"});document.getElementById("profilePageContent").innerHTML='<p class="muted">Loading your collection…</p>';
- const [profileResult,listingsResult,wantedResult]=await Promise.all([supabaseClient.from("profiles").select("username,bio,favorite_tcg,location_label,avatar_url").eq("id",userId).maybeSingle(),supabaseClient.from("listings").select("id,title,price,status,category,image_urls,created_at").eq("seller_id",userId).order("created_at",{ascending:false}),supabaseClient.from("wanted_posts").select("id,title,details,game,budget,created_at").eq("user_id",userId).order("created_at",{ascending:false})]);
+ let profileResult,listingsResult,wantedResult;
+  try{
+   const requests=Promise.all([supabaseClient.from("profiles").select("username,bio,favorite_tcg,location_label,avatar_url").eq("id",userId).maybeSingle(),supabaseClient.from("listings").select("id,title,price,status,category,image_urls,created_at").eq("seller_id",userId).order("created_at",{ascending:false}),supabaseClient.from("wanted_posts").select("id,title,details,game,budget,created_at").eq("user_id",userId).order("created_at",{ascending:false})]);
+   [profileResult,listingsResult,wantedResult]=await (tab==="saved"?readMarketplaceRequest(requests,8000):requests);
+  }catch(error){
+   if(current()&&tab==="saved")document.getElementById("profilePageContent").innerHTML='<p class="muted" role="status">Your saved items could not load. Check your connection and <button type="button" class="ghost" data-retry-profile-saved>retry saved items</button>.</p>';
+   return;
+  }
  if(!current())return;
  const profile=profileResult.data||{},listings=listingsResult.data||[],wanted=wantedResult.data||[],avatar=safeImageUrl(profile.avatar_url),username=profile.username||currentUser.user_metadata?.username||"collector";
  document.getElementById("pageAvatar").innerHTML=avatar?`<img src="${escapeHtml(avatar)}" alt="Your profile picture">`:escapeHtml(username[0].toUpperCase());
  document.getElementById("pageHandle").textContent="@"+username;document.getElementById("pageBio").textContent=profile.bio||"Add a bio to tell collectors about yourself.";
  document.getElementById("pageMeta").textContent=[profile.favorite_tcg?"Favorite TCG: "+profile.favorite_tcg:"",profile.location_label||""].filter(Boolean).join(" · ");
  document.getElementById("pageListingCount").textContent=listings.length+" listings";document.getElementById("pageWantedCount").textContent=wanted.length+" wanted posts";
- const ownRating=await sellerRatingHtml(userId);if(!current())return;document.getElementById("ownSellerRatings").innerHTML=ownRating;
+ if(tab==="saved"){
+   const rating=document.getElementById("ownSellerRatings");rating.textContent="Loading seller reviews…";
+   void sellerRatingHtml(userId).then(html=>{if(current())rating.innerHTML=html}).catch(()=>{if(current())rating.textContent="Seller reviews unavailable."});
+  }else{
+   const ownRating=await sellerRatingHtml(userId);if(!current())return;document.getElementById("ownSellerRatings").innerHTML=ownRating;
+  }
  document.querySelectorAll("[data-profile-tab]").forEach(b=>b.classList.toggle("active",b.dataset.profileTab===tab));
  const content=document.getElementById("profilePageContent");
  if(tab==="wanted"){content.innerHTML=wanted.length?wanted.map(w=>`<article class="profile-item"><h3>${escapeHtml(w.title)}</h3><p>${escapeHtml(w.details||"")}</p><small>${escapeHtml(w.game||"Collectibles")}${w.budget?" · Budget: $"+Number(w.budget).toFixed(2):""}</small></article>`).join(""):'<p class="muted">No wanted posts yet. Use the Wanted board to post what you are looking for.</p>';return}
@@ -3338,12 +3350,16 @@ async function showCollectorPage(tab="listings"){
   const blocksReady=await loadBlockedCollectors();
   if(!current())return;
   if(!blocksReady){content.innerHTML='<p class="muted" role="status">Could not verify blocked collectors. Your saved listings are hidden until this check succeeds. <button type="button" class="ghost" data-retry-profile-saved>Retry saved items</button></p>';return}
-  const {data:rows,error}=await supabaseClient.from("saved_listings").select("listing_id").eq("user_id",userId);
+  let rows,error;
+   try{({data:rows,error}=await readMarketplaceRequest(supabaseClient.from("saved_listings").select("listing_id").eq("user_id",userId),8000))}
+   catch(requestError){if(current())content.innerHTML=retry;return}
   if(!current())return;
   if(error){content.innerHTML=retry;return}
   const ids=[...new Set((rows||[]).map(row=>row.listing_id).filter(Boolean))];
   if(!ids.length){content.innerHTML='<p class="muted">No saved items yet. Save a listing with its heart button.</p>'+browse;return}
-  const {data:matches,error:listingError}=await supabaseClient.from("listings").select("id,title,price,status,image_urls,seller_id").in("id",ids).eq("status","active");
+  let matches,listingError;
+   try{({data:matches,error:listingError}=await readMarketplaceRequest(supabaseClient.from("listings").select("id,title,price,status,image_urls,seller_id").in("id",ids).eq("status","active"),8000))}
+   catch(requestError){if(current())content.innerHTML=retry;return}
   if(!current())return;
   if(listingError){content.innerHTML=retry;return}
   const visible=(matches||[]).filter(row=>!blockedCollectorIds.has(row.seller_id));
