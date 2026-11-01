@@ -50,3 +50,42 @@ test('deck and contents fields are legible in both themes and Cancel matches Pos
   await info.attach('deck-'+mode+'-emulated-'+info.project.name,{path:shot,contentType:'image/png'});
  }
 });
+
+test('Jayden and Tanner inspect customer-visible screens, not just selectable option IDs',async({page},info)=>{
+ const missions=[
+  {lead:'Jayden',type:'game',goal:'Sell a Nintendo Switch 2 video game',unwanted:['rarity','foil','grading']},
+  {lead:'Tanner',type:'single',game:'sports_cards',goal:'Sell a 1983-84 hockey card',unwanted:['game platform']},
+  {lead:'Jayden',type:'deck',goal:'Sell a complete playable One Piece deck',unwanted:['game platform']}
+ ];
+ const evidence=[];
+ for(const mission of missions)for(const theme of ['light','dark']){
+  await page.evaluate(value=>{document.documentElement.dataset.theme=value},theme);
+  await page.locator('#listingType').selectOption(mission.type);
+  if(mission.game)await page.locator('#tcgGame').selectOption(mission.game);
+  const observations=await page.evaluate(()=>{
+   const dlg=document.querySelector('#sellModal .dialog'),form=document.getElementById('listingForm');
+   const visible=el=>{const r=el.getBoundingClientRect(),c=getComputedStyle(el);return !!r.width&&!!r.height&&c.visibility!=='hidden'&&c.display!=='none'};
+   const rows=[...form.querySelectorAll('input,select,textarea,button')].filter(visible);
+   const overflow=rows.filter(el=>{const r=el.getBoundingClientRect();return r.right>innerWidth+2||r.left< -2}).map(el=>el.id||el.textContent.trim().slice(0,25));
+   const text=document.getElementById('listingDescriptionHelp').textContent.toLowerCase();
+   const a=document.querySelector('#sellModal .listing-submit-actions .ghost');
+   const b=document.getElementById('publishButton');
+   const radius=parseFloat(getComputedStyle(a).borderTopLeftRadius);
+   const buttonHeight=Math.abs(a.getBoundingClientRect().height-b.getBoundingClientRect().height);
+   return {overflow,help:text,visibleCategory:visible(document.getElementById('listingCategoryAdvanced')),cancelRadius:radius,buttonHeight,scrollWidth:dlg.scrollWidth,clientWidth:dlg.clientWidth};
+  });
+  expect(observations.overflow,mission.goal+' must not clip controls').toEqual([]);
+  expect(observations.visibleCategory,mission.goal+' must not ask twice').toBe(false);
+  expect(observations.scrollWidth).toBeLessThanOrEqual(observations.clientWidth+2);
+  expect(observations.buttonHeight).toBeLessThan(3);
+  expect(observations.cancelRadius,'Cancel should not be a round pill').toBeLessThanOrEqual(12);
+  for(const word of mission.unwanted)expect(observations.help).not.toContain(word);
+  const file=info.outputPath(mission.lead+'-'+mission.type+'-'+theme+'.png');
+  await page.screenshot({path:file,fullPage:false});
+  await info.attach(mission.lead+'-'+mission.type+'-'+theme,{path:file,contentType:'image/png'});
+  evidence.push({lead:mission.lead,goal:mission.goal,theme,viewport:page.viewportSize(),...observations,screenshot:file.split('/').pop(),limitations:'local mocked/anonymous staging build; not physical Android, not signed seller→buyer acceptance, screenshot not AI-inspected'});
+ }
+ const fs=require('node:fs');const file=info.outputPath('collector-customer-journey-evidence.json');
+ fs.writeFileSync(file,JSON.stringify({source:'emulated browser observations',missions:evidence,reviewStatus:'AWAITING INDEPENDENT VISUAL REVIEW'},null,2));
+ await info.attach('collector-journey-evidence',{path:file,contentType:'application/json'});
+});
