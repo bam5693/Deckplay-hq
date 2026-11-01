@@ -16,7 +16,7 @@ const extract = (source, name) => {
 const sports = vm.runInNewContext('(' + extract(html, 'sportsListingDetail') + ')');
 const specifics = vm.runInNewContext('(' + extract(html, 'listingBuyerSpecifics') + ')', {escapeHtml: value => String(value).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')});
 const editorLatest = vm.runInNewContext('(' + extract(editor, 'latestEditorClassification') + ')');
-const hockey = 'Sports brand: Fleer\\nYear: 1981\\n[Listing classification]\\nSport: Hockey\\nSports brand: Fleer\\nYear: 1981\\nPlayer: Wayne Gretzky\\n[End classification]\\n[Listing classification]\\nSport: Hockey\\nSports brand: O-Pee-Chee\\nYear: 1983-84\\nPlayer: Wayne Gretzky\\n[End classification]';
+const hockey = 'Sports brand: Fleer\nYear: 1981\n[Listing classification]\nSport: Hockey\nSports brand: Fleer\nYear: 1981\nPlayer: Wayne Gretzky\n[End classification]\n[Listing classification]\nSport: Hockey\nSports brand: O-Pee-Chee\nYear: 1983-84\nPlayer: Wayne Gretzky\n[End classification]';
 const sportsItem = {rawCategory:'trading_cards',game:'sports_cards',description:hockey};
 test('Tanner: latest vintage hockey brand and year win in buyer filters', () => {
  assert.equal(sports(sportsItem,'Brand'),'o-pee-chee');
@@ -35,16 +35,16 @@ test('Tanner: cleared current brand does not resurrect historical Fleer', () => 
  assert.doesNotMatch(specifics(item),/Fleer/);
 });
 test('Jayden: corrected Pokemon 151 printing replaces old Base Set identity', () => {
- const description='Set: Base Set\\n[Listing classification]\\nSet: Base Set\\nCard number: 4/102\\n[End classification]\\n[Listing classification]\\nSet: 151\\nCard number: 199/165\\n[End classification]';
+ const description='Set: Base Set\n[Listing classification]\nSet: Base Set\nCard number: 4/102\n[End classification]\n[Listing classification]\nSet: 151\nCard number: 199/165\n[End classification]';
  const detail=specifics({rawCategory:'trading_cards',game:'pokemon',description});
  assert.match(detail,/151/);
- assert.match(detail,/199\\/165/);
- assert.doesNotMatch(detail,/Base Set|4\\/102/);
+ assert.match(detail,/199\/165/);
+ assert.doesNotMatch(detail,/Base Set|4\/102/);
 });
 test('Editor reentry uses latest classification, not historical fallback', () => {
  assert.match(editorLatest(hockey),/O-Pee-Chee/);
  assert.doesNotMatch(editorLatest(hockey),/Fleer/);
- assert.match(editor,/return \\(latest\\?\\?description\\)\\.match\\(pattern\\)/);
- assert.match(editor,/\\(!latest\\?options\\.find/);
+ assert.match(editor,/return \(latest\?\?description\)\.match\(pattern\)/);
+ assert.match(editor,/\(!latest\?options\.find/);
  assert.equal(editorLatest('Seller notes only'),null);
 });
