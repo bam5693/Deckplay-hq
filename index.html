@@ -1381,7 +1381,9 @@ document.getElementById("priceOffersList").addEventListener("click",async e=>{
 // Never infer one item for legacy listings lacking an explicit contents block.
 function listingDisclosedQuantity(description){
  const raw=String(description||"");
- if(!/^\[Listing contents\]\n[\s\S]*?\n\[End listing contents\](?:\n|$)/.test(raw))return null;
+ const block=raw.match(/^\[Listing contents\]\n([\s\S]*?)\n\[End listing contents\](?:\n|$)/)?.[1];
+ // Editor defaults are for drafting only: never invent a public quantity from a malformed disclosure.
+ if(!block||!/^Quantity included: [1-9]\d*$/m.test(block)||!/^Unit: [^\n]+$/m.test(block))return null;
  const parsed=readListingContents(raw),amount=Number(parsed.quantity);
  const unit=String(parsed.unit||"").replace(/[\x00-\x1f\x7f]+/g," ").trim();
  if(!Number.isSafeInteger(amount)||amount<1||amount>100000||!unit||unit.length>40)return null;
