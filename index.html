@@ -1855,7 +1855,7 @@ void supabaseClient.auth.getSession().then(({data,error})=>{
 let wantedLoadVersion=0;
 async function loadWanted(){
  const request=++wantedLoadVersion,owner=currentUser?.id||null,epoch=listingAccountVersion;
- const active=()=>request===wantedLoadVersion&&currentUser?.id===owner&&listingAccountVersion===epoch;
+ const active=()=>request===wantedLoadVersion&&(currentUser?.id||null)===owner&&listingAccountVersion===epoch;
  const grid=document.getElementById("wantedGrid");
  grid.textContent="Loading wanted posts…";
  let data,error;
