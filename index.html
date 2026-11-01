@@ -3334,6 +3334,10 @@ async function showCollectorPage(tab="listings"){
  if(tab==="saved"){
   const retry='<p class="muted" role="status">Your saved items could not load. Check your connection and <button type="button" class="ghost" data-retry-profile-saved>retry saved items</button>.</p>';
   const browse='<button type="button" class="ghost" data-browse-from-saved>Browse marketplace</button>';
+  // Do not show a blocked seller's saved card before the privacy preflight completes.
+  const blocksReady=await loadBlockedCollectors();
+  if(!current())return;
+  if(!blocksReady){content.innerHTML='<p class="muted" role="status">Could not verify blocked collectors. Your saved listings are hidden until this check succeeds. <button type="button" class="ghost" data-retry-profile-saved>Retry saved items</button></p>';return}
   const {data:rows,error}=await supabaseClient.from("saved_listings").select("listing_id").eq("user_id",userId);
   if(!current())return;
   if(error){content.innerHTML=retry;return}
