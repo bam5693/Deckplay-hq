@@ -180,6 +180,34 @@ test('Kyle: a temporary shared-link lookup failure offers a retry and opens the 
  await expect(page.locator('#deckplaySharedLinkRetry')).toHaveCount(0);
 });
 
+test('T7 mobile retry shows progress and restores its control after a failed slow lookup',async({page})=>{
+ await ready(page);
+ await page.evaluate(listing=>{
+  history.replaceState({},'','/?listing='+listing);
+  window.__retryPending=null;
+  window.__firstSharedLookup=true;
+  supabaseClient.from=()=>{
+   const q={};
+   for(const key of ['select','eq'])q[key]=()=>q;
+   q.maybeSingle=()=>{
+    if(window.__firstSharedLookup){window.__firstSharedLookup=false;return Promise.resolve({data:null,error:{message:'offline'}});}
+    return new Promise(resolve=>{window.__retryPending=resolve});
+   };
+   return q;
+  };
+ },LISTING);
+ await page.evaluate(()=>window.deckplayOpenSharedLinkOnce());
+ const retry=page.getByRole('button',{name:'Retry shared link'});
+ await expect(retry).toBeEnabled();
+ await retry.click();
+ const loading=page.getByRole('button',{name:'Opening shared link…'});
+ await expect(loading).toBeDisabled();
+ await expect(page.locator('#detailModal')).not.toHaveClass(/open/);
+ await page.evaluate(()=>window.__retryPending({data:null,error:{message:'still offline'}}));
+ await expect(retry).toBeEnabled();
+ await expect(page.locator('#deckplaySharedLinkRetry')).toContainText('Check your connection');
+});
+
 test('Kyle: a temporary shared collector lookup offers a usable retry on mobile and desktop',async({page})=>{
  await ready(page);
  await page.evaluate(seller=>{
