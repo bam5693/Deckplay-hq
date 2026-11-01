@@ -16,6 +16,11 @@
     <details><summary><strong>How do I report a suspicious listing?</strong></summary><p>Use the Report action on the listing or collector. For account access, bugs or other help, open a private support ticket below.</p></details>
     <details><summary><strong>What if my listing or account was restricted?</strong></summary><p>You can ask support to review a moderation decision. Explain which listing or action you want reviewed and why, without including passwords, payment information or private addresses. Sending a request does not automatically reverse a restriction.</p><button type="button" class="ghost" id="supportModerationReview">Request a moderation review</button></details>
     <details><summary><strong>What if a trade or shipping arrangement goes wrong?</strong></summary><p>DeckPlay beta does not process payments, purchases or shipping. If a collector pressures you to pay off-platform, report the listing or collector. For a proposed trade, delivery concern or confusing shipping preview, send a private support ticket. Do not include addresses, tracking numbers or payment details.</p><button type="button" class="ghost" id="supportTradeConcern">Get help with a trade or shipping concern</button></details>
+    <section id="supportBetaStatusNotice" aria-label="DeckPlay beta access status" style="border:1px solid #819c9655;border-radius:12px;padding:12px;margin:14px 0">
+      <strong id="supportBetaStatusHeading">Beta access status</strong>
+      <p id="supportBetaStatusDetail" class="muted" role="status" aria-live="polite"></p>
+      <p class="muted" style="font-size:12px;margin-bottom:0">Status is updated through an approved DeckPlay release, not by support tickets. Do not submit personal information or payment to request an invitation.</p>
+    </section>
     <details id="supportBetaAccessGuide"><summary><strong>How does the private beta work, and can I request access?</strong></summary><p>DeckPlay is preparing a limited collector beta. An account or support request does not guarantee an invitation or a launch date. Do not send passwords, payment information, addresses or identity documents to request access. If invitations open, DeckPlay will communicate the official process through its own website.</p></details>
     <details id="supportBetaIssueGuide"><summary><strong>I found a problem. How will I know what happens next?</strong></summary><p>Sign in and open a private support ticket describing what you were trying to do, what happened and which device you used. You can return to Help &amp; support → My tickets to read replies and check whether your report is open, waiting or resolved. A report is not an automatic fix or a promise of a response time. For immediate safety concerns, use the listing or collector Report action. Never share passwords, payment details or private addresses.</p></details>
     <div id="supportSignIn"><p class="muted">Sign in to send feedback or open and follow private support tickets.</p><button type="button" class="primary" id="supportSignInButton">Sign in to send feedback</button></div>
@@ -135,6 +140,17 @@
     </section>
   </div>`;
   document.body.append(modal);
+  // Owner-controlled release status. Changing this requires an intentional reviewed deployment.
+  // It does NOT grant accounts access, send invitations, or make a waitlist.
+  const betaAccessPhase = "in-development";
+  const betaStatusCopy = Object.freeze({
+    "in-development": ["Invitations not yet announced", "DeckPlay is still being built and tested. There is no public invitation request form or confirmed beta opening date."],
+    "invite-only": ["Invite-only beta", "Only collectors specifically invited by DeckPlay can participate. This page does not issue invitations or collect access requests."],
+    "paused": ["Beta access paused", "New beta access is temporarily paused. Existing support tickets can still be followed here."]
+  });
+  const betaStatus = betaStatusCopy[betaAccessPhase] || betaStatusCopy["in-development"];
+  document.getElementById("supportBetaStatusHeading").textContent = betaStatus[0];
+  document.getElementById("supportBetaStatusDetail").textContent = betaStatus[1];
   const el = id => document.getElementById(id);
   const status = (id, message) => { el(id).textContent = message || ""; };
   const date = value => new Date(value).toLocaleString();
