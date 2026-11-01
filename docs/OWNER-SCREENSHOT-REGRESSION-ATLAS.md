@@ -4,7 +4,7 @@
 
 ## What is actually available
 
-- The owner supplied **11 JPG attachments in the current conversation**; **10 show DeckPlay mobile UI**, and **one is a GitHub Actions view, not a DeckPlay UI screen**. The screenshot images are attached in the owner chat, **not copied into the repository**. The workers must use the visible descriptions here and request/review the actual image bytes when a pixel-accurate check is required. Never pretend this markdown file contains images.
+- The owner supplied **10 screenshot files are explicitly available in the current conversation**. Earlier screenshot files may require access to the original conversations. The screenshot images are attached in the owner chat, **not copied into the repository**. The workers must use the visible descriptions here and request/review the actual image bytes when a pixel-accurate check is required. Never pretend this markdown file contains images.
 - Earlier DeckPlay owner screenshots were discussed across prior chats: unreadable Inbox message box; missing/odd profile and Settings Sign Out; password-reset error, missing password visibility and mismatched Cancel; staging login that could not authenticate; double-category listing input; mobile navigation and header search; live-vs-staging discrepancies. These are **historical user bug reports**, not proof that their old image bytes were retrieved or that each is still broken. Verify current version before reopening.
 - Any additional owner screenshot: add one indexed record with exact reproduction, category/viewport/theme, customer harm, worker owner, fix commit, independent review and current deployment evidence. No silent skips; deduplicate truly identical problems.
 
@@ -22,7 +22,6 @@
 | 33654.jpg | One Piece set selection incl. EB-01 through EB-05 | Correctness of displayed releases, optional skipping, very long Android native menu |
 | 33652.jpg | Sports brand chooser (Topps/Panini/etc.) | Native menu height, legibility, skipped/unknown choice and dependency on sports selection |
 | 33648.jpg | Light mobile onboarding landing panel | White-on-pale heading readability, lengthy text layout, button hierarchy, mobile dock overlap and discoverability |
-| 33646.jpg | GitHub interface screenshot, not public DeckPlay UI | Use for process/CI visibility, **not** as evidence of customer interface quality |
 
 **Important**: These are observations, not automatically confirmed root causes or open defects. Native Android `<select>` menus may render as system sheets; a large list is not inherently broken. Test whether users can choose quickly, search or scroll naturally, recover and preserve the value. Do not replace native controls with expensive custom dropdowns without evidence.
 
