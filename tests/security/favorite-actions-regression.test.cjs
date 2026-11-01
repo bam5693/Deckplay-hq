@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const vm = require('node:vm');
 const path = require('node:path');
 
-function harness(error = null) {
+function harness(error = null, options = {}) {
   const saved = new Set();
   const notices = [];
   let renders = 0;
@@ -16,7 +16,9 @@ function harness(error = null) {
     toast: message => notices.push(message),
     openModal: () => { throw Error('unexpected login prompt'); },
     AbortSignal,
-    supabaseClient: {from: () => ({
+    setTimeout: options.setTimeout || setTimeout,
+    clearTimeout: options.clearTimeout || clearTimeout,
+    supabaseClient: options.supabaseClient || {from: () => ({
       insert: async () => ({error}),
       delete: () => ({eq: () => ({eq: async () => ({error})})})
     })}
@@ -69,4 +71,19 @@ test('failed favorite removal restores the saved state',async()=>{
   await h.context.window.favoriteActions.toggle('card-1');
   assert.equal(h.saved.has('card-1'),true);
   assert.deepEqual(h.notices,['Delete failed']);
+});
+
+test('a never-settling favorite transport without abortSignal times out and releases retry control',async()=>{
+  let attempts=0;
+  const h=harness(null,{
+    setTimeout: callback => {queueMicrotask(callback);return 1;},
+    clearTimeout: () => {},
+    supabaseClient: {from: () => ({insert: () => {attempts++;return new Promise(()=>{});}})}
+  });
+  await h.context.window.favoriteActions.toggle('card-1');
+  assert.equal(h.saved.has('card-1'),false);
+  assert.match(h.notices[0],/timed out.*retry/i);
+  assert.equal(h.context.window.favoriteActions.pending('card-1'),false);
+  await h.context.window.favoriteActions.toggle('card-1');
+  assert.equal(attempts,2);
 });
