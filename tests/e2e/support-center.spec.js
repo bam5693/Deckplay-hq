@@ -1469,3 +1469,20 @@ test('T8.3: private reply length indicator follows draft and resets after send',
  await page.getByRole('button',{name:'Send reply'}).click();
  await expect(page.locator('#supportReplyCount')).toHaveText('0 / 3000 characters');
 });
+
+test('T8.3: staff sees what a ticket status means before saving',async({page})=>{
+ await boot(page);await signIn(page,'buyer');
+ await page.getByRole('button',{name:'Help & support'}).last().click();
+ await page.locator('#supportSubject').fill('Help with collectible listing');
+ await page.locator('#supportDescription').fill('Synthetic ticket to inspect the staff status guidance.');
+ await page.getByRole('button',{name:'Create private ticket'}).click();
+ await page.evaluate(()=>{window.currentUser={id:'staff'};window.__authCallback('SIGNED_IN',{user:{id:'staff'}})});
+ await page.getByRole('button',{name:'Help & support'}).last().click();
+ await page.locator('#supportStaff').click();
+ await page.locator('#supportTicketList button').filter({hasText:'Help with collectible listing'}).click();
+ await expect(page.locator('#supportStaffStatusHint')).toContainText('New or active case');
+ await page.locator('#supportStatusSelect').selectOption('waiting_on_user');
+ await expect(page.locator('#supportStaffStatusHint')).toContainText('Collector needs to reply');
+ await page.locator('#supportStatusSelect').selectOption('resolved');
+ await expect(page.locator('#supportStaffStatusHint')).toContainText('Case is closed');
+});
