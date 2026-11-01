@@ -1077,7 +1077,7 @@ async function refreshSellerRatingCache(){
  sellerRatingCache=new Map([...grouped].map(([id,x])=>[id,{average:(x.total/x.count).toFixed(1),count:x.count}]));
  render();
 }
-function marketplaceSearchText(value){return String(value).normalize("NFKD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/\b(op|eb|st|prb)(?:\s*-\s*|\s+)(\d{1,3})\b/g,(_,series,number)=>series+number)}
+function marketplaceSearchText(value){return String(value).normalize("NFKD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/\b(op|eb|st|prb)(?:\s*-\s*|\s+)(\d{1,3})\b/g,(_,series,number)=>series+number).replace(/\bsnes\b/g,"super nintendo").replace(/\bn64\b/g,"nintendo 64").replace(/\bps([1-5])\b/g,(_,generation)=>"playstation "+generation)}
 // Seller edits retain historical disclosures for audit, but buyer search/details
 // must not present superseded structured fields as the current item identity.
 function marketplaceCurrentSearchDescription(value){
