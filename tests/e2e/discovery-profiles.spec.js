@@ -281,3 +281,66 @@ test('T4.4 failed storefront availability check keeps item for retry, then opens
  await expect(page.locator('#detailTitle')).toHaveText('Sports card current price');
  expect(await page.evaluate(()=>storefrontChecks)).toBe(2);
 });
+
+test('public storefront survives failed Wanted read and stalled optional reviews, then retries Wanted only',async({page})=>{
+ await page.route('https://challenges.cloudflare.com/**',r=>r.abort());
+ await page.route('https://prrrzeelltmyugssqnzk.supabase.co/**',r=>r.fulfill({json:[]}));
+ await page.goto('/');
+ await page.evaluate(async()=>{
+  await supabaseClient.auth.getSession();currentUser=null;blockedCollectorIds.clear();
+  window.wantedProfileReads=0;
+  const originalRead=readMarketplaceRequest;
+  readMarketplaceRequest=(request)=>Promise.race([
+   Promise.resolve(request),
+   new Promise((_,reject)=>setTimeout(()=>reject(Error('Timed out')),60))
+  ]);
+  sellerRatingHtml=()=>new Promise(()=>{}); // Optional reviews must not freeze storefront.
+  const row={id:'one-piece-card',seller_id:'seller-1',title:'OP05 Manga Luffy',price:200,category:'trading_cards',image_urls:[],status:'active'};
+  supabaseClient.from=table=>{
+   const q={select:()=>q,eq:()=>q,order:()=>q,limit:()=>q,
+    maybeSingle:async()=>({data:table==='profiles'?{username:'Tanner',collection_links:[]}:null,error:null}),
+    then:(resolve,reject)=>{
+     const result=table==='listings'?{data:[row],error:null}:table==='wanted_posts'
+      ?(++wantedProfileReads===1?{data:null,error:{message:'Offline'}}:{data:[{id:'wanted-1',title:'Looking for Luffy',details:'OP05'}],error:null})
+      :{data:[],error:null};
+     return Promise.resolve(result).then(resolve,reject);
+    }};
+   return q;
+  };
+  await showPublicProfile('seller-1');
+  readMarketplaceRequest=originalRead;
+ });
+ await expect(page.locator('#publicProfileResults')).toContainText('OP05 Manga Luffy');
+ await expect(page.locator('#publicProfileContent')).toContainText('Seller reviews unavailable');
+ await expect(page.locator('#publicProfileContent')).toContainText('Wanted unavailable');
+ await page.locator('[data-public-tab="wanted"]').click();
+ await expect(page.locator('#publicProfileResults')).toContainText('Wanted posts could not load');
+ await expect(page.locator('#publicProfileResults')).not.toContainText('No wanted posts yet');
+ await page.locator('[data-retry-public-wanted]').click();
+ await expect(page.locator('#publicProfileResults')).toContainText('Looking for Luffy');
+ await expect(page.locator('#publicProfileContent')).toContainText('1 wanted posts');
+ expect(await page.evaluate(()=>wantedProfileReads)).toBe(2);
+});
+
+test('public profile never exposes collection links when block verification stalls',async({page})=>{
+ await page.route('https://challenges.cloudflare.com/**',r=>r.abort());
+ await page.route('https://prrrzeelltmyugssqnzk.supabase.co/**',r=>r.fulfill({json:[]}));
+ await page.goto('/');
+ await page.evaluate(async()=>{
+  await supabaseClient.auth.getSession();currentUser={id:'buyer-1'};blockedCollectorIds.clear();
+  readMarketplaceRequest=(request)=>Promise.race([
+   Promise.resolve(request),
+   new Promise((_,reject)=>setTimeout(()=>reject(Error('Timed out')),60))
+  ]);
+  supabaseClient.from=table=>{
+   const q={select:()=>q,eq:()=>q,order:()=>q,limit:()=>q,
+    maybeSingle:()=>table==='user_blocks'?new Promise(()=>{}):Promise.resolve({data:{username:'Tanner',collection_links:[{label:'Private collection',url:'https://collections.example.org'}]},error:null}),
+    then:(resolve,reject)=>Promise.resolve({data:[],error:null}).then(resolve,reject)};
+   return q;
+  };
+  await showPublicProfile('seller-1');
+ });
+ await expect(page.locator('#publicProfileContent')).toContainText('Could not verify blocked collectors');
+ await expect(page.locator('#publicProfileContent')).not.toContainText('Private collection');
+ await expect(page.locator('#publicProfileContent a')).toHaveCount(0);
+});
