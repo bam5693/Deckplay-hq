@@ -1903,6 +1903,7 @@ void supabaseClient.auth.getSession().then(({data,error})=>{
 }).catch(error=>console.warn("Could not restore this browser session",error));
 
 let wantedLoadVersion=0;
+const wantedDeletePending=new Set(),wantedDeleteUncertain=new Set();
 // Match buttons are tied to the Wanted post and account snapshot that rendered them.
 let wantedVisiblePosts=new Map(),wantedVisibleOwner=null,wantedVisibleEpoch=0,wantedVisibleBlockedIds=new Set();
 function wantedMatchMarkup(post){
@@ -1951,7 +1952,7 @@ async function loadWanted(){
  const ids=[...new Set(visiblePosts.map(p=>p.user_id))];
  // Show actual Wanted posts and exact matches immediately. Profile names are
  // optional enrichment and must never hold the board behind a slow request.
- grid.innerHTML=visiblePosts.map(p=>`<article class="wanted-card"><div class="kind">${escapeHtml(tcgNames[p.game]||[...document.getElementById("wantedGame").options].find(o=>o.value===p.game)?.textContent||p.game||"Collectibles")} · ${escapeHtml(p.offer_type==="either"?"Buy or trade":p.offer_type==="buy"?"Looking to buy":"Looking to trade")}</div><h3>${escapeHtml(p.title)}</h3><p>${escapeHtml((p.details||"").split("[DeckPlay match: ")[0].trim()||"No additional details")}</p>${wantedMatchContainer(p)}<div class="wanted-bottom"><span><span data-wanted-author="${escapeHtml(p.user_id)}">DeckPlay member</span>${p.budget!=null?" · Budget $"+Number(p.budget).toFixed(2):""}</span>${p.user_id===currentUser?.id?`<button type="button" class="ghost" data-delete-wanted="${escapeHtml(p.id)}">Delete</button>`:""}</div></article>`).join("");
+ grid.innerHTML=visiblePosts.map(p=>`<article class="wanted-card"><div class="kind">${escapeHtml(tcgNames[p.game]||[...document.getElementById("wantedGame").options].find(o=>o.value===p.game)?.textContent||p.game||"Collectibles")} · ${escapeHtml(p.offer_type==="either"?"Buy or trade":p.offer_type==="buy"?"Looking to buy":"Looking to trade")}</div><h3>${escapeHtml(p.title)}</h3><p>${escapeHtml((p.details||"").split("[DeckPlay match: ")[0].trim()||"No additional details")}</p>${wantedMatchContainer(p)}<div class="wanted-bottom"><span><span data-wanted-author="${escapeHtml(p.user_id)}">DeckPlay member</span>${p.budget!=null?" · Budget $"+Number(p.budget).toFixed(2):""}</span>${p.user_id===currentUser?.id?`<button type="button" class="ghost" data-delete-wanted="${escapeHtml(p.id)}">${wantedDeleteUncertain.has(p.user_id+":"+p.id)?"Check removal status":"Delete"}</button>`:""}</div></article>`).join("");
  try{
   const result=await readMarketplaceRequest(supabaseClient.from("profiles").select("id,username,display_name").in("id",ids),5000);
   if(!active())return;
@@ -2078,7 +2079,6 @@ document.getElementById("wantedForm").addEventListener("submit",async e=>{
  }catch(error){if(valid())status.textContent=error.message||"Could not publish. Try again."}
  finally{if(valid()){wantedPublishBusy=false;button.disabled=false;form.removeAttribute("aria-busy")}}
 });
-const wantedDeletePending=new Set(),wantedDeleteUncertain=new Set();
 document.getElementById("wantedGrid").addEventListener("click",async e=>{if(e.target.closest("[data-retry-wanted]")){await loadWanted();return}if(e.target.closest("[data-retry-wanted-listings]")){await loadListings();return}const match=e.target.closest("[data-wanted-match]");if(match){
  const post=wantedVisiblePosts.get(match.dataset.wantedPost);
  const item=items.find(x=>String(x.id)===match.dataset.wantedMatch);
