@@ -2315,11 +2315,18 @@ function publicCollectionHtml(p,id,isBlocked){
  return `<section class="public-collections"><h3>Shared collections</h3><p class="muted">External pages · Unverified ownership · Items are not listed for sale</p>${links.map(l=>`<p><a href="${escapeHtml(safeCollectionUrl(l.url))}" target="_blank" rel="noopener noreferrer nofollow ugc">${escapeHtml(l.label)} ↗ <small>(${escapeHtml(new URL(l.url).hostname)})</small></a></p>`).join("")}${p.collection_inquiry_mode!=="off"&&["trades","buy_trade"].includes(p.collection_inquiry_mode)&&!isBlocked&&currentUser?.id!==id?`<button class="ghost" type="button" data-collection-inquiry="${escapeHtml(id)}">${p.collection_inquiry_mode==="trades"?"Ask about a trade":"Ask about buying or trading"}</button>`:'<p class="muted">Collection showcase · New collection inquiries are off</p>'}</section>`;
 }
 async function showPublicProfile(id){
- const version=++publicProfileVersion,viewer=currentUser?.id,current=()=>version===publicProfileVersion&&currentUser?.id===viewer;
+ const version=++publicProfileVersion,viewer=currentUser?.id,current=()=>version===publicProfileVersion&&currentUser?.id===viewer&&!blockedCollectorIds.has(id);
  if(blockedCollectorIds.has(id)){toast("This collector is blocked. Unblock them in Settings to view their profile.");return}
  const content=document.getElementById("publicProfileContent");content.textContent="Loading collector…";openModal("publicProfileModal");
  const [pResult,lResult,wResult,blockResult]=await Promise.all([supabaseClient.from("profiles").select("username,bio,favorite_tcg,location_label,avatar_url,collection_links,collection_inquiry_mode").eq("id",id).maybeSingle(),supabaseClient.from("listings").select("id,title,description,price,image_urls,condition,category,tcg_game,collectible_subcategory,accepts_trades,accepts_price_offers,created_at,seller_id").eq("seller_id",id).eq("status","active").order("created_at",{ascending:false}).order("id",{ascending:false}).limit(61),supabaseClient.from("wanted_posts").select("id,title,details,game").eq("user_id",id).order("created_at",{ascending:false}).limit(30),currentUser?supabaseClient.from("user_blocks").select("blocked_id").eq("blocker_id",currentUser.id).eq("blocked_id",id).maybeSingle():Promise.resolve({data:null})]);
  if(!current())return;
+ // A direct profile link can race the blocked-collector preload. Never show
+ // seller identity, listings or collection links when the authoritative block
+ // lookup reports a block or fails; cached block state alone is insufficient.
+ if(viewer&&(blockResult.error||blockResult.data)){
+  content.textContent=blockResult.error?"Could not verify collector privacy. Please retry.":"This collector is blocked. Unblock them in Settings to view their profile.";
+  return "blocked";
+ }
  if(pResult.error){content.textContent="Could not load collector profile. Please retry.";return "retry"}
  if(!pResult.data){content.textContent="Collector profile unavailable.";return "missing"}
  const followResult=currentUser&&currentUser.id!==id?await supabaseClient.from("seller_follows").select("seller_id").eq("follower_id",currentUser.id).eq("seller_id",id).maybeSingle():{data:null};
