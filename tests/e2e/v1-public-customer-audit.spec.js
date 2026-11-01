@@ -26,7 +26,7 @@ test('first-time visitor explores V1 navigation with readable controls and scree
    const desktopTargets={marketplace:'.cat',sell:'button:has-text("Sell")'};
    const guestGated=surface.name==='favorites'||(!mobile&&['inbox','profile'].includes(surface.name));
    const target=mobile?mobileTargets[surface.name]:desktopTargets[surface.name];
-   const item=page.locator(target||'#__signed_in_destination__').locator(':visible').first();
+   const item=page.locator(target||'#__signed_in_destination__').filter({visible:true}).first();
    const available=!guestGated&&await item.count()>0;
    let status=guestGated?'signed-in-only':'missing',overflow=[],unlabeled=[];
    if(available){
