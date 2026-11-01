@@ -164,3 +164,12 @@ Focused [test source](https://github.com/bam5693/Deckplay-hq/blob/3b17c5970652a3
 | P2 | Legacy single `Set:` line without enough generated context | Could be real seller prose; preserve rather than delete automatically. Require real editor review before treating as generated. | T1 / integration | **UNKNOWN — deliberate fail-safe** |
 
 **UX ACCEPTANCE:** BLOCKED. Original owner JPGs, independent review, rendered mobile light/dark and physical Android not inspected; signed seller→buyer, storage and deployed parity pending. Existing T1.1/T1.2 acceptance retained. No PR #30/#31 code merged.
+
+
+### 2026-11-01 15:30 CST — grouped deck metadata/quantity gap (T1.4)
+| Priority | Collector scenario | Source and harm | Owner / exact check | Status |
+|---|---|---|---|---|
+| P1 | One Piece grouped 8-card deck edited after adding set/variant | Existing `listingEditorLatestDeckList` stopped at the first blank line; old editor put `Set:`/`Variant:` after the decklist. Reopening lost a group or introduced non-card rows. | T1; [focused 5-case test](https://github.com/bam5693/Deckplay-hq/blob/dev/hourly-trunk1/tests/security/trunk1-decklist-roundtrip.test.cjs), signed seller edit→buyer readback still required | **FIXED ON BRANCH** [7e9d88f](https://github.com/bam5693/Deckplay-hq/commit/7e9d88fc86adee653f1780fc632dd684b8075b32); 5/5 committed-source V8 PASS; **deployed/browser UNKNOWN** |
+| P1 | Owner screenshot 33662 dark deck panel and 33660 Cancel | Original JPG bytes not accessible in repository; contrast, Android keyboard, footer and draft reentry cannot be inferred from source assertions. | Independent reviewer via manual G; mobile light/dark actual screenshots and physical Android owner check | **VISUAL REVIEW BLOCKED** |
+
+**Tanner/Jayden review:** Both missions were authored by this developer, not independently navigated. Other seven listing types unchanged. No native CI, signed buyer/seller, storage, wrong-account, offline, deployed parity, actual Android screenshots or physical phone verified. T1.1/T1.2 retain acceptance; T1.3–T1.6 remain open. Draft PR #25 is not live.
