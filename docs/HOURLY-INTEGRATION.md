@@ -12,6 +12,6 @@
 
 **Conflict/ownership:** PR #32 source copied as a narrow isolated candidate; do not merge PR #32 plus this PR independently (duplicate code). Trunk 1 worker owns its metadata PR #25 and may touch `index.html`; reconcile their later changes before integration. Trunk 4 PR #10 remains separate. Trunk 8 PR #36 not touched. Trunk 9 PR #37 preserved. No CI was triggered intentionally; repository Actions in_progress=0 queued=0 at preflight.
 
-**IN PROGRESS:** [Draft integration PR #39](https://github.com/bam5693/Deckplay-hq/pull/39) opened into `test/staging-reporting` for owner/lead review; not merged. GitHub initially reports `mergeable=false` despite branch being 4 commits ahead / 0 behind at creation; recheck mergeability and branch protection before integration.
+**IN PROGRESS:** [Draft integration PR #39](https://github.com/bam5693/Deckplay-hq/pull/39) opened into `test/staging-reporting` for owner/lead review; not merged. GitHub rechecked the draft PR as `mergeable=true` (initial false was transient while mergeability was computed); draft/UX review gates still block any merge.
 
 **NEXT EXECUTABLE ACTION:** Independently run only `npx playwright test --config=playwright.v1-mobile-sell.config.cjs --project=local-mobile --retries=0 --max-failures=1` in an authorized local runner, inspect light/dark screenshots, then compare PR #25's current index metadata changes and plan non-destructive conflict resolution. Manual G owns any staging deploy/acceptance.
