@@ -13,7 +13,18 @@ function listingEditorVisibleDescription(description){
  const withoutLegacy=latestEditorClassification(description)===null?withoutEdits:withoutEdits
   .replace(/(?:^|\n)\[Sports Cards\]\nSport:[^\n]*\nBrand:[^\n]*\nYear:[^\n]*\nPlayer:[^\n]*(?:\nProduct line:[^\n]*)?/g,"\n")
   .replace(/(?:^|\n)\[Video Game\]\nPlatform:[^\n]*/g,"\n")
-  .replace(/(?:^|\n)\[Card Condition\]\n[^\n]*/g,"\n");
+  // The original seller form put unmarked TCG set/variant lines immediately
+  // after [Card Condition]. When a later classification exists, remove only
+  // an entire recognizable multi-field generated paragraph. A lone "Set:"
+  // line may be the seller's own note and must not be silently discarded.
+  .replace(/(^|\n)\[Card Condition\]\n[^\n]*(?:\n\n([^\n]+(?:\n[^\n]+)*))?/g,(match,lead,paragraph)=>{
+   const lines=String(paragraph||"").split("\n");
+   const generated=lines.length>=2&&lines.every(line=>/^(?:Era|Set|Card number|Variant|Rarity|Edition \/ printing|Language):\s*\S/.test(line));
+   return lead+(generated?"":paragraph?"\n\n"+paragraph:"");
+  })
+  // Grading details were another generated legacy block. The newer
+  // classification is authoritative; keep only actual seller prose.
+  .replace(/(?:^|\n)\[Graded Card\]\nGrader:[^\n]*\nGrade:[^\n]*(?:\nCertification:[^\n]*)?/g,"\n");
  return withoutLegacy.replace(/^\n+|\n+$/g,"").replace(/\n{3,}/g,"\n\n");
 }
 function listingEditorLatestDeckList(description){
