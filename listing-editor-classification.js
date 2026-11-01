@@ -6,8 +6,15 @@ function latestEditorClassification(description){
 // free-text notes after multiple seller edits.
 function listingEditorVisibleDescription(description){
  const withoutContents=String(description||"").replace(/\r\n/g,"\n").replace(/^\[Listing contents\]\r?\n[\s\S]*?\r?\n\[End listing contents\]\r?\n*/,"");
- return withoutContents.replace(/(?:^|\r?\n)\[Listing classification\]\r?\n[\s\S]*?\r?\n\[End classification\](?=\r?\n|$)/g,"\n")
-  .replace(/^\n+|\n+$/g,"").replace(/\n{3,}/g,"\n\n");
+ const withoutEdits=withoutContents.replace(/(?:^|\r?\n)\[Listing classification\]\r?\n[\s\S]*?\r?\n\[End classification\](?=\r?\n|$)/g,"\n");
+ // A first-time listing may contain these old, app-generated blocks alongside
+ // the newer authoritative classification. Never put stale sport/platform or
+ // card-condition metadata back into editable seller prose.
+ const withoutLegacy=latestEditorClassification(description)===null?withoutEdits:withoutEdits
+  .replace(/(?:^|\n)\[Sports Cards\]\nSport:[^\n]*\nBrand:[^\n]*\nYear:[^\n]*\nPlayer:[^\n]*/g,"\n")
+  .replace(/(?:^|\n)\[Video Game\]\nPlatform:[^\n]*/g,"\n")
+  .replace(/(?:^|\n)\[Card Condition\]\n[^\n]*/g,"\n");
+ return withoutLegacy.replace(/^\n+|\n+$/g,"").replace(/\n{3,}/g,"\n\n");
 }
 function listingEditorLatestDeckList(description){
  const source=latestEditorClassification(description)??String(description||"");
