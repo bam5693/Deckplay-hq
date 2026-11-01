@@ -45,6 +45,8 @@ test('deck and contents fields are legible in both themes and Cancel matches Pos
   const [ca,po]=await Promise.all([cancel.boundingBox(),post.boundingBox()]);
   expect(Math.abs(ca.height-po.height)).toBeLessThan(3);
   expect(await cancel.evaluate(el=>getComputedStyle(el).borderRadius)).toBe('12px');
-  await info.attach('deck-'+mode+'-emulated-'+info.project.name,{body:await page.screenshot(),contentType:'image/png'});
+  const shot=info.outputPath('deck-'+mode+'-'+info.project.name+'.png');
+  await page.screenshot({path:shot});
+  await info.attach('deck-'+mode+'-emulated-'+info.project.name,{path:shot,contentType:'image/png'});
  }
 });
