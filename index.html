@@ -1608,6 +1608,7 @@ document.getElementById("menuPostWanted").addEventListener("click",()=>{closeAcc
 document.getElementById("signOutButton").addEventListener("click",async()=>{await supabaseClient.auth.signOut();toast("Signed out.")});
 document.getElementById("myProfile").addEventListener("click",()=>{closeAccountMenu();showCollectorPage()});
 let profileEditorLoadVersion=0;
+let profileSaveVersion=0;
 async function profileEditorRead(request,timeout=8000){
  try{return await readMarketplaceRequest(request,timeout)}
  catch(error){return {data:null,error}}
@@ -1634,7 +1635,7 @@ document.getElementById("profileEdit").addEventListener("click",async()=>{docume
 document.getElementById("profileViewListings").addEventListener("click",()=>{closeModal("profileModal");document.getElementById("myListings").click()});document.getElementById("profileViewWanted").addEventListener("click",()=>{closeModal("profileModal");toggleWanted(true)});
 document.getElementById("profileForm").addEventListener("submit",async event=>{
  event.preventDefault();const form=event.currentTarget;if(!currentUser||form.dataset.pending)return;if(form.dataset.loadFailed==="true"){document.getElementById("profileStatus").textContent="Your saved collection settings must load before you can save. Close and reopen Edit profile to retry.";return}
- const userId=currentUser.id,status=document.getElementById("profileStatus"),button=form.querySelector('button[type="submit"]'),username=document.getElementById("profileUsername").value.trim();
+ const userId=currentUser.id,saveVersion=++profileSaveVersion,saveActive=()=>currentUser?.id===userId&&saveVersion===profileSaveVersion,status=document.getElementById("profileStatus"),button=form.querySelector('button[type="submit"]'),username=document.getElementById("profileUsername").value.trim();
  if(!/^[A-Za-z0-9_]{3,20}$/.test(username)){status.textContent="Username must be 3–20 letters, numbers, or underscores.";return}
  const collectionLinks=[];for(let i=0;i<3;i++){const label=document.getElementById("collectionLabel"+i).value.trim(),url=document.getElementById("collectionUrl"+i).value.trim();if(!url&&!label)continue;if(!label||!safeCollectionUrl(url)){status.textContent="Add a name and a public HTTPS collection link without a login, port, or tracking query.";return}collectionLinks.push({label,url})}
  const inquiryMode=document.getElementById("collectionInquiryMode").value;if(inquiryMode!=="off"&&collectionLinks.length===0){status.textContent="Add a public collection link before enabling inquiries, or choose Showcase only.";return}const profilePayload={collection_links:collectionLinks,collection_inquiry_mode:inquiryMode,id:userId,username,display_name:username,bio:document.getElementById("profileBio").value.trim(),favorite_tcg:document.getElementById("profileGame").value,location_label:document.getElementById("profileLocation").value.trim()},avatarFile=document.getElementById("profileAvatarFile").files[0];
@@ -1644,17 +1645,46 @@ document.getElementById("profileForm").addEventListener("submit",async event=>{
  try{
   if(avatarFile){
    status.textContent="Uploading profile picture…";const extension=avatarFile.type==='image/png'?'png':avatarFile.type==='image/webp'?'webp':'jpg',avatarPath=userId+'/'+crypto.randomUUID()+'.'+extension;
-   const {error}=await supabaseClient.storage.from("profile-avatars").upload(avatarPath,avatarFile,{contentType:avatarFile.type,upsert:false});if(currentUser?.id!==userId)return;if(error)throw new Error("Photo upload failed: "+error.message);
+   const {error}=await readMarketplaceRequest(supabaseClient.storage.from("profile-avatars").upload(avatarPath,avatarFile,{contentType:avatarFile.type,upsert:false}),12000);if(!saveActive())return;if(error)throw new Error("Photo upload failed: "+error.message);
    profilePayload.avatar_url=supabaseClient.storage.from("profile-avatars").getPublicUrl(avatarPath).data.publicUrl;
   }
-  if(currentUser?.id!==userId)return;
-  const {error}=await supabaseClient.from("profiles").upsert(profilePayload,{onConflict:"id"});if(currentUser?.id!==userId)return;if(error)throw error;
-  const {error:metadataError}=await supabaseClient.auth.updateUser({data:{username,display_name:username}});if(currentUser?.id!==userId)return;if(metadataError)console.warn("Profile saved; auth metadata sync failed",metadataError);
-  const {data:updated}=await supabaseClient.auth.getUser();if(currentUser?.id!==userId)return;if(updated?.user?.id===userId)currentUser=updated.user;
+  if(!saveActive())return;
+  // A timed-out write may still have reached the server. Verify its exact owner
+  // and consent before reporting success; never silently retry an uncertain upsert.
+  try{
+   const {error}=await readMarketplaceRequest(supabaseClient.from("profiles").upsert(profilePayload,{onConflict:"id"}),10000);
+   if(!saveActive())return;
+   if(error)throw error;
+  }catch(error){
+   if(!saveActive())return;
+   if(!/timed out/i.test(String(error?.message||"")))throw error;
+   status.textContent="Save timed out. Checking whether your collection settings were saved…";
+   const {data:confirmed,error:readError}=await profileEditorRead(supabaseClient.from("profiles").select("username,display_name,bio,favorite_tcg,location_label,avatar_url,collection_links,collection_inquiry_mode").eq("id",userId).maybeSingle(),8000);
+   if(!saveActive())return;
+   const sameText=key=>String(confirmed?.[key]||"")===String(profilePayload[key]||"");
+   const sameLinks=JSON.stringify(confirmed?.collection_links||[])===JSON.stringify(profilePayload.collection_links);
+   if(readError||!confirmed||!["username","display_name","bio","favorite_tcg","location_label","collection_inquiry_mode"].every(sameText)||!sameLinks||(profilePayload.avatar_url&&!sameText("avatar_url"))){
+    status.textContent="We could not confirm whether your changes saved. Your entries are still here. Check your profile or reopen Edit profile before submitting again.";
+    return;
+   }
+  }
+  // Auth metadata is a convenience copy; it must not leave a saved profile
+  // spinning indefinitely if the authentication service is slow.
+  try{
+   const {error:metadataError}=await readMarketplaceRequest(supabaseClient.auth.updateUser({data:{username,display_name:username}}),6000);
+   if(metadataError)console.warn("Profile saved; auth metadata sync failed",metadataError);
+  }catch(error){console.warn("Profile saved; auth metadata sync unavailable",error)}
+  if(!saveActive())return;
+  try{
+   const {data:updated}=await readMarketplaceRequest(supabaseClient.auth.getUser(),6000);
+   if(!saveActive())return;
+   if(updated?.user?.id===userId)currentUser=updated.user;
+  }catch(error){console.warn("Profile saved; session refresh unavailable",error)}
+  if(!saveActive())return;
   updateAccountUI();closeModal("profileModal");if(!document.getElementById("collectorPage").hidden)void showCollectorPage(profileTab);toast("Your profile is saved!");
   try{await loadListings()}catch(error){console.warn("Profile saved; listings refresh failed",error)}
- }catch(error){if(currentUser?.id===userId)status.textContent=error.code==='23505'?"That username is already taken. Try another.":error.message||"Profile save failed. Please try again."}
- finally{delete form.dataset.pending;form.removeAttribute("aria-busy");button.disabled=false;form.querySelectorAll("input,textarea,select").forEach(el=>el.disabled=false)}
+ }catch(error){if(saveActive())status.textContent=error.code==='23505'?"That username is already taken. Try another.":error.message||"Profile save failed. Please try again."}
+ finally{if(saveActive()){delete form.dataset.pending;form.removeAttribute("aria-busy");button.disabled=false;form.querySelectorAll("input,textarea,select").forEach(el=>el.disabled=false)}}
 });
 function openMarketplaceInventory(savedOnly){
  // Saved listings must use the account-scoped ID lookup, not just the current marketplace page.
@@ -2739,7 +2769,7 @@ function syncInboxDraftUser(){
   profileInventoryFilter={search:"",status:"all",category:"all"};window.listingEditor?.reset?.();window.sellerOverview?.reset?.();window.privateMessagePhotos?.reset?.();inboxDrafts.clear();messageSendAttempts.clear();tradeSendAttempts.clear();inboxOlderMessages.clear();inboxOlderExhausted.clear();inboxNegotiationPages.clear();inboxConversationCursor=null;inboxConversationExhausted=false;inboxOlderPriceOffers.clear();inboxOlderTradeOffers.clear();inboxPriceCursor=null;inboxTradeCursor=null;inboxPriceExhausted=false;inboxTradeExhausted=false;inboxConversationFilter={search:"",unread:false};inboxDraftUser=id;if(id)restoreInboxDrafts(id);++tradePickerVersion;tradeTargetId=null;tradeRecipientId=null;document.getElementById("tradeComposeForm").reset();document.getElementById("tradeCashAmount").disabled=true;document.getElementById("tradeOfferStatus").textContent="";closeModal("tradeComposeModal");tradeBundleSelection=[];document.getElementById("tradeBundleItems").replaceChildren();document.getElementById("tradeBundleCount").textContent="";
   ++blockedCollectorsLoadVersion;blockedCollectorIds.clear();document.getElementById("blockedUsersList").replaceChildren();document.getElementById("settingsBlockCount").textContent="";
   ++reportDialogVersion;reportTargetUser=null;reportTargetListing=null;reportTargetBlocked=false;document.getElementById("reportForm").reset();document.getElementById("reportStatus").textContent="";document.querySelector('#reportForm button[type="submit"]').disabled=false;closeModal("reportModal");
-  ++notificationSettingsVersion;notificationSettingsOwner=null;notificationSettingsLoading=false;notificationPreferenceControls(true);document.querySelectorAll("[data-notify-pref]").forEach(input=>input.checked=false);document.getElementById("notificationSettingsStatus").textContent="";++inboxLoadVersion;++profileLoadVersion;++priceOffersLoadVersion;++tradeOffersLoadVersion;++unreadCountLoadVersion;++profileEditorLoadVersion;selectedInboxCollector=null;
+  ++notificationSettingsVersion;notificationSettingsOwner=null;notificationSettingsLoading=false;notificationPreferenceControls(true);document.querySelectorAll("[data-notify-pref]").forEach(input=>input.checked=false);document.getElementById("notificationSettingsStatus").textContent="";++inboxLoadVersion;++profileLoadVersion;++priceOffersLoadVersion;++tradeOffersLoadVersion;++unreadCountLoadVersion;++profileEditorLoadVersion;++profileSaveVersion;const profileSaveForm=document.getElementById("profileForm");delete profileSaveForm.dataset.pending;delete profileSaveForm.dataset.loadFailed;profileSaveForm.removeAttribute("aria-busy");profileSaveForm.querySelectorAll("input,textarea,select,button[type=submit]").forEach(el=>el.disabled=false);document.getElementById("profileStatus").textContent="";selectedInboxCollector=null;
   for(const name of ["messageInbox","inboxNotificationList","notificationList","priceOffersList","tradeOffersList"])document.getElementById(name).replaceChildren();
   // Never show the former collector's unread counts or activity sheet during an account switch.
   ++notificationCenterLoadVersion;++notificationCountLoadVersion;
