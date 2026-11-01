@@ -39,6 +39,15 @@ The CLI is dry-run-only unless an operator explicitly approves a send using all 
 - Invitation redirect URLs must be allowed in Supabase Auth and expiry/email rate limits must be confirmed.
 - No claim that these controls restrict existing app feature access or all RLS operations; that requires a separate access policy review.
 
+## Owner-first staging rehearsal (no invitations sent automatically)
+- Initial tester has volunteered and supplied a recipient address privately in chat. **Do not put that address into repository files, CI flags, test artifacts, or logs.**
+- Cloudflare staging Worker has a `STAGING_ACCESS_PASSWORD` secret binding and its workers.dev subdomain is enabled. This confirms a configured gate, **not** that an emailed invitation successfully crosses the gate.
+- First confirm the exact staging Supabase Auth **Site URL**, allowed redirect URLs, and whether signup is enabled through the staging-only Dashboard. Do not use the production Supabase project.
+- Have the owner open staging in a fresh private browser and authenticate through its separate HTTP Basic Auth access gate before attempting a one-person invitation. Avoid putting Basic Auth credentials in an email URL or query string.
+- After owner permission to send, use the staging Supabase Dashboard invitation flow, then have the owner open the actual delivered invite in a fresh browser, complete account setup and sign in. Record only pass/fail observations, not credentials, email contents, or invite tokens.
+- A person volunteering as a tester **does not by itself** establish that the invite-link and Auth policy verification flags can be set; leave the protected CLI disabled until those prerequisites are independently checked.
+- If the invite fails to reach staging through Basic Auth, stop and fix the redirect/access handoff in staging only. Do not disable the gate to make a test pass.
+
 ## Current activation blockers
 - Public signup prohibition has **not** been confirmed or activated in staging; enabling it requires a separate approved Auth configuration action.
 - Staging email invitations have **not** been sent or received. The protected site requires Basic Auth, so the link may not be usable by an invited person without an approved access path.
