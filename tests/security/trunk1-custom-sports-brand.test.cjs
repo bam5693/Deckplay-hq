@@ -31,7 +31,7 @@ test('Tanner: editor restores an exact historical brand and does not silently ov
   assert.equal(brandValue(restore(options, 'Pro Set').selected, restore(options, 'Pro Set').custom), 'Pro Set');
 });
 test('Jayden: latest edited exact brand drives buyer search and sport filter, not original label', () => {
-  const description = '[Sports Cards]\\nSport: Football\\nBrand: Topps\\nYear: 1991\\nPlayer: Joe Montana\\n[Listing classification]\\nSport: Football\\nSports brand: Pro Set\\nYear: 1991\\nPlayer: Joe Montana\\n[End classification]';
+  const description = '[Sports Cards]\nSport: Football\nBrand: Topps\nYear: 1991\nPlayer: Joe Montana\n[Listing classification]\nSport: Football\nSports brand: Pro Set\nYear: 1991\nPlayer: Joe Montana\n[End classification]';
   assert.equal(buyerBrand({description}, 'Brand'), 'pro set');
   assert.notEqual(buyerBrand({description}, 'Brand'), 'topps');
   const current = helper(html, /function marketplaceCurrentSearchDescription\(value\)\{[\s\S]*?\n\}/, 'buyer current search');
