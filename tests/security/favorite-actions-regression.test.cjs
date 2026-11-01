@@ -114,5 +114,5 @@ test('offline tap does not optimistically save and can retry after reconnecting'
   h.context.navigator.onLine=true;
   await h.context.window.favoriteActions.toggle('card-1');
   assert.equal(h.saved.has('card-1'),true);
-  assert.deepEqual(h.notices,['You are offline. Reconnect, then try saving this item again.','Saved to your account']);
+  assert.deepEqual(h.notices,['You are offline. Reconnect, then retry this saved-item change.','Saved to your account']);
 });
