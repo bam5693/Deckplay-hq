@@ -299,3 +299,72 @@ test('Saved profile loads older favorites even when unrelated seller and Wanted 
  await expect(page.locator('#profilePageContent')).toContainText('Older saved One Piece card');
  await expect(page.locator('#pageListingCount')).toContainText('— listings');
 });
+
+test('Saved inventory keeps unavailable records removable without disclosing their private details',async({page})=>{
+ await fixture(page);
+ await page.evaluate(async()=>{
+  sellerRatingHtml=async()=>'';loadBlockedCollectors=async()=>true;blockedCollectorIds.clear();
+  saved.add('hidden-saved');saved.add('visible-saved');
+  window.savedRemoveAttempts=0;window.profileSavedIds=['hidden-saved','visible-saved'];
+  supabaseClient.from=table=>{
+   let operation='read',target=null;
+   const q={select:()=>q,eq:(key,value)=>{if(key==='listing_id')target=value;return q},in:()=>q,order:()=>q,
+    delete:()=>{operation='delete';return q},
+    maybeSingle:async()=>({data:{username:'jayden'},error:null}),
+    then:(resolve,reject)=>{
+     let response={data:[],error:null};
+     if(table==='saved_listings'&&operation==='read')response={data:profileSavedIds.map(listing_id=>({listing_id})),error:null};
+     if(table==='saved_listings'&&operation==='delete'){
+      savedRemoveAttempts++;
+      if(savedRemoveAttempts===1)response={data:null,error:{message:'Offline'}};
+      else{window.profileSavedIds=profileSavedIds.filter(id=>id!==target);response={data:null,error:null}}
+     }
+     if(table==='listings')response={data:[{id:'visible-saved',title:'TEST ONLY One Piece card',price:10,status:'active',seller_id:'safe-seller',image_urls:[]}],error:null};
+     return Promise.resolve(response).then(resolve,reject);
+    }};
+   return q;
+  };
+  await showCollectorPage('saved');
+ });
+ await expect(page.locator('#profilePageContent')).toContainText('TEST ONLY One Piece card');
+ await expect(page.locator('#profilePageContent')).toContainText('Saved listing unavailable');
+ await expect(page.locator('[data-remove-profile-saved]')).toHaveCount(2);
+ await page.locator('[data-remove-profile-saved="hidden-saved"]').click();
+ await expect(page.locator('[data-saved-remove-error]')).toContainText('Could not remove');
+ expect(await page.evaluate(()=>saved.has('hidden-saved'))).toBe(true);
+ await page.locator('[data-remove-profile-saved="hidden-saved"]').click();
+ await expect(page.locator('[data-remove-profile-saved="hidden-saved"]')).toHaveCount(0);
+ await expect(page.locator('#profilePageContent')).toContainText('TEST ONLY One Piece card');
+ expect(await page.evaluate(()=>saved.has('hidden-saved'))).toBe(false);
+ expect(await page.evaluate(()=>savedRemoveAttempts)).toBe(2);
+});
+
+test('a late Saved removal cannot clear another account after switching users',async({page})=>{
+ await fixture(page);
+ await page.evaluate(async()=>{
+  sellerRatingHtml=async()=>'';loadBlockedCollectors=async()=>true;blockedCollectorIds.clear();
+  saved.add('old-saved');window.resolveOldRemoval=null;
+  supabaseClient.from=table=>{
+   let operation='read';
+   const q={select:()=>q,eq:()=>q,in:()=>q,order:()=>q,
+    delete:()=>{operation='delete';return q},
+    maybeSingle:async()=>({data:{username:'jayden'},error:null}),
+    then:(resolve,reject)=>{
+     if(table==='saved_listings'&&operation==='delete')return new Promise(done=>{window.resolveOldRemoval=()=>done({error:null})}).then(resolve,reject);
+     const rows=table==='saved_listings'?(currentUser?.id==='first-buyer'?[{listing_id:'old-saved'}]:[{listing_id:'new-saved'}]):[];
+     return Promise.resolve({data:rows,error:null}).then(resolve,reject);
+    }};
+   return q;
+  };
+  await showCollectorPage('saved');
+ });
+ await page.locator('[data-remove-profile-saved="old-saved"]').click();
+ await expect.poll(()=>page.evaluate(()=>!!resolveOldRemoval)).toBe(true);
+ await page.evaluate(async()=>{
+  currentUser={id:'second-buyer',user_metadata:{username:'tanner'}};
+  listingAccountVersion++;resetSavedListingsForAccount('second-buyer');saved.add('new-saved');
+  await showCollectorPage('saved');resolveOldRemoval();
+ });
+ await expect(page.locator('[data-remove-profile-saved="new-saved"]')).toBeVisible();
+ expect(await page.evaluate(()=>[...saved])).toEqual(['new-saved']);
+});
