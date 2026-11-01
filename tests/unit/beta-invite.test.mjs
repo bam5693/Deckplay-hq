@@ -6,7 +6,8 @@ const jwt = (claims) => ['eyJhbGciOiJIUzI1NiJ9',Buffer.from(JSON.stringify(claim
 const key = jwt({role:'service_role',ref:'prrrzeelltmyugssqnzk',exp:Math.floor(Date.now()/1000)+3600});
 const redirect = 'https://deckplay-hq-staging.cstivers56.workers.dev/';
 const config = {DECKPLAY_STAGING_SUPABASE_URL:STAGING_PROJECT_URL,DECKPLAY_STAGING_SERVICE_ROLE_KEY:key,
-  DECKPLAY_STAGING_INVITE_REDIRECT_URL:redirect,DECKPLAY_BETA_INVITE_APPROVED:'1'};
+  DECKPLAY_STAGING_INVITE_REDIRECT_URL:redirect,DECKPLAY_BETA_INVITE_APPROVED:'1',
+  DECKPLAY_STAGING_INVITE_LINK_VERIFIED:'1',DECKPLAY_STAGING_AUTH_POLICY_VERIFIED:'1'};
 
 test('dry run does not require credentials or any network permission',()=>{
  const args=parseInviteArgs(['--email=Collector@Example.test']);
@@ -24,6 +25,8 @@ test('rejects attempts to send without approval or to production',()=>{
  assert.throws(()=>validateSendGuard({args,env:{...config,DECKPLAY_STAGING_SUPABASE_URL:'https://yffruutknztvdyioovmp.supabase.co'}}));
  assert.throws(()=>validateSendGuard({args,env:{...config,DECKPLAY_STAGING_SERVICE_ROLE_KEY:'sb_publishable_test'}}));
  assert.throws(()=>validateSendGuard({args,env:{...config,DECKPLAY_STAGING_INVITE_REDIRECT_URL:''}}));
+ assert.throws(()=>validateSendGuard({args,env:{...config,DECKPLAY_STAGING_INVITE_LINK_VERIFIED:'0'}}));
+ assert.throws(()=>validateSendGuard({args,env:{...config,DECKPLAY_STAGING_AUTH_POLICY_VERIFIED:'0'}}));
  assert.equal(validateSendGuard({args,env:config}),true);
 });
 test('forbids anon and expired JWT, and a JWT claiming another project',()=>{
