@@ -912,6 +912,23 @@ body.deckplay-market #gettingStarted{display:none!important}
 @media(max-width:700px){
  input:is([type=text],[type=email],[type=password],[type=search],[type=number],[type=tel],[type=url],[type=date],[type=datetime-local],[type=time],:not([type])),textarea,select{font-size:max(16px,1em)}
 }
+
+/* Owner-device mobile listing readability: isolate the form from generic theme overrides. */
+#sellModal .listing-contents-fields{background:#f3f6fa;color:#17243a;border:1px solid #9babc0;border-radius:12px;padding:14px 15px;margin:14px 0 18px;min-width:0}
+#sellModal .listing-contents-fields legend{color:#24334b;font-weight:700;padding:0 7px}
+#sellModal .listing-contents-fields label{color:#24334b;font-weight:700}
+#sellModal .listing-contents-fields .file-help{color:#44556e;line-height:1.5;margin:8px 0 12px}
+#sellModal .listing-contents-fields input,#sellModal .listing-contents-fields textarea{background:#fff;color:#18263c;border:1px solid #96a9c1}
+#sellModal #deckFields{background:#f3f6fa;color:#17243a;border-color:#9babc0}
+#sellModal #deckFields label,#sellModal #deckFields .file-help{color:#24334b}
+#sellModal #deckFields input,#sellModal #deckFields textarea{background:#fff;color:#18263c}
+html[data-theme="dark"] #sellModal .listing-contents-fields,html[data-theme="dark"] #sellModal #deckFields{background:#1b2b40!important;border-color:#536d8a!important;color:#e9f1ff!important}
+html[data-theme="dark"] #sellModal .listing-contents-fields legend,html[data-theme="dark"] #sellModal .listing-contents-fields label,html[data-theme="dark"] #sellModal .listing-contents-fields .file-help,html[data-theme="dark"] #sellModal #deckFields label,html[data-theme="dark"] #sellModal #deckFields .file-help{color:#dbe8f8!important}
+html[data-theme="dark"] #sellModal .listing-contents-fields input,html[data-theme="dark"] #sellModal .listing-contents-fields textarea,html[data-theme="dark"] #sellModal #deckFields input,html[data-theme="dark"] #sellModal #deckFields textarea{background:#263951!important;color:#fff!important;border-color:#5c7694!important}
+#sellModal .listing-submit-actions button{font-size:16px!important;line-height:1.3!important;min-height:52px!important;min-width:0;white-space:normal;word-break:normal}
+#sellModal .listing-submit-actions .ghost{background:transparent!important;border:1px solid #d4a746!important;color:inherit!important;border-radius:12px!important}
+@media(max-width:480px){#sellModal .listing-contents-fields{padding:12px;margin:12px 0 16px}#sellModal .listing-submit-actions{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px}#sellModal .listing-submit-actions button{font-size:16px!important;padding:12px 8px!important}}
+
 </style>
 </head>
 <body>
