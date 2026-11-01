@@ -3375,14 +3375,19 @@ async function showCollectorPage(tab="listings"){
   if(!current())return;
   if(listingError){content.innerHTML=retry;return}
   const visible=(matches||[]).filter(row=>!blockedCollectorIds.has(row.seller_id));
-  content.innerHTML=visible.length?renderProfileCards(visible,false):'<p class="muted">None of your saved listings are currently available. They may have sold, been paused, or be hidden by your blocked-seller settings.</p>'+browse;
+  // A saved record can outlive a public listing. Never drop it silently or
+  // disclose a blocked/removed seller's private title or status.
+  const visibleIds=new Set(visible.map(row=>String(row.id)));
+  const unavailable=ids.filter(id=>!visibleIds.has(String(id)));
+  const missingCards=unavailable.map(id=>`<article class="profile-item"><h3>Saved listing unavailable</h3><p class="muted">This item may have sold, been paused, removed, or hidden by your blocked-seller settings.</p><button type="button" class="ghost" data-remove-profile-saved="${escapeHtml(id)}">Remove from saved</button></article>`).join("");
+  content.innerHTML=(visible.length?renderProfileCards(visible,false,true):"")+(missingCards?`<div class="profile-card-grid">${missingCards}</div>`:"")+(visible.length||missingCards?"":'<p class="muted">No saved items available.</p>')+browse;
   return
  }
  if(listingsResult.error){content.textContent=listingsResult.error.message;return}
  content.innerHTML=listings.length?renderProfileInventory(listings):'<p class="muted">You haven’t posted any listings yet. Tap Sell an item to get started.</p>';
  if(listings.length)filterProfileInventory();
 }
-function renderProfileCards(rows,own){return '<div class="profile-card-grid">'+rows.map(l=>{const image=safeImageUrl(l.image_urls?.[0]);return `<article class="profile-item" data-inventory-status="${escapeHtml(l.status||"active")}" data-inventory-category="${escapeHtml(l.category||"other")}" data-inventory-search="${escapeHtml(l.title)}">${image?`<img class="profile-listing-image" src="${escapeHtml(image)}" alt="${escapeHtml(l.title)}">`:""}<h3>${escapeHtml(l.title)}</h3><strong>$${Number(l.price||0).toFixed(2)}</strong><p class="muted">${escapeHtml(l.status||"active")}</p><div class="profile-item-actions">${l.status==="active"?`<button type="button" class="ghost" data-profile-view="${escapeHtml(l.id)}">View listing</button>`:""}${own&&l.status==="active"?`<button type="button" class="ghost" data-profile-edit="${escapeHtml(l.id)}">Edit listing</button><button type="button" class="ghost" data-page-sold="${escapeHtml(l.id)}">Mark sold</button>`:""}${own&&l.status==="active"?`<button type="button" class="ghost" data-page-pause="${escapeHtml(l.id)}">Pause listing</button>`:""}${own&&l.status==="paused"?`<button type="button" class="ghost" data-page-resume="${escapeHtml(l.id)}">Resume listing</button>`:""}${own?`<button type="button" class="ghost" data-page-delete="${escapeHtml(l.id)}">Delete</button>`:""}</div></article>`}).join("")+'</div>'}
+function renderProfileCards(rows,own,savedView=false){return '<div class="profile-card-grid">'+rows.map(l=>{const image=safeImageUrl(l.image_urls?.[0]);return `<article class="profile-item" data-inventory-status="${escapeHtml(l.status||"active")}" data-inventory-category="${escapeHtml(l.category||"other")}" data-inventory-search="${escapeHtml(l.title)}">${image?`<img class="profile-listing-image" src="${escapeHtml(image)}" alt="${escapeHtml(l.title)}">`:""}<h3>${escapeHtml(l.title)}</h3><strong>$${Number(l.price||0).toFixed(2)}</strong><p class="muted">${escapeHtml(l.status||"active")}</p><div class="profile-item-actions">${l.status==="active"?`<button type="button" class="ghost" data-profile-view="${escapeHtml(l.id)}">View listing</button>`:""}${own&&l.status==="active"?`<button type="button" class="ghost" data-profile-edit="${escapeHtml(l.id)}">Edit listing</button><button type="button" class="ghost" data-page-sold="${escapeHtml(l.id)}">Mark sold</button>`:""}${own&&l.status==="active"?`<button type="button" class="ghost" data-page-pause="${escapeHtml(l.id)}">Pause listing</button>`:""}${own&&l.status==="paused"?`<button type="button" class="ghost" data-page-resume="${escapeHtml(l.id)}">Resume listing</button>`:""}${own?`<button type="button" class="ghost" data-page-delete="${escapeHtml(l.id)}">Delete</button>`:""}${savedView?`<button type="button" class="ghost" data-remove-profile-saved="${escapeHtml(l.id)}">Remove from saved</button>`:""}</div></article>`}).join("")+'</div>'}
 
 
 function renderProfileInventory(rows){
@@ -3399,7 +3404,29 @@ function filterProfileInventory(){
 }
 document.getElementById("profilePageContent").addEventListener("input",e=>{if(e.target.id==="inventorySearch")filterProfileInventory()});
 document.getElementById("profilePageContent").addEventListener("change",e=>{if(["inventoryStatus","inventoryCategory"].includes(e.target.id))filterProfileInventory()});
-document.getElementById("profilePageContent").addEventListener("click",e=>{
+document.getElementById("profilePageContent").addEventListener("click",async e=>{
+ const removeSaved=e.target.closest("[data-remove-profile-saved]");
+ if(removeSaved){
+  const owner=currentUser?.id,epoch=listingAccountVersion,id=removeSaved.dataset.removeProfileSaved,view=profileLoadVersion;
+  if(!owner||!id||removeSaved.disabled)return;
+  const sameView=()=>currentUser?.id===owner&&listingAccountVersion===epoch&&profileLoadVersion===view&&profileTab==="saved";
+  removeSaved.disabled=true;removeSaved.setAttribute("aria-busy","true");removeSaved.textContent="Removing…";
+  try{
+   const {error}=await readMarketplaceRequest(supabaseClient.from("saved_listings").delete().eq("user_id",owner).eq("listing_id",id),8000);
+   if(!sameView())return;
+   if(error)throw error;
+   saved.delete(id);++savedListingsLoadVersion;
+   await showCollectorPage("saved");
+  }catch(error){
+   if(sameView()){
+    removeSaved.disabled=false;removeSaved.removeAttribute("aria-busy");removeSaved.textContent="Retry remove";
+    let status=removeSaved.nextElementSibling;
+    if(!status||!status.matches("[data-saved-remove-error]")){status=document.createElement("p");status.dataset.savedRemoveError="";status.setAttribute("role","alert");removeSaved.after(status)}
+    status.textContent="Could not remove this saved item. Check your connection and retry.";
+   }
+  }
+  return;
+ }
  const savedRetry=e.target.closest("[data-retry-profile-saved]");if(savedRetry){savedRetry.disabled=true;void showCollectorPage("saved");return}
  if(e.target.closest("[data-browse-from-saved]")){document.getElementById("menuMarketplace").click();return}
  if(e.target.closest("[data-inventory-clear]")){const root=document.getElementById("profilePageContent");root.querySelector("#inventorySearch").value="";root.querySelector("#inventoryStatus").value="all";root.querySelector("#inventoryCategory").value="all";filterProfileInventory();root.querySelector("#inventorySearch").focus();return}
