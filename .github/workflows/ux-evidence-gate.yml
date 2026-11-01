@@ -12,6 +12,8 @@ jobs:
     timeout-minutes: 3
     steps:
       - uses: actions/checkout@v4
+      - name: Self-test enforcement with allowed and blocked PR fixtures
+        run: node scripts/test-ux-evidence.cjs
       - name: Fetch changed filenames, read-only
         env:
           GH_TOKEN: ${{ github.token }}
