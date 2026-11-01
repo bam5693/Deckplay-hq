@@ -45,3 +45,18 @@ For any changed buyer/seller flow, developer and reviewer must use a **Jayden + 
 - **Gate ownership:** Feature developer self-reviews; a **separate reviewer/worker** examines the changed journey for unnecessary steps and inconsistencies, not just assertions supplied by the developer. Interactive G integration lead owns final UX gate and has authority to hold a release. Hourly T1 developer reviews its seller/listing slice; hourly T4 developer reviews its discovery/collection slice. Trunk 9 may flag competitor UX gaps but does not approve app functionality.
 - **Failure policy:** Report `UX BLOCKED` with precise screenshot/steps if usability is not demonstrated. Fix before shipping; no checkbox or 100% trunk claim based solely on code/test presence. Avoid large recurring audits or testing already-accepted unaffected flows.
 - **Safety:** No bot may bypass the usual branch isolation, protected staging, production migration/backup approvals, or owner release permission in pursuit of usability fixes.
+
+## Release-quality ownership and fail-closed checklist (owner directive)
+
+For each customer-facing PR, the integration lead must record one accountable **developer owner**, a distinct **usability reviewer**, and a single disposition: **READY**, **UX BLOCKED**, **FUNCTIONAL BLOCKED**, or **PRODUCTION-COMPATIBILITY BLOCKED**. A failing status must include repro steps, exact screen/category, assignee, and the next code fix. Nobody may close a known bug solely by changing or deleting the failing test.
+
+**Minimum review for changed journeys only** (reuse evidence, avoid repeated full-suite expenses):
+1. **Complete journey:** realistic seller creates/previews/posts/edits/cancels and buyer searches/opens/contacts/offers as appropriate; test across the relevant top-level category matrix.
+2. **Design audit:** actively challenge duplicate questions, irrelevant choices or help, confusing category hierarchy, long scroll, broken keyboard focus, unreadable light/dark contrast, select-menu usability, touch targets, and inconsistent navigation.
+3. **Negative paths:** empty, failed, offline, wrong-account and stale-request outcomes; never show mock data as customer success.
+4. **Production compatibility:** read-only contract against actual production schema and enabled service endpoints; explicitly suppress unsupported staging-only UI without changing customer data.
+5. **Visual evidence:** mobile light and dark screenshots for the changed states, inspected by a second worker, plus a desktop check if affected. Emulation is not a physical Android acceptance.
+6. **Regression lock:** focused automated assertion for every verified customer-visible regression; verify new behavior plus the original failure, not just one isolated button.
+7. **Release proof:** exact commit, source/deployed parity, reviewer identity/role, focused run, rollback target, and any physical-device/unverified caveat. A release without independent UX evidence remains blocked even when CI is green.
+
+**Enforcement limitation:** This checklist and the PR template alone do not configure GitHub branch protection or a required status check. Do not claim a mechanically enforced gate until a fail-closed GitHub Action is implemented and verified as a required check on the protected branch. In the meantime, release manager must explicitly hold PRs missing independent review. Existing production deployment approval and backup rules are separate and remain mandatory.
