@@ -69,3 +69,49 @@ test('T1.5 unavailable buyer photo has visible recovery and another photo still 
  await expect(page.locator('.detail-photo-load-status')).toContainText('This photo could not load');
  await expect(page.locator('#detailZoomButton')).toBeHidden();
 });
+
+test('T1.5 blocked collector profile links fail closed on stale cache, lookup errors and in-flight blocks',async({page})=>{
+ await page.route('https://**/*',route=>route.abort());
+ await page.goto('/');
+ for(const mode of ['blocked','lookup-error','blocked-during-load']){
+  const outcome=await page.evaluate(async mode=>{
+   const originalFrom=supabaseClient.from,originalUser=currentUser,originalBlocks=[...blockedCollectorIds];
+   const sellerId='fixture-private-seller';let releaseProfile;
+   try{
+    currentUser={id:'fixture-profile-viewer'};blockedCollectorIds.clear();
+    supabaseClient.from=function(table){
+     const q={
+      select(){return this},eq(){return this},order(){return this},
+      limit(){return Promise.resolve({data:[]})},
+      maybeSingle(){
+       if(table==='profiles'){
+        if(mode==='blocked-during-load')return new Promise(resolve=>{releaseProfile=resolve});
+        return Promise.resolve({data:{username:'SECRET_SELLER',bio:'SECRET_BIO',collection_links:['SECRET_LINK']}});
+       }
+       if(table==='user_blocks')return Promise.resolve(mode==='lookup-error'?{data:null,error:{message:'Offline'}}:{data:mode==='blocked'?{blocked_id:sellerId}:null,error:null});
+       return Promise.resolve({data:null,error:null});
+      }
+     };
+     return q;
+    };
+    const pending=showPublicProfile(sellerId);
+    if(mode==='blocked-during-load'){
+     blockedCollectorIds.add(sellerId);
+     releaseProfile({data:{username:'SECRET_SELLER',bio:'SECRET_BIO',collection_links:['SECRET_LINK']},error:null});
+    }
+    await pending;
+    const content=document.getElementById('publicProfileContent');
+    return {text:content.textContent,html:content.innerHTML};
+   }finally{
+    supabaseClient.from=originalFrom;currentUser=originalUser;
+    blockedCollectorIds.clear();originalBlocks.forEach(id=>blockedCollectorIds.add(id));
+    closeModal('publicProfileModal');
+   }
+  },mode);
+  expect(outcome.html).not.toContain('SECRET_SELLER');
+  expect(outcome.html).not.toContain('SECRET_BIO');
+  expect(outcome.html).not.toContain('SECRET_LINK');
+  if(mode==='blocked')expect(outcome.text).toContain('This collector is blocked');
+  if(mode==='lookup-error')expect(outcome.text).toContain('Could not verify collector privacy');
+ }
+});
