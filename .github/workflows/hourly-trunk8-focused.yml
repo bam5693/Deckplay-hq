@@ -31,4 +31,5 @@ jobs:
           key: staging-playwright-${{ hashFiles('package-lock.json') }}
       - run: npx playwright install chromium --only-shell
       - name: T8.2 isolated mock UI regression only (desktop and mobile)
-        run: npx playwright test --config=playwright.local.config.js moderation-security.spec.js --grep 'T8.2: staff can refresh capped private queue, recover from failure and scrub on tab hide' --project=local-desktop --project=local-mobile --max-failures=1 --timeout=20000
+        run: |
+          npx playwright test --config=playwright.local.config.js moderation-security.spec.js --grep 'T8.2: staff can refresh capped private queue, recover from failure and scrub on tab hide' --project=local-desktop --project=local-mobile --max-failures=1 --timeout=20000
