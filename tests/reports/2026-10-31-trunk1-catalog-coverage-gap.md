@@ -42,3 +42,10 @@
 - **Visual:** mobile light **NOT VERIFIED**, mobile dark **NOT VERIFIED**, long Android native menus **NOT VERIFIED**, Cancel/Post placement **NOT VERIFIED**; physical Android **NOT VERIFIED**. No independent reviewer assigned or model-browser navigation observed. Do not claim screenshot acceptance.
 - **Functional:** 3 offline Node tests PASS at `bea0f5e9`; browser, authenticated seller publish/edit, buyer search/details, offline/wrong-account, private staging deployment parity **NOT VERIFIED**. No production changes.
 - **Owner next:** T1 worker should first remove redundant type/category and irrelevant help as a focused UX fix, then improve sports product-brand/year and per-sport coverage without overwriting PR #30. Integration lead must secure independent reviewer and one Android-sized light/dark browser journey before release. Do not merge merely on these source tests.
+
+## 22:30 CDT — P0 listing UX source fix update (branch only)
+- Type/Category duplication: source candidate 061245e/540bc73 removes second category question for seven explicit types; Other alone has category selector; hardware subtype maps to consoles/controllers/accessories. Buyer readback not verified.
+- Noncard guidance: source candidate aa763f7/540bc73 adds game/hardware/figure/card-specific description and quantity guidance; no foil/rarity prompt for game.
+- Focused source check: eight types, hardware Controller and Other-to-video-game checks pass; all five inline scripts parse. Dedicated two-case mobile light/dark Playwright test and workflow added at 06361a3/3fb8a6b; browser run and actual screenshot inspection not confirmed.
+- UX BLOCKED: Jayden and Tanner self-critiques are not independent reviewer acceptance. No physical Android, signed seller/buyer, exact served staging parity. 33656 and 33658 source-fixed candidates; 33660 Cancel browser check pending; 33662 dark deck panel unresolved. Original JPG bytes unavailable.
+- P0 hockey O-Pee-Chee/Parkhurst still awaiting separate PR #30 reconciliation; no duplicate catalog edits attempted.
