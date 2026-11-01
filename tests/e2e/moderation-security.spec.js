@@ -180,3 +180,44 @@ test('T8.5: verified operator can prepare a safe incident handoff when report qu
  await expect(page.locator('#incidentSummary')).toHaveValue('');
  await expect(page.locator('#incidentCopy')).toBeDisabled();
 });
+
+test('T8.4: stale report decisions refresh without retrying and denied writes scrub evidence',async({page})=>{
+ await moderator(page);
+ await expect(page.locator('#reports')).toContainText('Private synthetic evidence');
+ await page.evaluate(()=>{
+  window.reviewWriteCount=0;
+  moderationFixture.rpc=async(name,payload)=>{
+   moderationCalls.push(name);
+   if(name==='is_deckplay_moderator')return {data:true,error:null};
+   if(name==='moderation_report_queue')return {data:[{id:'synthetic-report',reason:'Counterfeit suspicion',details:'Fresh private evidence',status:'reviewing'}],error:null};
+   if(name==='review_deckplay_report'){
+    reviewWriteCount++;
+    return {data:null,error:{code:'40001',message:'Sensitive SQL detail must not display'}};
+   }
+   throw Error('Unexpected RPC');
+  };
+ });
+ await page.getByRole('textbox',{name:'Reason for review action (required)'}).fill('Reviewing conflicting synthetic evidence.');
+ page.once('dialog',dialog=>dialog.accept());
+ await page.getByRole('button',{name:'Resolve report',exact:true}).click();
+ await expect(page.locator('#reports')).toContainText('Fresh private evidence');
+ await expect(page.locator('#reports')).toContainText('reviewing');
+ await expect(page.locator('#actionStatus')).toContainText('Queue refreshed; review the current evidence');
+ await expect(page.locator('#actionStatus')).not.toContainText('Sensitive SQL detail');
+ expect(await page.evaluate(()=>reviewWriteCount)).toBe(1);
+ await page.evaluate(()=>{
+  moderationFixture.rpc=async(name)=>{
+   moderationCalls.push(name);
+   if(name==='is_deckplay_moderator')return {data:true,error:null};
+   if(name==='review_deckplay_report')return {data:null,error:{code:'42501',message:'Sensitive authorization details'}};
+   throw Error('Unexpected RPC');
+  };
+ });
+ await page.getByRole('textbox',{name:'Reason for review action (required)'}).fill('Newly reviewed evidence requires escalation.');
+ page.once('dialog',dialog=>dialog.accept());
+ await page.getByRole('button',{name:'Resolve report',exact:true}).click();
+ await expect(page.locator('#state')).toContainText('Moderator access could not be verified');
+ await expect(page.locator('#reports')).toBeEmpty();
+ await expect(page.locator('#incidentPanel')).toBeHidden();
+ await expect(page.locator('#state')).not.toContainText('Sensitive authorization details');
+});
