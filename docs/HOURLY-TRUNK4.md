@@ -1,20 +1,15 @@
-# DeckPlay HQ — hourly Trunk 4 checkpoint (2026-11-01 13:53 CST)
+# DeckPlay HQ — hourly Trunk 4 checkpoint (2026-11-01 15:13 CST)
 
-**Ownership:** T4.1–T4.6 only; commits only on `dev/hourly-autonomous`. [Draft PR #10](https://github.com/bam5693/Deckplay-hq/pull/10) targets `test/staging-reporting` for separate review; no merge, rebase, staging deployment, database writes or production changes. Retired lease untouched.
+**Ownership:** T4.1–T4.6 only on `dev/hourly-autonomous`; draft PR #10 targets `test/staging-reporting` for separate review. No staging deployment, merge, real data, or retired lease activity.
 
-## DONE — code and narrow checks, not acceptance
+## DONE — source improvements (not acceptance)
+- **T4.2 Wanted removal recovery:** [f7aae96](https://github.com/bam5693/Deckplay-hq/commit/f7aae967f2e6f1c0ad89f172cb9c05651c8a03a3) changes a failed/timed-out Delete into **Check removal status** instead of inviting a duplicate delete. Owner-scoped readback: absent post refreshes board, present post requires a deliberate second Delete, offline/readback failure retains uncertainty. Existing account/epoch guard prevents old-session updates. [3cf532f](https://github.com/bam5693/Deckplay-hq/commit/3cf532f5265874d2cd42d2b296ca711e4738d66c) keeps the Check label through a board refresh.
+- **Focused evidence actually executed:** isolated actual Wanted click-handler harness **3/3 PASS** (timed-out deletion then absent/present/offline readback; zero duplicate deletes); changed full inline script syntax **PASS**; source check confirms one pending/uncertain declaration and refresh-label binding. These are **mocked local logic/static checks**, not real Supabase/browser/Android acceptance.
+- **T4.1 prior code retained:** saved profile uncertain delete [c666bf0](https://github.com/bam5693/Deckplay-hq/commit/c666bf06a0e8b1c1c8afab7fe2be1373628b2d34) (5 focused handler scenarios previously passed); favorite heart recovery `514d151`, `a313c26`, `2140434`. No redundant retest. Preserve other T4 code and evidence.
 
-**T4.1 profile Saved removal timeout recovery:** [c666bf0](https://github.com/bam5693/Deckplay-hq/commit/c666bf06a0e8b1c1c8afab7fe2be1373628b2d34) fixes a distinct Saved-page path that previously offered **Retry remove** immediately after a timed-out delete, even though the server might have removed it. The button now says **Check removal status**; the next tap reads the account-scoped saved row rather than blindly deleting again. Confirmed absence refreshes Saved; confirmed presence asks for a deliberate new removal. Offline/readback failures preserve uncertainty, and profile loads also reject results from a previous login epoch.
-
-**Focused checks executed in isolated JavaScript harness against the changed actual profile handler:** five passed (timeout, absent-row readback without duplicate delete, present-row readback, offline no-write, account switch rejects stale result). All five inline `index.html` scripts parsed. These are mocked-handler/static checks, **not** browser, real Supabase, or device acceptance. Initial harness failed because its DOM mock omitted `Element.matches`; corrected the mock and the five scenarios passed; no product defect was inferred from that harness error.
-
-**Previously built T4.1 favorite heart timeout recovery:** [514d151](https://github.com/bam5693/Deckplay-hq/commit/514d151f39305a87081c33b14bed99b47a47cc27), [a313c26](https://github.com/bam5693/Deckplay-hq/commit/a313c264030bcc78abc8f91499092564119c9c69), [2140434](https://github.com/bam5693/Deckplay-hq/commit/214043432a73bcef02550320be5514ecb06e68fd); focused fixture checks previously passed. Preserve prior T4.2–T4.6 work/evidence; do not rerun unchanged suites.
-
-## IN PROGRESS — UX / final acceptance BLOCKED
-
-Scoreboard **T4.1–T4.6 all remain unchecked**. Owner screenshot atlas was read as written; screenshot image bytes were **not** inspected. Jayden (One Piece buyer) should save a listing, time out, switch accounts and recover via the heart; Tanner (sports collector) should remove a saved listing from Profile, encounter timeout, reconnect, check status, then explicitly retry only if still present. The observed defect is misleading immediate retry after uncertain deletion; source fix is `c666bf0`. Light/dark Android viewport, keyboard/tap targets, separate reviewer, authenticated protected staging, complete seller→buyer browser journey and physical Android are **NOT VERIFIED**. Do not mark UX accepted or claim deployed.
+## IN PROGRESS — UX / integration BLOCKED
+All T4.1–T4.6 remain **unchecked** on staging scoreboard. Jayden (One Piece buyer) and Tanner (sports collector) self-review: deleting a Wanted post under slow mobile connectivity must not silently retry or falsely say deleted; readback requires same account, and blocked authors/listings must remain hidden. Owner screenshot **atlas text** reviewed; screenshot bytes not available/inspected. Independent reviewer, mobile light/dark viewport, actual authenticated protected staging, seller→buyer journey, deployment parity and physical Android are **NOT VERIFIED**. PR #10 is diverged/conflicted; no merge attempted.
 
 ## NEXT
-
-1. Continue earliest genuinely unfinished T4 customer outcome (T4.1 integration/UX remains pending; build independent T4.2 Wanted privacy/matching recovery if browser verification is unavailable). No redundant broad suites.
-2. Integration lead separately resolves PR #10 conflicts, reviews exact diff and executes narrow signed-in Jayden/Tanner browser/device acceptance before marking any T4 item accepted. No hourly staging integration.
+1. Continue another unblocked T4 customer outcome (Wanted publish uncertain-write reconciliation / privacy) while awaiting independent T4.1/T4.2 UX acceptance. Do not re-run unchanged broad suites.
+2. Integration lead separately reviews PR #10 against latest staging and performs narrow signed-in Jayden/Tanner browser/device acceptance before checking any T4 ID. Production untouched.
