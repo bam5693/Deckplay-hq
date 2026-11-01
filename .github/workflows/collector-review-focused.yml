@@ -1,0 +1,28 @@
+name: Collector-first reviewer cheap checks
+on:
+  push:
+    branches: [review/collector-first-acceptance-20261031]
+    paths:
+      - scripts/ai-leads.mjs
+      - scripts/collector-catalog-audit.cjs
+      - tests/security/ai-leads.test.mjs
+      - tests/security/collector-catalog-audit.test.cjs
+      - tests/fixtures/collector-challenges.json
+      - tests/fixtures/category-catalog.json
+      - .github/workflows/collector-review-focused.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  review-tools:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Reviewer and catalog challenge tests (no browser, network or AI inference)
+        run: node --test tests/security/ai-leads.test.mjs tests/security/collector-catalog-audit.test.cjs
+      - name: Print static coverage gaps, not UX approval
+        run: node scripts/collector-catalog-audit.cjs
