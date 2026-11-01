@@ -13,13 +13,19 @@ window.createListingEditorClassification=(container,status)=>{
   const category=get('category'),cards=category==='trading_cards',hardware=['consoles','controllers','accessories'].includes(category);
   const visible={all:true,cards,hardware,collectibles:category==='collectibles',games:category==='video_games',general:!cards,sports:cards&&get('tcgGame')==='sports_cards',graded:cards&&get('cardCondition')==='graded',deck:get('listingType')==='deck'};
   const required=new Set(['category','listingType','tcgGame','collectibleSubcategory','gamePlatform','consoleItemType','consoleBrand','consoleModel','condition','cardCondition','sportsSport','sportsBrand','sportsYear','sportsPlayer','gradingCompany','gradingScore','deckLeader','deckCardCount','deckList']);
-  for(const [id,{wrap,group}]of groups){wrap.hidden=!visible[group];controls.get(id).disabled=busy||!enabled.checked||!visible[group];controls.get(id).required=enabled.checked&&visible[group]&&required.has(id)}
+  for(const [id,{wrap,group}]of groups){wrap.hidden=!visible[group]||(id==='category'&&get('listingType')!=='other');controls.get(id).disabled=busy||!enabled.checked||!visible[group];controls.get(id).required=enabled.checked&&visible[group]&&required.has(id)}
   fields.disabled=busy||!enabled.checked;enabled.disabled=busy;
  }
  fields.addEventListener('change',e=>{
   const id=[...controls].find(([,el])=>el===e.target)?.[0];
-  if(id==='listingType')set('category',defaults[get(id)]);
-  if(id==='category'&&!allowed[get(id)]?.includes(get('listingType')))set('listingType',allowed[get(id)]?.[0]||'other');
+  if(id==='listingType'){
+   set('category',defaults[get(id)]||'other');
+   if(get(id)==='console')set('consoleItemType','Console');
+  }
+  // Hardware subtype determines the buyer-facing category; don't ask twice.
+  if(id==='consoleItemType'&&get('listingType')==='console')set('category',({Console:'consoles',Controller:'controllers',Accessory:'accessories'})[get(id)]||'consoles');
+  // 'Other' intentionally keeps its explicit category choice, including games/cards.
+  if(id==='category'&&get('listingType')!=='other'&&!allowed[get(id)]?.includes(get('listingType')))set('listingType',allowed[get(id)]?.[0]||'other');
   if(id==='tcgGame')sets();
   if(id==='tcgEra')deckplayFillOptions(controls.get('tcgSet'),deckplaySets[get('tcgGame')]?.[get('tcgEra')]||[],'Not specified');
   if(id==='category'&&['consoles','controllers','accessories'].includes(get(id)))set('consoleItemType',{consoles:'Console',controllers:'Controller',accessories:'Accessory'}[get(id)]);
