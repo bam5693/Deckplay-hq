@@ -2385,17 +2385,21 @@ let composeRecipient=null,composeListing=null;
 document.getElementById("detailContent").addEventListener("click",async e=>{const profile=e.target.closest("[data-profile-id]");if(profile){await showPublicProfile(profile.dataset.profileId);return}const contact=e.target.closest("[data-contact-id]");if(contact){if(!currentUser){openModal("authModal");return}composeRecipient=contact.dataset.contactId;composeListing=contact.dataset.contactListing;document.getElementById("composeContext").textContent="Ask about this item or propose a trade";document.getElementById("composeStatus").textContent="";openModal("composeModal")}});
 document.getElementById("collectionInquiryForm").addEventListener("submit",async e=>{
  e.preventDefault();const form=e.currentTarget,userId=currentUser?.id,recipient=collectionInquiryRecipient,status=document.getElementById("collectionInquiryStatus");
- if(!userId||userId!==collectionInquiryOwner||!recipient||form.dataset.pending)return;
+ if(!userId||userId!==collectionInquiryOwner||!recipient||form.dataset.pending||form.dataset.deliveryUncertain)return;
  const continueButton=document.getElementById("collectionInquiryContinue");continueButton.hidden=true;continueButton.style.display="none";continueButton.dataset.existingConversation="false";
  const item=document.getElementById("collectionInquiryItem").value.trim(),body=document.getElementById("collectionInquiryBody").value.trim(),intent=document.getElementById("collectionInquiryIntent").value;
  if(item.length<3||!body)return;
  const requestVersion=++collectionInquiryRequestVersion;
  const current=()=>requestVersion===collectionInquiryRequestVersion&&currentUser?.id===userId&&collectionInquiryOwner===userId&&collectionInquiryRecipient===recipient&&document.getElementById("collectionInquiryModal").classList.contains("open");
  form.dataset.pending="true";form.querySelectorAll("input,textarea,select,button").forEach(x=>x.disabled=true);status.textContent="Sending inquiry…";
- try{const {error}=await supabaseClient.rpc("send_collection_inquiry",{p_recipient:recipient,p_item:item,p_intent:intent,p_body:body});if(!current())return;if(error)throw error;form.reset();closeModal("collectionInquiryModal");await showInboxPage(recipient);toast("Inquiry sent. Continue in your inbox.")}
+ try{const {error}=await readMarketplaceRequest(supabaseClient.rpc("send_collection_inquiry",{p_recipient:recipient,p_item:item,p_intent:intent,p_body:body}),10000);if(!current())return;if(error)throw error;form.reset();closeModal("collectionInquiryModal");await showInboxPage(recipient);toast("Inquiry sent. Continue in your inbox.")}
  catch(error){if(current()){
   const message=String(error?.message||"");
-  if(/already inquired about this item/i.test(message)){
+  if(/timed out/i.test(message)){
+   form.dataset.deliveryUncertain="true";
+   status.textContent="We could not confirm whether your inquiry was sent. Check your Inbox before trying again. Your draft is preserved.";
+   continueButton.textContent="Check inbox";continueButton.dataset.existingConversation="false";continueButton.hidden=false;continueButton.style.display="inline-flex";
+  }else if(/already inquired about this item/i.test(message)){
    status.textContent="You already asked about this item. Continue your existing conversation instead of sending another inquiry.";
    continueButton.textContent="Continue existing conversation";continueButton.dataset.existingConversation="true";continueButton.hidden=false;continueButton.style.display="inline-flex";
   }else if(/collection inquiry limit reached/i.test(message)){
@@ -2405,7 +2409,7 @@ document.getElementById("collectionInquiryForm").addEventListener("submit",async
    status.textContent="This collector is not accepting new collection inquiries. Your message was not sent.";
   }else status.textContent="Could not send your inquiry. Your draft is preserved; try again.";
  }}
- finally{if(current()){delete form.dataset.pending;form.querySelectorAll("input,textarea,select,button").forEach(x=>x.disabled=false);document.getElementById("collectionInquiryIntent").querySelector('[value="buy"]').disabled=collectionInquiryMode==="trades"}}
+ finally{if(current()){delete form.dataset.pending;form.querySelectorAll("input,textarea,select,button").forEach(x=>x.disabled=false);form.querySelector('button[type="submit"]').disabled=form.dataset.deliveryUncertain==="true";document.getElementById("collectionInquiryIntent").querySelector('[value="buy"]').disabled=collectionInquiryMode==="trades"}}
 });
 document.getElementById("collectionInquiryContinue").addEventListener("click",async()=>{
  const button=document.getElementById("collectionInquiryContinue"),userId=currentUser?.id,recipient=collectionInquiryRecipient;
@@ -2541,7 +2545,7 @@ async function showPublicProfile(id){
    finally{if(current()){loadingMoreListings=false;renderStorefront()}}
    return;
   }
-  const inquiry=e.target.closest("[data-collection-inquiry]");if(inquiry){if(!currentUser){openModal("authModal");return}collectionInquiryRecipient=id;collectionInquiryOwner=currentUser.id;collectionInquiryMode=p.collection_inquiry_mode;++collectionInquiryRequestVersion;const inquiryForm=document.getElementById("collectionInquiryForm");delete inquiryForm.dataset.pending;inquiryForm.querySelectorAll("input,textarea,select,button").forEach(x=>x.disabled=false);inquiryForm.reset();document.getElementById("collectionInquiryIntent").querySelector('[value="buy"]').disabled=collectionInquiryMode==="trades";document.getElementById("collectionInquiryStatus").textContent="";const continueButton=document.getElementById("collectionInquiryContinue");continueButton.hidden=true;continueButton.style.display="none";continueButton.dataset.existingConversation="false";closeModal("publicProfileModal");openModal("collectionInquiryModal");return}const tab=e.target.closest("[data-public-tab]");if(tab){showTab(tab.dataset.publicTab);return}const follow=e.target.closest("[data-follow-profile]");if(follow){
+  const inquiry=e.target.closest("[data-collection-inquiry]");if(inquiry){if(!currentUser){openModal("authModal");return}collectionInquiryRecipient=id;collectionInquiryOwner=currentUser.id;collectionInquiryMode=p.collection_inquiry_mode;++collectionInquiryRequestVersion;const inquiryForm=document.getElementById("collectionInquiryForm");delete inquiryForm.dataset.pending;delete inquiryForm.dataset.deliveryUncertain;inquiryForm.querySelectorAll("input,textarea,select,button").forEach(x=>x.disabled=false);inquiryForm.reset();document.getElementById("collectionInquiryIntent").querySelector('[value="buy"]').disabled=collectionInquiryMode==="trades";document.getElementById("collectionInquiryStatus").textContent="";const continueButton=document.getElementById("collectionInquiryContinue");continueButton.hidden=true;continueButton.style.display="none";continueButton.dataset.existingConversation="false";closeModal("publicProfileModal");openModal("collectionInquiryModal");return}const tab=e.target.closest("[data-public-tab]");if(tab){showTab(tab.dataset.publicTab);return}const follow=e.target.closest("[data-follow-profile]");if(follow){
    if(!currentUser){openModal("authModal");return}
    if(follow.disabled)return;
    if(followUnavailable){await showPublicProfile(id);return}
@@ -2782,7 +2786,7 @@ function syncInboxDraftUser(){
   if(!document.getElementById("inboxPage").hidden)selectInboxMessages();
   for(const name of ["profilePageContent","ownSellerRatings"])document.getElementById(name).replaceChildren();
   for(const name of ["pageHandle","pageBio","pageMeta","settingsAccountEmail","settingsSecurityStatus","composeStatus"])document.getElementById(name).textContent="";
-  document.getElementById("collectionInquiryForm").reset();closeModal("collectionInquiryModal");collectionInquiryRecipient=null;collectionInquiryOwner=null;++publicProfileVersion;document.getElementById("publicProfileContent").replaceChildren();closeModal("publicProfileModal");document.getElementById("profileForm").reset();setProfileInterest("");document.getElementById("collectorAvatar").textContent="C";document.getElementById("collectorHandle").textContent="";
+  const oldInquiryForm=document.getElementById("collectionInquiryForm");oldInquiryForm.reset();delete oldInquiryForm.dataset.pending;delete oldInquiryForm.dataset.deliveryUncertain;oldInquiryForm.querySelectorAll("input,textarea,select,button").forEach(x=>x.disabled=false);document.getElementById("collectionInquiryStatus").textContent="";closeModal("collectionInquiryModal");collectionInquiryRecipient=null;collectionInquiryOwner=null;++publicProfileVersion;document.getElementById("publicProfileContent").replaceChildren();closeModal("publicProfileModal");document.getElementById("profileForm").reset();setProfileInterest("");document.getElementById("collectorAvatar").textContent="C";document.getElementById("collectorHandle").textContent="";
   document.getElementById("pageAvatar").textContent="C";document.getElementById("composeBody").value="";
   for(const name of ["profileModal","settingsModal","blockedUsersModal","composeModal","priceOffersModal","tradesModal","counterModal","tradeComposeModal","priceOfferModal"])closeModal(name);
   if(!document.getElementById("inboxPage").hidden||!document.getElementById("collectorPage").hidden)showMainMarketplace();
