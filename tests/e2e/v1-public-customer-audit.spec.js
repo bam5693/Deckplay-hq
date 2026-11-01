@@ -5,12 +5,13 @@ const fs=require('node:fs');
 const base=process.env.DECKPLAY_QA_BASE_URL;
 const permitted=(()=>{try{const u=new URL(base);return ['localhost','127.0.0.1','[::1]'].includes(u.hostname)&&['http:','https:'].includes(u.protocol)}catch{return false}})();
 test.skip(!permitted,'Read-only QA requires explicit loopback DECKPLAY_QA_BASE_URL; never audit production by default');
+// These are customer actions, not guesses at label spelling. Account destinations live in a closed menu.
 const surfaces=[
- {name:'marketplace',target:'a[href*="marketplace"],[data-page="marketplace"],button:has-text("Marketplace")'},
- {name:'favorites',target:'a[href*="favorite"],button:has-text("Favorites")'},
- {name:'inbox',target:'a[href*="inbox"],button:has-text("Inbox")'},
- {name:'profile',target:'a[href*="profile"],button:has-text("Profile")'},
- {name:'sell',target:'button:has-text("Sell"),button:has-text("List Item")'},
+ {name:'marketplace',target:'#menuMarketplace',menu:true},
+ {name:'favorites',target:'#myFavorites',menu:true},
+ {name:'inbox',target:'#myMessages',menu:true},
+ {name:'profile',target:'#myProfile',menu:true},
+ {name:'sell',target:'button[data-sell]',menu:false},
 ];
 test('first-time visitor explores V1 navigation with readable controls and screenshot evidence',async({page},info)=>{
  await page.goto(base,{waitUntil:'domcontentloaded'});
@@ -18,7 +19,13 @@ test('first-time visitor explores V1 navigation with readable controls and scree
  for(const theme of ['light','dark']){
   await page.evaluate(t=>document.documentElement.dataset.theme=t,theme);
   for(const surface of surfaces){
-   const item=page.locator(surface.target).filter({visible:true}).first();
+   if(surface.menu){
+    const account=page.locator('#accountButton');
+    await expect(account,'Account menu must be discoverable').toBeVisible();
+    await account.click();
+    await expect(page.locator('#accountMenu'),'Account menu must open for guests').toBeVisible();
+   }
+   const item=page.locator(surface.target).locator(':visible').first();
    const available=await item.count()>0;
    let status='missing',overflow=[],unlabeled=[];
    if(available){
@@ -44,7 +51,9 @@ test('first-time visitor explores V1 navigation with readable controls and scree
  const output=info.outputPath('v1-public-journey-audit.json');
  fs.writeFileSync(output,JSON.stringify({scope:'anonymous read-only loopback browser; no login, payment, or live seller data',results},null,2));
  await info.attach('v1-public-journey-audit',{path:output,contentType:'application/json'});
- expect(results.filter(r=>r.status==='visited').length,'No public V1 surfaces could be visited').toBeGreaterThan(0);
+ const unvisited=results.filter(r=>r.status!=='visited');
+ expect(unvisited,'Every visible guest navigation destination should be reachable; missing is a failed audit, not a pass').toEqual([]);
+
 });
 
 test('guest seller sign-in has three separate readable actions with no overlapping Cancel',async({page},info)=>{
