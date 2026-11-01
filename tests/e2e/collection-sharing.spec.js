@@ -209,3 +209,38 @@ test('collection consent editor opens while optional listing and Wanted counts s
  await expect(page.locator('#profileForm button[type="submit"]')).toBeEnabled();
  await expect(page.locator('#profileListingCount')).toHaveText('—');
 });
+
+test('timed-out collection inquiry keeps its draft and requires inbox check before retry',async({page})=>{
+ await fixture(page,'buy_trade');await page.clock.install();
+ await page.locator('[data-collection-inquiry]').click();
+ await page.locator('#collectionInquiryItem').fill('One Piece OP05-119');
+ await page.locator('#collectionInquiryBody').fill('Would you trade this card?');
+ await page.evaluate(()=>{window.inboxOpens=[];showInboxPage=async target=>inboxOpens.push(target??null)});
+ await page.locator('#collectionInquiryForm button[type="submit"]').click();
+ await expect.poll(()=>page.evaluate(()=>inquiryWrites.length)).toBe(1);
+ await page.clock.fastForward(10100);
+ await expect(page.locator('#collectionInquiryStatus')).toContainText('could not confirm whether your inquiry was sent');
+ await expect(page.locator('#collectionInquiryBody')).toHaveValue('Would you trade this card?');
+ await expect(page.locator('#collectionInquiryForm button[type="submit"]')).toBeDisabled();
+ await expect(page.locator('#collectionInquiryContinue')).toHaveText('Check inbox');
+ await page.locator('#collectionInquiryContinue').click();
+ expect(await page.evaluate(()=>({writes:inquiryWrites.length,inboxOpens}))).toEqual({writes:1,inboxOpens:[null]});
+});
+
+test('account switch releases pending inquiry controls without accepting late delivery',async({page})=>{
+ await fixture(page,'trades');
+ await page.locator('[data-collection-inquiry]').click();
+ await page.locator('#collectionInquiryItem').fill('Signed baseball card');
+ await page.locator('#collectionInquiryBody').fill('Could we discuss a trade?');
+ await page.locator('#collectionInquiryForm button[type="submit"]').click();
+ await expect.poll(()=>page.evaluate(()=>inquiryWrites.length)).toBe(1);
+ await page.evaluate(()=>{
+  window.inboxOpens=[];showInboxPage=async target=>inboxOpens.push(target);
+  currentUser={id:'different-account'};syncInboxDraftUser();
+  finishInquiry({error:null});
+ });
+ await expect(page.locator('#collectionInquiryModal')).not.toHaveClass(/open/);
+ await expect(page.locator('#collectionInquiryForm button[type="submit"]')).toBeEnabled();
+ await expect(page.locator('#collectionInquiryBody')).toHaveValue('');
+ expect(await page.evaluate(()=>inboxOpens)).toEqual([]);
+});
