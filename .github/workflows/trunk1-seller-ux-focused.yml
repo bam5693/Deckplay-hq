@@ -1,0 +1,32 @@
+name: Trunk 1 seller classification mobile UX focused
+on:
+  push:
+    branches: [dev/hourly-trunk1]
+    paths:
+      - 'tests/e2e/trunk1-seller-ux.spec.js'
+      - '.github/workflows/trunk1-seller-ux-focused.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  seller-ux:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Cheap source preflight
+        run: |
+          node --check tests/e2e/trunk1-seller-ux.spec.js
+          node scripts/check-inline-js.cjs
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: staging-playwright-${{ hashFiles('package-lock.json') }}
+      - run: npx playwright install chromium --only-shell
+      - name: Two mobile light and dark eight-type browser journeys (synthetic)
+        run: npx playwright test --config=playwright.local.config.js tests/e2e/trunk1-seller-ux.spec.js --retries=0 --timeout=20000
