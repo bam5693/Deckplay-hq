@@ -25,6 +25,32 @@ for(const theme of ['light','dark']){
    await expect(page.locator('#listingDescriptionHelp')).toContainText(new RegExp(helpWord,'i'));
    if(['game','console','figure','other'].includes(type))
     await expect(page.locator('#listingDescriptionHelp')).not.toContainText(/foil|rarity|missing a card/i);
+   if(type==='deck'){
+    await expect(page.locator('#deckFields')).toBeVisible();
+    // Owner 33662.jpg: white deck panel against a dark form made labels illegible.
+    // Measure actual rendered foreground/background contrast, not merely theme class names.
+    const deckContrast=await page.locator('#deckFields').evaluate(panel=>{
+     const rgb=color=>(color.match(/[\\d.]+/g)||[]).slice(0,3).map(Number);
+     const luminance=color=>{
+      const channels=rgb(color).map(n=>{const v=n/255;return v<=0.04045?v/12.92:Math.pow((v+0.055)/1.055,2.4)});
+      return channels[0]*0.2126+channels[1]*0.7152+channels[2]*0.0722;
+     };
+     const contrast=(a,b)=>{const [hi,lo]=[luminance(a),luminance(b)].sort((x,y)=>y-x);return (hi+0.05)/(lo+0.05)};
+     const label=panel.querySelector('label');
+     const help=panel.querySelector('.file-help');
+     const field=panel.querySelector('#deckList');
+     return {
+      label:contrast(getComputedStyle(label).color,getComputedStyle(panel).backgroundColor),
+      help:contrast(getComputedStyle(help).color,getComputedStyle(panel).backgroundColor),
+      field:contrast(getComputedStyle(field).color,getComputedStyle(field).backgroundColor),
+      fits:panel.getBoundingClientRect().width<=panel.parentElement.getBoundingClientRect().width+1
+     };
+    });
+    expect(deckContrast.label,'Deck label contrast').toBeGreaterThanOrEqual(4.5);
+    expect(deckContrast.help,'Deck instructions contrast').toBeGreaterThanOrEqual(4.5);
+    expect(deckContrast.field,'Decklist input contrast').toBeGreaterThanOrEqual(4.5);
+    expect(deckContrast.fits,'Deck panel must not overflow phone modal').toBe(true);
+   }
    if(type==='game'){
     await expect(page.locator('#gamePlatformFields')).toBeVisible();
     await expect(page.locator('#tcgGameWrap')).toBeHidden();
