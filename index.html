@@ -3563,10 +3563,15 @@ async function showCollectorPage(tab="listings"){
  if(tab==="saved"){
   const retry='<p class="muted" role="status">Your saved items could not load. Check your connection and <button type="button" class="ghost" data-retry-profile-saved>retry saved items</button>.</p>';
   const browse='<button type="button" class="ghost" data-browse-from-saved>Browse marketplace</button>';
-  // Do not show a blocked seller's saved card before the privacy preflight completes.
-  const blocksReady=await loadBlockedCollectors();
+  // This page owns its privacy preflight. Reusing the global block refresh can
+  // return false when an unrelated refresh supersedes it, hiding valid saved cards.
+  // Keep this account's verified block IDs local; never render on an uncertain read.
+  let blockedRows,blockError;
+  try{({data:blockedRows,error:blockError}=await readMarketplaceRequest(supabaseClient.from("user_blocks").select("blocked_id").eq("blocker_id",userId),8000))}
+  catch(error){blockError=error}
   if(!current())return;
-  if(!blocksReady){content.innerHTML='<p class="muted" role="status">Could not verify blocked collectors. Your saved listings are hidden until this check succeeds. <button type="button" class="ghost" data-retry-profile-saved>Retry saved items</button></p>';return}
+  if(blockError){content.innerHTML='<p class="muted" role="status">Could not verify blocked collectors. Your saved listings are hidden until this check succeeds. <button type="button" class="ghost" data-retry-profile-saved>Retry saved items</button></p>';return}
+  const blockedForSaved=new Set((blockedRows||[]).map(row=>row.blocked_id).filter(Boolean));
   let rows,error;
    try{({data:rows,error}=await readMarketplaceRequest(supabaseClient.from("saved_listings").select("listing_id").eq("user_id",userId),8000))}
    catch(requestError){if(current())content.innerHTML=retry;return}
@@ -3579,7 +3584,7 @@ async function showCollectorPage(tab="listings"){
    catch(requestError){if(current())content.innerHTML=retry;return}
   if(!current())return;
   if(listingError){content.innerHTML=retry;return}
-  const visible=(matches||[]).filter(row=>!blockedCollectorIds.has(row.seller_id));
+  const visible=(matches||[]).filter(row=>!blockedForSaved.has(row.seller_id));
   // A saved record can outlive a public listing. Never drop it silently or
   // disclose a blocked/removed seller's private title or status.
   const visibleIds=new Set(visible.map(row=>String(row.id)));
