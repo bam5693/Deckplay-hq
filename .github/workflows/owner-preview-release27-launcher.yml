@@ -3,7 +3,7 @@ on:
   push:
     branches: [main]
     paths:
-      - release/gates.json
+      - .github/workflows/owner-preview-release27-launcher.yml
 permissions:
   contents: read
   actions: write
@@ -12,31 +12,39 @@ concurrency:
   cancel-in-progress: false
 jobs:
   dispatch:
-    if: "${{ github.ref == 'refs/heads/main' && contains(github.event.head_commit.message, 'Merge pull request #27 from release/owner-preview-v1-2026-10-31') }}"
+    if: "${{ github.ref == 'refs/heads/main' && github.event.head_commit.message == 'release: resume approved PR27 protected deployment' }}"
     runs-on: ubuntu-latest
     timeout-minutes: 3
     steps:
       - uses: actions/checkout@v4
-      - name: Check owner approval and exact reviewed production application blob
+        with:
+          fetch-depth: 2
+      - name: Verify exact approved merge parent and absence of application changes
         run: |
           node <<'NODE'
           const fs=require('node:fs'),{execFileSync}=require('node:child_process');
           const g=JSON.parse(fs.readFileSync('release/gates.json','utf8'));
-          const approval=g.ownerPreviewRelease27Approval;
-          const actual=execFileSync('git',['rev-parse','HEAD:index.html'],{encoding:'utf8'}).trim();
-          const parents=execFileSync('git',['rev-list','--parents','-n','1','HEAD'],{encoding:'utf8'}).trim().split(/\s+/).slice(1);
-          if(parents.length!==2||actual!=='025759167624d03e0aaf34de9c82800ce06cc731'||g.approvedApplicationTree!=='025759167624d03e0aaf34de9c82800ce06cc731'||
-             approval?.approvedApplicationTree!=='025759167624d03e0aaf34de9c82800ce06cc731'||
-             approval?.approvedSourceCandidateCommit!=='920859155efb764c5c9ce955cee1cd0dc170cce4'||
-             approval?.managedServiceRecoveryVerified!==false||
-             approval?.previousWaiverForPR5NotReused!==true||
-             g.blockers.length!==0||
-             g.productionSchemaVerified!==true||
-             g.previewAcceptanceVerified!==true||
-             g.rollbackVerified!==true)throw Error('PR27 exact owner approval, tree, or release gate missing');
-          console.log('Owner-approved PR27 merge application verified; dispatching existing protected production workflow.');
+          const a=g.ownerPreviewRelease27Approval;
+          const git=(...args)=>execFileSync('git',args,{encoding:'utf8'}).trim();
+          const actual=git('rev-parse','HEAD:index.html');
+          const parent=git('rev-parse','HEAD^');
+          const changed=git('diff-tree','--no-commit-id','--name-only','-r','HEAD');
+          if(parent!=='70e15eb79ba321a64fb152101a0beb66a8686037' ||
+             changed!=='.github/workflows/owner-preview-release27-launcher.yml' ||
+             actual!=='025759167624d03e0aaf34de9c82800ce06cc731' ||
+             g.approvedApplicationTree!=='025759167624d03e0aaf34de9c82800ce06cc731' ||
+             a?.approvedApplicationTree!=='025759167624d03e0aaf34de9c82800ce06cc731' ||
+             a?.approvedSourceCandidateCommit!=='920859155efb764c5c9ce955cee1cd0dc170cce4' ||
+             a?.managedServiceRecoveryVerified!==false ||
+             a?.previousWaiverForPR5NotReused!==true ||
+             g.blockers.length!==0 ||
+             g.productionSchemaVerified!==true ||
+             g.previewAcceptanceVerified!==true ||
+             g.rollbackVerified!==true)
+             throw Error('Owner-authorized PR27 main release gate mismatch');
+          console.log('Exactly approved app retained; no source changes since merge. Dispatching existing protected production workflow.');
           NODE
-      - name: Dispatch protected manual production workflow with exact merged main SHA
+      - name: Dispatch existing manual protected production workflow with this exact SHA
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh workflow run deploy.yml --ref main --field approved_sha="${GITHUB_SHA}"
