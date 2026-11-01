@@ -77,7 +77,20 @@
    if(verified!==userId)deny('Your account changed. Reload the moderation queue.');
    const {error}=await client.rpc(name,payload);if(!active())return;if(error)throw error;
    await load();
-  }catch(error){if(active()){if(error.accessDenied){++generation;clearPrivate();state.textContent=error.message}else status.textContent='Action failed: '+(error.message||'Please try again.')}}
+  }catch(error){if(active()){
+   // Database authorization can expire after the pre-write MFA check.
+   // Never retain report evidence or show raw backend details on a denied write.
+   if(error.accessDenied||error.code==='42501'||error.status===401||error.status===403){
+    ++generation;clearPrivate();
+    state.textContent=error.accessDenied?error.message:'Moderator access could not be verified. Refresh to retry.';
+   }else if(error.code==='40001'||error.code==='P0002'){
+    // Another moderator may have changed/deleted this report. Do not retry
+    // the write automatically against a status the operator has not reviewed.
+    await load();
+    if(authorizedUser===userId&&(queueState==='snapshot loaded'||queueState==='bounded snapshot'))
+     status.textContent='Report changed or is no longer available. Queue refreshed; review the current evidence and status before taking another action. No change was made by this attempt.';
+   }else status.textContent='Review action could not be completed. Check your connection and refresh the queue before trying again.';
+  }}
   finally{if(active()){busy=false;controls(false)}}
  }
  function renderSnapshot(){
