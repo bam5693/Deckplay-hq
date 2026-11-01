@@ -344,3 +344,39 @@ test('public profile never exposes collection links when block verification stal
  await expect(page.locator('#publicProfileContent')).not.toContainText('Private collection');
  await expect(page.locator('#publicProfileContent a')).toHaveCount(0);
 });
+
+test('stalled load-more request releases the button and allows the same seller page to recover',async({page})=>{
+ await page.route('https://challenges.cloudflare.com/**',r=>r.abort());
+ await page.route('https://prrrzeelltmyugssqnzk.supabase.co/**',r=>r.fulfill({json:[]}));
+ await page.goto('/');
+ await page.evaluate(async()=>{
+  await supabaseClient.auth.getSession();currentUser=null;window.olderPageRequests=0;
+  readMarketplaceRequest=request=>Promise.race([
+   Promise.resolve(request),
+   new Promise((_,reject)=>setTimeout(()=>reject(Error('Timed out')),60))
+  ]);
+  const rows=Array.from({length:62},(_,i)=>({id:'card-'+i,seller_id:'tanner',title:'Sports card '+i,price:20,category:'trading_cards',image_urls:[],status:'active',created_at:new Date(2026,9,29,0,0,0,i).toISOString()}));
+  supabaseClient.from=table=>{
+   let range=null;
+   const q={select:()=>q,eq:()=>q,order:()=>q,limit:()=>q,range:(a,b)=>{range=[a,b];return q},
+    maybeSingle:async()=>({data:table==='profiles'?{username:'Tanner'}:null,error:null}),
+    then:(resolve,reject)=>{
+     if(table==='listings'&&range){
+      olderPageRequests++;
+      if(olderPageRequests===1)return new Promise(()=>{}).then(resolve,reject);
+      return Promise.resolve({data:rows.slice(range[0],range[1]+1),error:null}).then(resolve,reject);
+     }
+     return Promise.resolve({data:table==='listings'?rows.slice(0,61):[],error:null}).then(resolve,reject);
+    }};
+   return q;
+  };
+  await showPublicProfile('tanner');
+ });
+ await expect(page.locator('#publicProfileResults .profile-item')).toHaveCount(60);
+ await page.locator('[data-storefront-more]').click();
+ await expect(page.locator('#publicProfileResults [role="alert"]')).toContainText('Try again');
+ await expect(page.locator('[data-storefront-more]')).toBeEnabled();
+ await page.locator('[data-storefront-more]').click();
+ await expect(page.locator('#publicProfileResults .profile-item')).toHaveCount(62);
+ expect(await page.evaluate(()=>olderPageRequests)).toBe(2);
+});
