@@ -23,13 +23,16 @@ jobs:
           node-version: '22'
           cache: npm
       - name: Cheap syntax preflight
-        run: node --check moderation.js && node --check tests/e2e/moderation-security.spec.js
+        run: |
+          node --check moderation.js
+          node --check tests/e2e/moderation-security.spec.js
+          node -e "const s=require('fs').readFileSync('moderation.html','utf8');for(const id of ['incidentPanel','incidentKind','incidentImpact','incidentPrepare','incidentCopy','incidentSummary','incidentStatus'])if(!s.includes('id=\\\"'+id+'\\\"'))throw Error('Missing incident control: '+id)"
       - run: npm ci
       - uses: actions/cache@v4
         with:
           path: ~/.cache/ms-playwright
           key: staging-playwright-${{ hashFiles('package-lock.json') }}
       - run: npx playwright install chromium --only-shell
-      - name: T8.2 isolated mock UI regression only (desktop and mobile)
+      - name: T8.5 incident handoff local mock only (desktop and mobile)
         run: |
-          npx playwright test --config=playwright.local.config.js moderation-security.spec.js --grep 'T8.2: status filter never treats the bounded report snapshot as the full queue' --project=local-desktop --project=local-mobile --max-failures=1 --timeout=20000
+          npx playwright test --config=playwright.local.config.js moderation-security.spec.js --grep 'T8.5: verified operator can prepare a safe incident handoff when report queue fails' --project=local-desktop --project=local-mobile --max-failures=1 --timeout=20000
