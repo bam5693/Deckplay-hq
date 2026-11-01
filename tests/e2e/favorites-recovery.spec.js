@@ -267,3 +267,33 @@ test('Favorites menu routes to the complete account Saved tab, not the loaded ma
  expect(await page.evaluate(()=>savedRouteVisits)).toEqual(['saved']);
  expect(await page.evaluate(()=>onlySavedListings)).toBe(false);
 });
+
+
+test('Saved profile loads older favorites even when unrelated seller and Wanted queries are unavailable',async({page})=>{
+ await fixture(page);
+ await page.evaluate(async()=>{
+  currentUser={id:'first-buyer',user_metadata:{username:'jayden'}};
+  window.sellerOverview={refresh:()=>{}};
+  loadBlockedCollectors=async()=>true;
+  sellerRatingHtml=async()=>''; 
+  supabaseClient.from=table=>{
+   if(table==='wanted_posts')throw Error('Saved must not query Wanted');
+   const result=table==='saved_listings'
+    ?{data:[{listing_id:'older-card'}],error:null}
+    :table==='listings'
+     ?{data:[{id:'older-card',title:'Older saved One Piece card',price:18,status:'active',image_urls:[],seller_id:'seller-2'}],error:null}
+     :{data:[],error:null};
+   const q={
+    select:()=>q,
+    eq:key=>{if(table==='listings'&&key==='seller_id')throw Error('Saved must not query seller inventory');return q},
+    in:()=>q,order:()=>q,
+    maybeSingle:async()=>({data:{username:'jayden'},error:null}),
+    then:(ok,bad)=>Promise.resolve(result).then(ok,bad)
+   };
+   return q;
+  };
+  await showCollectorPage('saved');
+ });
+ await expect(page.locator('#profilePageContent')).toContainText('Older saved One Piece card');
+ await expect(page.locator('#pageListingCount')).toContainText('— listings');
+});
