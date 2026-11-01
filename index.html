@@ -2482,7 +2482,33 @@ async function showPublicProfile(id){
     }
    }
    return;
-  }const report=e.target.closest("[data-report-profile]");if(report){startReport(id);return}const contact=e.target.closest("[data-message-profile]");if(contact){if(!currentUser){openModal("authModal");return}closeModal("publicProfileModal");await showInboxPage(id);return}const view=e.target.closest("[data-public-listing]");if(view){const l=listings.find(x=>x.id===view.dataset.publicListing);if(l){closeModal("publicProfileModal");showDetails(marketplaceItemFromRow(l,p))}}};
+  }const report=e.target.closest("[data-report-profile]");if(report){startReport(id);return}const contact=e.target.closest("[data-message-profile]");if(contact){if(!currentUser){openModal("authModal");return}closeModal("publicProfileModal");await showInboxPage(id);return}const view=e.target.closest("[data-public-listing]");if(view){
+    const row=listings.find(x=>String(x.id)===view.dataset.publicListing);
+    if(!row||view.disabled)return;
+    if(blockedCollectorIds.has(id)){toast("This collector is blocked. Unblock them in Settings to view their listings.");return}
+    const label=view.textContent;
+    view.disabled=true;view.setAttribute("aria-busy","true");view.textContent="Checking availability…";
+    try{
+     // A storefront may stay open while its seller edits, pauses or sells an item.
+     // Never open cached details or offer actions without a fresh active-row check.
+     const {data,error}=await readMarketplaceRequest(supabaseClient.from("listings")
+      .select("id,title,description,price,image_urls,condition,category,tcg_game,collectible_subcategory,accepts_trades,accepts_price_offers,created_at,seller_id")
+      .eq("id",row.id).eq("status","active").maybeSingle(),8000);
+     if(!current())return;
+     if(error)throw error;
+     if(!data||String(data.seller_id)!==String(id)||blockedCollectorIds.has(id)){
+      const index=listings.indexOf(row);
+      if(index>=0)listings.splice(index,1);
+      renderStorefront();
+      toast("This listing is no longer available. Seller inventory has been refreshed.");
+      return;
+     }
+     closeModal("publicProfileModal");
+     showDetails(marketplaceItemFromRow(data,p));
+    }catch(error){if(current())toast("Could not check this listing. Check your connection and retry.")}
+    finally{if(current()&&view.isConnected){view.disabled=false;view.removeAttribute("aria-busy");view.textContent=label}}
+    return;
+   }};
  return "ready";
 }
 document.getElementById("myMessages").addEventListener("click",async()=>{closeAccountMenu();if(!currentUser)return;await showInboxPage()});
