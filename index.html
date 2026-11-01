@@ -3329,7 +3329,9 @@ async function showCollectorPage(tab="listings"){
    if(tab==="saved"){
     // Saved cards need their own IDs, not the owner's listings or Wanted history.
     // An unrelated slow query must never hide a collector's saved inventory.
-    profileResult=await readMarketplaceRequest(profileRequest,8000);
+    // Profile decoration is optional; a failed header read must not block Saved IDs.
+    try{profileResult=await readMarketplaceRequest(profileRequest,8000)}
+    catch(error){profileResult={data:null,error}}
     listingsResult={data:[]};wantedResult={data:[]};
    }else{
     [profileResult,listingsResult,wantedResult]=await Promise.all([profileRequest,supabaseClient.from("listings").select("id,title,price,status,category,image_urls,created_at").eq("seller_id",userId).order("created_at",{ascending:false}),supabaseClient.from("wanted_posts").select("id,title,details,game,budget,created_at").eq("user_id",userId).order("created_at",{ascending:false})]);
