@@ -11,6 +11,10 @@ function listingEditorVisibleDescription(description){
  // the newer authoritative classification. Never put stale sport/platform or
  // card-condition metadata back into editable seller prose.
  const withoutLegacy=latestEditorClassification(description)===null?withoutEdits:withoutEdits
+  // A published deck has an app-generated original list before [Card Condition].
+  // On later edits the current classification is authoritative; never put the
+  // superseded list back into the seller notes. Keep unmarked seller prose.
+  .replace(/(?:^|\n)\[Complete Deck\]\r?\nDeck:[^\n]*\r?\nCards:[^\n]*\r?\n\r?\nFull decklist:\r?\n[\s\S]*?(?=\r?\n\r?\n\[Card Condition\]\r?\n)/g,"\n")
   .replace(/(?:^|\n)\[Sports Cards\]\nSport:[^\n]*\nBrand:[^\n]*\nYear:[^\n]*\nPlayer:[^\n]*(?:\nProduct line:[^\n]*)?/g,"\n")
   .replace(/(?:^|\n)\[Video Game\]\nPlatform:[^\n]*/g,"\n")
   // The original seller form put unmarked TCG set/variant lines immediately
