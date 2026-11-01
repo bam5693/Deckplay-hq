@@ -126,3 +126,22 @@ test('Other item can choose a buyer-search category, and card set fields reset a
  await page.locator('#tcgGame').selectOption('one_piece');
  await expect(page.locator('#tcgSetFields')).toBeVisible();
 });
+
+test('Other hardware category does not ask for a duplicate hardware type',async({page})=>{
+ await page.locator('#listingType').selectOption('other');
+ await expect(page.locator('#listingCategoryChoice')).toBeVisible();
+ for(const [category,type] of [['controllers','Controller'],['accessories','Accessory'],['consoles','Console']]){
+  await page.locator('#category').selectOption(category);
+  await expect(page.locator('#consoleItemTypeWrap')).toBeHidden();
+  await expect(page.locator('#consoleItemType')).toHaveValue(type);
+  await expect(page.locator('#consoleItemType')).not.toHaveAttribute('required','');
+  await expect(page.locator('#consoleFields')).toBeVisible();
+  await expect(page.locator('#consoleBrand')).toHaveAttribute('required','');
+  await expect(page.locator('#category')).toHaveValue(category);
+ }
+ await page.locator('#listingType').selectOption('console');
+ await expect(page.locator('#listingCategoryChoice')).toBeHidden();
+ await expect(page.locator('#consoleItemTypeWrap')).toBeVisible();
+ await expect(page.locator('#consoleItemType')).toHaveValue('Console');
+ await expect(page.locator('#category')).toHaveValue('consoles');
+});
