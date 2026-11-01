@@ -3527,7 +3527,17 @@ async function showCollectorPage(tab="listings"){
     catch(error){profileResult={data:null,error}}
     listingsResult={data:[]};wantedResult={data:[]};
    }else{
-    [profileResult,listingsResult,wantedResult]=await Promise.all([profileRequest,supabaseClient.from("listings").select("id,title,price,status,category,image_urls,created_at").eq("seller_id",userId).order("created_at",{ascending:false}),supabaseClient.from("wanted_posts").select("id,title,details,game,budget,created_at").eq("user_id",userId).order("created_at",{ascending:false})]);
+    // One stalled profile, inventory or Wanted query must not strand the entire collection page.
+    // Preserve individual failures so the affected tab can offer Retry, not a false empty state.
+    const boundedProfileRead=async(request,timeout=8000)=>{
+     try{return await readMarketplaceRequest(request,timeout)}
+     catch(error){return {data:null,error}}
+    };
+    [profileResult,listingsResult,wantedResult]=await Promise.all([
+     boundedProfileRead(profileRequest),
+     boundedProfileRead(supabaseClient.from("listings").select("id,title,price,status,category,image_urls,created_at").eq("seller_id",userId).order("created_at",{ascending:false}),10000),
+     boundedProfileRead(supabaseClient.from("wanted_posts").select("id,title,details,game,budget,created_at").eq("user_id",userId).order("created_at",{ascending:false}),8000)
+    ]);
    }
   }catch(error){
    if(current()&&tab==="saved")document.getElementById("profilePageContent").innerHTML='<p class="muted" role="status">Your saved items could not load. Check your connection and <button type="button" class="ghost" data-retry-profile-saved>retry saved items</button>.</p>';
@@ -3539,15 +3549,17 @@ async function showCollectorPage(tab="listings"){
  document.getElementById("pageHandle").textContent="@"+username;document.getElementById("pageBio").textContent=profile.bio||"Add a bio to tell collectors about yourself.";
  document.getElementById("pageMeta").textContent=[profile.favorite_tcg?"Favorite TCG: "+profile.favorite_tcg:"",profile.location_label||""].filter(Boolean).join(" · ");
  document.getElementById("pageListingCount").textContent=tab==="saved"?"— listings":listings.length+" listings";document.getElementById("pageWantedCount").textContent=tab==="saved"?"— wanted posts":wanted.length+" wanted posts";
- if(tab==="saved"){
-   const rating=document.getElementById("ownSellerRatings");rating.textContent="Loading seller reviews…";
-   void sellerRatingHtml(userId).then(html=>{if(current())rating.innerHTML=html}).catch(()=>{if(current())rating.textContent="Seller reviews unavailable."});
-  }else{
-   const ownRating=await sellerRatingHtml(userId);if(!current())return;document.getElementById("ownSellerRatings").innerHTML=ownRating;
-  }
+ // Reviews are optional decoration, not a reason to hide listings or Wanted posts.
+ // A hung review lookup must never keep the page on "Loading your collection…".
+ const rating=document.getElementById("ownSellerRatings");rating.textContent="Loading seller reviews…";
+ void readMarketplaceRequest(sellerRatingHtml(userId),5000).then(html=>{if(current())rating.innerHTML=html}).catch(()=>{if(current())rating.textContent="Seller reviews unavailable."});
  document.querySelectorAll("[data-profile-tab]").forEach(b=>b.classList.toggle("active",b.dataset.profileTab===tab));
  const content=document.getElementById("profilePageContent");
- if(tab==="wanted"){content.innerHTML=wanted.length?wanted.map(w=>`<article class="profile-item"><h3>${escapeHtml(w.title)}</h3><p>${escapeHtml(w.details||"")}</p><small>${escapeHtml(w.game||"Collectibles")}${w.budget?" · Budget: $"+Number(w.budget).toFixed(2):""}</small></article>`).join(""):'<p class="muted">No wanted posts yet. Use the Wanted board to post what you are looking for.</p>';return}
+ if(tab==="wanted"){
+  if(wantedResult.error){content.innerHTML='<p class="muted" role="alert">Your Wanted posts could not load. Check your connection and <button type="button" class="ghost" data-retry-profile-tab="wanted">retry Wanted posts</button>.</p>';return}
+  content.innerHTML=wanted.length?wanted.map(w=>`<article class="profile-item"><h3>${escapeHtml(w.title)}</h3><p>${escapeHtml(w.details||"")}</p><small>${escapeHtml(w.game||"Collectibles")}${w.budget?" · Budget: $"+Number(w.budget).toFixed(2):""}</small></article>`).join(""):'<p class="muted">No wanted posts yet. Use the Wanted board to post what you are looking for.</p>';return
+ }
+ if(tab==="listings"&&listingsResult.error){content.innerHTML='<p class="muted" role="alert">Your listings could not load. Check your connection and <button type="button" class="ghost" data-retry-profile-tab="listings">retry listings</button>.</p>';return}
  if(tab==="saved"){
   const retry='<p class="muted" role="status">Your saved items could not load. Check your connection and <button type="button" class="ghost" data-retry-profile-saved>retry saved items</button>.</p>';
   const browse='<button type="button" class="ghost" data-browse-from-saved>Browse marketplace</button>';
@@ -3620,6 +3632,7 @@ document.getElementById("profilePageContent").addEventListener("click",async e=>
   }
   return;
  }
+ const tabRetry=e.target.closest("[data-retry-profile-tab]");if(tabRetry){tabRetry.disabled=true;void showCollectorPage(tabRetry.dataset.retryProfileTab);return}
  const savedRetry=e.target.closest("[data-retry-profile-saved]");if(savedRetry){savedRetry.disabled=true;void showCollectorPage("saved");return}
  if(e.target.closest("[data-browse-from-saved]")){document.getElementById("menuMarketplace").click();return}
  if(e.target.closest("[data-inventory-clear]")){const root=document.getElementById("profilePageContent");root.querySelector("#inventorySearch").value="";root.querySelector("#inventoryStatus").value="all";root.querySelector("#inventoryCategory").value="all";filterProfileInventory();root.querySelector("#inventorySearch").focus();return}
