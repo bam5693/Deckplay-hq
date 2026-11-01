@@ -1086,6 +1086,10 @@ function marketplaceCurrentSearchDescription(value){
  if(!blocks.length)return description;
  const latest=blocks[blocks.length-1];
  const older=description.slice(0,latest.index)
+  // Remove only the app-generated original deck, bounded by [Card Condition].
+  // The seller's latest edited decklist must drive search and buyer details;
+  // unmarked seller notes and unedited legacy decks remain untouched.
+  .replace(/(?:^|\n)\[Complete Deck\]\r?\nDeck:[^\n]*\r?\nCards:[^\n]*\r?\n\r?\nFull decklist:\r?\n[\s\S]*?(?=\r?\n\r?\n\[Card Condition\]\r?\n)/g,"\n")
   .replace(/(?:^|\n)\[Card Condition\]\r?\n[^\n]*/gi,"\n")
   .replace(/(?:^|\n)\[Listing classification\]\r?\n[\s\S]*?\r?\n\[End classification\]/g,"\n")
   .replace(/^(?:Category|Listing type|Card condition|Sport|Sports brand|Brand|Product line|Year|Player|Set|Era|Card number|Variant|Rarity|Edition \/ printing|Language|Platform|Hardware type|Model|Storage \/ version|Storage\/version|Grader|Grade|Certification|Deck|Cards):[^\n]*$/gmi,"");
