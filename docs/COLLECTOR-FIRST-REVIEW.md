@@ -9,7 +9,8 @@ A selected dropdown, successful publish API, or 496 fixture paths can all pass w
 - An AI model is only considered operational if a protected reviewer deployment and authenticated inference response are independently verified. A configuration or successful mock test is not proof.
 - No task may claim a second independent humanlike visual review when only one developer authored both the journey and the assertions.
 
-## Real-customer review sequence (run only for affected features)
+## Owner's actual bug history
+Read [OWNER-SCREENSHOT-REGRESSION-ATLAS.md](OWNER-SCREENSHOT-REGRESSION-ATLAS.md) first. Its ten Android screenshot IDs (33668, 33666, 33664, 33662, 33660, 33658, 33656, 33654, 33652 and 33648) are regression seeds, **not proof current staging is broken or that the model saw pixels**. Review original screenshot bytes only when genuinely available; never substitute remembered descriptions for visual analysis.\n\n## Real-customer review sequence (run only for affected features)
 1. **Choose a mission before seeing the UI.** Select a relevant case from `tests/fixtures/collector-challenges.json`. State exactly what the customer owns or wants, grade/edition/printing, and whether buyer/seller/trader. Use history-accurate brands.
 2. **Try it cold.** Start as an ordinary visitor, not from a test locator or developer shortcut. Find the listing path or desired product using the UI; if confused, document the confusion rather than reading code to find the answer.
 3. **Seller and buyer must agree.** Enter the product accurately; check preview, publish, saved state, edit, buyer search/filter, details, contact/offer/trade when affected. Test mismatch between typed search aliases and canonical catalog terms.
