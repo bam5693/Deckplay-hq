@@ -62,6 +62,7 @@ for(const theme of ['light','dark']){
    document.documentElement.dataset.theme=theme;
    window.trunk1Classification=createListingEditorClassification(document.getElementById('editListingClassification'),{});
    trunk1Classification.reset({category:'controllers',product_type:'console',condition:'used',description:'[Hardware: Controller]\\nBrand: Sony\\nModel: DualSense'});
+   document.getElementById('editListingModal').classList.add('open');
   },theme);
   await page.locator('#editListingClassification summary').click();
   await page.locator('#editClassificationEnabled').check();
