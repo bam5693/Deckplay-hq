@@ -251,8 +251,28 @@
         "label": "PC"
       },
       {
+        "value": "Sega Genesis / Mega Drive",
+        "label": "Sega Genesis / Mega Drive"
+      },
+      {
+        "value": "Sega Saturn",
+        "label": "Sega Saturn"
+      },
+      {
+        "value": "Sega Dreamcast",
+        "label": "Sega Dreamcast"
+      },
+      {
         "value": "Sega",
         "label": "Sega"
+      },
+      {
+        "value": "Atari 2600",
+        "label": "Atari 2600"
+      },
+      {
+        "value": "Atari 7800",
+        "label": "Atari 7800"
       },
       {
         "value": "Atari",
@@ -2819,6 +2839,33 @@
       "label": "PC — test game"
     },
     {
+      "key": "game/video_games/Sega Genesis / Mega Drive",
+      "fields": {
+        "listingType": "game",
+        "category": "video_games",
+        "gamePlatform": "Sega Genesis / Mega Drive"
+      },
+      "label": "Sega Genesis / Mega Drive — test game"
+    },
+    {
+      "key": "game/video_games/Sega Saturn",
+      "fields": {
+        "listingType": "game",
+        "category": "video_games",
+        "gamePlatform": "Sega Saturn"
+      },
+      "label": "Sega Saturn — test game"
+    },
+    {
+      "key": "game/video_games/Sega Dreamcast",
+      "fields": {
+        "listingType": "game",
+        "category": "video_games",
+        "gamePlatform": "Sega Dreamcast"
+      },
+      "label": "Sega Dreamcast — test game"
+    },
+    {
       "key": "game/video_games/Sega",
       "fields": {
         "listingType": "game",
@@ -2826,6 +2873,24 @@
         "gamePlatform": "Sega"
       },
       "label": "Sega — test game"
+    },
+    {
+      "key": "game/video_games/Atari 2600",
+      "fields": {
+        "listingType": "game",
+        "category": "video_games",
+        "gamePlatform": "Atari 2600"
+      },
+      "label": "Atari 2600 — test game"
+    },
+    {
+      "key": "game/video_games/Atari 7800",
+      "fields": {
+        "listingType": "game",
+        "category": "video_games",
+        "gamePlatform": "Atari 7800"
+      },
+      "label": "Atari 7800 — test game"
     },
     {
       "key": "game/video_games/Atari",
