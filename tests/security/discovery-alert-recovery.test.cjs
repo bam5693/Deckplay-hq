@@ -13,7 +13,9 @@ const handlers = html.slice(start, end);
 function fixture(read) {
   const notices = [];
   const nodes = Object.fromEntries(['notificationList', 'inboxNotificationList', 'notificationBell', 'notificationBadge', 'dockNotifications'].map(id => [id, {
-    innerHTML: '', textContent: '', hidden: false, setAttribute() {}
+    innerHTML: '', textContent: '', hidden: false, attributes: {},
+    setAttribute(name, value) { this.attributes[name] = value; },
+    removeAttribute(name) { delete this.attributes[name]; }
   }]));
   const context = {
     currentUser: { id: 'buyer-a' }, notificationCenterLoadVersion: 0, notificationCountLoadVersion: 0,
@@ -97,4 +99,27 @@ test('late read receipt from another account never displays its error on the new
   resolveOld({ error: { message: 'offline' } });
   await oldWrite;
   assert.equal(h.notices.length, 0);
+});
+
+test('T4.3 lost connection clears an old unread count instead of displaying stale activity', async () => {
+  let reads = 0;
+  const h = fixture(async () => ++reads === 1
+    ? { count: 4, error: null }
+    : { count: null, error: { message: 'offline' } });
+  await h.context.refreshNotificationCount();
+  assert.equal(h.nodes.notificationBadge.textContent, '4');
+  assert.equal(h.nodes.notificationBadge.hidden, false);
+  await h.context.refreshNotificationCount();
+  assert.equal(h.nodes.notificationBadge.hidden, true);
+  assert.equal(h.nodes.notificationBadge.textContent, '');
+  assert.equal(h.nodes.dockNotifications.hidden, true);
+  assert.match(h.nodes.notificationBell.attributes['aria-label'], /unavailable.*retry/i);
+});
+
+test('T4.3 malformed alert feed is retryable, not a false empty inbox', async () => {
+  const h = fixture(async () => ({ data: null, error: null }));
+  await h.context.loadNotificationCenter();
+  assert.match(h.nodes.notificationList.innerHTML, /Alerts could not load.*Retry alerts/);
+  assert.match(h.nodes.inboxNotificationList.innerHTML, /Retry alerts/);
+  assert.doesNotMatch(h.nodes.notificationList.innerHTML, /No activity alerts yet/);
 });
