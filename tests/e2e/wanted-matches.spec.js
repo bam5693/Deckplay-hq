@@ -328,6 +328,8 @@ test('Wanted exact matching prefers seller-edited classification over stale crea
 test('Wanted posts and match actions appear before optional profile names finish loading',async({page})=>{
  await page.goto('/');await page.waitForLoadState('networkidle');
  await page.evaluate(()=>{
+  // Public Wanted discovery must render without any authenticated session.
+  currentUser=null;
   const originalFrom=supabaseClient.from.bind(supabaseClient);
   window.resolveSlowWantedProfile=null;
   supabaseClient.from=table=>{
