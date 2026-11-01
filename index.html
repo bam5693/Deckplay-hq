@@ -3570,7 +3570,7 @@ async function showCollectorPage(tab="listings"){
   try{({data:blockedRows,error:blockError}=await readMarketplaceRequest(supabaseClient.from("user_blocks").select("blocked_id").eq("blocker_id",userId),8000))}
   catch(error){blockError=error}
   if(!current())return;
-  if(blockError){content.innerHTML='<p class="muted" role="status">Could not verify blocked collectors. Your saved listings are hidden until this check succeeds. <button type="button" class="ghost" data-retry-profile-saved>Retry saved items</button></p>';return}
+  if(blockError||!Array.isArray(blockedRows)){content.innerHTML='<p class="muted" role="status">Could not verify blocked collectors. Your saved listings are hidden until this check succeeds. <button type="button" class="ghost" data-retry-profile-saved>Retry saved items</button></p>';return}
   const blockedForSaved=new Set((blockedRows||[]).map(row=>row.blocked_id).filter(Boolean));
   let rows,error;
    try{({data:rows,error}=await readMarketplaceRequest(supabaseClient.from("saved_listings").select("listing_id").eq("user_id",userId),8000))}
