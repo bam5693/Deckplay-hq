@@ -75,19 +75,58 @@ test('failed favorite removal restores the saved state',async()=>{
   assert.deepEqual(h.notices,['Delete failed']);
 });
 
-test('a never-settling favorite transport without abortSignal times out and releases retry control',async()=>{
-  let attempts=0;
+test('a timed-out save checks persisted state before any second write',async()=>{
+  let inserts=0,reads=0;
   const h=harness(null,{
-    setTimeout: callback => {queueMicrotask(callback);return 1;},
-    clearTimeout: () => {},
-    supabaseClient: {from: () => ({insert: () => {attempts++;return new Promise(()=>{});}})}
+    setTimeout: (callback,ms) => ms===20000?(queueMicrotask(callback),1):setTimeout(callback,ms),
+    clearTimeout: id => {if(id!==1)clearTimeout(id);},
+    supabaseClient: {from: () => ({
+      insert: () => {inserts++;return new Promise(()=>{});},
+      select: () => ({eq: () => ({eq: () => ({maybeSingle: async () => {reads++;return {data:{listing_id:'listing-1'},error:null};}}})})
+    })}
   });
   await h.context.window.favoriteActions.toggle('card-1');
   assert.equal(h.saved.has('card-1'),false);
-  assert.match(h.notices[0],/timed out.*retry/i);
-  assert.equal(h.context.window.favoriteActions.pending('card-1'),false);
+  assert.equal(h.context.window.favoriteActions.uncertain('card-1'),true);
+  assert.match(h.notices[0],/may have completed.*check/i);
   await h.context.window.favoriteActions.toggle('card-1');
-  assert.equal(attempts,2);
+  assert.equal(inserts,1,'second tap must check rather than duplicate a timed-out write');
+  assert.equal(reads,1);
+  assert.equal(h.saved.has('card-1'),true);
+  assert.equal(h.context.window.favoriteActions.uncertain('card-1'),false);
+  assert.match(h.notices.at(-1),/Confirmed: this item is saved/);
+});
+
+test('a failed saved-status check keeps the item uncertain without another write',async()=>{
+  let inserts=0,reads=0;
+  const h=harness(null,{
+    setTimeout: (callback,ms) => ms===20000?(queueMicrotask(callback),1):setTimeout(callback,ms),
+    clearTimeout: id => {if(id!==1)clearTimeout(id);},
+    supabaseClient: {from: () => ({
+      insert: () => {inserts++;return new Promise(()=>{});},
+      select: () => ({eq: () => ({eq: () => ({maybeSingle: async () => {reads++;return {data:null,error:{message:'Offline'}};}}})})
+    })}
+  });
+  await h.context.window.favoriteActions.toggle('card-1');
+  await h.context.window.favoriteActions.toggle('card-1');
+  assert.equal(inserts,1);
+  assert.equal(reads,1);
+  assert.equal(h.context.window.favoriteActions.uncertain('card-1'),true);
+  assert.match(h.notices.at(-1),/still unknown/i);
+});
+
+test('a saved refresh settles uncertain status for only the active account',async()=>{
+  const h=harness(null,{
+    setTimeout: (callback,ms) => ms===20000?(queueMicrotask(callback),1):setTimeout(callback,ms),
+    clearTimeout: id => {if(id!==1)clearTimeout(id);},
+    supabaseClient: {from: () => ({insert: () => new Promise(()=>{})})}
+  });
+  await h.context.window.favoriteActions.toggle('card-1');
+  assert.equal(h.context.window.favoriteActions.uncertain('card-1'),true);
+  h.context.window.favoriteActions.reconcile('user-2',1);
+  assert.equal(h.context.window.favoriteActions.uncertain('card-1'),true);
+  h.context.window.favoriteActions.reconcile('user-1',1);
+  assert.equal(h.context.window.favoriteActions.uncertain('card-1'),false);
 });
 
 test('blocked seller cannot gain new favorites but existing favorites can be removed',async()=>{
