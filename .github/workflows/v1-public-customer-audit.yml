@@ -1,0 +1,39 @@
+name: V1 local customer navigation audit
+on:
+  push:
+    branches: [qa/v1-customer-public-journeys-20261101]
+    paths:
+      - tests/e2e/v1-public-customer-audit.spec.js
+      - playwright.v1-public-customer.config.cjs
+      - .github/workflows/v1-public-customer-audit.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  local-customer-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: node --check tests/e2e/v1-public-customer-audit.spec.js
+      - run: npm ci
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: staging-playwright-${{ hashFiles('package-lock.json') }}
+      - run: npx playwright install chromium --only-shell
+      - name: Run customer audit on local isolated build
+        env:
+          DECKPLAY_QA_BASE_URL: http://127.0.0.1:8765
+        run: npx playwright test --config=playwright.v1-public-customer.config.cjs --retries=0 --max-failures=1
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: v1-local-customer-audit
+          path: test-results/
+          retention-days: 3
+          if-no-files-found: ignore
