@@ -358,3 +358,44 @@ test('Wanted posts and match actions appear before optional profile names finish
  await expect(card.locator('[data-wanted-author="collector-slow"]')).toHaveText('@retrocollector');
  await expect(card).toContainText('Looking for a complete copy');
 });
+
+test('stale Wanted match buttons recheck exact variant, listing availability, and account',async({page})=>{
+ await page.goto('/');await page.waitForLoadState('networkidle');
+ await page.evaluate(()=>{
+  currentUser={id:'viewer-a'};
+  window.staleMatchToasts=[];toast=message=>staleMatchToasts.push(message);
+  items=[{id:'stale-match-card',databaseId:'stale-match-card',c:'Trading Cards',game:'one_piece',sellerId:'seller-b',
+   n:'Manga Rare Luffy',p:120,cond:'Near Mint',status:'active',
+   description:'Card number: OP05-119\\nVariant: Manga Rare',imageUrls:[]}];
+  const original=supabaseClient.from.bind(supabaseClient);
+  supabaseClient.from=table=>{
+   if(table==='wanted_posts'){
+    const q={select:()=>q,order:()=>q,limit:()=>Promise.resolve({data:[{
+     id:'wanted-post-stale',user_id:'buyer-c',game:'one_piece',title:'Manga Rare Luffy',offer_type:'buy',
+     details:'[DeckPlay match: {"cardNumber":"OP05-119","variant":"Manga Rare"}]'
+    }],error:null})};return q;
+   }
+   if(table==='profiles'){
+    const q={select:()=>q,in:()=>Promise.resolve({data:[],error:null})};return q;
+   }
+   return original(table);
+  };
+  toggleWanted(true);
+ });
+ const match=page.locator('[data-wanted-post="wanted-post-stale"][data-wanted-match="stale-match-card"]');
+ await expect(match).toBeVisible();
+ await page.evaluate(()=>{items[0].description='Card number: OP05-119\\nVariant: Regular'});
+ await match.click();
+ await expect(page.locator('#detailModal')).not.toHaveClass(/open/);
+ await page.evaluate(()=>{items[0].description='Card number: OP05-119\\nVariant: Manga Rare';items[0].status='paused'});
+ await match.click();
+ await expect(page.locator('#detailModal')).not.toHaveClass(/open/);
+ await page.evaluate(()=>{items[0].status='active';currentUser={id:'viewer-b'}});
+ await match.click();
+ await expect(page.locator('#detailModal')).not.toHaveClass(/open/);
+ expect(await page.evaluate(()=>staleMatchToasts)).toEqual([
+  'This listing is no longer an exact match. Refresh wanted posts.',
+  'This listing is no longer an exact match. Refresh wanted posts.',
+  'This listing is no longer an exact match. Refresh wanted posts.'
+ ]);
+});
