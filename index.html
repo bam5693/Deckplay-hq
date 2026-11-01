@@ -940,6 +940,11 @@ html[data-theme="dark"] #sellModal .listing-contents-fields input,html[data-them
 #sellModal .listing-submit-actions .ghost{appearance:none!important;box-shadow:none!important;border-radius:12px!important;clip-path:none!important;transform:none!important;max-width:none!important}
 html[data-theme="dark"] #sellModal #listingForm>label,html[data-theme="dark"] #sellModal .listing-contents-fields legend{color:#e9f1ff!important}
 @media(max-width:480px){#sellModal .dialog{padding:16px!important}#sellModal #deckFields{padding:12px!important}#sellModal .listing-submit-actions{gap:10px!important}#sellModal .listing-submit-actions button{border-radius:12px!important;font-size:16px!important;min-height:50px!important}}
+/* V1 customer review: prevent sign-in dialog actions from colliding on phones. */
+#authModal .dialog-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;align-items:stretch}
+#authModal .dialog-actions button{box-sizing:border-box;min-width:0;width:100%;max-width:100%;white-space:normal;overflow-wrap:anywhere;line-height:1.35;border-radius:12px}
+#authModal .dialog-actions button[data-close="authModal"]{grid-column:1/-1}
+
 </style>
 </head>
 <body>
