@@ -1,12 +1,12 @@
 {
-  "approvedApplicationTree": "1d920feb6ebb6429f2e005f7ee36c0ab79d1ad29",
+  "approvedApplicationTree": "025759167624d03e0aaf34de9c82800ce06cc731",
   "productionSchemaVerified": true,
   "previewAcceptanceVerified": true,
   "rollbackVerified": true,
   "blockers": [],
   "productionMigrationRehearsalVerified": true,
   "backupProcedureRehearsalVerified": true,
-  "candidateCodeCommit": "bec838936f1963617fd1124a85989bbeb4dae938",
+  "candidateCodeCommit": "920859155efb764c5c9ce955cee1cd0dc170cce4",
   "actualDatabaseRestoreVerified": true,
   "actualRecoveredMigrationVerified": true,
   "storageObjectBytesVerified": true,
@@ -31,5 +31,21 @@
     "ownerAuthorization": "Owner approved eye hotfix and reported mismatched Cancel button with screenshot on 2026-10-30",
     "approvedApplicationTree": "1d920feb6ebb6429f2e005f7ee36c0ab79d1ad29",
     "deployMethod": "Existing manual production workflow with exact approved merged SHA; no staging bundle"
+  },
+  "ownerPreviewRelease27Approval": {
+    "approvedDateCentral": "2026-10-31",
+    "ownerAuthorization": "Owner replied 'Do it' immediately after being asked to approve PR #27 candidate 920859155efb764c5c9ce955cee1cd0dc170cce4 and explicitly notified of unfinished managed Auth and Storage recovery.",
+    "approvedSourceCandidateCommit": "920859155efb764c5c9ce955cee1cd0dc170cce4",
+    "approvedApplicationTree": "025759167624d03e0aaf34de9c82800ce06cc731",
+    "scope": "Only production-compatible V1 owner-preview web assets; keep production Supabase and customer data, no schema migrations, destructive resets, payments or shipping; protected release and rollback.",
+    "managedServiceRecoveryVerified": false,
+    "previousWaiverForPR5NotReused": true,
+    "incompleteSafeguardsAccepted": [
+      "complete managed Auth/MFA recovery rehearsal",
+      "isolated Storage object reupload/recovery",
+      "second independently verified encrypted production backup"
+    ],
+    "protectedWorkflow": "deploy.yml",
+    "rollbackWorkerVersion": "57f5ec07-3ee9-48b4-ba09-cec14c451f89"
   }
 }
