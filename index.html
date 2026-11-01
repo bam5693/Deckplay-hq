@@ -2042,42 +2042,91 @@ function exactWantedMatches(post){
    ||kind==="other"&&item.rawCategory==="other")
  ).slice(0,5);
 }
-let wantedPublishVersion=0,wantedPublishBusy=false;
-function resetWantedPublisher(){
- ++wantedPublishVersion;wantedPublishBusy=false;
+let wantedPublishVersion=0,wantedPublishBusy=false,wantedPublishUncertain=null;
+function lockWantedPublisher(locked){
  const form=document.getElementById("wantedForm");
- form.reset();form.removeAttribute("aria-busy");form.querySelector('button[type="submit"]').disabled=false;
- document.getElementById("wantedStatus").textContent="";syncWantedCardFields();syncWantedOfferFields();
+ form.querySelectorAll("input,select,textarea").forEach(field=>field.disabled=locked);
+ if(!locked){syncWantedCardFields();syncWantedOfferFields()}
+}
+function resetWantedPublisher(){
+ ++wantedPublishVersion;wantedPublishBusy=false;wantedPublishUncertain=null;
+ const form=document.getElementById("wantedForm");
+ form.reset();form.removeAttribute("aria-busy");
+ lockWantedPublisher(false);
+ const button=form.querySelector('button[type="submit"]');
+ button.disabled=false;button.textContent="Publish wanted post";
+ document.getElementById("wantedStatus").textContent="";
 }
 document.getElementById("wantedForm").addEventListener("submit",async e=>{
  e.preventDefault();if(!currentUser||wantedPublishBusy)return;
  const form=e.currentTarget,button=form.querySelector('button[type="submit"]'),status=document.getElementById("wantedStatus");
  const owner=currentUser.id,epoch=messageAccountVersion,request=++wantedPublishVersion;
  const valid=()=>request===wantedPublishVersion&&currentUser?.id===owner&&messageAccountVersion===epoch;
- wantedPublishBusy=true;button.disabled=true;form.setAttribute("aria-busy","true");status.textContent="Publishing…";
- const budget=document.getElementById("wantedBudget").value;
- const details=(()=>{
-   const detail=document.getElementById("wantedDetails").value.trim();let metadata=null;
-   if(!document.getElementById("wantedCardFields").hidden){
-    const card={set:document.getElementById("wantedSet").value.trim(),cardNumber:document.getElementById("wantedCardNumber").value.trim(),variant:document.getElementById("wantedVariant").value};
-    if(Object.values(card).some(Boolean))metadata=card;
-   }else if(!document.getElementById("wantedNonCardFields").hidden&&document.getElementById("wantedExactNonCard").checked){
-    const category=document.getElementById("wantedGame").value;metadata={nonCardExact:true};
-    if(category==="video_games")metadata.platform=document.getElementById("wantedNonCardPlatform").value.trim();
-    if(category==="consoles"){metadata.hardwareType=document.getElementById("wantedNonCardHardwareType").value;metadata.model=document.getElementById("wantedNonCardModel").value.trim()}
-    if(category==="collectibles")metadata.subcategory=document.getElementById("wantedNonCardCollectibleType").value;
-   }
-   return metadata?[detail,"[DeckPlay match: "+JSON.stringify(metadata)+"]"].filter(Boolean).join("\\n"):detail||null;
-  })();
- const payload={user_id:owner,title:document.getElementById("wantedItem").value.trim(),game:document.getElementById("wantedGame").value||null,offer_type:document.getElementById("wantedOffer").value,budget:document.getElementById("wantedOffer").value==="trade"?null:(budget?Number(budget):null),details};
+ let attempt=wantedPublishUncertain;
+ // Never let a previous account's unresolved write become this account's retry.
+ if(attempt&&(attempt.owner!==owner||attempt.epoch!==epoch)){status.textContent="Sign in again to check the previous post.";return}
+ wantedPublishBusy=true;button.disabled=true;form.setAttribute("aria-busy","true");
+ status.textContent=attempt&&!attempt.retryReady?"Checking publish status…":"Publishing…";
  try{
-  const write=supabaseClient.from("wanted_posts").insert(payload);
-  const {error}=await (write.abortSignal?write.abortSignal(AbortSignal.timeout(20000)):write);
+  if(attempt&&!attempt.retryReady){
+   // The first insert might have committed after its response timed out.
+   // Read by its unique client-generated ID, not by a non-unique title.
+   const check=supabaseClient.from("wanted_posts").select("id").eq("id",attempt.payload.id).eq("user_id",owner).maybeSingle();
+   const result=await readMarketplaceRequest(check,12000);
+   if(!valid())return;
+   if(result.error)throw result.error;
+   if(result.data!==null){
+    if(!result.data||String(result.data.id)!==attempt.payload.id)throw Error("Could not verify publish status.");
+    resetWantedPublisher();closeModal("wantedModal");toast("Wanted post confirmed!");await loadWanted();return;
+   }
+   // A late first write could still finish. The next explicit tap retries
+   // the SAME UUID and original payload, so a duplicate cannot be created.
+   attempt.retryReady=true;
+   button.textContent="Retry same post";
+   status.textContent="No post found yet. Tap Retry same post to resend your original request safely.";
+   return;
+  }
+  if(!attempt){
+   const budget=document.getElementById("wantedBudget").value;
+   const details=(()=>{
+    const detail=document.getElementById("wantedDetails").value.trim();let metadata=null;
+    if(!document.getElementById("wantedCardFields").hidden){
+     const card={set:document.getElementById("wantedSet").value.trim(),cardNumber:document.getElementById("wantedCardNumber").value.trim(),variant:document.getElementById("wantedVariant").value};
+     if(Object.values(card).some(Boolean))metadata=card;
+    }else if(!document.getElementById("wantedNonCardFields").hidden&&document.getElementById("wantedExactNonCard").checked){
+     const category=document.getElementById("wantedGame").value;metadata={nonCardExact:true};
+     if(category==="video_games")metadata.platform=document.getElementById("wantedNonCardPlatform").value.trim();
+     if(category==="consoles"){metadata.hardwareType=document.getElementById("wantedNonCardHardwareType").value;metadata.model=document.getElementById("wantedNonCardModel").value.trim()}
+     if(category==="collectibles")metadata.subcategory=document.getElementById("wantedNonCardCollectibleType").value;
+    }
+    return metadata?[detail,"[DeckPlay match: "+JSON.stringify(metadata)+"]"].filter(Boolean).join("\\n"):detail||null;
+   })();
+   const id=globalThis.crypto?.randomUUID?.();
+   if(!id)throw Error("Secure post creation is unavailable. Reload using HTTPS and try again.");
+   attempt={owner,epoch,retryReady:false,payload:{id,user_id:owner,title:document.getElementById("wantedItem").value.trim(),game:document.getElementById("wantedGame").value||null,offer_type:document.getElementById("wantedOffer").value,budget:document.getElementById("wantedOffer").value==="trade"?null:(budget?Number(budget):null),details}};
+  }
+  const write=supabaseClient.from("wanted_posts").insert(attempt.payload);
+  const result=await readMarketplaceRequest(write,20000);
   if(!valid())return;
-  if(error){status.textContent=error.message||"Could not publish. Try again.";return}
+  if(result.error){
+   if(result.error.code!=="23505")throw result.error;
+   // A duplicate UUID is success only after a same-owner read confirms it.
+   const check=supabaseClient.from("wanted_posts").select("id").eq("id",attempt.payload.id).eq("user_id",owner).maybeSingle();
+   const confirmed=await readMarketplaceRequest(check,12000);
+   if(!valid())return;
+   if(confirmed.error||confirmed.data?.id!==attempt.payload.id)throw confirmed.error||Error("Could not confirm the original post.");
+  }
   resetWantedPublisher();closeModal("wantedModal");toast("Wanted post published!");await loadWanted();
- }catch(error){if(valid())status.textContent=error.message||"Could not publish. Try again."}
- finally{if(valid()){wantedPublishBusy=false;button.disabled=false;form.removeAttribute("aria-busy")}}
+ }catch(error){
+  if(valid()){
+   if(attempt){
+    wantedPublishUncertain=attempt;attempt.retryReady=false;
+    lockWantedPublisher(true);
+    button.textContent="Check publish status";
+    status.textContent="Post status uncertain. Check whether it published before trying again. Your original details are preserved.";
+   }else status.textContent=error.message||"Could not publish. Try again.";
+  }
+ }finally{if(valid()){wantedPublishBusy=false;button.disabled=false;form.removeAttribute("aria-busy")}}
 });
 document.getElementById("wantedGrid").addEventListener("click",async e=>{if(e.target.closest("[data-retry-wanted]")){await loadWanted();return}if(e.target.closest("[data-retry-wanted-listings]")){await loadListings();return}const match=e.target.closest("[data-wanted-match]");if(match){
  const post=wantedVisiblePosts.get(match.dataset.wantedPost);
