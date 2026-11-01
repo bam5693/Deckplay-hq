@@ -54,6 +54,10 @@ async function boot(page){
        window.__db.failOlderOnce=false;
        return Promise.resolve({data:null,error:{message:'Simulated temporary network error'}}).then(resolve,reject);
       }
+      if(table==='support_ticket_replies' && state.start===0 && window.__db.failRepliesFirstOnce){
+       window.__db.failRepliesFirstOnce=false;
+       return Promise.resolve({data:null,error:{message:'Simulated reply load interruption'}}).then(resolve,reject);
+      }
       if(table==='support_ticket_replies' && state.start>=40 && window.__db.failRepliesOlderOnce){
        window.__db.failRepliesOlderOnce=false;
        return Promise.resolve({data:null,error:{message:'Simulated older reply fetch error'}}).then(resolve,reject);
@@ -1410,4 +1414,23 @@ test('T8: failed ticket refresh preserves the last readable list and allows retr
  await page.locator('#supportRefresh').click();
  await expect(page.locator('#supportListStatus')).toContainText('Showing 1');
  await expect(page.locator('#supportTicketList')).toContainText('My existing ticket');
+});
+
+test('T8: failed private replies can retry in place without losing ticket or draft',async({page})=>{
+ await boot(page);await signIn(page,'buyer');
+ await page.getByRole('button',{name:'Help & support'}).last().click();
+ await page.locator('#supportSubject').fill('Existing help request');
+ await page.locator('#supportDescription').fill('My collectible listing needs assistance with a message.');
+ await page.getByRole('button',{name:'Create private ticket'}).click();
+ await expect(page.locator('#supportTicketTitle')).toHaveText('Existing help request');
+ await page.locator('#supportReplyBody').fill('My unsent reply is important');
+ await page.evaluate(()=>{window.__db.failRepliesFirstOnce=true});
+ await page.locator('#supportTicketList button').first().click();
+ await expect(page.locator('#supportRepliesRetry')).toBeVisible();
+ await expect(page.locator('#supportReplies')).toContainText('Replies could not load');
+ await expect(page.locator('#supportReplyBody')).toHaveValue('My unsent reply is important');
+ await page.locator('#supportRepliesRetry').click();
+ await expect(page.locator('#supportRepliesRetry')).toBeHidden();
+ await expect(page.locator('#supportReplies')).toContainText('No replies yet.');
+ await expect(page.locator('#supportReplyBody')).toHaveValue('My unsent reply is important');
 });
