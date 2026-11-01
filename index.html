@@ -3331,7 +3331,21 @@ async function showCollectorPage(tab="listings"){
  document.querySelectorAll("[data-profile-tab]").forEach(b=>b.classList.toggle("active",b.dataset.profileTab===tab));
  const content=document.getElementById("profilePageContent");
  if(tab==="wanted"){content.innerHTML=wanted.length?wanted.map(w=>`<article class="profile-item"><h3>${escapeHtml(w.title)}</h3><p>${escapeHtml(w.details||"")}</p><small>${escapeHtml(w.game||"Collectibles")}${w.budget?" · Budget: $"+Number(w.budget).toFixed(2):""}</small></article>`).join(""):'<p class="muted">No wanted posts yet. Use the Wanted board to post what you are looking for.</p>';return}
- if(tab==="saved"){const {data:rows,error}=await supabaseClient.from("saved_listings").select("listing_id").eq("user_id",userId);if(!current())return;if(error){content.textContent=error.message;return}const ids=(rows||[]).map(r=>r.listing_id);if(!ids.length){content.innerHTML='<p class="muted">No saved items yet.</p>';return}const {data:matches,error:listingError}=await supabaseClient.from("listings").select("id,title,price,status,image_urls,seller_id").in("id",ids).eq("status","active");if(!current())return;if(listingError){content.textContent=listingError.message;return}content.innerHTML=renderProfileCards((matches||[]).filter(row=>!blockedCollectorIds.has(row.seller_id)),false);return}
+ if(tab==="saved"){
+  const retry='<p class="muted" role="status">Your saved items could not load. Check your connection and <button type="button" class="ghost" data-retry-profile-saved>retry saved items</button>.</p>';
+  const browse='<button type="button" class="ghost" data-browse-from-saved>Browse marketplace</button>';
+  const {data:rows,error}=await supabaseClient.from("saved_listings").select("listing_id").eq("user_id",userId);
+  if(!current())return;
+  if(error){content.innerHTML=retry;return}
+  const ids=[...new Set((rows||[]).map(row=>row.listing_id).filter(Boolean))];
+  if(!ids.length){content.innerHTML='<p class="muted">No saved items yet. Save a listing with its heart button.</p>'+browse;return}
+  const {data:matches,error:listingError}=await supabaseClient.from("listings").select("id,title,price,status,image_urls,seller_id").in("id",ids).eq("status","active");
+  if(!current())return;
+  if(listingError){content.innerHTML=retry;return}
+  const visible=(matches||[]).filter(row=>!blockedCollectorIds.has(row.seller_id));
+  content.innerHTML=visible.length?renderProfileCards(visible,false):'<p class="muted">None of your saved listings are currently available. They may have sold, been paused, or be hidden by your blocked-seller settings.</p>'+browse;
+  return
+ }
  if(listingsResult.error){content.textContent=listingsResult.error.message;return}
  content.innerHTML=listings.length?renderProfileInventory(listings):'<p class="muted">You haven’t posted any listings yet. Tap Sell an item to get started.</p>';
  if(listings.length)filterProfileInventory();
@@ -3354,6 +3368,8 @@ function filterProfileInventory(){
 document.getElementById("profilePageContent").addEventListener("input",e=>{if(e.target.id==="inventorySearch")filterProfileInventory()});
 document.getElementById("profilePageContent").addEventListener("change",e=>{if(["inventoryStatus","inventoryCategory"].includes(e.target.id))filterProfileInventory()});
 document.getElementById("profilePageContent").addEventListener("click",e=>{
+ const savedRetry=e.target.closest("[data-retry-profile-saved]");if(savedRetry){savedRetry.disabled=true;void showCollectorPage("saved");return}
+ if(e.target.closest("[data-browse-from-saved]")){document.getElementById("menuMarketplace").click();return}
  if(e.target.closest("[data-inventory-clear]")){const root=document.getElementById("profilePageContent");root.querySelector("#inventorySearch").value="";root.querySelector("#inventoryStatus").value="all";root.querySelector("#inventoryCategory").value="all";filterProfileInventory();root.querySelector("#inventorySearch").focus();return}
  const edit=e.target.closest("[data-profile-edit]");if(edit&&currentUser){void window.listingEditor?.open(edit.dataset.profileEdit);return}
  const view=e.target.closest("[data-profile-view]");if(view)void navigateDeckplayNotification("favorite_price_drop",null,view.dataset.profileView);
