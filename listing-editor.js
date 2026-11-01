@@ -13,7 +13,7 @@ window.listingEditor=(()=>{
   ]));
  const hasUnsavedChanges=()=>!!record&&(formSnapshot()!==cleanSnapshot||photos.dirty());
  function requestClose(){
-  if(busy&&record)return;
+  if(busy&&record){status.textContent='Saving your listing. Keep this editor open until the save finishes.';return;}
   if(!busy&&hasUnsavedChanges()&&!window.confirm('Discard your unsaved listing changes?'))return;
   reset();
  }
@@ -24,7 +24,7 @@ window.listingEditor=(()=>{
  // The central page history handler must call this BEFORE closing the
  // modal; a separate popstate listener is too late on Android/PWA.
  function confirmHistoryClose(){
-  if(busy&&record)return false;
+  if(busy&&record){status.textContent='Saving your listing. Keep this editor open until the save finishes.';return false;}
   if(hasUnsavedChanges()&&!window.confirm('Discard your unsaved listing changes?'))return false;
   discardEditorState();
   return true;
