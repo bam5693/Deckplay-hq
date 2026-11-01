@@ -2078,7 +2078,7 @@ document.getElementById("wantedForm").addEventListener("submit",async e=>{
  }catch(error){if(valid())status.textContent=error.message||"Could not publish. Try again."}
  finally{if(valid()){wantedPublishBusy=false;button.disabled=false;form.removeAttribute("aria-busy")}}
 });
-const wantedDeletePending=new Set();
+const wantedDeletePending=new Set(),wantedDeleteUncertain=new Set();
 document.getElementById("wantedGrid").addEventListener("click",async e=>{if(e.target.closest("[data-retry-wanted]")){await loadWanted();return}if(e.target.closest("[data-retry-wanted-listings]")){await loadListings();return}const match=e.target.closest("[data-wanted-match]");if(match){
  const post=wantedVisiblePosts.get(match.dataset.wantedPost);
  const item=items.find(x=>String(x.id)===match.dataset.wantedMatch);
@@ -2096,19 +2096,49 @@ document.getElementById("wantedGrid").addEventListener("click",async e=>{if(e.ta
   toast("This wanted post is no longer available. Refresh wanted posts.");return;
  }
  const key=owner+":"+postId;
- if(wantedDeletePending.has(key)||!confirm("Delete this wanted post?"))return;
- wantedDeletePending.add(key);button.disabled=true;button.setAttribute("aria-busy","true");button.textContent="Deleting…";
+ if(wantedDeletePending.has(key))return;
+ const checking=wantedDeleteUncertain.has(key);
+ if(!checking&&!confirm("Delete this wanted post?"))return;
+ wantedDeletePending.add(key);button.disabled=true;button.setAttribute("aria-busy","true");
+ button.textContent=checking?"Checking removal…":"Deleting…";
  const active=()=>currentUser?.id===owner&&listingAccountVersion===epoch;
  try{
+  if(checking){
+   // A timed-out delete may have succeeded. Read only this owner's row
+   // before permitting another destructive request.
+   const check=supabaseClient.from("wanted_posts").select("id").eq("id",postId).eq("user_id",owner).maybeSingle();
+   const result=await readMarketplaceRequest(check,12000);
+   if(!active())return;
+   if(result.error)throw result.error;
+   if(result.data===null){
+    wantedDeleteUncertain.delete(key);
+    await loadWanted();
+    return;
+   }
+   if(!result.data||String(result.data.id)!==String(postId))throw Error("Could not verify removal status.");
+   wantedDeleteUncertain.delete(key);
+   toast("Post is still on the board. Tap Delete again if you want to retry.");
+   return;
+  }
   const request=supabaseClient.from("wanted_posts").delete().eq("id",postId).eq("user_id",owner);
   const {error}=await readMarketplaceRequest(request,12000);
   if(!active())return;
   if(error)throw error;
+  wantedDeleteUncertain.delete(key);
   await loadWanted();
- }catch(error){if(active())toast(error?.message||"Could not delete wanted post. Retry.");}
- finally{
+ }catch(error){
+  if(active()){
+   // Do not invite an immediate second delete when the first response
+   // was lost. Offline/readback failure must retain uncertainty.
+   if(!checking)wantedDeleteUncertain.add(key);
+   toast(checking?"Could not check removal status. Reconnect and check again.":"Removal status uncertain. Check status before trying again.");
+  }
+ }finally{
   wantedDeletePending.delete(key);
-  if(active()&&button.isConnected){button.disabled=false;button.removeAttribute("aria-busy");button.textContent="Delete";}
+  if(active()&&button.isConnected){
+   button.disabled=false;button.removeAttribute("aria-busy");
+   button.textContent=wantedDeleteUncertain.has(key)?"Check removal status":"Delete";
+  }
  }});
 let savedListingsLoadVersion=0,savedListingsOwnerId=null,savedListingsStatus="idle";
 function resetSavedListingsForAccount(userId){
