@@ -1,0 +1,21 @@
+name: Trunk 1 catalog aliases (cheap source regression)
+on:
+  push:
+    branches: [dev/hourly-trunk1]
+    paths:
+      - 'tests/security/trunk1-catalog-search.test.cjs'
+      - '.github/workflows/trunk1-catalog-focused.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  catalog-search:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Offline seller catalog and buyer alias assertions
+        run: node --test tests/security/trunk1-catalog-search.test.cjs
