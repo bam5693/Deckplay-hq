@@ -101,6 +101,11 @@ export async function sendStagingInvite({ email, key, redirectTo, fetchImpl = fe
     // Never echo API bodies, tokens, or email addresses to CI logs.
     if (!response.ok) throw new Error('Staging invite was rejected (HTTP ' + response.status + '). Check Auth settings/email limits in Supabase.');
     return { sent: true };
+  } catch (error) {
+    // Network/transport exceptions can include request headers or recipient addresses.
+    // Keep the intentionally sanitized HTTP status, but never surface unknown details.
+    if (error instanceof Error && /^Staging invite was rejected \(HTTP \d+\)\./.test(error.message)) throw error;
+    throw new Error('Staging invitation connection failed. Check private staging connectivity.');
   } finally {
     clearTimeout(timeout);
   }
@@ -120,7 +125,7 @@ export async function main(argv = process.argv.slice(2), env = process.env) {
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   main().catch(error => {
     // Avoid leaking credentials or email if the transport returns a verbose exception.
-    process.stderr.write(error instanceof TypeError ? 'Staging invitation connection failed.\n' : (error?.message || 'Invitation failed.') + '\n');
+    process.stderr.write((error?.message || 'Invitation failed.') + '\n');
     process.exitCode = 1;
   });
 }
