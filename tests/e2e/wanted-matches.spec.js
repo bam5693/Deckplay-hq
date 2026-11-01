@@ -148,6 +148,40 @@ test('blocked sellers stay out of wanted matches and stale match buttons cannot 
  expect(await page.evaluate(()=>blockedWantedToasts)).toEqual(['This listing is no longer available. Refresh wanted posts.']);
 });
 
+test('Wanted Board hides blocked authors and exact matches until account block verification recovers',async({page})=>{
+ await page.goto('/');await page.waitForLoadState('networkidle');
+ await page.evaluate(async()=>{
+  currentUser={id:'viewer'};listingAccountVersion++;blockedCollectorIds.clear();listingSource='live';
+  items=[
+   {id:'bad-match',c:'Trading Cards',game:'one_piece',sellerId:'bad-seller',n:'Private card',p:10,description:'Card number: OP05-119'},
+   {id:'good-match',c:'Trading Cards',game:'one_piece',sellerId:'good-seller',n:'Public card',p:20,description:'Card number: OP05-119'}
+  ];
+  window.wantedBlockAttempts=0;window.wantedBlockOwners=[];
+  const details='[DeckPlay match: '+JSON.stringify({cardNumber:'OP05-119'})+']';
+  supabaseClient.from=table=>{
+   const q={select:()=>q,eq:(field,value)=>{if(table==='user_blocks')wantedBlockOwners.push([field,value]);return q},order:()=>q,limit:()=>q,in:()=>q,
+    then:(resolve,reject)=>{
+     const response=table==='user_blocks'?(++wantedBlockAttempts===1?{data:null,error:{message:'Offline'}}:{data:[{blocked_id:'bad-seller'}],error:null}):
+      table==='wanted_posts'?{data:[
+       {id:'private-post',user_id:'bad-seller',game:'one_piece',title:'Private wanted',offer_type:'buy',details},
+       {id:'public-post',user_id:'buyer',game:'one_piece',title:'Public wanted',offer_type:'buy',details}
+      ],error:null}:{data:[],error:null};
+     return Promise.resolve(response).then(resolve,reject);
+    }};
+   return q;
+  };
+  await loadWanted();
+ });
+ await expect(page.locator('#wantedGrid')).toContainText('Could not verify blocked collectors');
+ await expect(page.locator('#wantedGrid')).not.toContainText('Public wanted');
+ await page.locator('#wantedGrid [data-retry-wanted]').click();
+ await expect(page.locator('#wantedGrid')).toContainText('Public wanted');
+ await expect(page.locator('#wantedGrid')).not.toContainText('Private wanted');
+ await expect(page.locator('[data-wanted-match="good-match"]')).toBeVisible();
+ await expect(page.locator('[data-wanted-match="bad-match"]')).toHaveCount(0);
+ expect(await page.evaluate(()=>wantedBlockOwners)).toEqual([['blocker_id','viewer'],['blocker_id','viewer']]);
+});
+
 test('a delayed Wanted Board load cannot render the previous account view',async({page})=>{
  await page.goto('/');await page.waitForLoadState('networkidle');
  await page.evaluate(()=>{
