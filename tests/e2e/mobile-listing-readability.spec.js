@@ -9,6 +9,8 @@ test('mobile listing form stays readable, offers category-specific help and squa
  expect(dark.background).not.toBe('rgb(242, 245, 239)');
  const fieldset=await page.locator('#listingIncludedQuantity').evaluate(el=>({bg:getComputedStyle(el.parentElement).backgroundColor,fg:getComputedStyle(el.parentElement).color}));
  expect(fieldset.bg).not.toBe('rgb(255, 255, 255)');
+ await expect(page.locator('#listingCategoryAdvanced')).toBeHidden();
+ await expect(page.locator('#category')).toHaveValue('trading_cards');
  await page.locator('#listingType').selectOption('game');
  await expect(page.locator('#deckFields')).toBeHidden();
  await expect(page.locator('#listingDescriptionHelp')).toContainText('platform');
