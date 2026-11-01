@@ -1486,3 +1486,21 @@ test('T8.3: staff sees what a ticket status means before saving',async({page})=>
  await page.locator('#supportStatusSelect').selectOption('resolved');
  await expect(page.locator('#supportStaffStatusHint')).toContainText('Case is closed');
 });
+
+test('T8.3: changing accounts clears previous staff status guidance',async({page})=>{
+ await boot(page);await signIn(page,'buyer');
+ await page.getByRole('button',{name:'Help & support'}).last().click();
+ await page.locator('#supportSubject').fill('Question for DeckPlay staff');
+ await page.locator('#supportDescription').fill('Synthetic ticket testing private staff status reset.');
+ await page.getByRole('button',{name:'Create private ticket'}).click();
+ await page.evaluate(()=>{window.currentUser={id:'staff'};window.__authCallback('SIGNED_IN',{user:{id:'staff'}})});
+ await page.getByRole('button',{name:'Help & support'}).last().click();
+ await page.locator('#supportStaff').click();
+ await page.locator('#supportTicketList button').filter({hasText:'Question for DeckPlay staff'}).click();
+ await page.locator('#supportStatusSelect').selectOption('waiting_on_user');
+ await expect(page.locator('#supportStaffStatusHint')).toContainText('Collector needs to reply');
+ await page.evaluate(()=>{window.currentUser={id:'other'};window.__authCallback('SIGNED_IN',{user:{id:'other'}})});
+ await expect(page.locator('#supportStaffStatusHint')).toBeEmpty();
+ await expect(page.locator('#supportStatusSelect')).toHaveValue('open');
+ await expect(page.locator('#supportStaffControls')).toBeHidden();
+});
