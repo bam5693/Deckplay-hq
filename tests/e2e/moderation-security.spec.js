@@ -102,3 +102,48 @@ test('T8.2: staff can refresh capped private queue, recover from failure and scr
  });
  await expect(page.locator('#reports')).toContainText('Private recovered fixture');
 });
+
+test('T8.2: status filter never treats the bounded report snapshot as the full queue',async({page})=>{
+ await moderator(page);
+ await expect(page.locator('#reports')).toContainText('Private synthetic evidence');
+ await page.evaluate(()=>{
+  moderationFixture.rpc=async name=>{
+   moderationCalls.push(name);
+   if(name==='is_deckplay_moderator')return {data:true,error:null};
+   if(name==='moderation_report_queue')return {data:Array.from({length:100},(_,i)=>({id:'bounded-'+i,reason:'Synthetic report',details:'Private bounded detail '+i,status:'open'})),error:null};
+   return {data:null,error:null};
+  };
+ });
+ await page.locator('#refreshReports').click();
+ await expect(page.locator('#reports .card')).toHaveCount(100);
+ await page.locator('[data-report-filter="reviewing"]').click();
+ await expect(page.locator('#state')).toContainText('Showing 0 reviewing in the returned snapshot');
+ await expect(page.locator('#reports')).toContainText('Other reports may exist beyond the first 100');
+ await expect(page.locator('#reports')).not.toContainText('Private bounded detail');
+ await expect(page.locator('#queueCoverage')).toContainText('More reports may exist');
+ await expect(page.locator('[data-report-filter="reviewing"]')).toHaveAttribute('aria-pressed','true');
+ await page.evaluate(()=>{
+  moderationFixture.rpc=async name=>{
+   moderationCalls.push(name);
+   if(name==='is_deckplay_moderator')return {data:true,error:null};
+   if(name==='moderation_report_queue')return {data:[
+    {id:'open',reason:'New report',details:'Open private detail',status:'open'},
+    {id:'review',reason:'Under review',details:'Review private detail',status:'reviewing'},
+    {id:'resolved',reason:'Closed report',details:'Resolved private detail',status:'resolved'}
+   ],error:null};
+   return {data:null,error:null};
+  };
+ });
+ await page.locator('#refreshReports').click();
+ await expect(page.locator('#reports')).toContainText('Review private detail');
+ await expect(page.locator('#reports')).not.toContainText('Open private detail');
+ await expect(page.locator('#reports')).not.toContainText('Resolved private detail');
+ await expect(page.locator('#state')).toContainText('Showing 1 reviewing in the returned snapshot');
+ await page.locator('[data-report-filter="resolved"]').click();
+ await expect(page.locator('#reports')).toContainText('Resolved private detail');
+ await expect(page.locator('#reports')).not.toContainText('Review private detail');
+ await page.evaluate(()=>fireModerationAuth('SIGNED_OUT',null));
+ await expect(page.locator('#reports')).toBeEmpty();
+ await expect(page.locator('[data-report-filter="resolved"]')).toBeDisabled();
+ await expect(page.locator('[data-report-filter="all"]')).toHaveAttribute('aria-pressed','true');
+});
