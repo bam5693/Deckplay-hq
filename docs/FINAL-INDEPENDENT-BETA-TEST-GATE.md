@@ -3,13 +3,21 @@
 **Status: REQUIRED BEFORE OWNER-APPROVED PUBLIC BETA. Not performed, not booked, and no spending authorized.**
 
 ## Release sequence
-1. Finish the fixed 48-item V1 acceptance scoreboard at `docs/V1-ACCEPTANCE-SCOREBOARD.md` with current-head evidence; resolve all known P0/P1 issues and verify the integrated release candidate in protected staging.
+1. Finish and integrate the **entire planned trunk system** (all eight V1 implementation trunks and their agreed release scope), reconcile the fixed 48-item V1 acceptance scoreboard at `docs/V1-ACCEPTANCE-SCOREBOARD.md`, and resolve known P0/P1 issues in protected staging. Existing valid passing evidence must be reused, not rerun by default.
 2. Freeze the beta candidate (record exact commit, staging deployment ID, test-account/fixture setup, and scope). The V1 beta is invite-only and **does not include real checkout, payouts, or purchased shipping**.
 3. Recruit **5–8 independent human testers** after owner approves the budget and provider. Prefer collectors who actually buy/sell Pokémon, One Piece/other TCGs, sports cards, and video games, plus at least one novice. Request mobile Android/iPhone and desktop coverage. **Do not hire or pay until step 1 is done.**
 4. Run uncoached, task-based **think-aloud** sessions with screen recording and explicit consent. Ask testers to narrate what they expect, what seems redundant, why they hesitate, what they distrust, and what they would change. Do not show them the intended path first. No fake positive reviews or pressured praise.
 5. Triaging: log every observation with recording timestamp, screenshot, device, category, reproduction steps, expected customer behavior, actual behavior, severity, and proposed fix. Distinguish bug, UX confusion, missing feature, and deliberate V1 limitation.
 6. Fix critical/major issues on staging, retest affected workflows, then perform a **small independent recheck** of changed experiences. Owner signs off on remaining minor issues before any public beta deployment.
 7. Production backup/restore verification, migration safety, and **explicit owner authorization** remain separate mandatory gates. Passing human tests does not authorize deployment.
+
+## Incremental testing policy while trunks are still in development
+- Previously passed and unchanged behavior: preserve evidence; **do not rerun by default**.
+- New feature: cheap syntax/preflight checks, then focused tests for its behavior and directly affected dependencies.
+- Bug fix: reproduce the defect, verify the fix, and test only plausible regression surfaces.
+- Integration across trunks: targeted contract/interaction checks for changed boundaries, not a wholesale suite rerun.
+- Final integrated candidate: one proportionate release-candidate safety pass, then the **independent human usability gate** below. Security, migrations, backup/restore, and owner-approved release safeguards remain mandatory even when unrelated UI tests were previously green.
+- Do not hire independent testers while trunk development is unfinished. A passing local test or individual trunk does not authorize this final gate.
 
 ## Tester missions (give outcomes, not click-by-click instructions)
 - **First visit / trust:** Arrive as a stranger. Decide what DeckPlay sells, whether fees and shipping are clear, and whether you trust signing up. Report anything that looks fake, repetitive, or inconsistent.
