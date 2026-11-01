@@ -86,6 +86,8 @@ export function validateSendGuard({ args, env }) {
 }
 
 export async function sendStagingInvite({ email, key, redirectTo, fetchImpl = fetch }) {
+  // Validate at the transport boundary too: direct callers bypass CLI parsing.
+  const recipient = validateEmail(email);
   validateStagingServiceRoleJwt(key);
   const destination = validateStagingRedirect(redirectTo);
   const controller = new AbortController();
@@ -95,7 +97,7 @@ export async function sendStagingInvite({ email, key, redirectTo, fetchImpl = fe
       method: 'POST',
       redirect: 'error',
       headers: { apikey: key, Authorization: 'Bearer ' + key, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email }),
+      body: JSON.stringify({ email: recipient }),
       signal: controller.signal
     });
     // Never echo API bodies, tokens, or email addresses to CI logs.
