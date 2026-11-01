@@ -82,3 +82,12 @@ test('transport exceptions cannot expose credentials or recipient in operator ou
    return true;
   });
 });
+
+test('direct transport rejects invalid recipient before network access',async()=>{
+ let calls=0;
+ const fetchImpl=async()=>{calls++;return {ok:true,status:200}};
+ for(const email of ['', 'not-an-email', 'name@example.test,second@example.test', 'bad..dots@example.test']){
+  await assert.rejects(sendStagingInvite({email,key,redirectTo:redirect,fetchImpl}),/single valid collector email/);
+ }
+ assert.equal(calls,0);
+});
