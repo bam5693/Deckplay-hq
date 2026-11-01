@@ -22,7 +22,7 @@ window.favoriteActions=(()=>{
   }
   // Avoid a misleading optimistic heart when the device reports offline.
   if(typeof navigator!=='undefined'&&navigator.onLine===false){
-   toast('You are offline. Reconnect, then try saving this item again.');return;
+   toast('You are offline. Reconnect, then retry this saved-item change.');return;
   }
   pending.add(requestKey);pendingDesired.set(requestKey,{id:String(id),owner,epoch,save:!wasSaved});++savedListingsLoadVersion;wasSaved?saved.delete(id):saved.add(id);render();
   try{
