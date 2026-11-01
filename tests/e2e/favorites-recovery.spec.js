@@ -208,6 +208,40 @@ test('saved profile fails closed if blocked collectors cannot be checked',async(
  expect(await page.evaluate(()=>privateSavedReads)).toBe(0);
 });
 
+test('Saved profile does not lose valid favorites when a global block refresh overlaps its privacy preflight',async({page})=>{
+ await fixture(page);
+ await page.evaluate(async()=>{
+  sellerRatingHtml=async()=>'';window.blockReadCalls=0;window.blockOwners=[];
+  supabaseClient.from=table=>{
+   const q={select:()=>q,eq:(field,value)=>{if(table==='user_blocks')blockOwners.push([field,value]);return q},in:()=>q,order:()=>q,
+    maybeSingle:async()=>({data:{username:'Jayden'},error:null}),
+    then:(resolve,reject)=>{
+     if(table==='user_blocks'){
+      blockReadCalls++;
+      if(blockReadCalls===1)return new Promise(done=>{window.finishGlobalBlock=()=>done({data:[],error:null})}).then(resolve,reject);
+      return Promise.resolve({data:[{blocked_id:'bad-seller'}],error:null}).then(resolve,reject);
+     }
+     if(table==='saved_listings')return Promise.resolve({data:[{listing_id:'safe-id'},{listing_id:'blocked-id'}],error:null}).then(resolve,reject);
+     if(table==='listings')return Promise.resolve({data:[
+      {id:'safe-id',title:'TEST ONLY sports card',seller_id:'good-seller',status:'active',image_urls:[],price:15},
+      {id:'blocked-id',title:'PRIVATE BLOCKED CARD',seller_id:'bad-seller',status:'active',image_urls:[],price:10}
+     ],error:null}).then(resolve,reject);
+     return Promise.resolve({data:[],error:null}).then(resolve,reject);
+    }};
+   return q;
+  };
+  window.globalBlockRefresh=loadBlockedCollectors(); // Global refresh remains unresolved.
+  await showCollectorPage('saved'); // Saved must use its own account-scoped privacy result.
+ });
+ await expect(page.locator('#profilePageContent')).toContainText('TEST ONLY sports card');
+ await expect(page.locator('#profilePageContent')).not.toContainText('PRIVATE BLOCKED CARD');
+ expect(await page.evaluate(()=>blockReadCalls)).toBe(2);
+ expect(await page.evaluate(()=>blockOwners)).toEqual([['blocker_id','first-buyer'],['blocker_id','first-buyer']]);
+ await page.evaluate(async()=>{finishGlobalBlock();await globalBlockRefresh});
+ await expect(page.locator('#profilePageContent')).toContainText('TEST ONLY sports card');
+ await expect(page.locator('#profilePageContent')).not.toContainText('PRIVATE BLOCKED CARD');
+});
+
 test('saved profile recovers from a stalled saved-list read even when seller reviews never finish',async({page})=>{
  await fixture(page);
  await page.evaluate(()=>{
