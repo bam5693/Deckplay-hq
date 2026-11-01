@@ -380,3 +380,60 @@ test('stalled load-more request releases the button and allows the same seller p
  await expect(page.locator('#publicProfileResults .profile-item')).toHaveCount(62);
  expect(await page.evaluate(()=>olderPageRequests)).toBe(2);
 });
+
+test('T4.4 owner collection shows retry instead of fake empty inventory after a failed read',async({page})=>{
+ await page.route('https://challenges.cloudflare.com/**',r=>r.abort());
+ await page.route('https://prrrzeelltmyugssqnzk.supabase.co/**',r=>r.fulfill({json:[]}));
+ await page.setViewportSize({width:390,height:844});
+ await page.goto('/');await page.waitForLoadState('networkidle');
+ await page.evaluate(async()=>{
+  await supabaseClient.auth.getSession();
+  currentUser={id:'fixture-owner',user_metadata:{username:'fixture_owner'}};
+  window.failCollectionListings=true;
+  supabaseClient.from=table=>{
+   const q={};for(const key of ['select','eq','order','limit'])q[key]=()=>q;
+   q.maybeSingle=async()=>({data:table==='profiles'?{username:'fixture_owner'}:null,error:null});
+   q.then=(resolve,reject)=>Promise.resolve({
+    data:table==='listings'?(failCollectionListings?null:[{id:'sports-card',title:'1981 Fleer card',price:9,status:'active',category:'trading_cards',image_urls:[]} ]):[],
+    error:table==='listings'&&failCollectionListings?{message:'Offline'}:null
+   }).then(resolve,reject);
+   return q;
+  };
+  await showCollectorPage('listings');
+ });
+ await expect(page.locator('#pageListingCount')).toHaveText('Listings unavailable');
+ await expect(page.locator('#profilePageContent')).toContainText('Your listings could not load');
+ await expect(page.locator('#profilePageContent')).not.toContainText('You haven’t posted');
+ await page.evaluate(()=>{failCollectionListings=false;document.documentElement.dataset.theme='dark'});
+ await page.locator('[data-retry-profile-tab="listings"]').click();
+ await expect(page.locator('#profilePageContent .profile-item')).toHaveCount(1);
+ await expect(page.locator('#profilePageContent')).toContainText('1981 Fleer card');
+});
+
+test('T4.4 Wanted failure and stalled optional reviews never hide owner collection',async({page})=>{
+ await page.route('https://challenges.cloudflare.com/**',r=>r.abort());
+ await page.route('https://prrrzeelltmyugssqnzk.supabase.co/**',r=>r.fulfill({json:[]}));
+ await page.goto('/');await page.waitForLoadState('networkidle');
+ await page.evaluate(async()=>{
+  await supabaseClient.auth.getSession();
+  currentUser={id:'fixture-owner',user_metadata:{username:'fixture_owner'}};
+  window.failCollectionWanted=true;
+  sellerRatingHtml=()=>new Promise(()=>{}); // Optional reviews must not block the page.
+  supabaseClient.from=table=>{
+   const q={};for(const key of ['select','eq','order','limit'])q[key]=()=>q;
+   q.maybeSingle=async()=>({data:table==='profiles'?{username:'fixture_owner'}:null,error:null});
+   q.then=(resolve,reject)=>Promise.resolve({
+    data:table==='wanted_posts'?(failCollectionWanted?null:[{id:'wanted-one',title:'One Piece OP05 card',game:'one_piece'}]):[],
+    error:table==='wanted_posts'&&failCollectionWanted?{message:'Offline'}:null
+   }).then(resolve,reject);
+   return q;
+  };
+  await showCollectorPage('wanted');
+ });
+ await expect(page.locator('#pageWantedCount')).toHaveText('Wanted unavailable');
+ await expect(page.locator('#profilePageContent')).toContainText('Your Wanted posts could not load');
+ await page.evaluate(()=>{failCollectionWanted=false});
+ await page.locator('[data-retry-profile-tab="wanted"]').click();
+ await expect(page.locator('#profilePageContent')).toContainText('One Piece OP05 card');
+ await expect(page.locator('#pageWantedCount')).toHaveText('1 wanted posts');
+});
