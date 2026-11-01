@@ -153,6 +153,8 @@ async function openSharedLinkOnce(){
  const listing=listings[0]||null,collector=collectors[0]||null;
  if(!supabaseClient){showRetry('Marketplace is still loading. Retry opening this shared link.');return}
  opening=true;
+ const retryButton=document.querySelector('#deckplaySharedLinkRetry button');
+ if(retryButton){retryButton.disabled=true;retryButton.textContent='Opening shared link…';}
  const account=currentUser?.id||null;
  const same=()=>((currentUser?.id||null)===account);
  const id=listing||collector;
@@ -190,6 +192,8 @@ async function openSharedLinkOnce(){
  }}
  finally{
   opening=false;
+  const retryButton=document.querySelector('#deckplaySharedLinkRetry button');
+  if(retryButton){retryButton.disabled=false;retryButton.textContent='Retry shared link';}
   if(!same()&&!attempted)showRetry('Your account changed. Retry opening this shared link.');
  }
 }
