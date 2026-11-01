@@ -58,6 +58,10 @@
         </section>
       </section>
       <div id="supportFeedbackQueueNotice" hidden role="status" style="padding:10px;margin:8px 0;border:1px solid #819c9640;border-radius:10px"><span id="supportFeedbackQueueLabel"></span> <button type="button" class="ghost" id="supportFeedbackQueueClear">Show all staff tickets</button></div>
+      <div id="supportStaffSortWrap" hidden style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:8px 0">
+        <label for="supportStaffSort">Staff queue order</label>
+        <select id="supportStaffSort" aria-label="Sort staff support queue"><option value="newest">Latest activity first</option><option value="oldest">Longest waiting first</option></select>
+      </div>
       <p id="supportListStatus" class="status" role="status" aria-live="polite"></p>
       <div id="supportTicketList"></div>
       <button type="button" class="ghost" id="supportLoadMore" hidden>Load older tickets</button>
@@ -156,7 +160,7 @@
   const date = value => new Date(value).toLocaleString();
   const labels = {open:"Open",waiting_on_staff:"Waiting on support",waiting_on_user:"Waiting on collector",resolved:"Resolved"};
   const nextSteps = {open:"Your ticket has been recorded. Check My tickets for updates; no response time is guaranteed.",waiting_on_staff:"Your ticket is waiting on support. You can check this page for replies.",waiting_on_user:"Support is waiting for your response. Read the replies below and respond if more information is needed.",resolved:"This ticket is marked resolved. If the problem continues, open a new support ticket."};
-  let userId = null, generation = 0, isStaff = false, staffView = false, staffSafetyOnly = false, ticketFilter = "all", ticketCategory = "all", feedbackQueueSubject = null, selected = null, tickets = [], ticketOffset = 0, ticketListRequest = 0, loadingTickets = false, moreTickets = false, replyOffset = 0, moreReplies = false, loadingReplies = false, replyRequest = 0, returnToFeedback = false, returnTopic = "feedback", feedbackMode = false, tradeConcernMode = false, listingReportId = null, pendingReportId = null, viewGeneration = 0, createRequest = 0, replySubmitRequest = 0, statusSubmitRequest = 0;
+  let userId = null, generation = 0, isStaff = false, staffView = false, staffSafetyOnly = false, staffSort = "newest", ticketFilter = "all", ticketCategory = "all", feedbackQueueSubject = null, selected = null, tickets = [], ticketOffset = 0, ticketListRequest = 0, loadingTickets = false, moreTickets = false, replyOffset = 0, moreReplies = false, loadingReplies = false, replyRequest = 0, returnToFeedback = false, returnTopic = "feedback", feedbackMode = false, tradeConcernMode = false, listingReportId = null, pendingReportId = null, viewGeneration = 0, createRequest = 0, replySubmitRequest = 0, statusSubmitRequest = 0;
   // Drafts are tab-memory only, keyed by ticket and purged on account/view reset.
   const replyDrafts = new Map();
   // Unsaved beta feedback stays only in this tab and only for the same account.
@@ -306,7 +310,8 @@
     el("supportSetStatus").disabled = false;
     ++ticketListRequest; loadingTickets = false; moreTickets = false; ticketOffset = 0;
     el("supportLoadMore").hidden = true; el("supportLoadMore").disabled = false;
-    selected = null; tickets = []; replyDrafts.clear(); isStaff = false; staffView = false; staffSafetyOnly = false; ticketFilter = "all"; ticketCategory = "all";
+    selected = null; tickets = []; replyDrafts.clear(); isStaff = false; staffView = false; staffSafetyOnly = false; staffSort = "newest"; ticketFilter = "all";
+    el("supportStaffSort").value = "newest"; el("supportStaffSortWrap").hidden = true; ticketCategory = "all";
     el("supportTicketCategory").value = "all"; el("supportTicketCategory").disabled = false;
     feedbackQueueSubject=null;el("supportFeedbackQueueNotice").hidden=true;el("supportFeedbackQueueLabel").textContent="";
     modal.querySelectorAll("[data-support-filter]").forEach(button => button.setAttribute("aria-pressed", String(button.dataset.supportFilter === ticketFilter)));
@@ -559,6 +564,7 @@
     const offset = append ? ticketOffset : 0;
     const loadMore = el("supportLoadMore");
     loadingTickets = true;
+    el("supportStaffSortWrap").hidden = !(staffView && isStaff);
     loadMore.disabled = true;
     if (!append) {
       moreTickets = false;
@@ -569,7 +575,8 @@
     try {
       let query = supabaseClient.from("support_tickets")
         .select("id,owner_id,category,subject,body,status,created_at,updated_at")
-        .order("updated_at",{ascending:false}).order("id",{ascending:false})
+        .order("updated_at",{ascending: staffView && isStaff && staffSort === "oldest"})
+        .order("id",{ascending: staffView && isStaff && staffSort === "oldest"})
         .range(offset, offset + 40);
       if (!staffView) query = query.eq("owner_id",u);
       if (staffView && isStaff && staffSafetyOnly) query = query.eq("category","safety");
@@ -757,7 +764,13 @@
   function resetTicketCategory(next="all",locked=false){
     ticketCategory=next;el("supportTicketCategory").value=next;el("supportTicketCategory").disabled=locked;
   }
-  el("supportMine").addEventListener("click",()=>{clearFeedbackQueue();staffView=false;staffSafetyOnly=false;resetTicketCategory();el("supportStaffSafety").setAttribute("aria-pressed","false");selected=null;el("supportTicketDetail").hidden=true;loadTickets()});
+  el("supportStaffSort").addEventListener("change",()=>{
+    if(!isStaff || !staffView){el("supportStaffSort").value="newest";return;}
+    staffSort=el("supportStaffSort").value==="oldest"?"oldest":"newest";
+    ticketOffset=0;moreTickets=false;selected=null;el("supportTicketDetail").hidden=true;
+    void loadTickets();
+  });
+  el("supportMine").addEventListener("click",()=>{clearFeedbackQueue();staffView=false;staffSafetyOnly=false;el("supportStaffSortWrap").hidden=true;resetTicketCategory();el("supportStaffSafety").setAttribute("aria-pressed","false");selected=null;el("supportTicketDetail").hidden=true;loadTickets()});
   el("supportStaff").addEventListener("click",()=>{clearFeedbackQueue();if(!isStaff)return;staffView=true;staffSafetyOnly=false;resetTicketCategory();el("supportStaffSafety").setAttribute("aria-pressed","false");selected=null;el("supportTicketDetail").hidden=true;loadTickets()});
   el("supportStaffSafety").addEventListener("click",()=>{clearFeedbackQueue();if(!isStaff)return;staffView=true;staffSafetyOnly=true;resetTicketCategory("safety",true);el("supportStaffSafety").setAttribute("aria-pressed","true");selected=null;el("supportTicketDetail").hidden=true;loadTickets()});
   el("supportRefresh").addEventListener("click", () => { void loadTickets(); if(isStaff)void refreshStaffOverview(); });
