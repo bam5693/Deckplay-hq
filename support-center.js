@@ -539,11 +539,8 @@
     const loadMore = el("supportLoadMore");
     loadingTickets = true;
     loadMore.disabled = true;
-    if (!append) {
-      moreTickets = false;
-      loadMore.hidden = true;
-      el("supportTicketList").replaceChildren();
-    }
+    // Keep the last successful page visible while Refresh is in flight.
+    // A transient network failure must not erase readable ticket history.
     status("supportListStatus", append ? "Loading older tickets…" : "Loading private tickets…");
     try {
       let query = supabaseClient.from("support_tickets")
@@ -565,7 +562,10 @@
       const page = rows.slice(0,40);
       moreTickets = rows.length > 40;
       ticketOffset = offset + page.length;
-      if (!append) tickets = [];
+      if (!append) {
+        tickets = [];
+        el("supportTicketList").replaceChildren();
+      }
       const known = new Set(tickets.map(ticket => ticket.id));
       for (const ticket of page) {
         if (known.has(ticket.id)) continue;
