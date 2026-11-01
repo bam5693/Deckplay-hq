@@ -59,3 +59,22 @@ test('offer entry keeps seller and anonymous-account safeguards', () => {
   assert.equal(openOffer({ id: 'seller-id' }, { amount: 4, unit: 'cards' }).opened.length, 0);
   assert.equal(openOffer(null, { amount: 4, unit: 'cards' }).opened[0], 'authModal');
 });
+
+
+test('buyer detail fee disclosure is contrast-safe in both themes', () => {
+  assert.doesNotMatch(html, /class="detail-fee-disclosure" style=/);
+  const light = html.match(/\.detail-fee-disclosure\{[^}]*color:(#[0-9a-f]{6})\}/);
+  const dark = html.match(/html\[data-theme="dark"\] \.detail-fee-disclosure\{[^}]*color:(#[0-9a-f]{6})\}/);
+  assert.ok(light && dark, 'explicit fee disclosure colors in both themes');
+  const luminance = hex => {
+    const c = hex.slice(1).match(/.{2}/g).map(v => parseInt(v, 16) / 255)
+      .map(v => v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4);
+    return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+  };
+  const contrast = (a, b) => {
+    const x = luminance(a), y = luminance(b);
+    return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05);
+  };
+  assert.ok(contrast(light[1], '#ffffff') >= 4.5, 'light dialog contrast');
+  assert.ok(contrast(dark[1], '#1b2636') >= 4.5, 'dark dialog contrast');
+});
