@@ -14,14 +14,14 @@ The CLI is dry-run-only unless an operator explicitly approves a send using all 
    ```bash
    export DECKPLAY_STAGING_SUPABASE_URL=https://prrrzeelltmyugssqnzk.supabase.co
    # Provide DECKPLAY_STAGING_SERVICE_ROLE_KEY securely, never in GitHub files/chat.
-   export DECKPLAY_BETA_INVITE_APPROVED=1
+   # Only after confirming that the private staging invite callback is allowlisted in Supabase Auth URL settings\n   # and that invitees can access it through staging's Basic Auth gate.\n   export DECKPLAY_STAGING_INVITE_REDIRECT_URL=https://deckplay-hq-staging.cstivers56.workers.dev/auth/callback\n   export DECKPLAY_BETA_INVITE_APPROVED=1
    node scripts/beta-invite.mjs --email=approved@example.com --send --confirm=SEND-STAGING-INVITE
    ```
 6. Verify invitation delivery, expiry, redirect URLs, password setup, anonymous signup denial, existing-user sign-in, removal/revocation procedure, and that an invited user can access intended isolated staging features. A successful API response does not prove an email was received. Staging's Basic Auth may prevent invitation-link access until a safe redirect and access path are approved.
 7. Do not store applicant email lists in the repo, client app, test artifacts or logs. Keep any staging service-role token in a secret manager and revoke/rotate if exposed.
 
 ## Security / release notes
-- The helper rejects production Supabase URLs and runs without secrets by default.
+- The helper rejects production Supabase URLs and runs without secrets by default.\n- Actual sends require a reviewed **HTTPS staging-only** redirect URL; non-staging, query-bearing, and unknown callback URLs are rejected. The staging callback still needs real browser/email verification and Basic Auth coordination.\n- The direct transport rechecks service-role JWT role and redirect; a public anon JWT, an expired JWT, or a JWT declaring another Supabase project cannot pass the client preflight. JWT claim inspection is not a replacement for Supabase's server-side cryptographic verification.
 - Sending requires a confirmation flag plus explicit environmental approval.
 - It never runs on a public webpage or requires a third-party email service.
 - Public registration is **not restricted** merely because this script exists.
