@@ -1410,3 +1410,15 @@ test('T8.6 ticket next-step guidance explains whose action is needed without pro
  await expect(page.locator('#supportTicketNextStep')).toContainText('marked resolved');
  await expect(page.locator('#supportReplyForm')).toBeHidden();
 });
+
+test('T8.6 release-controlled beta status is honest and does not collect invitations',async({page})=>{
+ await boot(page);
+ await page.getByRole('button',{name:'Help & support'}).last().click();
+ const notice=page.locator('#supportBetaStatusNotice');
+ await expect(notice).toBeVisible();
+ await expect(page.locator('#supportBetaStatusHeading')).toHaveText('Invitations not yet announced');
+ await expect(page.locator('#supportBetaStatusDetail')).toContainText('no public invitation request form');
+ await expect(notice).toContainText('not by support tickets');
+ await expect(notice.locator('form,input,textarea')).toHaveCount(0);
+ await expect(page.locator('#supportPrivate')).toBeHidden();
+});
