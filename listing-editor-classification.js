@@ -1,3 +1,7 @@
+function latestEditorClassification(description){
+ const edits=[...String(description||"").matchAll(/(?:^|\n)\[Listing classification\]\r?\n([\s\S]*?)\r?\n\[End classification\]/g)];
+ return edits.length?edits[edits.length-1][1]:null;
+}
 /* Independent editor controls clone the real seller catalog, without touching creation drafts. */
 window.createListingEditorClassification=(container,status)=>{
  container.innerHTML='<details><summary>Category, condition and item details</summary><label class="check-row"><input type="checkbox" id="editClassificationEnabled"> Change classification and item details</label><p class="file-help">Review your description when changing category. Your existing disclosures are preserved.</p><fieldset id="editClassificationFields" disabled style="border:0;padding:0;min-width:0;max-width:100%"></fieldset></details>';
@@ -40,8 +44,8 @@ window.createListingEditorClassification=(container,status)=>{
   const description=String(row.description||'');
   // The latest edited classification is authoritative; old seller disclosures can
   // still contain the original Set, Variant or Card condition values.
-  const latest=description.match(/\[Listing classification\]\n([\s\S]*?)\n\[End classification\]/)?.[1]||'';
-  const line=label=>{const pattern=new RegExp('(?:^|\\n)'+label+': ([^\\n]*)');return latest.match(pattern)?.[1]||description.match(pattern)?.[1]||''};
+  const latest=latestEditorClassification(description);
+  const line=label=>{const pattern=new RegExp('(?:^|\\n)'+label+': ([^\\n]*)');return (latest??description).match(pattern)?.[1]||''};
   for(const [id,label]of [['gamePlatform','Platform'],['consoleItemType','Hardware type'],['consoleBrand','Brand'],['consoleModel','Model'],['consoleStorage','Storage / version'],['sportsSport','Sport'],['sportsBrand','Sports brand'],['sportsYear','Year'],['sportsPlayer','Player'],['gradingCompany','Grader'],['gradingScore','Grade'],['gradingCert','Certification'],['tcgCustomSet','Set'],['tcgCardNumber','Card number'],['tcgCustomVariant','Variant'],['tcgRarity','Rarity'],['tcgEdition','Edition / printing'],['tcgLanguage','Language'],['deckLeader','Deck'],['deckCardCount','Cards']])set(id,line(label));
   // Restore optional set era before reloading its dependent set choices.
   set('tcgEra',line('Era'));
@@ -49,7 +53,7 @@ window.createListingEditorClassification=(container,status)=>{
   if(get('tcgGame')==='sports_cards'&&!get('sportsBrand'))set('sportsBrand',line('Brand'));
   const conditionLine=line('Card condition'),options=[...controls.get('cardCondition').options];
   // Never let a legacy [Card Condition] override the latest edited value.
-  const option=options.find(o=>o.textContent.trim()===conditionLine)||options.find(o=>description.includes('[Card Condition]\n'+o.textContent.trim()));
+  const option=options.find(o=>o.textContent.trim()===conditionLine)||(!latest?options.find(o=>description.includes('[Card Condition]\n'+o.textContent.trim())):null);
   if(option)set('cardCondition',option.value);else if(row.condition==='graded')set('cardCondition','graded');else if(row.condition==='new')set('cardCondition','sealed');
   set('deckList',description.match(/Full decklist:\n([\s\S]*?)(?:\n\[End classification\]|\n\n|$)/)?.[1]||'');
   if(!get('consoleItemType'))set('consoleItemType',{consoles:'Console',controllers:'Controller',accessories:'Accessory'}[get('category')]);sync();

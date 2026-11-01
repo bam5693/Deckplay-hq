@@ -1126,7 +1126,8 @@ function renderActiveMarketFilters(){
 // stale legacy notes after a seller changes the exact sports card details.
 function sportsListingDetail(item,key){
  const description=String(item.description||"");
- const classification=description.match(/(?:^|\n)\[Listing classification\]\n([\s\S]*?)\n\[End classification\]/)?.[1]||"";
+ const edits=[...description.matchAll(/(?:^|\n)\[Listing classification\]\r?\n([\s\S]*?)\r?\n\[End classification\]/g)];
+ const classification=edits.length?edits[edits.length-1][1]:"";
  const labels=key==="Brand"?["Sports brand","Brand"]:[key];
  const from=source=>{
   for(const line of source.split(/\r?\n/)){
@@ -1400,7 +1401,8 @@ function listingLotBadge(description){
 // Values are unverified seller disclosures, not platform-confirmed grading or identity.
 function listingBuyerSpecifics(item){
  const description=String(item.description||"");
- const updated=description.match(/(?:^|\n)\[Listing classification\]\n([\s\S]*?)\n\[End classification\]/);
+ const edits=[...description.matchAll(/(?:^|\n)\[Listing classification\]\r?\n([\s\S]*?)\r?\n\[End classification\]/g)];
+ const updated=edits.length?edits[edits.length-1]:null;
  const source=updated?updated[1]:description;
  const category=item.rawCategory||({ "Trading Cards":"trading_cards","Video Games":"video_games","Consoles & Controllers":"consoles" }[item.c]||"");
  const fields=category==="trading_cards"?

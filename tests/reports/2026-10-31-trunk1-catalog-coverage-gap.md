@@ -68,3 +68,10 @@
 | P1 | Jayden: buyer opens listing details in dark mobile theme | Fee disclosure had fixed inline `#657087` against dark dialog `#1b2636`, ~3.07:1 calculated contrast for 12px text. | T1; inspect actual light/dark mobile screenshots, buyer detail fee note and offer modal; independent reviewer required. | **Branch code 89a73ff; calculated contrast light 7.58:1/dark 10.27:1; visual/staging UNKNOWN** |
 
 **Scope and source:** `docs/V1-ACCEPTANCE-SCOREBOARD.md` T1.6 and owner screenshot atlas 33658/33660 (related UX seeds, not direct screenshot proof). Test source [04e8452](https://github.com/bam5693/Deckplay-hq/commit/04e845269cbf95e5261b23e974f331129bab9e65), executed only in a V8 Node-style harness against the branch HTML; no GitHub Actions run. Existing catalog gaps above remain open. **UX BLOCKED / REAL CUSTOMER ACCEPTANCE NOT VERIFIED.**
+
+## 2026-11-01 T1.3 repeated classification edit gap scorecard (new)
+| Priority | Source/impact | Owner | Focused verification | Fix status |
+|---|---|---|---|---|
+| P0 | Multiple generated classification blocks: sports buyer filters and detail previously used **first** instead of current last; O-Pee-Chee hockey correction could display Fleer | Trunk 1 | `tests/security/trunk1-latest-classification.test.cjs`; Tanner old/new brand and year, blank brand | **Branch fix; V8 synthetic PASS; signed staging/UX UNKNOWN** |
+| P0 | Pokémon corrected Base Set 4/102 → 151 199/165: buyer detail could show first old block | Trunk 1 | Same focused regression; Jayden exact number/set buyer detail | **Branch fix; V8 synthetic PASS; signed staging/UX UNKNOWN** |
+| P1 | Editor reopening multiple historical classification blocks could rehydrate stale condition | Trunk 1 | Latest-block helper + fallback source guard; actual edit/reopen browser not run | **Branch fix; UI NOT VERIFIED** |
