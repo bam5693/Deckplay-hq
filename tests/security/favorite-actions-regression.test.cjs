@@ -11,6 +11,8 @@ function harness(error = null, options = {}) {
   const context = {
     window: {}, currentUser: {id:'user-1'}, listingAccountVersion: 1,
     savedListingsLoadVersion: 0, saved,
+    blockedCollectorIds: options.blockedCollectorIds || new Set(),
+    navigator: {onLine: options.online !== false},
     items: [{id:'card-1',databaseId:'listing-1'}],
     render: () => { renders++; },
     toast: message => notices.push(message),
@@ -86,4 +88,31 @@ test('a never-settling favorite transport without abortSignal times out and rele
   assert.equal(h.context.window.favoriteActions.pending('card-1'),false);
   await h.context.window.favoriteActions.toggle('card-1');
   assert.equal(attempts,2);
+});
+
+test('blocked seller stale card cannot save or remove a favorite',async()=>{
+  const h=harness(null,{blockedCollectorIds:new Set(['seller-1'])});
+  h.context.items[0].sellerId='seller-1';
+  await h.context.window.favoriteActions.toggle('card-1');
+  assert.equal(h.saved.has('card-1'),false);
+  assert.equal(h.renders,0);
+  h.saved.add('card-1');
+  await h.context.window.favoriteActions.toggle('card-1');
+  assert.equal(h.saved.has('card-1'),true);
+  assert.equal(h.renders,0);
+  assert.equal(h.notices.length,2);
+  assert.match(h.notices[0],/blocked/i);
+});
+
+test('offline tap does not optimistically save and can retry after reconnecting',async()=>{
+  const h=harness(null,{online:false});
+  await h.context.window.favoriteActions.toggle('card-1');
+  assert.equal(h.saved.has('card-1'),false);
+  assert.equal(h.renders,0);
+  assert.equal(h.context.window.favoriteActions.pending('card-1'),false);
+  assert.match(h.notices[0],/offline.*reconnect/i);
+  h.context.navigator.onLine=true;
+  await h.context.window.favoriteActions.toggle('card-1');
+  assert.equal(h.saved.has('card-1'),true);
+  assert.deepEqual(h.notices,['You are offline. Reconnect, then try saving this item again.','Saved to your account']);
 });
