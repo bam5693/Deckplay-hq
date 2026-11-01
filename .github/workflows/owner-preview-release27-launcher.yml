@@ -12,7 +12,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   dispatch:
-    if: ${{ github.ref == 'refs/heads/main' && contains(github.event.head_commit.message, 'Merge pull request #27 from release/owner-preview-v1-2026-10-31') }}
+    if: "${{ github.ref == 'refs/heads/main' && contains(github.event.head_commit.message, 'Merge pull request #27 from release/owner-preview-v1-2026-10-31') }}"
     runs-on: ubuntu-latest
     timeout-minutes: 3
     steps:
