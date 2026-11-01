@@ -83,6 +83,7 @@
         <div id="supportStaffControls" hidden>
           <label for="supportStatusSelect">Staff: update status</label>
           <select id="supportStatusSelect"><option value="open">Open</option><option value="waiting_on_staff">Waiting on support</option><option value="waiting_on_user">Waiting on collector</option><option value="resolved">Resolved</option></select>
+          <p id="supportStaffStatusHint" class="muted" aria-live="polite"></p>
           <button class="ghost" type="button" id="supportSetStatus">Save status</button>
         </div>
       </section>
@@ -631,6 +632,16 @@
       }
     }
   }
+  const staffStatusDescriptions = {
+    open:"New or active case. Support has not marked who should respond next.",
+    waiting_on_staff:"Support needs to review or reply next.",
+    waiting_on_user:"Collector needs to reply or provide more information.",
+    resolved:"Case is closed. The collector can open a new ticket if needed."
+  };
+  const updateStaffStatusHint = () => {
+    el("supportStaffStatusHint").textContent = staffStatusDescriptions[el("supportStatusSelect").value] || "";
+  };
+  el("supportStatusSelect").addEventListener("change", updateStaffStatusHint);
   el("supportLoadMore").addEventListener("click", () => { void loadTickets(true); });
   async function showTicket(id){
     const ticket=tickets.find(t=>t.id===id);
@@ -655,6 +666,7 @@
     el("supportReplyForm").hidden=ticket.status==="resolved";
     el("supportStaffControls").hidden=!isStaff;
     el("supportStatusSelect").value=ticket.status;
+    updateStaffStatusHint();
     ++replyRequest; replyOffset = 0; moreReplies = false; loadingReplies = false;
     el("supportRepliesLoadMore").hidden = true;
     el("supportRepliesLoadMore").disabled = false;
