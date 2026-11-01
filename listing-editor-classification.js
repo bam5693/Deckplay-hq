@@ -28,8 +28,18 @@ function listingEditorVisibleDescription(description){
  return withoutLegacy.replace(/^\n+|\n+$/g,"").replace(/\n{3,}/g,"\n\n");
 }
 function listingEditorLatestDeckList(description){
- const source=latestEditorClassification(description)??String(description||"");
- return source.match(/(?:^|\n)Full decklist:\r?\n([\s\S]*?)(?:\r?\n\[End classification\]|\r?\n\r?\n|$)/)?.[1]||"";
+ const latest=latestEditorClassification(description);
+ const source=(latest??String(description||"")).replace(/\r\n?/g,"\n");
+ const match=source.match(/(?:^|\n)Full decklist:\n([\s\S]*)/);
+ if(!match)return "";
+ if(latest!==null){
+  // Older edits appended Set/Variant AFTER the decklist, and blank lines
+  // inside a decklist are meaningful separators, not an end marker.
+  return match[1].replace(/(?:\n(?:Set|Variant):[^\n]*)+\s*$/,"").trim();
+ }
+ // Original published decks separated the list from subsequent disclosure
+ // blocks with a blank paragraph. Preserve that legacy boundary.
+ return match[1].split(/\n\n/)[0].trim();
 }
 // Preserve the current public classification and quantity disclosure when
 // editing prose, without reintroducing superseded generated identity blocks.
@@ -136,8 +146,11 @@ window.createListingEditorClassification=(container,status)=>{
   const lines=['Category: '+controls.get('category').selectedOptions[0].textContent,'Listing type: '+controls.get('listingType').selectedOptions[0].textContent];
   const labels={tcgEra:'Era',gamePlatform:'Platform',consoleItemType:'Hardware type',consoleBrand:'Brand',consoleModel:'Model',consoleStorage:'Storage / version',sportsSport:'Sport',sportsBrand:'Sports brand',sportsProductLine:'Product line',sportsYear:'Year',sportsPlayer:'Player',gradingCompany:'Grader',gradingScore:'Grade',gradingCert:'Certification',tcgCardNumber:'Card number',tcgRarity:'Rarity',tcgEdition:'Edition / printing',tcgLanguage:'Language',deckLeader:'Deck',deckCardCount:'Cards',deckList:'Full decklist'};
   if(cards)lines.push('Card condition: '+controls.get('cardCondition').selectedOptions[0].textContent);
-  for(const [id,label]of Object.entries(labels))if(!controls.get(id).disabled&&get(id).trim())lines.push(label+(id==='deckList'?':\n':': ')+(id==='sportsBrand'?listingSportsBrandValue(get(id),get('sportsBrandCustom')):get(id)).trim());
+  for(const [id,label]of Object.entries(labels))if(id!=='deckList'&&!controls.get(id).disabled&&get(id).trim())lines.push(label+': '+(id==='sportsBrand'?listingSportsBrandValue(get(id),get('sportsBrandCustom')):get(id)).trim());
   if(cards){const setName=get('tcgCustomSet').trim()||get('tcgSet'),variant=get('tcgCustomVariant').trim()||get('tcgVariant');if(setName)lines.push('Set: '+setName);if(variant)lines.push('Variant: '+variant)}
+  // Keep the full decklist LAST so later optional set/variant metadata cannot
+  // be mistaken for card rows on edit/reopen. Existing old saves still parse.
+  if(type==='deck'&&get('deckList').trim())lines.push('Full decklist:\n'+get('deckList').trim());
   return {category,product_type:type,tcg_game:cards?get('tcgGame'):null,collectible_subcategory:category==='collectibles'?get('collectibleSubcategory'):null,condition:cards?({near_mint:'like_new',lightly_played:'used',moderately_played:'used',heavily_played:'damaged',damaged:'damaged',sealed:'new',graded:'graded'})[get('cardCondition')]:get('condition'),description:(contentsBlock?contentsBlock+'\n\n':'')+'[Listing classification]\n'+lines.join('\n')+'\n[End classification]\n\n'+strip(description)};
  }
  reset();return {reset,values,strip,preserve:listingEditorPreserveDescription,setBusy(value){busy=value;sync()}};
