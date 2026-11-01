@@ -62,3 +62,12 @@ test('Jayden: no sports product line leaks into unrelated game or TCG buyer deta
  assert.doesNotMatch(buyer({rawCategory:'trading_cards',game:'pokemon',description}), /Product line/);
  assert.match(html, /document\.getElementById\("sportsProductLine"\)\.value=""/);
 });
+
+test('Eight-type source matrix: sports detail is progressive, optional and does not add a second category', () => {
+ const choices=html.match(/<select id="listingType">([\s\S]*?)<\/select>/)?.[1] || '';
+ const types=[...choices.matchAll(/<option value="([^"]+)"/g)].map(match=>match[1]);
+ assert.equal(types.join(','), 'single,deck,lot,sealed,game,console,figure,other');
+ assert.match(html, /function toggleSportsBrand\(\)\{const sports=document\.getElementById\("category"\)\.value==="trading_cards"&&document\.getElementById\("tcgGame"\)\.value==="sports_cards"/);
+ assert.match(editor, /sports:cards&&get\('tcgGame'\)==='sports_cards'/);
+ assert.doesNotMatch(html, /document\.getElementById\("sportsProductLine"\)\.required=true/);
+});
