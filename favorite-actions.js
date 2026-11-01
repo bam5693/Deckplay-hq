@@ -16,6 +16,14 @@ window.favoriteActions=(()=>{
   const requestKey=key(id);if(pending.has(requestKey))return;
   const valid=()=>currentUser?.id===owner&&listingAccountVersion===epoch;
   const wasSaved=saved.has(id),item=items.find(x=>String(x.id)===String(id));
+  // Stale cards can remain clickable after their seller is blocked.
+  if(item?.sellerId&&blockedCollectorIds.has(item.sellerId)){
+   toast('This collector is blocked. Remove older saves from your Saved profile or unblock them in Settings.');return;
+  }
+  // Avoid a misleading optimistic heart when the device reports offline.
+  if(typeof navigator!=='undefined'&&navigator.onLine===false){
+   toast('You are offline. Reconnect, then try saving this item again.');return;
+  }
   pending.add(requestKey);pendingDesired.set(requestKey,{id:String(id),owner,epoch,save:!wasSaved});++savedListingsLoadVersion;wasSaved?saved.delete(id):saved.add(id);render();
   try{
    if(!item?.databaseId)throw Error('This item cannot be saved to your account yet. Try again.');
