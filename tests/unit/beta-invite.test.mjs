@@ -91,3 +91,12 @@ test('direct transport rejects invalid recipient before network access',async()=
  }
  assert.equal(calls,0);
 });
+
+test('malformed HTTP status cannot inject secrets into operator diagnostics',async()=>{
+ await assert.rejects(sendStagingInvite({email:'collector@example.test',key,redirectTo:redirect,
+  fetchImpl:async()=>({ok:false,status:'500 collector@example.test '+key})}),error=>{
+   assert.match(error.message,/HTTP unknown/);
+   assert.doesNotMatch(error.message,/collector|eyJ/);
+   return true;
+  });
+});
