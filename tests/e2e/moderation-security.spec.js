@@ -147,3 +147,36 @@ test('T8.2: status filter never treats the bounded report snapshot as the full q
  await expect(page.locator('[data-report-filter="resolved"]')).toBeDisabled();
  await expect(page.locator('[data-report-filter="all"]')).toHaveAttribute('aria-pressed','true');
 });
+
+test('T8.5: verified operator can prepare a safe incident handoff when report queue fails',async({page})=>{
+ await moderator(page);
+ await expect(page.locator('#reports')).toContainText('Private synthetic evidence');
+ await page.evaluate(()=>{
+  moderationFixture.rpc=async name=>{
+   moderationCalls.push(name);
+   if(name==='is_deckplay_moderator')return {data:true,error:null};
+   if(name==='moderation_report_queue')return {data:null,error:{message:'Private fixture details must never escape'}};
+   throw Error('No write RPC should be called');
+  };
+ });
+ await page.locator('#refreshReports').click();
+ await expect(page.locator('#state')).toContainText('Private report queue unavailable');
+ await expect(page.locator('#reports')).toBeEmpty();
+ await expect(page.locator('#incidentPanel')).toBeVisible();
+ await page.locator('#incidentKind').selectOption('Private moderation report queue');
+ await page.locator('#incidentImpact').selectOption('Unavailable');
+ await page.locator('#incidentPrepare').click();
+ const draft=await page.locator('#incidentSummary').inputValue();
+ expect(draft).toContain('OPERATOR INCIDENT HANDOFF (DRAFT; NOT SENT)');
+ expect(draft).toContain('Moderation queue: Unavailable');
+ expect(draft).toContain('LOCAL PREVIEW (synthetic)');
+ expect(draft).toContain('No incident was filed');
+ expect(draft).not.toContain('Private synthetic evidence');
+ expect(draft).not.toContain('Private fixture details must never escape');
+ expect(await page.evaluate(()=>moderationCalls)).not.toContain('review_deckplay_report');
+ await expect(page.locator('#incidentCopy')).toBeEnabled();
+ await page.evaluate(()=>fireModerationAuth('SIGNED_OUT',null));
+ await expect(page.locator('#incidentPanel')).toBeHidden();
+ await expect(page.locator('#incidentSummary')).toHaveValue('');
+ await expect(page.locator('#incidentCopy')).toBeDisabled();
+});
