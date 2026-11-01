@@ -16,9 +16,10 @@ window.favoriteActions=(()=>{
   const requestKey=key(id);if(pending.has(requestKey))return;
   const valid=()=>currentUser?.id===owner&&listingAccountVersion===epoch;
   const wasSaved=saved.has(id),item=items.find(x=>String(x.id)===String(id));
-  // Stale cards can remain clickable after their seller is blocked.
-  if(item?.sellerId&&blockedCollectorIds.has(item.sellerId)){
-   toast('This collector is blocked. Remove older saves from your Saved profile or unblock them in Settings.');return;
+  // A blocked seller cannot gain new saves, but an existing save must remain removable.
+  // Never trap a collector's old favorite behind the block that hid its listing.
+  if(item?.sellerId&&blockedCollectorIds.has(item.sellerId)&&!wasSaved){
+   toast('This collector is blocked. Unblock them in Settings before saving their listings.');return;
   }
   // Avoid a misleading optimistic heart when the device reports offline.
   if(typeof navigator!=='undefined'&&navigator.onLine===false){
