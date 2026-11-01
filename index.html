@@ -2476,9 +2476,9 @@ async function showPublicProfile(id){
    if(loadingMoreListings||!hasMoreListings)return;
    loadingMoreListings=true;moreListingError="";renderStorefront();
    try{
-    const {data,error}=await supabaseClient.from("listings").select("id,title,description,price,image_urls,condition,category,tcg_game,collectible_subcategory,accepts_trades,accepts_price_offers,created_at,seller_id")
+    const {data,error}=await publicProfileRead(supabaseClient.from("listings").select("id,title,description,price,image_urls,condition,category,tcg_game,collectible_subcategory,accepts_trades,accepts_price_offers,created_at,seller_id")
      .eq("seller_id",id).eq("status","active").order("created_at",{ascending:false}).order("id",{ascending:false})
-     .range(nextListingOffset,nextListingOffset+60);
+     .range(nextListingOffset,nextListingOffset+60),8000);
     if(!current())return;
     if(error)throw error;
     const page=(data||[]).slice(0,60);
