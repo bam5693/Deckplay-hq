@@ -1,0 +1,654 @@
+{
+  "version": 1,
+  "scope": "synthetic staging challenge prompts; not evidence of completed browser testing",
+  "updated": "2026-10-31",
+  "cases": [
+    {
+      "id": "pokemon-vintage-charizard",
+      "lead": "Jayden",
+      "domain": "Pokemon",
+      "goal": "Sell and locate a Base Set Charizard 4/102 holo, with printing/condition distinguished",
+      "pitfall": "A set is not a rarity or printing; a raw card is not a PSA 10",
+      "options": [
+        {
+          "field": "tcgGame",
+          "value": "pokemon"
+        },
+        {
+          "field": "tcgEra",
+          "value": "Base / Classic",
+          "game": "pokemon"
+        },
+        {
+          "field": "tcgSet",
+          "value": "Base Set",
+          "game": "pokemon",
+          "era": "Base / Classic"
+        },
+        {
+          "field": "marketGame",
+          "value": "pokemon"
+        }
+      ],
+      "journey": [
+        "seller selects correct classification without duplicate decisions",
+        "seller publishes with accurate identity and previews full details",
+        "buyer finds exact item using terms in goal and category filters",
+        "buyer sees correct brand, set, variant and condition",
+        "buyer opens listing and contacts seller or initiates permitted offer/trade",
+        "seller edits and buyer sees updated details on mobile and desktop"
+      ],
+      "negative": [
+        "empty search and back navigation",
+        "wrong account or stale listing",
+        "mobile dark mode and long controls"
+      ]
+    },
+    {
+      "id": "pokemon-151-sealed",
+      "lead": "Jayden",
+      "domain": "Pokemon",
+      "goal": "Sell and search for a Pokemon 151 Elite Trainer Box rather than a loose single",
+      "pitfall": "Sealed product needs its own product type; no irrelevant card-grade prompts",
+      "options": [
+        {
+          "field": "tcgGame",
+          "value": "pokemon"
+        },
+        {
+          "field": "tcgSet",
+          "value": "151",
+          "game": "pokemon",
+          "era": "Scarlet & Violet"
+        },
+        {
+          "field": "listingType",
+          "value": "sealed"
+        },
+        {
+          "field": "marketGame",
+          "value": "pokemon"
+        }
+      ],
+      "journey": [
+        "seller selects correct classification without duplicate decisions",
+        "seller publishes with accurate identity and previews full details",
+        "buyer finds exact item using terms in goal and category filters",
+        "buyer sees correct brand, set, variant and condition",
+        "buyer opens listing and contacts seller or initiates permitted offer/trade",
+        "seller edits and buyer sees updated details on mobile and desktop"
+      ],
+      "negative": [
+        "empty search and back navigation",
+        "wrong account or stale listing",
+        "mobile dark mode and long controls"
+      ]
+    },
+    {
+      "id": "one-piece-op17-parallel",
+      "lead": "Jayden",
+      "domain": "One Piece",
+      "goal": "List and find an OP-17 card by card number and parallel printing",
+      "pitfall": "OP-17 and OP17 should match; parallel is not a new set",
+      "options": [
+        {
+          "field": "tcgGame",
+          "value": "one_piece"
+        },
+        {
+          "field": "tcgSet",
+          "value": "OP-17",
+          "game": "one_piece",
+          "era": "Main booster sets"
+        },
+        {
+          "field": "marketGame",
+          "value": "one_piece"
+        }
+      ],
+      "journey": [
+        "seller selects correct classification without duplicate decisions",
+        "seller publishes with accurate identity and previews full details",
+        "buyer finds exact item using terms in goal and category filters",
+        "buyer sees correct brand, set, variant and condition",
+        "buyer opens listing and contacts seller or initiates permitted offer/trade",
+        "seller edits and buyer sees updated details on mobile and desktop"
+      ],
+      "negative": [
+        "empty search and back navigation",
+        "wrong account or stale listing",
+        "mobile dark mode and long controls"
+      ]
+    },
+    {
+      "id": "one-piece-starter-deck",
+      "lead": "Jayden",
+      "domain": "One Piece",
+      "goal": "List and find a sealed ST-31 or newer starter deck",
+      "pitfall": "ST starter deck must not be misclassified as main booster OP set",
+      "options": [
+        {
+          "field": "tcgGame",
+          "value": "one_piece"
+        },
+        {
+          "field": "tcgSet",
+          "value": "ST-31 and later",
+          "game": "one_piece",
+          "era": "Starter decks"
+        },
+        {
+          "field": "listingType",
+          "value": "sealed"
+        }
+      ],
+      "journey": [
+        "seller selects correct classification without duplicate decisions",
+        "seller publishes with accurate identity and previews full details",
+        "buyer finds exact item using terms in goal and category filters",
+        "buyer sees correct brand, set, variant and condition",
+        "buyer opens listing and contacts seller or initiates permitted offer/trade",
+        "seller edits and buyer sees updated details on mobile and desktop"
+      ],
+      "negative": [
+        "empty search and back navigation",
+        "wrong account or stale listing",
+        "mobile dark mode and long controls"
+      ]
+    },
+    {
+      "id": "magic-booster",
+      "lead": "Jayden",
+      "domain": "Other TCG",
+      "goal": "Find a Magic: The Gathering sealed booster product and exact set",
+      "pitfall": "Do not fall back to Generic TCG when game is popular; verify set input without dropdown explosion",
+      "options": [
+        {
+          "field": "tcgGame",
+          "value": "magic"
+        },
+        {
+          "field": "listingType",
+          "value": "sealed"
+        },
+        {
+          "field": "marketGame",
+          "value": "magic"
+        }
+      ],
+      "journey": [
+        "seller selects correct classification without duplicate decisions",
+        "seller publishes with accurate identity and previews full details",
+        "buyer finds exact item using terms in goal and category filters",
+        "buyer sees correct brand, set, variant and condition",
+        "buyer opens listing and contacts seller or initiates permitted offer/trade",
+        "seller edits and buyer sees updated details on mobile and desktop"
+      ],
+      "negative": [
+        "empty search and back navigation",
+        "wrong account or stale listing",
+        "mobile dark mode and long controls"
+      ]
+    },
+    {
+      "id": "gundam-single",
+      "lead": "Jayden",
+      "domain": "Other TCG",
+      "goal": "Find a Gundam card by set/code/printing",
+      "pitfall": "Card number, rarity and parallel should remain distinct",
+      "options": [
+        {
+          "field": "tcgGame",
+          "value": "gundam"
+        },
+        {
+          "field": "marketGame",
+          "value": "gundam"
+        }
+      ],
+      "journey": [
+        "seller selects correct classification without duplicate decisions",
+        "seller publishes with accurate identity and previews full details",
+        "buyer finds exact item using terms in goal and category filters",
+        "buyer sees correct brand, set, variant and condition",
+        "buyer opens listing and contacts seller or initiates permitted offer/trade",
+        "seller edits and buyer sees updated details on mobile and desktop"
+      ],
+      "negative": [
+        "empty search and back navigation",
+        "wrong account or stale listing",
+        "mobile dark mode and long controls"
+      ]
+    },
+    {
+      "id": "dragon-ball-fusion-world",
+      "lead": "Jayden",
+      "domain": "Other TCG",
+      "goal": "Find a Dragon Ball Super Fusion World card instead of another Dragon Ball line",
+      "pitfall": "Different product lines may share a franchise name; verify identification",
+      "options": [
+        {
+          "field": "tcgGame",
+          "value": "dragon_ball"
+        },
+        {
+          "field": "marketGame",
+          "value": "dragon_ball"
+        }
+      ],
+      "journey": [
+        "seller selects correct classification without duplicate decisions",
+        "seller publishes with accurate identity and previews full details",
+        "buyer finds exact item using terms in goal and category filters",
+        "buyer sees correct brand, set, variant and condition",
+        "buyer opens listing and contacts seller or initiates permitted offer/trade",
+        "seller edits and buyer sees updated details on mobile and desktop"
+      ],
+      "negative": [
+        "empty search and back navigation",
+        "wrong account or stale listing",
+        "mobile dark mode and long controls"
+      ]
+    },
+    {
+      "id": "fleer-baseball-vintage",
+      "lead": "Tanner",
+      "domain": "Sports baseball",
+      "goal": "Sell and find a 1981 Fleer baseball single by player, year and card number",
+      "pitfall": "Fleer publisher versus a product or set; buyer should narrow to baseball",
+      "options": [
+        {
+          "field": "tcgGame",
+          "value": "sports_cards"
+        },
+        {
+          "field": "sportsBrand",
+          "value": "Fleer"
+        },
+        {
+          "field": "sportsSport",
+          "value": "Baseball"
+        },
+        {
+          "field": "marketGame",
+          "value": "sports_cards"
+        }
+      ],
+      "journey": [
+        "seller selects correct classification without duplicate decisions",
+        "seller publishes with accurate identity and previews full details",
+        "buyer finds exact item using terms in goal and category filters",
+        "buyer sees correct brand, set, variant and condition",
+        "buyer opens listing and contacts seller or initiates permitted offer/trade",
+        "seller edits and buyer sees updated details on mobile and desktop"
+      ],
+      "negative": [
+        "empty search and back navigation",
+        "wrong account or stale listing",
+        "mobile dark mode and long controls"
+      ]
+    },
+    {
+      "id": "panini-football-prizm",
+      "lead": "Tanner",
+      "domain": "Sports football",
+      "goal": "List and find a Panini Prizm football rookie numbered parallel",
+      "pitfall": "Panini manufacturer vs Prizm product line; year, variant, serial number distinct",
+      "options": [
+        {
+          "field": "sportsBrand",
+          "value": "Panini"
+        },
+        {
+          "field": "sportsProductLine",
+          "value": "Prizm"
+        },
+        {
+          "field": "sportsSport",
+          "value": "Football"
+        }
+      ],
+      "journey": [
+        "seller selects correct classification without duplicate decisions",
+        "seller publishes with accurate identity and previews full details",
+        "buyer finds exact item using terms in goal and category filters",
+        "buyer sees correct brand, set, variant and condition",
+        "buyer opens listing and contacts seller or initiates permitted offer/trade",
+        "seller edits and buyer sees updated details on mobile and desktop"
+      ],
+      "negative": [
+        "empty search and back navigation",
+        "wrong account or stale listing",
+        "mobile dark mode and long controls"
+      ]
+    },
+    {
+      "id": "basketball-select",
+      "lead": "Tanner",
+      "domain": "Sports basketball",
+      "goal": "Find a basketball Panini Select parallel in a specific year",
+      "pitfall": "Select is product line, not manufacturer; sport filters matter",
+      "options": [
+        {
+          "field": "sportsBrand",
+          "value": "Panini"
+        },
+        {
+          "field": "sportsProductLine",
+          "value": "Select"
+        },
+        {
+          "field": "sportsSport",
+          "value": "Basketball"
+        }
+      ],
+      "journey": [
+        "seller selects correct classification without duplicate decisions",
+        "seller publishes with accurate identity and previews full details",
+        "buyer finds exact item using terms in goal and category filters",
+        "buyer sees correct brand, set, variant and condition",
+        "buyer opens listing and contacts seller or initiates permitted offer/trade",
+        "seller edits and buyer sees updated details on mobile and desktop"
+      ],
+      "negative": [
+        "empty search and back navigation",
+        "wrong account or stale listing",
+        "mobile dark mode and long controls"
+      ]
+    },
+    {
+      "id": "opc-hockey-vintage",
+      "lead": "Tanner",
+      "domain": "Sports hockey",
+      "goal": "List and find 1983-84 O-Pee-Chee hockey card by number",
+      "pitfall": "Do not assign a vintage O-Pee-Chee card to modern Upper Deck merely because it owns modern rights",
+      "options": [
+        {
+          "field": "tcgGame",
+          "value": "sports_cards"
+        },
+        {
+          "field": "sportsSport",
+          "value": "Hockey"
+        },
+        {
+          "field": "sportsProductLine",
+          "value": "O-Pee-Chee"
+        }
+      ],
+      "journey": [
+        "seller selects correct classification without duplicate decisions",
+        "seller publishes with accurate identity and previews full details",
+        "buyer finds exact item using terms in goal and category filters",
+        "buyer sees correct brand, set, variant and condition",
+        "buyer opens listing and contacts seller or initiates permitted offer/trade",
+        "seller edits and buyer sees updated details on mobile and desktop"
+      ],
+      "negative": [
+        "empty search and back navigation",
+        "wrong account or stale listing",
+        "mobile dark mode and long controls"
+      ]
+    },
+    {
+      "id": "opc-hockey-modern",
+      "lead": "Tanner",
+      "domain": "Sports hockey",
+      "goal": "Find a modern Upper Deck O-Pee-Chee hockey release",
+      "pitfall": "Upper Deck is the manufacturer and O-Pee-Chee is the product brand",
+      "options": [
+        {
+          "field": "sportsBrand",
+          "value": "Upper Deck"
+        },
+        {
+          "field": "sportsSport",
+          "value": "Hockey"
+        },
+        {
+          "field": "sportsProductLine",
+          "value": "O-Pee-Chee"
+        }
+      ],
+      "journey": [
+        "seller selects correct classification without duplicate decisions",
+        "seller publishes with accurate identity and previews full details",
+        "buyer finds exact item using terms in goal and category filters",
+        "buyer sees correct brand, set, variant and condition",
+        "buyer opens listing and contacts seller or initiates permitted offer/trade",
+        "seller edits and buyer sees updated details on mobile and desktop"
+      ],
+      "negative": [
+        "empty search and back navigation",
+        "wrong account or stale listing",
+        "mobile dark mode and long controls"
+      ]
+    },
+    {
+      "id": "topps-soccer",
+      "lead": "Tanner",
+      "domain": "Sports soccer",
+      "goal": "Search for a Topps Chrome soccer parallel by year and player",
+      "pitfall": "Chrome product brand should not replace manufacturer Topps",
+      "options": [
+        {
+          "field": "sportsBrand",
+          "value": "Topps"
+        },
+        {
+          "field": "sportsSport",
+          "value": "Soccer"
+        },
+        {
+          "field": "sportsProductLine",
+          "value": "Chrome"
+        }
+      ],
+      "journey": [
+        "seller selects correct classification without duplicate decisions",
+        "seller publishes with accurate identity and previews full details",
+        "buyer finds exact item using terms in goal and category filters",
+        "buyer sees correct brand, set, variant and condition",
+        "buyer opens listing and contacts seller or initiates permitted offer/trade",
+        "seller edits and buyer sees updated details on mobile and desktop"
+      ],
+      "negative": [
+        "empty search and back navigation",
+        "wrong account or stale listing",
+        "mobile dark mode and long controls"
+      ]
+    },
+    {
+      "id": "racing-card",
+      "lead": "Tanner",
+      "domain": "Sports racing",
+      "goal": "Find a racing trading card without classifying it as football or Other TCG",
+      "pitfall": "Sports outside the big four should still have a sensible sport",
+      "options": [
+        {
+          "field": "tcgGame",
+          "value": "sports_cards"
+        },
+        {
+          "field": "sportsSport",
+          "value": "Racing"
+        }
+      ],
+      "journey": [
+        "seller selects correct classification without duplicate decisions",
+        "seller publishes with accurate identity and previews full details",
+        "buyer finds exact item using terms in goal and category filters",
+        "buyer sees correct brand, set, variant and condition",
+        "buyer opens listing and contacts seller or initiates permitted offer/trade",
+        "seller edits and buyer sees updated details on mobile and desktop"
+      ],
+      "negative": [
+        "empty search and back navigation",
+        "wrong account or stale listing",
+        "mobile dark mode and long controls"
+      ]
+    },
+    {
+      "id": "switch2-game",
+      "lead": "Jayden",
+      "domain": "Video games",
+      "goal": "Sell a Nintendo Switch 2 game complete in box; buyer searches platform and edition",
+      "pitfall": "Game platform and game format should not ask the user to pick Console again",
+      "options": [
+        {
+          "field": "listingType",
+          "value": "game"
+        },
+        {
+          "field": "gamePlatform",
+          "value": "Nintendo Switch 2"
+        },
+        {
+          "field": "marketCategory",
+          "value": "Video Games"
+        }
+      ],
+      "journey": [
+        "seller selects correct classification without duplicate decisions",
+        "seller publishes with accurate identity and previews full details",
+        "buyer finds exact item using terms in goal and category filters",
+        "buyer sees correct brand, set, variant and condition",
+        "buyer opens listing and contacts seller or initiates permitted offer/trade",
+        "seller edits and buyer sees updated details on mobile and desktop"
+      ],
+      "negative": [
+        "empty search and back navigation",
+        "wrong account or stale listing",
+        "mobile dark mode and long controls"
+      ]
+    },
+    {
+      "id": "retro-nintendo-game",
+      "lead": "Jayden",
+      "domain": "Video games",
+      "goal": "List a Super Nintendo cartridge-only game, and let buyer find it by SNES",
+      "pitfall": "Super Nintendo and SNES need aliases; game completeness matters",
+      "options": [
+        {
+          "field": "gamePlatform",
+          "value": "Super Nintendo"
+        },
+        {
+          "field": "listingType",
+          "value": "game"
+        }
+      ],
+      "journey": [
+        "seller selects correct classification without duplicate decisions",
+        "seller publishes with accurate identity and previews full details",
+        "buyer finds exact item using terms in goal and category filters",
+        "buyer sees correct brand, set, variant and condition",
+        "buyer opens listing and contacts seller or initiates permitted offer/trade",
+        "seller edits and buyer sees updated details on mobile and desktop"
+      ],
+      "negative": [
+        "empty search and back navigation",
+        "wrong account or stale listing",
+        "mobile dark mode and long controls"
+      ]
+    },
+    {
+      "id": "xbox-console-hardware",
+      "lead": "Jayden",
+      "domain": "Hardware",
+      "goal": "List Xbox Series X console and locate by console model and condition",
+      "pitfall": "Xbox is brand/family, Series X is model; accessories should not be grouped as consoles",
+      "options": [
+        {
+          "field": "listingType",
+          "value": "console"
+        },
+        {
+          "field": "consoleBrand",
+          "value": "Microsoft Xbox"
+        },
+        {
+          "field": "consoleModel",
+          "value": "Xbox Series X"
+        }
+      ],
+      "journey": [
+        "seller selects correct classification without duplicate decisions",
+        "seller publishes with accurate identity and previews full details",
+        "buyer finds exact item using terms in goal and category filters",
+        "buyer sees correct brand, set, variant and condition",
+        "buyer opens listing and contacts seller or initiates permitted offer/trade",
+        "seller edits and buyer sees updated details on mobile and desktop"
+      ],
+      "negative": [
+        "empty search and back navigation",
+        "wrong account or stale listing",
+        "mobile dark mode and long controls"
+      ]
+    },
+    {
+      "id": "aftermarket-controller",
+      "lead": "Jayden",
+      "domain": "Hardware",
+      "goal": "List third-party controller with compatible console, connection type and included parts",
+      "pitfall": "Brand of accessory differs from compatible platform; no console-only fields",
+      "options": [
+        {
+          "field": "listingType",
+          "value": "console"
+        },
+        {
+          "field": "consoleItemType",
+          "value": "Controller"
+        },
+        {
+          "field": "consoleAccessoryBrand",
+          "value": "Third-party"
+        }
+      ],
+      "journey": [
+        "seller selects correct classification without duplicate decisions",
+        "seller publishes with accurate identity and previews full details",
+        "buyer finds exact item using terms in goal and category filters",
+        "buyer sees correct brand, set, variant and condition",
+        "buyer opens listing and contacts seller or initiates permitted offer/trade",
+        "seller edits and buyer sees updated details on mobile and desktop"
+      ],
+      "negative": [
+        "empty search and back navigation",
+        "wrong account or stale listing",
+        "mobile dark mode and long controls"
+      ]
+    },
+    {
+      "id": "anime-figure",
+      "lead": "Tanner",
+      "domain": "Collectibles",
+      "goal": "List a sealed anime figure with manufacturer, series, scale and box condition",
+      "pitfall": "A figure is not a trading card; no irrelevant card condition or grading",
+      "options": [
+        {
+          "field": "listingType",
+          "value": "figure"
+        },
+        {
+          "field": "collectibleSubcategory",
+          "value": "figures_statues"
+        }
+      ],
+      "journey": [
+        "seller selects correct classification without duplicate decisions",
+        "seller publishes with accurate identity and previews full details",
+        "buyer finds exact item using terms in goal and category filters",
+        "buyer sees correct brand, set, variant and condition",
+        "buyer opens listing and contacts seller or initiates permitted offer/trade",
+        "seller edits and buyer sees updated details on mobile and desktop"
+      ],
+      "negative": [
+        "empty search and back navigation",
+        "wrong account or stale listing",
+        "mobile dark mode and long controls"
+      ]
+    }
+  ]
+}
