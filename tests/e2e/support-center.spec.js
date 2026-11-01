@@ -1456,3 +1456,16 @@ test('T8.3 staff queue supports oldest waiting first with server pagination and 
  await expect(sorter).toHaveValue('newest');
  await expect(page.locator('#supportTicketList button').first()).toContainText('Sort queue 46');
 });
+
+test('T8.3: private reply length indicator follows draft and resets after send',async({page})=>{
+ await boot(page);await signIn(page,'buyer');
+ await page.getByRole('button',{name:'Help & support'}).last().click();
+ await page.locator('#supportSubject').fill('Question about a collectible listing');
+ await page.locator('#supportDescription').fill('Synthetic support request for a collectible listing and follow-up.');
+ await page.getByRole('button',{name:'Create private ticket'}).click();
+ await expect(page.locator('#supportReplyCount')).toHaveText('0 / 3000 characters');
+ await page.locator('#supportReplyBody').fill('A short follow-up');
+ await expect(page.locator('#supportReplyCount')).toHaveText('17 / 3000 characters');
+ await page.getByRole('button',{name:'Send reply'}).click();
+ await expect(page.locator('#supportReplyCount')).toHaveText('0 / 3000 characters');
+});
