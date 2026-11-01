@@ -75,3 +75,12 @@
 | P0 | Multiple generated classification blocks: sports buyer filters and detail previously used **first** instead of current last; O-Pee-Chee hockey correction could display Fleer | Trunk 1 | `tests/security/trunk1-latest-classification.test.cjs`; Tanner old/new brand and year, blank brand | **Branch fix; V8 synthetic PASS; signed staging/UX UNKNOWN** |
 | P0 | Pokémon corrected Base Set 4/102 → 151 199/165: buyer detail could show first old block | Trunk 1 | Same focused regression; Jayden exact number/set buyer detail | **Branch fix; V8 synthetic PASS; signed staging/UX UNKNOWN** |
 | P1 | Editor reopening multiple historical classification blocks could rehydrate stale condition | Trunk 1 | Latest-block helper + fallback source guard; actual edit/reopen browser not run | **Branch fix; UI NOT VERIFIED** |
+
+## 2026-11-01 05:30 CST — repeated seller edit metadata gap
+
+| Priority | Collector mission / impact | Owner | Focused check | Status |
+|---|---|---|---|---|
+| P0 | Tanner edits 1981 Fleer to 1983–84 O-Pee-Chee twice: old generated classification remained visible in seller notes and could be republished. | T1 | `trunk1-editor-repeated-edits.test.cjs`: note stripping, latest classification, preserved quantity | **FIXED ON BRANCH** [316934b](https://github.com/bam5693/Deckplay-hq/commit/316934b8026b8523ca14adca0e906dadb56699b7), 5/5 V8 harness; signed buyer **UNKNOWN** |
+| P0 | Jayden edits deck quantities twice: reopening used first historical decklist rather than latest. | T1 | Same focused test: latest 3x/1x, not old 4x | **FIXED ON BRANCH** [f82e5cf](https://github.com/bam5693/Deckplay-hq/commit/f82e5cf885be9dda04e8dc8a3e2877b72dff244c); rendered mobile **UNKNOWN** |
+
+**SCREENSHOT REGRESSION / UX:** Owner atlas 33652/33666/33662 are related seeds only; original JPG pixels unavailable. Tanner and Jayden were developer-authored source challenges, not independent reviewers. Native Node, mobile light/dark screenshot inspection, real signed publish/edit/buyer readback, offline/wrong-account, physical Android and private staging parity **NOT VERIFIED**. **UX BLOCKED**; T1.3–T1.6 not accepted. PR #30's missing O-Pee-Chee catalog option remains a separate candidate, not live. [PR #25](https://github.com/bam5693/Deckplay-hq/pull/25) awaits manual G integration; production untouched.
