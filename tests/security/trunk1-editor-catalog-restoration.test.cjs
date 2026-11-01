@@ -46,7 +46,7 @@ function mount(description,game='pokemon'){
  };
  const ctx={window:{},document:doc,deckplaySets:catalog,deckplayVariants:variants,
   deckplayFillOptions(el,values,placeholder){el.options=[{value:'',textContent:placeholder},...values.map(value=>({value,textContent:value}))];el.value=''},
-  listingContentsBlock(){return ''},deckQuantitySummary(){return {complete:true,invalid:false,total:0}}
+  listingContentsBlock(){return ''},readListingContents(){return {quantity:'',unit:'',contents:''}},deckQuantitySummary(){return {complete:true,invalid:false,total:0}}
  };
  vm.runInNewContext(source,ctx);
  const editor=ctx.window.createListingEditorClassification(container,{});
@@ -56,7 +56,7 @@ function mount(description,game='pokemon'){
  const change=(id,value)=>{const el=control(id);el.value=value;fields.change({target:el})};
  return {editor,control,change};
 }
-const block=lines=>'[Listing classification]\\n'+lines.join('\\n')+'\\n[End classification]';
+const block=lines=>'[Listing classification]\n'+lines.join('\n')+'\n[End classification]';
 
 test('Jayden: known Pokémon set and variant reopen as selects, not hidden custom overrides',()=>{
  const ui=mount(block(['Era: Scarlet & Violet','Set: 151','Variant: Special Illustration Rare']));
