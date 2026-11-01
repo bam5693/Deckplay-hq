@@ -45,6 +45,7 @@ test('Jayden and Tanner: corrected Dreamcast/7800 edits remain exact in buyer se
   }
   assert.equal(platform('Platform: Sega'), 'Sega', 'Never invent Genesis for an old generic Sega listing');
   assert.equal(platform('Platform: Atari'), 'Atari', 'Never invent 2600 for an old generic Atari listing');
-  assert.match(editor, /set\('gamePlatform',line\('Platform'\)\)/,
-    'Seller editor must restore the saved platform rather than resetting to generic');
+  assert.match(editor, /\['gamePlatform','Platform'\]/, 'Platform must be in the editor restore mapping');
+  assert.match(editor, /set\(id,line\(label\)\)/,
+    'Seller editor must restore mapped values from the latest saved classification');
 });
