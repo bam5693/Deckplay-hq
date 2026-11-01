@@ -186,3 +186,24 @@ test('saved profile tab offers an inline retry after an offline read',async({pag
  await expect(page.locator('[data-retry-profile-saved]')).toHaveCount(0);
  expect(await page.evaluate(()=>profileSavedReads)).toBe(2);
 });
+
+test('saved profile fails closed if blocked collectors cannot be checked',async({page})=>{
+ await fixture(page);
+ await page.evaluate(()=>{
+  window.privateSavedReads=0;sellerRatingHtml=async()=>'';
+  supabaseClient.from=table=>{
+   const q={select:()=>q,eq:()=>q,order:()=>q,in:()=>q,then:(resolve,reject)=>{
+    if(table==='saved_listings')privateSavedReads++;
+    const response=table==='user_blocks'?{data:null,error:{message:'Offline'}}:table==='saved_listings'?{data:[{listing_id:'private-card'}],error:null}:table==='listings'?{data:[{id:'private-card',title:'Blocked seller sports card',price:80,status:'active',seller_id:'blocked-seller',image_urls:[]}],error:null}:{data:[],error:null};
+    return Promise.resolve(response).then(resolve,reject);
+   }};
+   q.maybeSingle=async()=>({data:{username:'jayden'},error:null});
+   return q;
+  };
+  return showCollectorPage('saved');
+ });
+ await expect(page.locator('#profilePageContent')).toContainText('Could not verify blocked collectors');
+ await expect(page.locator('#profilePageContent')).not.toContainText('Blocked seller sports card');
+ await expect(page.locator('[data-retry-profile-saved]')).toBeVisible();
+ expect(await page.evaluate(()=>privateSavedReads)).toBe(0);
+});
