@@ -261,3 +261,53 @@ test('T8.4: private review history is MFA-scoped, readable and cleared on accoun
  await expect(page.locator('body')).not.toContainText('Former account secret must not render');
  await expect(page.locator('#state')).toContainText('Sign in');
 });
+
+test('T8.4: private appeal snapshot uses staff RLS, handles failure and scrubs stale replies',async({page})=>{
+ await moderator(page);
+ await expect(page.locator('#reports')).toContainText('Private synthetic evidence');
+ await expect(page.locator('#appealsPanel')).toBeVisible();
+ await page.evaluate(()=>{
+  window.appealMode='ok';window.appealQuery=[];
+  window.appealRows=[{id:'fixture-appeal',status:'waiting_on_staff',created_at:'2026-11-01T15:00:00Z',updated_at:'2026-11-01T18:30:00Z',body:'PRIVATE TICKET BODY MUST NOT RENDER',owner_id:'private-owner'}];
+  moderationFixture.from=table=>{
+   appealQuery.push(['from',table]);
+   return {select(columns){
+    appealQuery.push(['select',columns]);
+    return {eq(k,v){appealQuery.push(['eq',k,v]);return this},
+     neq(k,v){appealQuery.push(['neq',k,v]);return this},
+     order(k,options){appealQuery.push(['order',k,options.ascending]);return this},
+     limit(n){appealQuery.push(['limit',n]);
+      if(appealMode==='error')return Promise.resolve({data:null,error:{message:'Private SQL details must not display'}});
+      if(appealMode==='pending')return new Promise(resolve=>window.finishAppeal=resolve);
+      return Promise.resolve({data:appealRows,error:null});
+     }};
+   }};
+  };
+ });
+ await page.locator('#appealsRefresh').click();
+ await expect(page.locator('#appealsStatus')).toContainText('Showing 1 active moderation appeal');
+ await expect(page.locator('#appealsList')).toContainText('Waiting for staff');
+ await expect(page.locator('#appealsList')).toContainText('2026-11-01 18:30 UTC');
+ await expect(page.locator('#appealsPanel')).not.toContainText('PRIVATE TICKET BODY MUST NOT RENDER');
+ expect(await page.evaluate(()=>appealQuery)).toEqual([
+  ['from','support_tickets'],['select','id,status,created_at,updated_at'],
+  ['eq','category','safety'],['eq','subject','Request a moderation review'],
+  ['neq','status','resolved'],['order','updated_at',false],['limit',21]
+ ]);
+ await page.evaluate(()=>{appealMode='error'});
+ await page.locator('#appealsRefresh').click();
+ await expect(page.locator('#appealsStatus')).toContainText('unavailable. Refresh appeals to retry.');
+ await expect(page.locator('#appealsStatus')).not.toContainText('Private SQL details');
+ await expect(page.locator('#appealsList')).toBeEmpty();
+ await page.evaluate(()=>{appealMode='pending'});
+ await page.locator('#appealsRefresh').click();
+ await expect.poll(()=>page.evaluate(()=>typeof finishAppeal)).toBe('function');
+ await page.evaluate(()=>{
+  fireModerationAuth('SIGNED_OUT',null);
+  finishAppeal({data:[{id:'late',status:'open',updated_at:'2026-11-01T20:00:00Z',body:'STALE ACCOUNT SECRET'}],error:null});
+ });
+ await expect(page.locator('#appealsPanel')).toBeHidden();
+ await expect(page.locator('#appealsList')).toBeEmpty();
+ await expect(page.locator('body')).not.toContainText('STALE ACCOUNT SECRET');
+ await expect(page.locator('#reports')).toBeEmpty();
+});
