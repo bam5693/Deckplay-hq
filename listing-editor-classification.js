@@ -41,8 +41,13 @@ function listingEditorLatestDeckList(description){
   // inside a decklist are meaningful separators, not an end marker.
   return match[1].replace(/(?:\n(?:Set|Variant):[^\n]*)+\s*$/,"").trim();
  }
- // Original published decks separated the list from subsequent disclosure
- // blocks with a blank paragraph. Preserve that legacy boundary.
+ // A published deck can contain blank lines between groups of cards.
+ // Stop only at the next app-generated disclosure marker, not the first
+ // blank line; otherwise the first edit silently loses later card groups.
+ const boundary=match[1].search(/\n\n\[(?:Card Condition|Graded Card)\]\n/);
+ if(boundary>=0)return match[1].slice(0,boundary).trim();
+ // For malformed/older unmarked descriptions, retain the conservative
+ // legacy fallback rather than consuming arbitrary seller-authored prose.
  return match[1].split(/\n\n/)[0].trim();
 }
 // Preserve the current public classification and quantity disclosure when
