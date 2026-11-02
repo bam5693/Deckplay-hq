@@ -1,0 +1,21 @@
+name: Trunk 1 current seller metadata buyer readback (cheap)
+on:
+  push:
+    branches: [dev/hourly-trunk1]
+    paths:
+      - 'tests/security/trunk1-current-metadata.test.cjs'
+      - '.github/workflows/trunk1-current-metadata-focused.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  current-metadata:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Current edited seller metadata in buyer search and details
+        run: node --test tests/security/trunk1-current-metadata.test.cjs

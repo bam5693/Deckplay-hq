@@ -1,0 +1,33 @@
+name: Trunk 1 buyer gallery recovery focused checks
+on:
+  push:
+    branches: [dev/hourly-trunk1]
+    paths:
+      - 'index.html'
+      - 'tests/e2e/listing-gallery.spec.js'
+      - '.github/workflows/trunk1-gallery-focused.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  buyer-gallery:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Cheap syntax and inline source preflight
+        run: |
+          node --check tests/e2e/listing-gallery.spec.js
+          node scripts/check-inline-js.cjs
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: staging-playwright-${{ hashFiles('package-lock.json') }}
+      - run: npx playwright install chromium --only-shell
+      - name: Three buyer gallery scenarios on desktop and mobile emulation
+        run: npx playwright test --config=playwright.local.config.js tests/e2e/listing-gallery.spec.js --retries=0 --timeout=20000

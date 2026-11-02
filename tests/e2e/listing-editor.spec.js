@@ -83,6 +83,66 @@ test('editing bundle quantities replaces structured contents and keeps seller di
  await page.evaluate(()=>finishEdit({data:{id:'edit-item'},error:null}));
 });
 
+test('T1.4 seller deck edits reject incomplete and mismatched card counts before writing',async({page})=>{
+ await fixture(page);
+ await page.evaluate(async()=>{
+  editRow={...editRow,category:'trading_cards',product_type:'deck',tcg_game:'one_piece',condition:'used',
+   description:'[Listing classification]\nCard condition: Lightly Played\nDeck: Captain\nCards: 5\nFull decklist:\n4x Card A\nCard B\n[End classification]\n\nSeller discloses edge wear.'};
+  await listingEditor.open('edit-item');
+ });
+ await page.locator('#editListingClassification summary').click();
+ await page.locator('#editClassificationEnabled').check();
+ await page.locator('#editAttribute_deckLeader').fill('Captain');
+ await page.locator('#editAttribute_deckCardCount').fill('5');
+ await page.locator('#editAttribute_deckList').fill('4x Card A\nCard B');
+ await page.locator('#saveListingEdits').click();
+ await expect(page.locator('#editListingStatus')).toContainText('Every decklist line needs a valid quantity');
+ expect(await page.evaluate(()=>editWrites.length)).toBe(0);
+ await page.locator('#editAttribute_deckList').fill('4x Card A\n2x Card B');
+ await page.locator('#saveListingEdits').click();
+ await expect(page.locator('#editListingStatus')).toContainText('Deck quantities total 6 cards but the stated total is 5');
+ expect(await page.evaluate(()=>editWrites.length)).toBe(0);
+ await page.locator('#editAttribute_deckList').fill('4x Card A\n1x Card B');
+ await page.locator('#saveListingEdits').click();
+ await expect.poll(()=>page.evaluate(()=>editWrites.length)).toBe(1);
+ const saved=await page.evaluate(()=>editWrites[0]);
+ expect(saved.description).toContain('Cards: 5');
+ expect(saved.description).toContain('4x Card A\n1x Card B');
+ expect(saved.description).toContain('Seller discloses edge wear.');
+ await page.evaluate(()=>finishEdit({data:{id:'edit-item'},error:null}));
+});
+
+test('T1.3 latest edited classification wins over stale legacy card condition, set and variant',async({page})=>{
+ await fixture(page);
+ await page.evaluate(async()=>{
+  editRow={...editRow,category:'trading_cards',product_type:'single',tcg_game:'one_piece',condition:'used',
+   description:'[Card Condition]\nNear Mint\n\nSet: Old Release\nVariant: Original Art\n\n[Listing classification]\nCard condition: Lightly Played\nEra: Main booster sets\nSet: Current Release\nVariant: Alternate Art\nCard number: 007\nEdition / printing: Second printing\n[End classification]\n\nTiny surface scratch disclosed.'};
+  await listingEditor.open('edit-item');
+ });
+ await page.locator('#editListingClassification summary').click();
+ await page.locator('#editClassificationEnabled').check();
+ await expect(page.locator('#editAttribute_cardCondition')).toHaveValue('lightly_played');
+ await expect(page.locator('#editAttribute_tcgEra')).toHaveValue('Main booster sets');
+ await expect(page.locator('#editAttribute_tcgCustomSet')).toHaveValue('Current Release');
+ await expect(page.locator('#editAttribute_tcgCustomVariant')).toHaveValue('Alternate Art');
+ await expect(page.locator('#editAttribute_tcgCardNumber')).toHaveValue('007');
+ await page.locator('#editAttribute_tcgCardNumber').fill('008');
+ await page.locator('#saveListingEdits').click();
+ await expect.poll(()=>page.evaluate(()=>editWrites.length)).toBe(1);
+ const changes=await page.evaluate(()=>editWrites[0]);
+ expect(changes.condition).toBe('used');
+ const block=changes.description.match(/\[Listing classification\]\n([\s\S]*?)\n\[End classification\]/)?.[1];
+ expect(block).toContain('Card condition: Lightly Played');
+ expect(block).toContain('Era: Main booster sets');
+ expect(block).toContain('Set: Current Release');
+ expect(block).toContain('Variant: Alternate Art');
+ expect(block).toContain('Card number: 008');
+ expect(block).toContain('Edition / printing: Second printing');
+ expect(block).not.toContain('Card condition: Near Mint');
+ expect(changes.description).toContain('Tiny surface scratch disclosed.');
+ await page.evaluate(()=>finishEdit({data:{id:'edit-item'},error:null}));
+});
+
 test('sports listing editor restores original sport, brand, year and player and saves exact changes',async({page})=>{
  await fixture(page);await page.evaluate(async()=>{editRow={...editRow,category:'trading_cards',product_type:'single',tcg_game:'sports_cards',condition:'used',description:'[Sports Cards]\nSport: Football\nBrand: Panini\nYear: 2024\nPlayer: Original player\nSurface scratch disclosed'};await listingEditor.open('edit-item')});
  await page.locator('#editListingClassification summary').click();await page.locator('#editClassificationEnabled').check();

@@ -1,6 +1,10 @@
 const {test,expect}=require('@playwright/test');
 async function openFixture(page,item){
- await page.route('https://**/*',route=>route.abort());
+ // Keep existing navigation checks independent of remote image servers.
+ // A separate test below deliberately aborts one photo to verify recovery.
+ await page.route('https://**/*',route=>route.request().resourceType()==='image'
+  ?route.fulfill({status:200,contentType:'image/png',body:Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScL/nwAAAABJRU5ErkJggg==','base64')})
+  :route.abort());
  await page.goto('/');
  await page.evaluate(value=>showDetails(value),item);
 }
@@ -44,4 +48,70 @@ test('Jayden: TCG and game listing details handle single or missing photos witho
  await expect(page.locator('.detail-price')).toHaveText('$12.75');
  await expect(page.locator('.detail-photo-placeholder')).toBeVisible();
  await expect(page.locator('[data-detail-photo]')).toHaveCount(0);
+});
+
+
+test('T1.5 unavailable buyer photo has visible recovery and another photo still opens',async({page})=>{
+ await openFixture(page,{n:'Synthetic photo recovery',p:15,c:'Trading Cards',imageUrls:[]});
+ await page.route('https://example.test/broken.jpg',route=>route.abort());
+ await page.evaluate(()=>showDetails({n:'Synthetic photo recovery',p:15,c:'Trading Cards',imageUrls:['https://example.test/broken.jpg','https://example.test/good.jpg']}));
+ await expect(page.locator('.detail-photo-load-status')).toContainText('This photo could not load');
+ await expect(page.locator('#detailZoomButton')).toBeHidden();
+ await page.getByRole('button',{name:'Next listing photo'}).click();
+ await expect(page.locator('#detailGalleryMain')).toHaveAttribute('src','https://example.test/good.jpg');
+ await expect(page.locator('.detail-photo-load-status')).toBeHidden();
+ await expect(page.locator('#detailZoomButton')).toBeVisible();
+ await page.getByRole('button',{name:'Enlarge listing photo'}).click();
+ await expect(page.locator('#detailPhotoZoom')).toBeVisible();
+ await page.keyboard.press('Escape');
+ await expect(page.locator('#detailPhotoZoom')).toHaveCount(0);
+ await page.getByRole('button',{name:'Previous listing photo'}).click();
+ await expect(page.locator('.detail-photo-load-status')).toContainText('This photo could not load');
+ await expect(page.locator('#detailZoomButton')).toBeHidden();
+});
+
+test('T1.5 blocked collector profile links fail closed on stale cache, lookup errors and in-flight blocks',async({page})=>{
+ await page.route('https://**/*',route=>route.abort());
+ await page.goto('/');
+ for(const mode of ['blocked','lookup-error','blocked-during-load']){
+  const outcome=await page.evaluate(async mode=>{
+   const originalFrom=supabaseClient.from,originalUser=currentUser,originalBlocks=[...blockedCollectorIds];
+   const sellerId='fixture-private-seller';let releaseProfile;
+   try{
+    currentUser={id:'fixture-profile-viewer'};blockedCollectorIds.clear();
+    supabaseClient.from=function(table){
+     const q={
+      select(){return this},eq(){return this},order(){return this},
+      limit(){return Promise.resolve({data:[]})},
+      maybeSingle(){
+       if(table==='profiles'){
+        if(mode==='blocked-during-load')return new Promise(resolve=>{releaseProfile=resolve});
+        return Promise.resolve({data:{username:'SECRET_SELLER',bio:'SECRET_BIO',collection_links:['SECRET_LINK']}});
+       }
+       if(table==='user_blocks')return Promise.resolve(mode==='lookup-error'?{data:null,error:{message:'Offline'}}:{data:mode==='blocked'?{blocked_id:sellerId}:null,error:null});
+       return Promise.resolve({data:null,error:null});
+      }
+     };
+     return q;
+    };
+    const pending=showPublicProfile(sellerId);
+    if(mode==='blocked-during-load'){
+     blockedCollectorIds.add(sellerId);
+     releaseProfile({data:{username:'SECRET_SELLER',bio:'SECRET_BIO',collection_links:['SECRET_LINK']},error:null});
+    }
+    await pending;
+    const content=document.getElementById('publicProfileContent');
+    return {text:content.textContent,html:content.innerHTML};
+   }finally{
+    supabaseClient.from=originalFrom;currentUser=originalUser;
+    blockedCollectorIds.clear();originalBlocks.forEach(id=>blockedCollectorIds.add(id));
+    closeModal('publicProfileModal');
+   }
+  },mode);
+  expect(outcome.html).not.toContain('SECRET_SELLER');
+  expect(outcome.html).not.toContain('SECRET_BIO');
+  expect(outcome.html).not.toContain('SECRET_LINK');
+  if(mode==='blocked')expect(outcome.text).toContain('This collector is blocked');
+  if(mode==='lookup-error')expect(outcome.text).toContain('Could not verify collector privacy');
+ }
 });
