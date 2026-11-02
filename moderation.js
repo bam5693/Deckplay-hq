@@ -7,6 +7,8 @@
  const incidentImpact=document.getElementById('incidentImpact'),incidentPrepare=document.getElementById('incidentPrepare');
  const incidentCopy=document.getElementById('incidentCopy'),incidentSummary=document.getElementById('incidentSummary');
  const incidentStatus=document.getElementById('incidentStatus');
+ const appealsPanel=document.getElementById('appealsPanel'),appealsList=document.getElementById('appealsList');
+ const appealsStatus=document.getElementById('appealsStatus'),appealsRefresh=document.getElementById('appealsRefresh');
  const client=window.supabase.createClient('https://yffruutknztvdyioovmp.supabase.co','sb_publishable_cHzM8sQmrqfcCH8lhESytg_FMJrQtCX');
  let generation=0,authorizedUser=null,busy=false,reportsSnapshot=[],reportFilter='all';
  let queueState='not checked',queueCheckedAt=null;
@@ -17,6 +19,7 @@
   filters.forEach(button=>button.disabled=true);
   incident.hidden=true;incidentSummary.value='';incidentStatus.textContent='';incidentCopy.disabled=true;
   incidentKind.selectedIndex=0;incidentImpact.selectedIndex=0;
+  appealsPanel.hidden=true;appealsList.replaceChildren();appealsStatus.textContent='';appealsRefresh.disabled=true;
  }
  function controls(disabled){out.querySelectorAll('button,textarea').forEach(control=>control.disabled=disabled);refresh.disabled=disabled;filters.forEach(button=>button.disabled=disabled)}
  function deny(message){const error=Error(message);error.accessDenied=true;throw error}
@@ -32,6 +35,46 @@
   if(role.error||role.data!==true)deny('Access restricted to DeckPlay moderators. Moderator services must be configured before this queue can be used.');
   return data.user.id;
  }
+ // Appeals are existing private support tickets, never report decisions.
+ // Fetch only status/timestamps under the existing MFA-aware staff RLS policy.
+ async function loadAppeals(version,userId){
+  const active=()=>version===generation&&authorizedUser===userId&&!appealsPanel.hidden&&!document.hidden;
+  if(!active())return;
+  appealsRefresh.disabled=true;appealsList.replaceChildren();
+  appealsStatus.textContent='Verifying staff access to private appeals…';
+  try{
+   const verified=await verifyAccess(active);if(!active())return;
+   if(verified!==userId)deny('Moderator account changed. Refresh to retry.');
+   const {data,error}=await client.from('support_tickets')
+    .select('id,status,created_at,updated_at')
+    .eq('category','safety')
+    .eq('subject','Request a moderation review')
+    .neq('status','resolved')
+    .order('updated_at',{ascending:false})
+    .limit(21);
+   if(!active())return;
+   if(error)throw error;
+   if(!Array.isArray(data))throw Error('Appeal queue unavailable');
+   const statuses={open:'Open',waiting_on_staff:'Waiting for staff',waiting_on_user:'Waiting for requester'};
+   for(const ticket of data.slice(0,20)){
+    const item=document.createElement('li');
+    const date=Date.parse(ticket.updated_at);
+    const when=Number.isFinite(date)?new Date(date).toISOString().slice(0,16).replace('T',' ')+' UTC':'Update time unavailable';
+    item.textContent=(statuses[ticket.status]||'Status unavailable')+' · Last updated '+when;
+    appealsList.append(item);
+   }
+   appealsStatus.textContent=!data.length?'No active moderation appeal requests found.':
+    data.length>20?'Showing 20 recently updated active appeals; additional requests may exist. Open Help & support → Safety queue to respond.':
+    'Showing '+data.length+' active moderation appeal request(s). Open Help & support → Safety queue to respond.';
+  }catch(error){
+   if(!active())return;
+   appealsList.replaceChildren();
+   if(error.accessDenied||error.code==='42501'||error.status===401||error.status===403){
+    ++generation;clearPrivate();
+    state.textContent=error.accessDenied?error.message:'Moderator access could not be verified. Refresh to retry.';
+   }else appealsStatus.textContent='Private appeal requests unavailable. Refresh appeals to retry.';
+  }finally{if(active())appealsRefresh.disabled=false}
+ }
  async function load(){
   const version=++generation,active=()=>version===generation;
   clearPrivate();refresh.disabled=true;state.textContent='Checking your moderator access…';
@@ -39,7 +82,8 @@
    const userId=await verifyAccess(active);if(!userId||!active())return;
    // Verified staff may prepare a safe incident handoff even if the queue RPC fails.
    // The panel contains no report data and is hidden on any role/MFA failure.
-   authorizedUser=userId;incident.hidden=false;queueState='loading';queueCheckedAt=null;
+   authorizedUser=userId;incident.hidden=false;appealsPanel.hidden=false;
+   void loadAppeals(version,userId);queueState='loading';queueCheckedAt=null;
    state.textContent='Loading private report queue…';
    const {data,error}=await client.rpc('moderation_report_queue');
    if(!active())return;if(error)throw error;
@@ -232,6 +276,9 @@
   selectFilter(button.dataset.reportFilter);renderSnapshot();
  }));
  refresh.addEventListener('click',()=>{if(!refresh.disabled&&!busy)void load()});
+ appealsRefresh.addEventListener('click',()=>{
+  if(!appealsRefresh.disabled&&authorizedUser&&!busy)void loadAppeals(generation,authorizedUser);
+ });
  document.addEventListener('visibilitychange',()=>{
   if(document.hidden){++generation;clearPrivate();selectFilter('all');state.textContent='Private reports hidden while this tab is inactive.'}
   else void load(); // Recheck both MFA and server role on return.
