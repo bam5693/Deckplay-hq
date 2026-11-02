@@ -2377,11 +2377,25 @@ async function loadNotificationCenter(){
 /* Route alerts by activity type instead of sending every actor-linked alert to messages. */
 let discoveryNavigationVersion=0;
 async function navigateDeckplayNotification(kind,actorId,sourceId){
- const requestId=++discoveryNavigationVersion,userId=currentUser?.id;
- const current=()=>requestId===discoveryNavigationVersion&&currentUser?.id===userId;
+ const requestId=++discoveryNavigationVersion,userId=currentUser?.id,accountEpoch=listingAccountVersion;
+ const current=()=>requestId===discoveryNavigationVersion&&currentUser?.id===userId&&listingAccountVersion===accountEpoch;
+ // Alert sources can outlive block refreshes and account switches. Check the
+ // exact viewer/seller pair before showing listings or opening a storefront.
+ const sellerAccess=async sellerId=>{
+  if(!sellerId||!userId)return false;
+  const {data,error}=await notificationRead(supabaseClient.from("user_blocks").select("blocked_id").eq("blocker_id",userId).eq("blocked_id",sellerId).maybeSingle(),6000);
+  if(!current())return null;
+  if(error||data===undefined||(data!==null&&data.blocked_id!==sellerId)){
+   toast("Could not verify blocked collectors. Reopen this alert to retry.");
+   return null;
+  }
+  return !data&&!blockedCollectorIds.has(sellerId);
+ };
  if(kind==="favorite_sold"){
   if(!current())return;
-  if(actorId&&!blockedCollectorIds.has(actorId)){
+  const allowed=await sellerAccess(actorId);
+  if(!current()||allowed===null)return;
+  if(allowed){
    toast("That saved item has sold. Showing the seller's available listings.");
    await showPublicProfile(actorId);
   }else toast("That saved item has sold and is no longer available.");
@@ -2395,13 +2409,17 @@ async function navigateDeckplayNotification(kind,actorId,sourceId){
    if(!data){
     // An expired discovery match should not strand the collector in a closed alert.
     // Only use the notification's seller identity when that collector is not blocked.
-    if(actorId&&!blockedCollectorIds.has(actorId)){
+    const allowed=await sellerAccess(actorId);
+    if(!current()||allowed===null)return;
+    if(allowed){
      toast("That listing is no longer available. Showing the seller's current listings.");
      await showPublicProfile(actorId);
     }else toast("This listing is no longer available.");
     return;
    }
-   if(blockedCollectorIds.has(data.seller_id)){toast("This listing is no longer available.");return}
+   const allowed=await sellerAccess(data.seller_id);
+   if(!current()||allowed===null)return;
+   if(!allowed){toast("This listing is no longer available.");return}
    const {data:profile}=await notificationRead(supabaseClient.from("profiles").select("username,display_name").eq("id",data.seller_id).maybeSingle(),6000);
    if(!current())return;
    const listing=marketplaceItemFromRow(data,profile),index=items.findIndex(x=>String(x.databaseId||x.id)===String(sourceId));
