@@ -1,10 +1,27 @@
 /* UI privacy safeguards supplement server authorization; never grant roles here. */
 (() => {
  const state=document.getElementById('state'),out=document.getElementById('reports'),status=document.getElementById('actionStatus');
+ const refresh=document.getElementById('refreshReports'),coverage=document.getElementById('queueCoverage');
+ const filters=[...document.querySelectorAll('[data-report-filter]')];
+ const incident=document.getElementById('incidentPanel'),incidentKind=document.getElementById('incidentKind');
+ const incidentImpact=document.getElementById('incidentImpact'),incidentPrepare=document.getElementById('incidentPrepare');
+ const incidentCopy=document.getElementById('incidentCopy'),incidentSummary=document.getElementById('incidentSummary');
+ const incidentStatus=document.getElementById('incidentStatus');
+ const appealsPanel=document.getElementById('appealsPanel'),appealsList=document.getElementById('appealsList');
+ const appealsStatus=document.getElementById('appealsStatus'),appealsRefresh=document.getElementById('appealsRefresh');
  const client=window.supabase.createClient('https://yffruutknztvdyioovmp.supabase.co','sb_publishable_cHzM8sQmrqfcCH8lhESytg_FMJrQtCX');
- let generation=0,authorizedUser=null,busy=false;
- function clearPrivate(){authorizedUser=null;busy=false;out.replaceChildren();status.textContent=''}
- function controls(disabled){out.querySelectorAll('button,textarea').forEach(control=>control.disabled=disabled)}
+ let generation=0,authorizedUser=null,busy=false,reportsSnapshot=[],reportFilter='all';
+ let queueState='not checked',queueCheckedAt=null;
+ function selectFilter(value){reportFilter=value;filters.forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.reportFilter===value)))}
+ function clearPrivate(){
+  authorizedUser=null;busy=false;reportsSnapshot=[];queueState='not checked';queueCheckedAt=null;
+  out.replaceChildren();status.textContent='';coverage.textContent='';refresh.disabled=false;
+  filters.forEach(button=>button.disabled=true);
+  incident.hidden=true;incidentSummary.value='';incidentStatus.textContent='';incidentCopy.disabled=true;
+  incidentKind.selectedIndex=0;incidentImpact.selectedIndex=0;
+  appealsPanel.hidden=true;appealsList.replaceChildren();appealsStatus.textContent='';appealsRefresh.disabled=true;
+ }
+ function controls(disabled){out.querySelectorAll('button,textarea').forEach(control=>control.disabled=disabled);refresh.disabled=disabled;filters.forEach(button=>button.disabled=disabled)}
  function deny(message){const error=Error(message);error.accessDenied=true;throw error}
  async function verifyAccess(active){
   const {data,error}=await client.auth.getUser();
@@ -18,19 +35,81 @@
   if(role.error||role.data!==true)deny('Access restricted to DeckPlay moderators. Moderator services must be configured before this queue can be used.');
   return data.user.id;
  }
+ // Appeals are existing private support tickets, never report decisions.
+ // Fetch only status/timestamps under the existing MFA-aware staff RLS policy.
+ async function loadAppeals(version,userId){
+  const active=()=>version===generation&&authorizedUser===userId&&!appealsPanel.hidden&&!document.hidden;
+  if(!active())return;
+  appealsRefresh.disabled=true;appealsList.replaceChildren();
+  appealsStatus.textContent='Verifying staff access to private appeals…';
+  try{
+   const verified=await verifyAccess(active);if(!active())return;
+   if(verified!==userId)deny('Moderator account changed. Refresh to retry.');
+   const {data,error}=await client.from('support_tickets')
+    .select('id,status,created_at,updated_at')
+    .eq('category','safety')
+    .eq('subject','Request a moderation review')
+    .neq('status','resolved')
+    .order('updated_at',{ascending:false})
+    .limit(21);
+   if(!active())return;
+   if(error)throw error;
+   if(!Array.isArray(data))throw Error('Appeal queue unavailable');
+   const statuses={open:'Open',waiting_on_staff:'Waiting for staff',waiting_on_user:'Waiting for requester'};
+   for(const ticket of data.slice(0,20)){
+    const item=document.createElement('li');
+    const date=Date.parse(ticket.updated_at);
+    const when=Number.isFinite(date)?new Date(date).toISOString().slice(0,16).replace('T',' ')+' UTC':'Update time unavailable';
+    item.textContent=(statuses[ticket.status]||'Status unavailable')+' · Last updated '+when;
+    appealsList.append(item);
+   }
+   appealsStatus.textContent=!data.length?'No active moderation appeal requests found.':
+    data.length>20?'Showing 20 recently updated active appeals; additional requests may exist. Open Help & support → Safety queue to respond.':
+    'Showing '+data.length+' active moderation appeal request(s). Open Help & support → Safety queue to respond.';
+  }catch(error){
+   if(!active())return;
+   appealsList.replaceChildren();
+   if(error.accessDenied||error.code==='42501'||error.status===401||error.status===403){
+    ++generation;clearPrivate();
+    state.textContent=error.accessDenied?error.message:'Moderator access could not be verified. Refresh to retry.';
+   }else appealsStatus.textContent='Private appeal requests unavailable. Refresh appeals to retry.';
+  }finally{if(active())appealsRefresh.disabled=false}
+ }
  async function load(){
   const version=++generation,active=()=>version===generation;
-  clearPrivate();state.textContent='Checking your moderator access…';
+  clearPrivate();refresh.disabled=true;state.textContent='Checking your moderator access…';
   try{
    const userId=await verifyAccess(active);if(!userId||!active())return;
+   // Verified staff may prepare a safe incident handoff even if the queue RPC fails.
+   // The panel contains no report data and is hidden on any role/MFA failure.
+   authorizedUser=userId;incident.hidden=false;appealsPanel.hidden=false;
+   void loadAppeals(version,userId);queueState='loading';queueCheckedAt=null;
    state.textContent='Loading private report queue…';
    const {data,error}=await client.rpc('moderation_report_queue');
    if(!active())return;if(error)throw error;
    if(!Array.isArray(data))throw Error('Moderator queue is unavailable.');
-   authorizedUser=userId;
-   state.textContent=data.length?data.length+' reports in this queue. Reports are allegations, not proof of wrongdoing.':'No reports in the queue.';
-   for(const report of data)renderReport(report);
-  }catch(error){if(active()){clearPrivate();state.textContent=error.message||'Unable to load moderation queue.'}}
+   reportsSnapshot=data;queueState=data.length>=100?'bounded snapshot':'snapshot loaded';queueCheckedAt=new Date().toISOString();
+   filters.forEach(button=>button.disabled=false);
+   state.textContent=data.length?data.length+(data.length===1?' report':' reports')+' returned by the private queue. Reports are allegations, not proof of wrongdoing.':'No reports returned by the private queue.';
+   // The server RPC returns at most 100 reports, sorted open first. Never
+   // present that bounded snapshot as a complete database-wide total.
+   coverage.textContent=data.length>=100
+    ?'Showing the first 100 reports, prioritized by open, then reviewing, then resolved. More reports may exist. Refresh to check for changes.'
+    :'Queue snapshot loaded. Refresh to check for new or updated reports.';
+   renderSnapshot();
+  }catch(error){if(active()){
+   if(error.accessDenied||!authorizedUser||error.code==='42501'||error.status===401||error.status===403){
+    clearPrivate();state.textContent=error.accessDenied?error.message:'Moderator access could not be verified. Refresh to retry.';
+   }else{
+    // Keep only the verified operator's generic recovery panel, not failed/stale evidence.
+    reportsSnapshot=[];out.replaceChildren();coverage.textContent='';status.textContent='';
+    filters.forEach(button=>button.disabled=true);
+    queueState='unavailable';queueCheckedAt=null;
+    incidentSummary.value='';incidentCopy.disabled=true;
+    incidentStatus.textContent='Report queue unavailable; prepare a handoff or retry.';
+    state.textContent='Private report queue unavailable. Refresh to retry.';
+   }
+  }}finally{if(active())refresh.disabled=false}
  }
  async function act(button,name,payload,question){
   if(busy||!authorizedUser)return;
@@ -42,8 +121,80 @@
    if(verified!==userId)deny('Your account changed. Reload the moderation queue.');
    const {error}=await client.rpc(name,payload);if(!active())return;if(error)throw error;
    await load();
-  }catch(error){if(active()){if(error.accessDenied){++generation;clearPrivate();state.textContent=error.message}else status.textContent='Action failed: '+(error.message||'Please try again.')}}
+  }catch(error){if(active()){
+   // Database authorization can expire after the pre-write MFA check.
+   // Never retain report evidence or show raw backend details on a denied write.
+   if(error.accessDenied||error.code==='42501'||error.status===401||error.status===403){
+    ++generation;clearPrivate();
+    state.textContent=error.accessDenied?error.message:'Moderator access could not be verified. Refresh to retry.';
+   }else if(error.code==='40001'||error.code==='P0002'){
+    // Another moderator may have changed/deleted this report. Do not retry
+    // the write automatically against a status the operator has not reviewed.
+    await load();
+    if(authorizedUser===userId&&(queueState==='snapshot loaded'||queueState==='bounded snapshot'))
+     status.textContent='Report changed or is no longer available. Queue refreshed; review the current evidence and status before taking another action. No change was made by this attempt.';
+   }else status.textContent='Review action could not be completed. Check your connection and refresh the queue before trying again.';
+  }}
   finally{if(active()){busy=false;controls(false)}}
+ }
+ function renderSnapshot(){
+  if(!authorizedUser)return;
+  out.replaceChildren();
+  const visible=reportFilter==='all'?reportsSnapshot:reportsSnapshot.filter(report=>report.status===reportFilter);
+  const total=reportsSnapshot.length;
+  state.textContent=total?total+(total===1?' report':' reports')+' returned by the private queue. Reports are allegations, not proof of wrongdoing.':'No reports returned by the private queue.';
+  if(reportFilter!=='all')state.textContent+=' Showing '+visible.length+' '+reportFilter+' in the returned snapshot.';
+  if(!visible.length&&total){
+   const note=document.createElement('p');note.className='card';
+   note.textContent='No '+reportFilter+' reports in the returned snapshot.'+(total>=100?' Other reports may exist beyond the first 100.':'');
+   out.append(note);
+  }
+  for(const report of visible)renderReport(report);
+ }
+
+ // Read-only audit history is fetched on demand, after a fresh AAL2/role check.
+ // No moderator identity, session ID, or report contents are returned by this RPC.
+ function appendReviewHistory(card,report){
+  const history=document.createElement('details');history.className='review-history';
+  const summary=document.createElement('summary');summary.textContent='View private review history (latest 20)';
+  const message=document.createElement('p');message.setAttribute('role','status');message.setAttribute('aria-live','polite');
+  const entries=document.createElement('ol');
+  history.append(summary,message,entries);card.append(history);
+  let request=0;
+  history.addEventListener('toggle',()=>{
+   const token=++request;
+   entries.replaceChildren();
+   if(!history.open){message.textContent='';return}
+   const version=generation,userId=authorizedUser;
+   const active=()=>token===request&&version===generation&&userId===authorizedUser&&history.isConnected&&history.open&&!document.hidden;
+   void (async()=>{
+    message.textContent='Verifying access to private review history…';
+    try{
+     const verified=await verifyAccess(active);if(!active())return;
+     if(verified!==userId)deny('Moderator account changed. Refresh to retry.');
+     const {data,error}=await client.rpc('moderation_report_review_history',{p_report_id:report.id});
+     if(!active())return;
+     if(error)throw error;
+     if(!Array.isArray(data))throw Error('History unavailable');
+     if(!data.length){message.textContent='No recorded status decisions for this report.';return}
+     for(const event of data.slice(0,20)){
+      const item=document.createElement('li');
+      const when=Date.parse(event.reviewed_at);
+      const date=Number.isFinite(when)?new Date(when).toLocaleString():'Date unavailable';
+      item.textContent=date+' — '+String(event.previous_status||'unknown')+' → '+String(event.next_status||'unknown')+'. Reason: '+String(event.review_reason||'No reason recorded.');
+      entries.append(item);
+     }
+     message.textContent=data.length>=20?'Showing the latest 20 recorded status decisions.':'Showing '+data.length+' recorded status decision(s).';
+    }catch(error){
+     if(!active())return;
+     entries.replaceChildren();
+     if(error.accessDenied||error.code==='42501'||error.status===401||error.status===403){
+      ++generation;clearPrivate();
+      state.textContent=error.accessDenied?error.message:'Moderator access could not be verified. Refresh to retry.';
+     }else message.textContent='Review history unavailable. Close and reopen to retry.';
+    }
+   })();
+  });
  }
  function renderReport(report){
   const card=document.createElement('section');card.className='card';
@@ -67,11 +218,75 @@
   if(report.listing_id){
    const note=document.createElement('p');note.textContent='Listing removal is not available yet. Reviewing a report does not remove its listing.';card.append(note);
   }
-  card.append(actions);out.append(card);
+  card.append(actions);appendReviewHistory(card,report);out.append(card);
  }
+ const allowedIssues=new Set([...incidentKind.options].map(option=>option.value));
+ const allowedImpacts=new Set([...incidentImpact.options].map(option=>option.value));
+ function clearIncidentDraft(){incidentSummary.value='';incidentCopy.disabled=true;incidentStatus.textContent=''}
+ incidentKind.addEventListener('change',clearIncidentDraft);
+ incidentImpact.addEventListener('change',clearIncidentDraft);
+ incidentPrepare.addEventListener('click',()=>{
+  if(!authorizedUser||incident.hidden||document.hidden)return;
+  const issue=incidentKind.value,impact=incidentImpact.value;
+  if(!allowedIssues.has(issue)||!allowedImpacts.has(impact))return;
+  const host=window.location.hostname;
+  const environment=host==='deckplayhq.com'||host==='www.deckplayhq.com'?'PUBLIC PRODUCTION (no actions authorized)'
+   :host==='deckplay-hq-staging.cstivers56.workers.dev'?'PRIVATE STAGING'
+   :host==='localhost'||host==='127.0.0.1'?'LOCAL PREVIEW (synthetic)'
+   :'UNVERIFIED ORIGIN — confirm separately';
+  const queue=queueState==='unavailable'?'Unavailable (verified staff; queue request failed)'
+   :queueState==='loading'?'Still loading; no verified result'
+   :queueState==='bounded snapshot'?'Loaded; limited to the first 100 reports'
+   :queueState==='snapshot loaded'?'Loaded; snapshot only'
+   :'Not checked';
+  incidentSummary.value=[
+   'DECKPLAY HQ — OPERATOR INCIDENT HANDOFF (DRAFT; NOT SENT)',
+   'UTC time: '+new Date().toISOString(),
+   'Environment: '+environment,
+   'Affected operation: '+issue,
+   'Observed impact: '+impact,
+   'Moderation queue: '+queue,
+   'Last successful queue check (UTC): '+(queueCheckedAt||'None this session'),
+   '',
+   'MANUAL RESPONSE:',
+   '1. Verify the affected environment independently; staging is not production.',
+   '2. Pause releases/feature changes and notify the owner.',
+   '3. Do not share report contents, user identifiers, credentials or screenshots.',
+   '4. Before any production rollback, verify fresh DB, Auth and Storage backups plus a rehearsed restore plan; obtain explicit owner approval.',
+   '5. Verify recovery on the affected customer journey and record the result.',
+   '',
+   'No incident was filed. No feature control, rollback or account action was executed.'
+  ].join('\n');
+  incidentCopy.disabled=false;incidentStatus.textContent='Safe draft prepared locally. Nothing has been sent.';
+ });
+ incidentCopy.addEventListener('click',async()=>{
+  if(!authorizedUser||incident.hidden||document.hidden||!incidentSummary.value)return;
+  const version=generation,owner=authorizedUser,value=incidentSummary.value;
+  const active=()=>version===generation&&owner===authorizedUser&&!incident.hidden&&!document.hidden;
+  try{
+   if(!navigator.clipboard?.writeText)throw Error('clipboard unavailable');
+   await navigator.clipboard.writeText(value);
+   if(active())incidentStatus.textContent='Handoff copied. Share it only through an approved private channel.';
+  }catch{
+   if(active()){incidentSummary.focus();incidentSummary.select();incidentStatus.textContent='Clipboard unavailable. The handoff is selected for manual copying.'}
+  }
+ });
+ filters.forEach(button=>button.addEventListener('click',()=>{
+  if(!authorizedUser||busy||button.disabled)return;
+  selectFilter(button.dataset.reportFilter);renderSnapshot();
+ }));
+ refresh.addEventListener('click',()=>{if(!refresh.disabled&&!busy)void load()});
+ appealsRefresh.addEventListener('click',()=>{
+  if(!appealsRefresh.disabled&&authorizedUser&&!busy)void loadAppeals(generation,authorizedUser);
+ });
+ document.addEventListener('visibilitychange',()=>{
+  if(document.hidden){++generation;clearPrivate();selectFilter('all');state.textContent='Private reports hidden while this tab is inactive.'}
+  else void load(); // Recheck both MFA and server role on return.
+ });
+ window.addEventListener('pagehide',()=>{++generation;clearPrivate();selectFilter('all')});
  client.auth.onAuthStateChange((event,session)=>{
   if(event==='INITIAL_SESSION')return;
-  ++generation;clearPrivate();
+  ++generation;clearPrivate();selectFilter('all');
   state.textContent='Sign in and verify MFA to view private reports.';
   // Defer auth calls until Supabase finishes dispatching the auth event.
   if(session?.user&&event!=='PASSWORD_RECOVERY')setTimeout(()=>load(),0);
