@@ -1,14 +1,15 @@
-# DeckPlay HQ — hourly Trunk 4 checkpoint (2026-11-01 17:34 CST)
+# DeckPlay HQ — hourly Trunk 4 checkpoint (2026-11-01 19:16 CST)
 
-**Owner:** T4.1–T4.6 only, branch `dev/hourly-autonomous`; draft PR #10 review-only to `test/staging-reporting`. No staging/production/retired-lease changes.
+**Owner:** T4.1–T4.6 only, `dev/hourly-autonomous`; draft PR #10 review-only to `test/staging-reporting`. No staging/production/retired-lease changes.
 
 ## DONE — implemented, NOT accepted
-- **T4.1 seller follow safety:** `2f2e5d011c682b58db8f8162828999c872b24334` changes a timed-out follow/unfollow from blind **Retry** to **Check follow status**, performs owner/seller-scoped readback before another write or success toast, and ignores stale account epochs. `ea28ae3fcef288c51798bfa7a67260db0424ecfa` fails closed on malformed initial follow status. Regression `85bc2a106e5436bc7d2b2a1e7a1968a36929b3e6` adds four Node cases (**committed, NOT run**).
-- **Actually executed this run:** 4/4 isolated V8 checks of the *actual changed follow click handler* PASS (timeout readback without second write, confirmed follow, unconfirmed read, switched account). All 17 inline scripts parsed. Earlier T4.1 Favorites, T4.2 Wanted, T4.3 alerts and T4.4–T4.6 implementation evidence remains preserved; no broad retest.
+- **T4.3 alert seller privacy:** `a7ee769a0fbda42bdc166961e1de5e8382dbf1c1` verifies `user_blocks` for the **current viewer and actual listing seller** before opening active discovery-alert listings or redirecting expired/sold alerts to storefronts. Offline/malformed block checks fail closed with truthful retry guidance; account epoch changes discard stale results.
+- **Actually executed:** 6/6 isolated V8 executions of the changed real alert-navigation function PASS (blocked active listing, offline block check, blocked sold storefront, allowed sold storefront, allowed active listing, switched account during lookup). Focused function syntax preflight PASS. No broad suites, browser, staging or device checks.
+- Prior T4.1 Favorites/follows, T4.2 Wanted, T4.3 alert loading and T4.4–T4.6 collection implementation/test evidence remains preserved, not rerun.
 
 ## IN PROGRESS — UX / integration BLOCKED
-Staging scoreboard **T4.1–T4.6 unchecked**. Jayden buyer and Tanner collector adversarial source review: timed-out follow must not duplicate writes or falsely claim success. Browser mobile/desktop light/dark, independent UX reviewer, protected signed-in staging, deployment parity and physical Android **NOT VERIFIED**. Owner screenshot atlas text reviewed; actual JPG bytes **not inspected**. PR #10 is still conflicted/dirty against staging (last inspected head `908844b`, staging `35895d3` before this run).
+Staging scoreboard **T4.1–T4.6 unchecked**. Jayden buyer mission: follow a Wanted alert to a matching card after blocking its seller; no blocked listing may open. Tanner collector mission: open a sold-favorite alert and browse an unblocked storefront; offline block lookup must not reveal it. Both source-handler fixtures checked; independent desktop/mobile light/dark journey, protected signed-in staging, deployment parity, physical Android and independent UX reviewer **NOT VERIFIED**. Owner screenshot atlas text reviewed; actual JPG bytes **not inspected**. PR #10 has staging conflicts; no merge attempted.
 
 ## NEXT
-1. Review another genuinely unfinished T4.2 exact-match/privacy or T4.3 follow-alert behavior; implement only a concrete defect. Do not rerun existing green tests without impact.
-2. Integration lead reviews/conflict-resolves PR #10 and runs targeted signed-in Jayden/Tanner desktop/mobile UX before accepting any T4 ID. Current hourly HEAD `ea28ae3fcef288c51798bfa7a67260db0424ecfa`.
+1. Examine another concrete T4.2 exact-match/privacy or T4.3 alert defect and implement a scoped customer-visible fix; do not rerun green checks without changed behavior.
+2. Integration lead conflict-resolves PR #10 separately and runs targeted signed-in Jayden/Tanner mobile/desktop UX before accepting any T4 ID.
