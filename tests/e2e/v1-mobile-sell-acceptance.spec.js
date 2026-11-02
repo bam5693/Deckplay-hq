@@ -154,3 +154,14 @@ test('Other hardware category does not ask for a duplicate hardware type',async(
  await expect(page.locator('#consoleItemType')).toHaveValue('Console');
  await expect(page.locator('#category')).toHaveValue('consoles');
 });
+
+
+test('seller sees one honest whole-listing price for cards, decks, lots and games',async({page})=>{
+ for(const type of ['single','deck','lot','game']){
+  await page.locator('#listingType').selectOption(type);
+  await expect(page.locator('label[for="price"]')).toHaveText('Asking price for everything included (USD)');
+  await expect(page.locator('#price')).toHaveAttribute('aria-describedby','listingPriceScopeHelp');
+  await expect(page.locator('#listingPriceScopeHelp')).toContainText('full listing, not per card, copy or item');
+  await expect(page.locator('#listingPriceScopeHelp')).toContainText('Shipping, taxes and fees are not calculated');
+ }
+});
