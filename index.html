@@ -1864,6 +1864,10 @@ function applyListingDraftValues(values){
    else{if(typeof value!=="string"||value.length>6500)continue;el.value=value}
    if(el.tagName==="SELECT"||el.type==="checkbox")el.dispatchEvent(new Event("change",{bubbles:true}));
   }
+  // Category is the authoritative hardware choice for Other items. A saved
+  // draft may restore its hidden consoleItemType after the category select;
+  // re-derive that hidden subtype before showing or publishing the draft.
+  syncCategoryFields();
   syncGradedCondition();updateDeckQuantityStatus();updateListingQuickSummary();
  }finally{applyingListingDraft=false}
  saveListingDraft();
