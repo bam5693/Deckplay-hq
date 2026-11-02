@@ -165,3 +165,21 @@ test('seller sees one honest whole-listing price for cards, decks, lots and game
   await expect(page.locator('#listingPriceScopeHelp')).toContainText('Shipping, taxes and fees are not calculated');
  }
 });
+
+test('restoring a saved Other hardware draft keeps its buyer category and hidden subtype consistent',async({page})=>{
+ // A previous form may have saved Console before the seller changed category.
+ // Draft restore walks DOM order: category first, then hidden consoleItemType.
+ for(const [category,expected] of [['controllers','Controller'],['accessories','Accessory'],['consoles','Console']]){
+  await page.evaluate(cat=>applyListingDraftValues({listingType:'other',category:cat,consoleItemType:'Console'}),category);
+  await expect(page.locator('#listingType')).toHaveValue('other');
+  await expect(page.locator('#category')).toHaveValue(category);
+  await expect(page.locator('#consoleItemType')).toHaveValue(expected);
+  await expect(page.locator('#consoleItemTypeWrap')).toBeHidden();
+  await expect(page.locator('#consoleFields')).toBeVisible();
+ }
+ // Normal hardware listings still honor the seller's explicit subtype.
+ await page.evaluate(()=>applyListingDraftValues({listingType:'console',category:'consoles',consoleItemType:'Accessory'}));
+ await expect(page.locator('#category')).toHaveValue('accessories');
+ await expect(page.locator('#consoleItemType')).toHaveValue('Accessory');
+ await expect(page.locator('#consoleItemTypeWrap')).toBeVisible();
+});
